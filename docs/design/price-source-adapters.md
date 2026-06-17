@@ -99,3 +99,17 @@ vnfin/
     ssi.py vndirect.py vps.py kis.py pinetree.py
   client.py            # FailoverPriceClient
 ```
+
+## RESOLVED — agreed contract (reviewer APPROVE_WITH_NOTES, 2026-06-18)
+
+Reviewer: `vnfin-oss-reviewer/reviews/review-202606180012-price-source-adapters.md`. Blocker B1 (FireAnt token) redacted. Final decisions:
+
+1. **Return type:** typed `PriceHistory` core + `.to_dataframe()`. Add fields: `currency="VND"`, `exchange`, `adjustment_policy`, `provider_symbol`, `fetched_at_utc`, `warnings`, plus failover `attempts` diagnostics.
+2. **Intraday:** `D1` guaranteed for all 5; intraday is capability-gated best-effort. Unsupported interval → raise `UnsupportedInterval` (never silently fall back to daily). Document per-source intraday retention.
+3. **Adjustment:** enum `AdjustmentPolicy = PROVIDER_ADJUSTED | RAW | MIXED | UNKNOWN` (not a bool). Default chain returns provider-adjusted only; `MIXED`/`UNKNOWN` excluded from default failover. No raw via data providers (Simplize/CafeF) in the broker-native default.
+4. **Failover:** sequential, all 5 configured, max 3 attempts. Validate transport/status/non-empty/array-lengths/OHLC/volume/range. "Last bar stale" is a **soft warning** (VN trading-calendar aware), never a hard fail. Cross-source reconciliation = separate diagnostic mode.
+5. **DRY:** shared `_UDFSource` (HTTP + envelope parse + array alignment + tz + common validation); each adapter owns URL, resolution map, price scale, envelope unwrap, capabilities, headers, adjustment policy — and its **own tests + synthetic fixtures**.
+6. **Symbol universe:** lazy for MVP (uppercase-normalize, call provider, surface `UnknownSymbol`/empty). No bundled ticker universe; official exchange lists only after a separate license-clear vetting note.
+7. **Compliance:** runtime fetch only; no bundled broker data or real-price cassettes; source attribution in every `PriceHistory`; low concurrency + retry/backoff + local cache; per-source ToS/robots/provenance note before coding each adapter; FireAnt/Yahoo/Wichart and any bearer/encrypted source excluded from the default chain.
+
+**Acceptance criteria before merge to main:** RED tests first (models, each adapter, failover); synthetic fixtures cover normal / empty / malformed / unsupported-interval / envelope-variant / price-scaling / timezone / OHLC-failure; failover tests prove stop-after-first-valid, ≤3 attempts, diagnostics recorded, no unnecessary later calls; integration tests opt-in & CI-skipped; per-source capability + compliance docs; secret scan clean.

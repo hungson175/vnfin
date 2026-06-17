@@ -39,7 +39,7 @@ Run the checklist in `docs/vnstock-blacklist.md` before every research task, and
 
 TDD is mandatory — **write the failing test first, then the code** (Red → Green → Refactor). Follow the global reference `~/.claude/refs/testing.md` for coverage targets, test categories (normal / boundary / error / edge), and the VCR cassette strategy.
 
-- **No tests → no code.** Every data-source adapter and the failover client ships with unit tests; mock the HTTP layer and record real broker responses as VCR cassettes for integration tests. Never hit live broker endpoints in CI.
+- **No tests → no code.** Every data-source adapter and the failover client ships with unit tests that mock the HTTP layer using **synthetic UDF fixtures committed to the repo** — never commit real broker price rows. Integration tests that hit live endpoints are opt-in and skipped in CI (use private, gitignored cassettes if replay is needed). CI runs deterministic unit/contract tests only.
 - **Integration gate:** when work is split across branches/worktrees, integration tests must pass before merging into the main branch.
 - **Web E2E:** for any end-to-end test that drives a website, use the Playwright CLI.
 
