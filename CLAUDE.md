@@ -43,6 +43,16 @@ TDD is mandatory — **write the failing test first, then the code** (Red → Gr
 - **Integration gate:** when work is split across branches/worktrees, integration tests must pass before merging into the main branch.
 - **Web E2E:** for any end-to-end test that drives a website, use the Playwright CLI.
 
+## Reviewer collaboration (mandatory at every checkpoint)
+
+Work with `vnfin-oss-reviewer` (tmux) at all important checkpoints — never ship a milestone solo.
+
+- **Before implementing:** discuss the design/solution with the reviewer and converge before writing code.
+- **After implementing:** the reviewer reads the code, runs the tests, and reviews coding standards + live test coverage (full code-reviewer duties). Address findings before a step is considered done.
+- **Implementation:** once the design is agreed, implement it via a workflow or sub-agents — jointly pick the best approach.
+- **Document each step** as soon as it is finished.
+- **Every 2–3 steps:** the reviewer reviews the overall structure and proposes architecture — keep the long-term vision in mind, but plan only 2–3 steps ahead.
+
 ## Layout
 
 `docs/` plans, specs, source-vetting, API design · `tasks/` task files + acceptance criteria · `outputs/` Boss-ready deliverables · `scripts/` helper scripts · `context/` boot/mission notes.
