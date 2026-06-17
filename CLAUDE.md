@@ -35,6 +35,14 @@ Run the checklist in `docs/vnstock-blacklist.md` before every research task, and
 4. Be conservative on legal/licensing uncertainty and flag the risk.
 5. Use `tm-send` (never raw `tmux send-keys`) for agent messages; keep them short with a timestamp/source prefix.
 
+## Testing discipline
+
+TDD is mandatory — **write the failing test first, then the code** (Red → Green → Refactor). Follow the global reference `~/.claude/refs/testing.md` for coverage targets, test categories (normal / boundary / error / edge), and the VCR cassette strategy.
+
+- **No tests → no code.** Every data-source adapter and the failover client ships with unit tests; mock the HTTP layer and record real broker responses as VCR cassettes for integration tests. Never hit live broker endpoints in CI.
+- **Integration gate:** when work is split across branches/worktrees, integration tests must pass before merging into the main branch.
+- **Web E2E:** for any end-to-end test that drives a website, use the Playwright CLI.
+
 ## Layout
 
 `docs/` plans, specs, source-vetting, API design · `tasks/` task files + acceptance criteria · `outputs/` Boss-ready deliverables · `scripts/` helper scripts · `context/` boot/mission notes.
