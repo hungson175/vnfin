@@ -37,6 +37,11 @@ Excluded by directive: FireAnt, CafeF, Simplize, Wichart, 24hMoney, Yahoo, Viets
 
 ### Standard contract (the port)
 
+> ⚠️ **Superseded draft.** The block below is the original sketch. The authoritative
+> contract is the **RESOLVED** section near the end of this doc (`AdjustmentPolicy` enum
+> + full `PriceHistory` metadata + `UnsupportedInterval` + coverage warnings). Implement
+> against that, not the `adjusted: bool` shown here.
+
 **Normalized inputs:**
 - `symbol: str` — e.g. `"FPT"` (HOSE/HNX/UPCOM)
 - `interval: Interval` — enum `D1 | W1 | MN1 | M1 | M5 | M15 | M30 | H1`

@@ -41,7 +41,7 @@ df = h.to_dataframe()                            # pandas, indexed by time, meta
 ## Tests
 
 - **79 unit/contract tests, 98% coverage** (`./.venv/bin/python -m pytest --cov=vnfin`).
-- Synthetic UDF fixtures only — **no real broker price rows committed**.
+- Synthetic UDF fixtures only — **no real broker rows used as test fixtures or bundled datasets** (docs may carry short illustrative provenance snippets).
 - Live integration tests are opt-in and CI-skipped: `VNFIN_LIVE=1 ./.venv/bin/python -m pytest -m integration`.
 - Live smoke (2026-06-18): `default_client().get_daily("FPT", …)` → served by `ssi`, 11 bars, last close 72,300 VND, tz +07.
 

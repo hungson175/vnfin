@@ -24,6 +24,10 @@ with reviewer → TDD implement → document → commit.**
 - Runtime fetch only; no bundled data or real-data fixtures committed.
 - Reviewer reviews each step's code (read code, run tests, coverage) and does a whole-architecture review every 2–3 steps.
 
+## Source notes
+
+- **Macro (Step 5):** Boss directs us to use **FRED** (`api.stlouisfed.org`), key in `~/dev/.env`. ⚠️ As of 2026-06-18 no FRED-named var is present in `~/dev/.env` (vars checked by name) — resolve the key before Step 5 macro implementation. Meanwhile the **World Bank API** (`api.worldbank.org/v2`, no key) is the no-key cross-country fallback.
+
 ## Parallelization
 
 Research/probe (read-only) fans out now across Steps 3–5 simultaneously (independent).

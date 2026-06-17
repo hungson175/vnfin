@@ -39,7 +39,7 @@ Run the checklist in `docs/vnstock-blacklist.md` before every research task, and
 
 TDD is mandatory — **write the failing test first, then the code** (Red → Green → Refactor). Follow the global reference `~/.claude/refs/testing.md` for coverage targets, test categories (normal / boundary / error / edge), and the VCR cassette strategy.
 
-- **No tests → no code.** Every data-source adapter and the failover client ships with unit tests that mock the HTTP layer using **synthetic UDF fixtures committed to the repo** — never commit real broker price rows. Integration tests that hit live endpoints are opt-in and skipped in CI (use private, gitignored cassettes if replay is needed). CI runs deterministic unit/contract tests only.
+- **No tests → no code.** Every data-source adapter and the failover client ships with unit tests that mock the HTTP layer using **synthetic UDF fixtures committed to the repo**. No real broker rows are used as test fixtures or bundled datasets; docs may contain short illustrative provenance snippets (a few values for evidence). Integration tests that hit live endpoints are opt-in and skipped in CI (use private, gitignored cassettes if replay is needed). CI runs deterministic unit/contract tests only.
 - **Integration gate:** when work is split across branches/worktrees, integration tests must pass before merging into the main branch.
 - **Web E2E:** for any end-to-end test that drives a website, use the Playwright CLI.
 - **Refactor only under green:** the full test suite must pass immediately **before AND after** any refactor — never refactor on red. Commit the green state first.
@@ -54,6 +54,7 @@ Work with `vnfin-oss-reviewer` (tmux) at all important checkpoints — never shi
 - **Document each step** as soon as it is finished.
 - **Every 2–3 steps:** the reviewer reviews the overall structure and proposes architecture — keep the long-term vision in mind, but plan only 2–3 steps ahead.
 - **You decide when to pause** for an architecture review + refactoring pass (when an abstraction starts to strain, or at the 2–3 step mark). Build independent domains in parallel via **git worktrees** to avoid write conflicts; merge only with green integration tests.
+- **Reviewer parallelism:** several jobs may be in review at once. At every handoff, tell `vnfin-oss-reviewer` to **spawn its own sub-agents** (one per job/domain) so reviews run in parallel and never serialize behind each other.
 
 ## Layout
 
