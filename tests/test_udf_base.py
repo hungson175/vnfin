@@ -113,3 +113,52 @@ def test_envelope_unwrap(synth):
     h = s.get_history("FPT", Interval.D1, *WIDE)
     assert len(h) == 3
     assert h.source == "dummy_env"
+
+
+# --- P1: malformed scalars must raise InvalidData (failover-safe), not raw exceptions ---
+
+
+def test_none_close_raises_invalid(synth):
+    payload = json.dumps(
+        {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [72.5], "l": [71.8], "c": [None], "v": [1000]}
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_garbage_timestamp_raises_invalid():
+    payload = json.dumps(
+        {"s": "ok", "t": ["not-a-ts"], "o": [72.0], "h": [72.5], "l": [71.8], "c": [72.0], "v": [1000]}
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_nan_price_raises_invalid(synth):
+    # json.loads parses bare NaN by default -> float('nan') -> non-finite guard
+    payload = '{"s":"ok","t":[%d],"o":[72.0],"h":[72.5],"l":[71.8],"c":[NaN],"v":[1000]}' % synth.ts("2024-01-02")
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_negative_volume_raises_invalid(synth):
+    bad = [("2024-01-02", 72.0, 72.5, 71.8, 72.3, -5)]
+    with pytest.raises(InvalidData):
+        src_with(synth.bare(rows=bad)).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_missing_array_raises_invalid(synth):
+    payload = json.dumps(
+        {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [72.5], "l": [71.8], "v": [1000]}
+    )  # no 'c'
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_naive_datetime_input_accepted(synth):
+    from datetime import datetime
+
+    h = src_with(synth.bare()).get_history(
+        "FPT", Interval.D1, datetime(2024, 1, 1), datetime(2024, 1, 31)
+    )
+    assert len(h) == 3

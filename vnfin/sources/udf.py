@@ -119,17 +119,22 @@ class UDFSource(PriceSource):
 
         bars: list[PriceBar] = []
         for i in range(n):
-            tm = datetime.fromtimestamp(int(t[i]), tz=timezone.utc).astimezone(VN_TZ)
-            op = float(o[i]) * self.PRICE_SCALE
-            hp = float(h[i]) * self.PRICE_SCALE
-            lp = float(l[i]) * self.PRICE_SCALE
-            cp = float(c[i]) * self.PRICE_SCALE
-            vol = int(round(float(v[i]) * self.VOLUME_SCALE))
-            for x in (op, hp, lp, cp):
-                if not math.isfinite(x):
-                    raise InvalidData(f"{self.name}: non-finite price")
-            if vol < 0:
-                raise InvalidData(f"{self.name}: negative volume")
+            try:
+                tm = datetime.fromtimestamp(int(t[i]), tz=timezone.utc).astimezone(VN_TZ)
+                op = float(o[i]) * self.PRICE_SCALE
+                hp = float(h[i]) * self.PRICE_SCALE
+                lp = float(l[i]) * self.PRICE_SCALE
+                cp = float(c[i]) * self.PRICE_SCALE
+                raw_vol = float(v[i]) * self.VOLUME_SCALE
+            except (TypeError, ValueError, OverflowError) as exc:
+                # Malformed scalar (null, garbage string, overflow) must surface as a
+                # SourceError so FailoverPriceClient fails over instead of crashing.
+                raise InvalidData(f"{self.name}: malformed scalar at row {i}") from exc
+            if not all(math.isfinite(x) for x in (op, hp, lp, cp, raw_vol)):
+                raise InvalidData(f"{self.name}: non-finite OHLCV at row {i}")
+            if raw_vol < 0:
+                raise InvalidData(f"{self.name}: negative volume at row {i}")
+            vol = int(round(raw_vol))
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
                 raise InvalidData(f"{self.name}: OHLC invariant violated at {tm.date()}")
             bars.append(PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol))

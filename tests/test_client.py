@@ -79,3 +79,38 @@ def test_empty_result_falls_through(synth):
     assert h.source == "s2"
     assert s1.calls == 1
     assert h.attempts[0].ok is False and "empty" in h.attempts[0].reason
+
+
+def test_no_capable_source_raises_unsupported(synth):
+    from vnfin.exceptions import UnsupportedInterval
+
+    s = FakeSource("s1", synth.make_history("s1", 2), supported=(Interval.H1,))
+    client = FailoverPriceClient([s])
+    with pytest.raises(UnsupportedInterval):
+        client.get_daily("FPT", *WIDE)
+    assert s.calls == 0
+
+
+def test_partial_end_coverage_warning(synth):
+    # bars end 2024-01-04; requested end 2024-01-31 -> >7d -> soft warning
+    s = FakeSource("s1", synth.make_history("s1", 3))
+    client = FailoverPriceClient([s])
+    h = client.get_daily("FPT", date(2024, 1, 1), date(2024, 1, 31))
+    assert h.source == "s1"
+    assert any("partial_end_coverage" in w for w in h.warnings)
+
+
+def test_full_coverage_no_warning(synth):
+    s = FakeSource("s1", synth.make_history("s1", 3))
+    client = FailoverPriceClient([s])
+    h = client.get_daily("FPT", date(2024, 1, 1), date(2024, 1, 5))
+    assert h.warnings == ()
+
+
+def test_partial_start_coverage_warning_with_datetime_inputs(synth):
+    from datetime import datetime
+
+    s = FakeSource("s1", synth.make_history("s1", 3))  # bars 2024-01-02..04
+    client = FailoverPriceClient([s])
+    h = client.get_history("FPT", Interval.D1, datetime(2023, 11, 1), datetime(2024, 1, 4))
+    assert any("partial_start_coverage" in w for w in h.warnings)

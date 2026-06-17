@@ -38,9 +38,8 @@ def test_default_client_fetches_daily_live():
 
 
 @_skip
-def test_failover_skips_dead_source_live():
-    # A bogus source class can't be injected cleanly here; instead verify each
-    # default source independently returns a sane daily series.
+def test_each_default_source_returns_daily_live():
+    # Verify each default source independently returns a sane daily series.
     from vnfin.sources.registry import default_sources
 
     end = date.today()
