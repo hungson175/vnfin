@@ -240,7 +240,7 @@ curl -s -4 -m 25 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537
 
 ```bash
 # reproduce (uses curl -4 + browser UA):
-curl -s -4 -m 25 -H 'Authorization: Bearer ***REDACTED-JWT***' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' 'https://restv2.fireant.vn/symbols/FPT/historical-quotes?startDate=2026-01-01&endDate=2026-06-17&offset=0&limit=20'
+curl -s -4 -m 25 -H 'Authorization: Bearer <REDACTED-public-fireant-web-token; fetch at runtime, never commit>' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' 'https://restv2.fireant.vn/symbols/FPT/historical-quotes?startDate=2026-01-01&endDate=2026-06-17&offset=0&limit=20'
 ```
 
 ### Wichart (Wigroup) public charting API — chart.wichart.vn TradingView UDF datafeed
