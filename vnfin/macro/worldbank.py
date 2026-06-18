@@ -76,14 +76,29 @@ class WorldBankMacroSource:
         Raises a ``vnfin.exceptions.SourceError`` subclass on any failure so it
         composes safely with failover/orchestration like the price sources.
         """
-        country = self.normalize_country(country_iso3)
-        code = indicator_code.strip()
+        country = self.normalize_country(country_iso3 or "")
+        code = (indicator_code or "").strip()
+        # Reject empty identifiers client-side so we never build a malformed URL
+        # (and never leak a raw error); these surface as InvalidData like any other
+        # bad-input failure so callers can fail over safely.
+        if not country:
+            raise InvalidData(f"{self.NAME}: empty country code")
+        if not code:
+            raise InvalidData(f"{self.NAME}: empty indicator code")
         url = f"{self.BASE_URL}/country/{country}/indicator/{code}"
         params = {"format": "json", "per_page": self._per_page}
         if start_year is not None or end_year is not None:
             lo = start_year if start_year is not None else end_year
             hi = end_year if end_year is not None else start_year
-            params["date"] = f"{int(lo)}:{int(hi)}"
+            try:
+                lo_i, hi_i = int(lo), int(hi)
+            except (TypeError, ValueError) as exc:
+                raise InvalidData(f"{self.NAME}: non-integer year range") from exc
+            if lo_i > hi_i:
+                raise InvalidData(
+                    f"{self.NAME}: start_year {lo_i} is after end_year {hi_i}"
+                )
+            params["date"] = f"{lo_i}:{hi_i}"
 
         try:
             text = self._http_get(url, params, self._headers())

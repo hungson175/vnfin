@@ -247,7 +247,7 @@ curl -s -4 -m 25 -H 'Authorization: Bearer <REDACTED-public-fireant-web-token; f
 
 - **Host:** `chart.wichart.vn (the data API host the hinted api.wichart.vn root pointed me toward; the UDF datafeed lives on chart.wichart.vn/data, while api.wichart.vn is the same Wigroup backend reachable as wichart.vn/wichartapi -> api.wichart.vn/v2)`
 - **Auth:** none (no cookie, no token, no API key, no Referer/Origin required; bare curl works)
-- **Daily endpoint:** `https://chart.wichart.vn/data/history?symbol={TICKER}&resolution=1D&from={UNIX_FROM}&to={UNIX_TO}  (response is AES-encrypted: {"enc":"<base64 OpenSSL Salted__ AES-256-CBC>"} ; decrypt with CryptoJS-style passphrase "***REDACTED-KEY***" using EVP_BytesToKey/MD5, then it is plain TradingView UDF JSON with parallel arrays t/o/h/l/c/v)`
+- **Daily endpoint:** `https://chart.wichart.vn/data/history?symbol={TICKER}&resolution=1D&from={UNIX_FROM}&to={UNIX_TO}  (response is AES-encrypted: {"enc":"<base64 OpenSSL Salted__ AES-256-CBC>"} ; the CryptoJS-style decryption passphrase is <redacted> — anti-circumvention material intentionally NOT reproduced. Decrypting it bypasses an access-control mechanism; excluded from the default chain.)`
 - **Daily history depth:** Daily goes back to 2014-12-31 for both FPT and VCB (2856 bars to 2026-06-16) even when requesting from 2015-01-01; ~10+ years available. Prices are split/dividend-ADJUSTED (FPT 2014 close 7.37, VCB 2014 close 9.37). Timestamps are session-open epoch (UTC).
 - **Intraday:** Confirmed working: 60 (hourly), 15 (15-min), 1 (1-min). Config advertises supported_resolutions ["15","60","1D","1W","1M"]; symbol meta also lists has_intraday=true, intraday_multipliers ["1"], session 0900-1500. Intraday history depth is shallower: hourly (res=60) goes back only to ~2023-06-19 (3727 bars) even when requesting from 2015. Weekly (1W) and monthly (1M) also supported (encrypted like daily).
   - endpoint: `https://chart.wichart.vn/data/history?symbol={TICKER}&resolution={60|15|1}&from={UNIX_FROM}&to={UNIX_TO}  (IMPORTANT: intraday is returned as PLAINTEXT UDF JSON — NOT encrypted — so no decryption step is needed for intraday, only for 1D/1W/1M)`
@@ -259,7 +259,11 @@ curl -s -4 -m 25 -H 'Authorization: Bearer <REDACTED-public-fireant-web-token; f
 
 ```bash
 # reproduce (uses curl -4 + browser UA):
-curl -s -4 -m 30 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' "https://chart.wichart.vn/data/history?symbol=FPT&resolution=1D&from=$(date -d '2015-01-01' +%s)&to=$(date -d '2026-06-17' +%s)" | python3 -c 'import sys,json,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["enc"]))' | ***REDACTED-DECRYPT-CMD***
+# NOTE: the 1D/1W/1M response is AES-256-CBC encrypted. The decryption passphrase is
+# <redacted> and the decrypt step is intentionally omitted: decrypting bypasses an
+# access-control mechanism (anti-circumvention). Risk posture: requires response
+# decryption; excluded from the default source chain. Intraday (1/15/60) is plaintext.
+curl -s -4 -m 30 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' "https://chart.wichart.vn/data/history?symbol=FPT&resolution=1D&from=$(date -d '2015-01-01' +%s)&to=$(date -d '2026-06-17' +%s)"  # response is {"enc":"<base64 AES-256-CBC>"}; passphrase <redacted>
 ```
 
 ### Yahoo Finance chart API (.VN tickers for HOSE)

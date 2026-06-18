@@ -48,18 +48,20 @@ def test_all_price_sources_agree_on_daily_close():
     assert _rel_spread(list(closes.values())) < 0.02, f"price unit/scale mismatch across sources: {closes}"
 
 
-@pytest.mark.xfail(
-    reason="VN gold adapter mislabels mixed-weight/silver rows as VND/chi — see docs/units.md",
-    strict=False,
-)
 def test_vn_gold_dealers_same_magnitude():
-    """BTMC vs PNJ must be the same order of magnitude (both VND/chi) — catches a x1000 bug."""
+    """BTMC vs PNJ must agree on the canonical VN gold quote (both VND/lượng).
+
+    Catches the class of unit bugs this fix resolved: mixed gold/silver rows, total
+    price for a stated weight vs per-chỉ, and thousand-VND vs VND scaling. Both
+    dealers must land in the per-lượng band and within a loose relative spread.
+    """
     from vnfin.gold import BTMCGoldSource, PNJGoldSource
 
     mids = {}
     for src in (BTMCGoldSource(), PNJGoldSource()):
         try:
             quotes = src.get_quotes()
+            assert all(q.unit == "VND/luong" for q in quotes), f"{src.name} not VND/luong"
             picks = [q.mid for q in quotes if q.mid > 0]
             if picks:
                 picks.sort()
@@ -68,8 +70,9 @@ def test_vn_gold_dealers_same_magnitude():
             pass
     assert mids, "no VN gold dealer reachable"
     for name, m in mids.items():
-        # 1 chi of gold is ~millions of VND; this band only catches unit (x1000) errors
-        assert 1_000_000 < m < 100_000_000, f"{name} mid {m} outside plausible VND/chi band (unit bug?)"
+        # 1 lượng of gold is ~hundreds of millions of VND; this band catches unit errors
+        # (per-chỉ ~15M, thousand-VND-scale ~150k, or silver contamination).
+        assert 10_000_000 < m < 1_000_000_000, f"{name} mid {m} outside plausible VND/luong band (unit bug?)"
     if len(mids) >= 2:
         assert _rel_spread(list(mids.values())) < 0.5, f"VN gold dealers differ too much: {mids}"
 

@@ -103,12 +103,19 @@ class NavHistory:
 class FundHolding:
     """A single disclosed portfolio holding.
 
-    ``weight_pct`` is the holding's percent of net asset value (0-100).
-    ``price`` is the provider's last-disclosed price for the underlying (units as
-    reported by the provider, may be ``None``).
+    ``weight_pct`` is the holding's percent of net asset value (0-100) — the only
+    safely-normalized numeric field on this model.
+
+    ``price_raw`` is the provider's last-disclosed price for the underlying *exactly
+    as reported*, with **no normalization applied**. Its meaning is documented by
+    ``price_unit`` (e.g. ``"raw"`` — the literal provider scalar). We do NOT claim a
+    canonical money unit (the provider's price scale is unverified and ambiguous),
+    so callers must treat ``price_raw`` as opaque until a live-verified unit exists.
+    Both may be ``None`` when the provider omits the price.
     """
 
     stock_code: str
     weight_pct: float
     industry: Optional[str] = None
-    price: Optional[float] = None
+    price_raw: Optional[float] = None
+    price_unit: Optional[str] = None

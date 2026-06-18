@@ -1,8 +1,12 @@
 """TDD for vnfin.fundamentals — VNDirect api-finfo financial statements + ratios.
 
-All fixtures are SYNTHETIC: hand-crafted JSON matching the real api-finfo shapes
-documented in docs/research/2026-06-18-vn-fundamental-data-sources.md. No real
-provider rows are committed. Tests inject http_get so no network is touched.
+All fixtures are SYNTHETIC and OBVIOUSLY FAKE: hand-crafted JSON that preserves
+the real api-finfo *shapes* (long/tall itemCode rows, bank vs corporate
+modelType split, validation cases) documented in
+docs/research/2026-06-18-vn-fundamental-data-sources.md — but with made-up
+symbols ("TESTCO", "ZZBANK") and FABRICATED numbers. No real provider rows or
+research-doc proof values are committed here. Tests inject http_get so no
+network is touched.
 
 Real shapes (synthesized below):
   /v4/financial_statements -> {"data":[{code,itemCode(float),reportType,
@@ -10,7 +14,7 @@ Real shapes (synthesized below):
     LONG/tall: one row per (line-item, period). Corporate IS/BS/CF = modelType
     1/2/3; banks = 101/102/103. Units = RAW VND.
   /v4/ratios -> {"data":[{code,group,reportDate,itemCode(str),ratioCode,
-    itemName,value}], ...}
+    itemName,value}], ...}  — period-agnostic; value is dimensionless/per-share.
 """
 from __future__ import annotations
 
@@ -30,7 +34,9 @@ from vnfin.fundamentals import (
 
 
 # --------------------------------------------------------------------------- #
-# Synthetic fixtures (shapes match the research doc; values are made up)
+# Synthetic fixtures — FAKE symbols + FABRICATED numbers, real provider shape.
+# Values are deliberately round/obviously-invented so they cannot be mistaken
+# for real provider rows or research-doc proof snippets.
 # --------------------------------------------------------------------------- #
 def _stmt_row(code, item_code, value, fiscal_date, report_type, model_type):
     return {
@@ -40,8 +46,8 @@ def _stmt_row(code, item_code, value, fiscal_date, report_type, model_type):
         "modelType": float(model_type),
         "numericValue": value,
         "fiscalDate": fiscal_date,
-        "createdDate": "2026-01-27 00:00:00",
-        "modifiedDate": "2026-03-20 00:00:00",
+        "createdDate": "2000-01-01 00:00:00",
+        "modifiedDate": "2000-01-01 00:00:00",
     }
 
 
@@ -61,24 +67,25 @@ def corp_income_two_periods():
     """Corporate income statement (modelType 1), two fiscal years, tall rows.
 
     itemCode 11000 = net revenue, 20000 = profit before tax (synthetic mapping
-    that overlaps the real itemCode->name map we ship).
+    that overlaps the headline itemCode->name map we ship). Values are obviously
+    fabricated round raw-VND numbers, NOT real provider figures.
     """
     rows = [
-        _stmt_row("FPT", 11000, 70_112_825_100_710.0, "2025-12-31", "ANNUAL", 1),
-        _stmt_row("FPT", 20000, 13_043_632_834_000.0, "2025-12-31", "ANNUAL", 1),
-        _stmt_row("FPT", 11000, 62_848_794_351_367.0, "2024-12-31", "ANNUAL", 1),
-        _stmt_row("FPT", 20000, 11_000_000_000_000.0, "2024-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 10_000_000_000_000.0, "2024-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 20000, 2_000_000_000_000.0, "2024-12-31", "ANNUAL", 1),
     ]
-    return _stmt_envelope(rows, total=2977)
+    return _stmt_envelope(rows, total=400)
 
 
 def bank_income_one_period():
-    """Bank income statement (modelType 102) — single period."""
+    """Bank income statement (modelType 102) — single period, fabricated values."""
     rows = [
-        _stmt_row("VCB", 421601, 5_269_108_000_000.0, "2025-12-31", "ANNUAL", 102),
-        _stmt_row("VCB", 22070, 8_821_697_000_000.0, "2025-12-31", "ANNUAL", 102),
+        _stmt_row("ZZBANK", 421601, 5_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
+        _stmt_row("ZZBANK", 22070, 8_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
     ]
-    return _stmt_envelope(rows, total=536)
+    return _stmt_envelope(rows, total=100)
 
 
 def _ratio_row(code, ratio_code, value, report_date, item_name="x"):
@@ -86,7 +93,7 @@ def _ratio_row(code, ratio_code, value, report_date, item_name="x"):
         "code": code,
         "group": "STOCK",
         "reportDate": report_date,
-        "itemCode": "51006",
+        "itemCode": "99999",
         "ratioCode": ratio_code,
         "itemName": item_name,
         "value": value,
@@ -95,11 +102,11 @@ def _ratio_row(code, ratio_code, value, report_date, item_name="x"):
 
 def ratios_two_dates():
     rows = [
-        _ratio_row("FPT", "PRICE_TO_EARNINGS", 12.86, "2026-03-31", "Tỷ lệ PE"),
-        _ratio_row("FPT", "PRICE_TO_BOOK", 3.20, "2026-03-31", "Tỷ lệ PB"),
-        _ratio_row("FPT", "PRICE_TO_EARNINGS", 11.01, "2025-12-31", "Tỷ lệ PE"),
+        _ratio_row("TESTCO", "PRICE_TO_EARNINGS", 10.00, "2026-03-31", "Tỷ lệ PE"),
+        _ratio_row("TESTCO", "PRICE_TO_BOOK", 2.00, "2026-03-31", "Tỷ lệ PB"),
+        _ratio_row("TESTCO", "PRICE_TO_EARNINGS", 9.00, "2025-12-31", "Tỷ lệ PE"),
     ]
-    return _stmt_envelope(rows, total=2102)
+    return _stmt_envelope(rows, total=300)
 
 
 def _src(text):
@@ -127,7 +134,9 @@ def test_statement_type_enum_values():
 
 
 def test_period_enum_values():
-    assert {p.value for p in Period} == {"QUARTER", "ANNUAL"}
+    assert {p.value for p in Period} >= {"QUARTER", "ANNUAL"}
+    # period-agnostic sentinel exists for ratios (see ratio tests below)
+    assert "UNKNOWN" in {p.value for p in Period}
 
 
 # --------------------------------------------------------------------------- #
@@ -135,14 +144,14 @@ def test_period_enum_values():
 # --------------------------------------------------------------------------- #
 def test_income_parses_into_reports_per_period():
     reports = _src(corp_income_two_periods()).get_financials(
-        "fpt", StatementType.INCOME, Period.ANNUAL
+        "testco", StatementType.INCOME, Period.ANNUAL
     )
     assert isinstance(reports, tuple)
     assert len(reports) == 2  # two fiscal years -> two reports
     assert all(isinstance(r, FinancialReport) for r in reports)
 
     newest = reports[0]
-    assert newest.symbol == "FPT"  # normalized uppercase
+    assert newest.symbol == "TESTCO"  # normalized uppercase
     assert newest.statement_type is StatementType.INCOME
     assert newest.period is Period.ANNUAL
     assert newest.currency == "VND"
@@ -152,7 +161,7 @@ def test_income_parses_into_reports_per_period():
 
 def test_reports_sorted_newest_first():
     reports = _src(corp_income_two_periods()).get_financials(
-        "FPT", StatementType.INCOME, Period.ANNUAL
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
     )
     dates = [r.fiscal_date.isoformat() for r in reports]
     assert dates == ["2025-12-31", "2024-12-31"]
@@ -160,7 +169,7 @@ def test_reports_sorted_newest_first():
 
 def test_line_items_grouped_under_their_period():
     reports = _src(corp_income_two_periods()).get_financials(
-        "FPT", StatementType.INCOME, Period.ANNUAL
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
     )
     newest = reports[0]
     # two line items per period in the fixture
@@ -172,19 +181,28 @@ def test_line_items_grouped_under_their_period():
 
 def test_units_are_raw_vnd_no_scaling():
     reports = _src(corp_income_two_periods()).get_financials(
-        "FPT", StatementType.INCOME, Period.ANNUAL
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
     )
     val = reports[0].get("11000")
-    assert val == pytest.approx(70_112_825_100_710.0)  # raw VND, unscaled
+    assert val == pytest.approx(12_000_000_000_000.0)  # raw VND, unscaled
+
+
+def test_statement_line_items_carry_vnd_value_unit():
+    """Each statement line states VND explicitly (per-line unit, not just report)."""
+    reports = _src(corp_income_two_periods()).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    for li in reports[0].items:
+        assert li.value_unit == "VND"
 
 
 def test_get_accessor_and_name_map():
     reports = _src(corp_income_two_periods()).get_financials(
-        "FPT", StatementType.INCOME, Period.ANNUAL
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
     )
     r = reports[0]
     # value accessor by itemCode
-    assert r.get("11000") == pytest.approx(70_112_825_100_710.0)
+    assert r.get("11000") == pytest.approx(12_000_000_000_000.0)
     assert r.get("does-not-exist") is None
     # the LineItem exposes a best-effort human name from the client-side map
     li = next(li for li in r.items if li.item_code == "11000")
@@ -196,16 +214,16 @@ def test_get_accessor_and_name_map():
 # --------------------------------------------------------------------------- #
 def test_bank_uses_modelType_10x_in_params():
     src, captured = _capturing_src(bank_income_one_period())
-    src.get_financials("VCB", StatementType.INCOME, Period.ANNUAL, is_bank=True)
+    src.get_financials("ZZBANK", StatementType.INCOME, Period.ANNUAL, is_bank=True)
     q = captured["params"]["q"]
     assert "modelType:102" in q
-    assert "code:VCB" in q
+    assert "code:ZZBANK" in q
     assert "reportType:ANNUAL" in q
 
 
 def test_corporate_uses_modelType_single_digit_in_params():
     src, captured = _capturing_src(corp_income_two_periods())
-    src.get_financials("FPT", StatementType.BALANCE, Period.QUARTER)
+    src.get_financials("TESTCO", StatementType.BALANCE, Period.QUARTER)
     q = captured["params"]["q"]
     assert "modelType:2" in q  # balance sheet corporate
     assert "reportType:QUARTER" in q
@@ -213,19 +231,19 @@ def test_corporate_uses_modelType_single_digit_in_params():
 
 def test_cashflow_corporate_modelType_3():
     src, captured = _capturing_src(corp_income_two_periods())
-    src.get_financials("FPT", StatementType.CASHFLOW, Period.ANNUAL)
+    src.get_financials("TESTCO", StatementType.CASHFLOW, Period.ANNUAL)
     assert "modelType:3" in captured["params"]["q"]
 
 
 def test_cashflow_bank_modelType_103():
     src, captured = _capturing_src(bank_income_one_period())
-    src.get_financials("VCB", StatementType.CASHFLOW, Period.ANNUAL, is_bank=True)
+    src.get_financials("ZZBANK", StatementType.CASHFLOW, Period.ANNUAL, is_bank=True)
     assert "modelType:103" in captured["params"]["q"]
 
 
 def test_bank_reports_carry_bank_model_metadata():
     reports = _src(bank_income_one_period()).get_financials(
-        "VCB", StatementType.INCOME, Period.ANNUAL, is_bank=True
+        "ZZBANK", StatementType.INCOME, Period.ANNUAL, is_bank=True
     )
     assert reports[0].is_bank is True
     assert reports[0].model_type == 102
@@ -233,28 +251,98 @@ def test_bank_reports_carry_bank_model_metadata():
 
 # --------------------------------------------------------------------------- #
 # Ratios path (different shape: ratioCode/reportDate/value)
+# Ratios are PERIOD-AGNOSTIC and NOT monetary: the report must not claim a
+# requested Period or report-wide VND currency.
 # --------------------------------------------------------------------------- #
 def test_ratios_parse_per_report_date():
     reports = _src(ratios_two_dates()).get_financials(
-        "FPT", StatementType.RATIOS, Period.QUARTER
+        "TESTCO", StatementType.RATIOS, Period.QUARTER
     )
     assert len(reports) == 2  # two distinct reportDates
     newest = reports[0]
     assert newest.statement_type is StatementType.RATIOS
-    assert newest.get("PRICE_TO_EARNINGS") == pytest.approx(12.86)
-    assert newest.get("PRICE_TO_BOOK") == pytest.approx(3.20)
+    assert newest.get("PRICE_TO_EARNINGS") == pytest.approx(10.00)
+    assert newest.get("PRICE_TO_BOOK") == pytest.approx(2.00)
+
+
+def test_ratios_report_is_period_agnostic_not_requested_period():
+    """The ratios endpoint has no period filter, so the report must NOT pretend
+    to honour the requested Period — it reports Period.UNKNOWN regardless."""
+    for requested in (Period.QUARTER, Period.ANNUAL):
+        reports = _src(ratios_two_dates()).get_financials(
+            "TESTCO", StatementType.RATIOS, requested
+        )
+        assert reports[0].period is Period.UNKNOWN
+
+
+def test_ratios_report_is_not_monetary_vnd():
+    """Ratios are dimensionless/per-share — the report must not claim currency VND."""
+    reports = _src(ratios_two_dates()).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.QUARTER
+    )
+    assert reports[0].currency is None
+
+
+def test_ratio_line_items_have_ratio_value_unit():
+    reports = _src(ratios_two_dates()).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.QUARTER
+    )
+    for li in reports[0].items:
+        assert li.value_unit == "ratio"
 
 
 def test_ratios_hit_ratios_endpoint_not_statements():
     src, captured = _capturing_src(ratios_two_dates())
-    src.get_financials("FPT", StatementType.RATIOS, Period.QUARTER)
+    src.get_financials("TESTCO", StatementType.RATIOS, Period.QUARTER)
     assert captured["url"].endswith("/v4/ratios")
 
 
 def test_statements_hit_financial_statements_endpoint():
     src, captured = _capturing_src(corp_income_two_periods())
-    src.get_financials("FPT", StatementType.INCOME, Period.ANNUAL)
+    src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
     assert captured["url"].endswith("/v4/financial_statements")
+
+
+# --------------------------------------------------------------------------- #
+# Input validation (user-supplied args — not source errors)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("bad_symbol", ["", "   ", "\t"])
+def test_empty_symbol_raises_vnfin_error(bad_symbol):
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_periods()).get_financials(
+            bad_symbol, StatementType.INCOME, Period.ANNUAL
+        )
+
+
+@pytest.mark.parametrize("bad_limit", [0, -1, -100])
+def test_non_positive_limit_raises_vnfin_error(bad_limit):
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_periods()).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, limit=bad_limit
+        )
+
+
+def test_empty_symbol_validated_before_network():
+    """Validation must reject bad input even if the source would crash."""
+    def boom(url, params, headers):  # pragma: no cover - must not be reached
+        raise AssertionError("network must not be touched on invalid input")
+
+    src = VNDirectFundamentalSource(http_get=boom)
+    with pytest.raises(VnfinError):
+        src.get_financials("", StatementType.INCOME, Period.ANNUAL)
+
+
+def test_get_financials_function_validates_empty_symbol():
+    with pytest.raises(VnfinError):
+        get_financials("", StatementType.INCOME, Period.ANNUAL, source=_src(corp_income_two_periods()))
+
+
+def test_get_financials_function_validates_limit():
+    with pytest.raises(VnfinError):
+        get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, limit=0,
+            source=_src(corp_income_two_periods()),
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -263,21 +351,21 @@ def test_statements_hit_financial_statements_endpoint():
 def test_empty_data_array_raises_empty():
     with pytest.raises(EmptyData):
         _src(_stmt_envelope([], total=0)).get_financials(
-            "FPT", StatementType.INCOME, Period.ANNUAL
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
         )
 
 
 def test_missing_data_key_raises_empty():
     with pytest.raises(EmptyData):
         _src(json.dumps({"currentPage": 1})).get_financials(
-            "FPT", StatementType.INCOME, Period.ANNUAL
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
         )
 
 
 def test_non_json_raises_invalid():
     with pytest.raises(InvalidData):
         _src("<html>503</html>").get_financials(
-            "FPT", StatementType.INCOME, Period.ANNUAL
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
         )
 
 
@@ -285,7 +373,7 @@ def test_malformed_numericValue_raises_invalid():
     bad = _stmt_envelope(
         [
             {
-                "code": "FPT",
+                "code": "TESTCO",
                 "itemCode": 11000.0,
                 "reportType": "ANNUAL",
                 "modelType": 1.0,
@@ -295,24 +383,24 @@ def test_malformed_numericValue_raises_invalid():
         ]
     )
     with pytest.raises(InvalidData):
-        _src(bad).get_financials("FPT", StatementType.INCOME, Period.ANNUAL)
+        _src(bad).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
 def test_nan_numericValue_raises_invalid():
     payload = (
-        '{"data":[{"code":"FPT","itemCode":11000.0,"reportType":"ANNUAL",'
+        '{"data":[{"code":"TESTCO","itemCode":11000.0,"reportType":"ANNUAL",'
         '"modelType":1.0,"numericValue":NaN,"fiscalDate":"2025-12-31"}],'
         '"totalElements":1}'
     )
     with pytest.raises(InvalidData):
-        _src(payload).get_financials("FPT", StatementType.INCOME, Period.ANNUAL)
+        _src(payload).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
 def test_missing_fiscalDate_raises_invalid():
     bad = _stmt_envelope(
         [
             {
-                "code": "FPT",
+                "code": "TESTCO",
                 "itemCode": 11000.0,
                 "reportType": "ANNUAL",
                 "modelType": 1.0,
@@ -321,15 +409,29 @@ def test_missing_fiscalDate_raises_invalid():
         ]
     )
     with pytest.raises(InvalidData):
-        _src(bad).get_financials("FPT", StatementType.INCOME, Period.ANNUAL)
+        _src(bad).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
 def test_garbage_fiscalDate_raises_invalid():
     bad = _stmt_envelope(
-        [_stmt_row("FPT", 11000, 1.0, "31/12/2025", "ANNUAL", 1)]
+        [_stmt_row("TESTCO", 11000, 1.0, "31/12/2025", "ANNUAL", 1)]
     )
     with pytest.raises(InvalidData):
-        _src(bad).get_financials("FPT", StatementType.INCOME, Period.ANNUAL)
+        _src(bad).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+def test_data_not_a_list_raises_invalid():
+    bad = json.dumps({"data": {"unexpected": "object"}, "totalElements": 1})
+    with pytest.raises(InvalidData):
+        _src(bad).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+def test_ratio_row_missing_ratioCode_raises_invalid():
+    bad = _stmt_envelope(
+        [{"code": "TESTCO", "reportDate": "2026-03-31", "value": 1.0}]
+    )
+    with pytest.raises(InvalidData):
+        _src(bad).get_financials("TESTCO", StatementType.RATIOS, Period.QUARTER)
 
 
 def test_transport_error_wrapped_as_source_unavailable():
@@ -338,7 +440,7 @@ def test_transport_error_wrapped_as_source_unavailable():
 
     src = VNDirectFundamentalSource(http_get=boom)
     with pytest.raises(SourceUnavailable):
-        src.get_financials("FPT", StatementType.INCOME, Period.ANNUAL)
+        src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
 # --------------------------------------------------------------------------- #
@@ -346,21 +448,21 @@ def test_transport_error_wrapped_as_source_unavailable():
 # --------------------------------------------------------------------------- #
 def test_get_financials_function_uses_injected_source():
     src = _src(corp_income_two_periods())
-    reports = get_financials("FPT", StatementType.INCOME, Period.ANNUAL, source=src)
+    reports = get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL, source=src)
     assert len(reports) == 2
     assert reports[0].statement_type is StatementType.INCOME
 
 
 def test_get_financials_accepts_string_args():
     src = _src(corp_income_two_periods())
-    reports = get_financials("FPT", "income", "annual", source=src)
+    reports = get_financials("TESTCO", "income", "annual", source=src)
     assert reports[0].statement_type is StatementType.INCOME
     assert reports[0].period is Period.ANNUAL
 
 
 def test_invalid_statement_string_raises_vnfin_error():
     with pytest.raises(VnfinError):
-        get_financials("FPT", "nonsense", "annual", source=_src(corp_income_two_periods()))
+        get_financials("TESTCO", "nonsense", "annual", source=_src(corp_income_two_periods()))
 
 
 # --------------------------------------------------------------------------- #
@@ -368,9 +470,19 @@ def test_invalid_statement_string_raises_vnfin_error():
 # --------------------------------------------------------------------------- #
 def test_report_to_dataframe():
     reports = _src(corp_income_two_periods()).get_financials(
-        "FPT", StatementType.INCOME, Period.ANNUAL
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
     )
     df = reports[0].to_dataframe()
     assert list(df.columns) >= ["item_code", "name", "value"]
-    assert df.attrs["symbol"] == "FPT"
+    assert "value_unit" in df.columns
+    assert df.attrs["symbol"] == "TESTCO"
     assert df.attrs["currency"] == "VND"
+
+
+def test_ratio_report_to_dataframe_has_no_vnd_currency():
+    reports = _src(ratios_two_dates()).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.QUARTER
+    )
+    df = reports[0].to_dataframe()
+    assert df.attrs["currency"] is None
+    assert df.attrs["period"] == "UNKNOWN"

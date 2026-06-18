@@ -1,8 +1,11 @@
 """Tests for vnfin.macro World Bank adapter — SYNTHETIC fixtures only.
 
-Shapes are hand-crafted to match the real World Bank Indicators API v2 envelope
-(verified live 2026-06-18) but contain NO real provider rows beyond what is needed
-to exercise parsing. The synthetic numbers below are illustrative, not authoritative.
+Shapes are hand-crafted to match the World Bank Indicators API v2 envelope but
+contain NO real provider rows. Per the synthetic-fixture policy (P0.4) the country
+code is OBVIOUSLY FAKE (``ZZZ`` / ``FAKELAND``), the indicator code/name are
+fabricated (``FK.TEST.IND.ZG``), and every observation value is invented — no real
+country, indicator code, name, inflation %, or GDP figure from the research docs is
+reused. Only the JSON envelope SHAPE and validation cases mirror the real provider.
 
 World Bank response shapes covered:
 - success:        [meta, [obs, ...]]
@@ -20,17 +23,19 @@ from vnfin.macro import IndicatorSeries, WorldBankMacroSource
 
 
 # ---------------------------------------------------------------------------
-# Synthetic fixtures (match real WB envelope shape, fabricated values)
+# Synthetic fixtures (match WB envelope shape; fabricated codes + values)
 # ---------------------------------------------------------------------------
 
-INDICATOR = "FP.CPI.TOTL.ZG"
-INDICATOR_NAME = "Inflation, consumer prices (annual %)"
+COUNTRY = "ZZZ"  # obviously-fake ISO3 (not a real World Bank member)
+COUNTRY_NAME = "Fakeland"
+INDICATOR = "FK.TEST.IND.ZG"  # fabricated WDI-style code
+INDICATOR_NAME = "Fake test indicator (annual %)"
 
 
 def _obs(country_id, iso3, year, value, *, name=INDICATOR_NAME, code=INDICATOR, unit=""):
     return {
         "indicator": {"id": code, "value": name},
-        "country": {"id": country_id, "value": "United States"},
+        "country": {"id": country_id, "value": COUNTRY_NAME},
         "countryiso3code": iso3,
         "date": str(year),
         "value": value,
@@ -54,10 +59,13 @@ def _meta(total, **kw):
 
 
 def wb_success(rows=None):
-    """rows: list of (year, value). Newest-first like the real API."""
+    """rows: list of (year, value). Newest-first like the real API.
+
+    Values are fabricated (no real inflation/GDP figures).
+    """
     if rows is None:
-        rows = [(2023, 4.1), (2022, 8.0), (2021, 4.7)]
-    obs = [_obs("US", "USA", y, v) for (y, v) in rows]
+        rows = [(2023, 1.1), (2022, 2.2), (2021, 3.3)]
+    obs = [_obs("ZZ", COUNTRY, y, v) for (y, v) in rows]
     return json.dumps([_meta(len(obs)), obs])
 
 
@@ -98,9 +106,9 @@ def _src(text):
 
 def test_parses_success_into_indicator_series():
     s = _src(wb_success())
-    res = s.get_indicator("USA", INDICATOR, 2021, 2023)
+    res = s.get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     assert isinstance(res, IndicatorSeries)
-    assert res.country == "USA"
+    assert res.country == COUNTRY
     assert res.indicator_code == INDICATOR
     assert res.indicator_name == INDICATOR_NAME
     assert res.source == "worldbank"
@@ -110,7 +118,7 @@ def test_parses_success_into_indicator_series():
 def test_points_sorted_ascending_by_date():
     # API returns newest-first; result must be chronological (oldest first).
     s = _src(wb_success())
-    res = s.get_indicator("USA", INDICATOR, 2021, 2023)
+    res = s.get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     years = [d.year for (d, _v) in res.points]
     assert years == [2021, 2022, 2023]
 
@@ -118,17 +126,17 @@ def test_points_sorted_ascending_by_date():
 def test_point_dates_are_plain_date_jan1():
     from datetime import date
 
-    res = _src(wb_success()).get_indicator("USA", INDICATOR, 2021, 2023)
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     d, v = res.points[0]
     assert isinstance(d, date)
     assert (d.year, d.month, d.day) == (2021, 1, 1)
-    assert v == pytest.approx(4.7)
+    assert v == pytest.approx(3.3)
 
 
 def test_carries_source_and_fetched_at_utc():
     from datetime import timezone
 
-    res = _src(wb_success()).get_indicator("USA", INDICATOR, 2021, 2023)
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     assert res.source == "worldbank"
     assert res.fetched_at_utc is not None
     assert res.fetched_at_utc.tzinfo == timezone.utc
@@ -136,7 +144,7 @@ def test_carries_source_and_fetched_at_utc():
 
 def test_currency_is_usd_default():
     # World Bank world money series are US$; the result states currency explicitly.
-    res = _src(wb_success()).get_indicator("USA", INDICATOR, 2021, 2023)
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     assert res.currency == "USD"
 
 
@@ -145,19 +153,20 @@ def test_currency_is_usd_default():
 # ---------------------------------------------------------------------------
 
 def test_unit_captured_from_obs():
+    # Fabricated money-like indicator (code/name/value all invented).
     rows_text = json.dumps([
         _meta(1),
-        [_obs("US", "USA", 2023, 27_000_000.0, name="GDP (current US$)",
-              code="NY.GDP.MKTP.CD", unit="")],
+        [_obs("ZZ", COUNTRY, 2023, 123456.0, name="Fake money indicator (current US$)",
+              code="FK.MONEY.CD", unit="")],
     ])
-    res = _src(rows_text).get_indicator("USA", "NY.GDP.MKTP.CD", 2023, 2023)
-    assert res.indicator_name == "GDP (current US$)"
-    assert res.indicator_code == "NY.GDP.MKTP.CD"
+    res = _src(rows_text).get_indicator(COUNTRY, "FK.MONEY.CD", 2023, 2023)
+    assert res.indicator_name == "Fake money indicator (current US$)"
+    assert res.indicator_code == "FK.MONEY.CD"
 
 
 def test_country_iso3_normalized_uppercase():
-    res = _src(wb_success()).get_indicator("usa", INDICATOR, 2021, 2023)
-    assert res.country == "USA"
+    res = _src(wb_success()).get_indicator("zzz", INDICATOR, 2021, 2023)
+    assert res.country == "ZZZ"
 
 
 # ---------------------------------------------------------------------------
@@ -165,8 +174,8 @@ def test_country_iso3_normalized_uppercase():
 # ---------------------------------------------------------------------------
 
 def test_null_obs_value_skipped_not_invalid():
-    rows = [(2024, None), (2023, 4.1), (2022, 8.0)]
-    res = _src(wb_success(rows)).get_indicator("USA", INDICATOR, 2022, 2024)
+    rows = [(2024, None), (2023, 1.1), (2022, 2.2)]
+    res = _src(wb_success(rows)).get_indicator(COUNTRY, INDICATOR, 2022, 2024)
     years = [d.year for (d, _v) in res.points]
     assert 2024 not in years          # null year dropped
     assert years == [2022, 2023]
@@ -176,7 +185,7 @@ def test_null_obs_value_skipped_not_invalid():
 def test_all_null_values_raise_empty():
     rows = [(2024, None), (2023, None)]
     with pytest.raises(EmptyData):
-        _src(wb_success(rows)).get_indicator("USA", INDICATOR, 2023, 2024)
+        _src(wb_success(rows)).get_indicator(COUNTRY, INDICATOR, 2023, 2024)
 
 
 # ---------------------------------------------------------------------------
@@ -185,12 +194,12 @@ def test_all_null_values_raise_empty():
 
 def test_no_data_second_element_null_raises_empty():
     with pytest.raises(EmptyData):
-        _src(wb_no_data()).get_indicator("USA", INDICATOR, 1800, 1800)
+        _src(wb_no_data()).get_indicator(COUNTRY, INDICATOR, 1800, 1800)
 
 
 def test_empty_page_raises_empty():
     with pytest.raises(EmptyData):
-        _src(wb_empty_page()).get_indicator("USA", INDICATOR, 1800, 1800)
+        _src(wb_empty_page()).get_indicator(COUNTRY, INDICATOR, 1800, 1800)
 
 
 # ---------------------------------------------------------------------------
@@ -208,43 +217,43 @@ def test_message_error_envelope_raises_invalid():
 
 def test_non_json_raises_invalid():
     with pytest.raises(InvalidData):
-        _src("<html>503 Service Unavailable</html>").get_indicator("USA", INDICATOR, 2020, 2023)
+        _src("<html>503 Service Unavailable</html>").get_indicator(COUNTRY, INDICATOR, 2020, 2023)
 
 
 def test_non_array_top_level_raises_invalid():
     with pytest.raises(InvalidData):
-        _src(json.dumps({"unexpected": "object"})).get_indicator("USA", INDICATOR, 2020, 2023)
+        _src(json.dumps({"unexpected": "object"})).get_indicator(COUNTRY, INDICATOR, 2020, 2023)
 
 
 def test_malformed_scalar_value_raises_invalid():
     # value is a garbage non-numeric string -> InvalidData (failover-safe)
-    rows_text = json.dumps([_meta(1), [_obs("US", "USA", 2023, "not-a-number")]])
+    rows_text = json.dumps([_meta(1), [_obs("ZZ", COUNTRY, 2023, "not-a-number")]])
     with pytest.raises(InvalidData):
-        _src(rows_text).get_indicator("USA", INDICATOR, 2023, 2023)
+        _src(rows_text).get_indicator(COUNTRY, INDICATOR, 2023, 2023)
 
 
 def test_nan_value_raises_invalid():
     # bare NaN -> float('nan') -> non-finite guard
     payload = (
         '[{"page":1,"pages":1,"per_page":50,"total":1,"sourceid":"2","lastupdated":"x"},'
-        '[{"indicator":{"id":"FP.CPI.TOTL.ZG","value":"Inflation"},'
-        '"country":{"id":"US","value":"United States"},"countryiso3code":"USA",'
+        '[{"indicator":{"id":"FK.TEST.IND.ZG","value":"Fake test indicator"},'
+        '"country":{"id":"ZZ","value":"Fakeland"},"countryiso3code":"ZZZ",'
         '"date":"2023","value":NaN,"unit":"","obs_status":"","decimal":1}]]'
     )
     with pytest.raises(InvalidData):
-        _src(payload).get_indicator("USA", INDICATOR, 2023, 2023)
+        _src(payload).get_indicator(COUNTRY, INDICATOR, 2023, 2023)
 
 
 def test_garbage_date_raises_invalid():
     rows_text = json.dumps([
         _meta(1),
         [{"indicator": {"id": INDICATOR, "value": INDICATOR_NAME},
-          "country": {"id": "US", "value": "United States"},
-          "countryiso3code": "USA", "date": "not-a-year", "value": 4.1,
+          "country": {"id": "ZZ", "value": COUNTRY_NAME},
+          "countryiso3code": COUNTRY, "date": "not-a-year", "value": 1.1,
           "unit": "", "obs_status": "", "decimal": 1}],
     ])
     with pytest.raises(InvalidData):
-        _src(rows_text).get_indicator("USA", INDICATOR, 2020, 2023)
+        _src(rows_text).get_indicator(COUNTRY, INDICATOR, 2020, 2023)
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +263,7 @@ def test_garbage_date_raises_invalid():
 def test_transport_error_wrapped_as_unavailable():
     s = WorldBankMacroSource(http_get=_raising(ConnectionError("boom")))
     with pytest.raises(SourceUnavailable):
-        s.get_indicator("USA", INDICATOR, 2020, 2023)
+        s.get_indicator(COUNTRY, INDICATOR, 2020, 2023)
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +272,7 @@ def test_transport_error_wrapped_as_unavailable():
 
 def test_utf8_bom_prefix_tolerated():
     s = _src("﻿" + wb_success())
-    res = s.get_indicator("USA", INDICATOR, 2021, 2023)
+    res = s.get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     assert len(res.points) == 3
 
 
@@ -280,8 +289,8 @@ def test_request_url_and_params_shape():
         captured["headers"] = headers
         return wb_success()
 
-    WorldBankMacroSource(http_get=_g).get_indicator("usa", INDICATOR, 2021, 2023)
-    assert captured["url"] == "https://api.worldbank.org/v2/country/USA/indicator/FP.CPI.TOTL.ZG"
+    WorldBankMacroSource(http_get=_g).get_indicator("zzz", INDICATOR, 2021, 2023)
+    assert captured["url"] == f"https://api.worldbank.org/v2/country/ZZZ/indicator/{INDICATOR}"
     assert captured["params"]["format"] == "json"
     assert captured["params"]["date"] == "2021:2023"
     assert int(captured["params"]["per_page"]) >= 100
@@ -295,8 +304,52 @@ def test_no_year_range_omits_date_param():
         captured["params"] = params
         return wb_success()
 
-    WorldBankMacroSource(http_get=_g).get_indicator("USA", INDICATOR)
+    WorldBankMacroSource(http_get=_g).get_indicator(COUNTRY, INDICATOR)
     assert "date" not in captured["params"]
+
+
+# ---------------------------------------------------------------------------
+# Input validation (failover-safe: bad caller input -> InvalidData)
+# ---------------------------------------------------------------------------
+
+def test_empty_country_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator("", INDICATOR, 2021, 2023)
+
+
+def test_whitespace_country_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator("   ", INDICATOR, 2021, 2023)
+
+
+def test_empty_indicator_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator(COUNTRY, "", 2021, 2023)
+
+
+def test_whitespace_indicator_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator(COUNTRY, "   ", 2021, 2023)
+
+
+def test_reversed_year_range_raises_invalid():
+    # start_year after end_year is a caller error, not a silent swap.
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2023, 2021)
+
+
+def test_validation_runs_before_network():
+    # Bad input must short-circuit before any http_get call (no leaked request).
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return wb_success()
+
+    src = WorldBankMacroSource(http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_indicator("", INDICATOR, 2021, 2023)
+    assert called["n"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -304,13 +357,13 @@ def test_no_year_range_omits_date_param():
 # ---------------------------------------------------------------------------
 
 def test_indicator_series_len_and_iter():
-    res = _src(wb_success()).get_indicator("USA", INDICATOR, 2021, 2023)
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     assert len(res) == 3
     assert len(list(res)) == 3
 
 
 def test_indicator_series_latest_returns_most_recent_point():
-    res = _src(wb_success()).get_indicator("USA", INDICATOR, 2021, 2023)
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     d, v = res.latest()
     assert d.year == 2023
 
@@ -318,16 +371,16 @@ def test_indicator_series_latest_returns_most_recent_point():
 def test_indicator_series_is_frozen():
     import dataclasses
 
-    res = _src(wb_success()).get_indicator("USA", INDICATOR, 2021, 2023)
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     with pytest.raises(dataclasses.FrozenInstanceError):
-        res.country = "VNM"  # type: ignore[misc]
+        res.country = "FAK"  # type: ignore[misc]
 
 
 def test_to_dataframe_has_value_column_and_attrs():
-    res = _src(wb_success()).get_indicator("USA", INDICATOR, 2021, 2023)
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     df = res.to_dataframe()
     assert list(df.columns) == ["value"]
-    assert df.attrs["country"] == "USA"
+    assert df.attrs["country"] == COUNTRY
     assert df.attrs["indicator_code"] == INDICATOR
     assert df.attrs["source"] == "worldbank"
     assert len(df) == 3

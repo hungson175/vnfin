@@ -1,7 +1,9 @@
 """Tests for vnfin.indices — index VALUE history + CONSTITUENTS.
 
-Synthetic fixtures only (hand-crafted JSON matching the real provider shapes from
-docs/research/2026-06-18-indices.md). No real provider rows are committed.
+Synthetic fixtures only: hand-crafted JSON that matches the provider JSON *shape*
+(arrays, envelope, status) but uses OBVIOUSLY-FAKE symbols (TESTCO/ZZZ/FAKE1) and
+FABRICATED numbers (round ~1000-point levels). No real provider proof values are
+copied here — real snippets stay in docs/research provenance only.
 
 Two domains:
   (a) index value history — index-aware UDF sources that reuse the price stack but
@@ -15,7 +17,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable
+from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable, VnfinError
 from vnfin.models import AdjustmentPolicy, Interval
 from vnfin.indices import (
     IndexClient,
@@ -34,11 +36,14 @@ WIDE = (date(2024, 6, 1), date(2024, 6, 30))
 
 # ----------------------------- synthetic fixtures -----------------------------
 
+# OBVIOUSLY-FAKE index series. These are FABRICATED, internally-consistent numbers
+# (round levels around 1000 points, satisfying low<=open/close<=high) — NOT real
+# provider proof values. Real provider snippets live only in the provenance docs.
 # (date, open, high, low, close, volume) — index values in POINTS, volume in shares.
 _INDEX_ROWS = [
-    ("2024-06-10", 1292.67, 1297.39, 1287.44, 1290.67, 742_266_776),
-    ("2024-06-11", 1295.03, 1296.41, 1279.47, 1284.41, 815_619_047),
-    ("2024-06-12", 1285.01, 1301.35, 1281.71, 1300.19, 731_047_219),
+    ("2024-06-10", 1000.0, 1010.0, 995.0, 1005.0, 100_000_000),
+    ("2024-06-11", 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+    ("2024-06-12", 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
 ]
 
 
@@ -69,8 +74,10 @@ def _ssi_envelope(rows=None, status="ok") -> str:
 
 
 def _constituents_payload(members=None, code="SUCCESS") -> str:
+    # OBVIOUSLY-FAKE constituents. Symbols are fabricated placeholders (not real
+    # index members) but the JSON shape matches the provider's group endpoint.
     members = (
-        [("ACB", "hose"), ("FPT", "hose"), ("VCB", "hose")] if members is None else members
+        [("TESTCO", "hose"), ("ZZZ", "hose"), ("FAKE1", "hose")] if members is None else members
     )
     data = [
         {
@@ -105,11 +112,13 @@ def _raising(exc):
 
 
 def test_vps_index_source_values_in_points_not_vnd():
-    """Critical: index feed close 1290.67 stays 1290.67 (points), NOT x1000."""
+    """Critical: a synthetic index close of 1005.0 stays 1005.0 (points), NOT x1000."""
     s = VPSIndexSource(http_get=_get(_bare_udf()))
     h = s.get_history("VNINDEX", Interval.D1, *WIDE)
-    assert h.bars[0].close == pytest.approx(1290.67)
-    assert h.bars[0].open == pytest.approx(1292.67)
+    assert h.bars[0].close == pytest.approx(1005.0)
+    assert h.bars[0].open == pytest.approx(1000.0)
+    # Hard scale check: index point levels must never be x1000-scaled into VND.
+    assert h.bars[0].close < 10_000
     assert h.currency == "points"
     assert h.source == "vps_index"
 
@@ -118,7 +127,7 @@ def test_ssi_index_source_envelope_unwrap_points():
     s = SSIIndexSource(http_get=_get(_ssi_envelope()))
     h = s.get_history("VNINDEX", Interval.D1, *WIDE)
     assert len(h) == 3
-    assert h.bars[-1].close == pytest.approx(1300.19)
+    assert h.bars[-1].close == pytest.approx(1018.0)
     assert h.currency == "points"
     assert h.source == "ssi_index"
 
@@ -127,7 +136,7 @@ def test_vndirect_index_source_points():
     s = VNDirectIndexSource(http_get=_get(_bare_udf()))
     h = s.get_history("VNINDEX", Interval.D1, *WIDE)
     assert h.currency == "points"
-    assert h.bars[0].close == pytest.approx(1290.67)
+    assert h.bars[0].close == pytest.approx(1005.0)
     assert h.source == "vndirect_index"
 
 
@@ -141,7 +150,7 @@ def test_adjustment_policy_is_raw_for_index_values():
 def test_volume_preserved_as_shares():
     s = VPSIndexSource(http_get=_get(_bare_udf()))
     h = s.get_history("VNINDEX", Interval.D1, *WIDE)
-    assert h.bars[0].volume == 742_266_776
+    assert h.bars[0].volume == 100_000_000
 
 
 def test_per_source_symbol_aliasing():
@@ -177,8 +186,8 @@ def test_empty_rows_raise_empty():
 
 def test_malformed_scalar_raises_invalid():
     payload = json.dumps(
-        {"symbol": "VNINDEX", "s": "ok", "t": [_ts("2024-06-10")], "o": [1292.67],
-         "h": [1297.39], "l": [1287.44], "c": [None], "v": [100]}
+        {"symbol": "VNINDEX", "s": "ok", "t": [_ts("2024-06-10")], "o": [1000.0],
+         "h": [1010.0], "l": [995.0], "c": [None], "v": [100]}
     )
     with pytest.raises(InvalidData):
         VPSIndexSource(http_get=_get(payload)).get_history("VNINDEX", Interval.D1, *WIDE)
@@ -188,6 +197,46 @@ def test_transport_error_wrapped_unavailable():
     s = VPSIndexSource(http_get=_raising(ConnectionError("boom")))
     with pytest.raises(SourceUnavailable):
         s.get_history("VNINDEX", Interval.D1, *WIDE)
+
+
+# ------------------- B2: index sources must stay POINT-scaled -----------------
+# Indices are POINTS, never VND. The index adapters must never apply the x1000
+# equity price scaling. Guard against a misconfigured/wrong-scaled index source
+# silently returning 1000x-corrupted, plausible-looking values.
+
+
+def test_all_default_index_sources_are_point_scaled():
+    # Every adapter in the index failover chain must use PRICE_SCALE == 1.0 and
+    # advertise 'points', so no x1000 equity scaling can ever apply to an index.
+    for cls in (VPSIndexSource, SSIIndexSource, VNDirectIndexSource):
+        assert cls.PRICE_SCALE == 1.0, f"{cls.__name__} is not point-scaled"
+        assert cls.CURRENCY == "points"
+
+
+def test_index_source_rejects_non_point_scale_instead_of_corrupting():
+    """A misconfigured index source (x1000 equity scale) must raise a stable
+    VnfinError, NOT silently return 1000x-inflated index values."""
+
+    class _MisscaledIndexSource(VPSIndexSource):
+        PRICE_SCALE = 1000.0  # wrong for an index — would corrupt points -> VND
+
+    s = _MisscaledIndexSource(http_get=_get(_bare_udf()))
+    with pytest.raises(VnfinError):
+        s.get_history("VNINDEX", Interval.D1, *WIDE)
+
+
+def test_misscaled_index_source_does_not_return_inflated_close():
+    """Belt-and-suspenders: confirm the guard fires before any 1000x value escapes."""
+
+    class _MisscaledIndexSource(VPSIndexSource):
+        PRICE_SCALE = 1000.0
+
+    s = _MisscaledIndexSource(http_get=_get(_bare_udf()))
+    try:
+        h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    except VnfinError:
+        return  # guard fired — correct
+    pytest.fail(f"misscaled index source silently returned close={h.bars[0].close}")
 
 
 # ----------------------------- IndexClient ----------------------------------
@@ -228,6 +277,60 @@ def test_module_level_index_history():
     assert len(h) == 3
 
 
+# ------------------------- B1: date-argument validation ----------------------
+# Public API must never leak a raw TypeError/ValueError when dates are omitted or
+# inverted; it must raise a stable VnfinError BEFORE any source/failover call.
+
+
+def test_index_history_missing_both_dates_raises_vnfin_error():
+    # Was the B1 bug: omitting dates reached datetime.combine(None) -> raw TypeError.
+    c = IndexClient(http_get=_get(_bare_udf()))
+    with pytest.raises(VnfinError):
+        c.index_history("VNINDEX")
+
+
+def test_index_history_missing_start_raises_vnfin_error():
+    c = IndexClient(http_get=_get(_bare_udf()))
+    with pytest.raises(VnfinError):
+        c.index_history("VNINDEX", end=date(2024, 6, 30))
+
+
+def test_index_history_missing_end_raises_vnfin_error():
+    c = IndexClient(http_get=_get(_bare_udf()))
+    with pytest.raises(VnfinError):
+        c.index_history("VNINDEX", start=date(2024, 6, 1))
+
+
+def test_index_history_reversed_range_raises_vnfin_error():
+    c = IndexClient(http_get=_get(_bare_udf()))
+    with pytest.raises(VnfinError):
+        c.index_history("VNINDEX", date(2024, 6, 30), date(2024, 6, 1))
+
+
+def test_index_history_missing_dates_does_not_leak_typeerror():
+    # Stronger than the above: assert it is NOT a bare TypeError/ValueError escaping.
+    c = IndexClient(http_get=_get(_bare_udf()))
+    with pytest.raises(VnfinError):
+        try:
+            c.index_history("VNINDEX")
+        except (TypeError, ValueError) as exc:  # pragma: no cover - guard
+            if not isinstance(exc, VnfinError):
+                pytest.fail(f"leaked raw {type(exc).__name__}: {exc}")
+            raise
+
+
+def test_module_level_index_history_missing_dates_raises_vnfin_error():
+    with pytest.raises(VnfinError):
+        index_history("VNINDEX", http_get=_get(_bare_udf()))
+
+
+def test_index_history_valid_range_still_works_after_validation():
+    # Sanity: validation does not reject a valid window.
+    c = IndexClient(http_get=_get(_bare_udf()))
+    h = c.index_history("VNINDEX", date(2024, 6, 1), date(2024, 6, 30))
+    assert len(h) == 3
+
+
 # ========================== (b) CONSTITUENTS =================================
 
 
@@ -236,10 +339,10 @@ def test_constituents_source_parses_members():
     res = s.get_constituents("VN30")
     assert isinstance(res, IndexConstituents)
     assert res.index == "VN30"
-    assert res.symbols == ("ACB", "FPT", "VCB")
+    assert res.symbols == ("TESTCO", "ZZZ", "FAKE1")
     assert len(res) == 3
     assert isinstance(res.members[0], IndexMember)
-    assert res.members[0].symbol == "ACB"
+    assert res.members[0].symbol == "TESTCO"
     assert res.members[0].exchange == "HOSE"
 
 
@@ -300,18 +403,18 @@ def test_constituents_transport_error_wrapped():
 def test_index_client_constituents_convenience():
     c = IndexClient(http_get=_get(_constituents_payload()))
     res = c.constituents("VN30")
-    assert res.symbols == ("ACB", "FPT", "VCB")
+    assert res.symbols == ("TESTCO", "ZZZ", "FAKE1")
 
 
 def test_module_level_index_constituents():
     res = index_constituents("VN30", http_get=_get(_constituents_payload()))
     assert res.index == "VN30"
-    assert res.symbols == ("ACB", "FPT", "VCB")
+    assert res.symbols == ("TESTCO", "ZZZ", "FAKE1")
 
 
 def test_constituents_to_dataframe():
     res = IndexConstituentsSource(http_get=_get(_constituents_payload())).get_constituents("VN30")
     df = res.to_dataframe()
-    assert list(df["symbol"]) == ["ACB", "FPT", "VCB"]
+    assert list(df["symbol"]) == ["TESTCO", "ZZZ", "FAKE1"]
     assert df.attrs["index"] == "VN30"
     assert df.attrs["source"] == "ssi_iboard_query"

@@ -60,6 +60,17 @@ class _IndexUDFMixin:
         return self.ALIASES.get(canon, canon)
 
     def get_history(self, symbol, interval, start, end):
+        # Scale guard (B2): indices are POINTS, not VND. The equity UDF adapters
+        # apply PRICE_SCALE=1000.0 (thousands-of-VND -> VND); applying that to an
+        # index would silently inflate levels 1000x into plausible-but-wrong values
+        # — worse than an error. Refuse to serve an index from a non-point-scaled
+        # source: raise a stable InvalidData (a VnfinError) so failover/diagnostics
+        # surface the misconfiguration instead of corrupting data.
+        if self.PRICE_SCALE != 1.0:
+            raise InvalidData(
+                f"{self.name}: index source must be POINT-scaled (PRICE_SCALE=1.0), "
+                f"got {self.PRICE_SCALE} — indices are points, not VND"
+            )
         hist = super().get_history(symbol, interval, start, end)
         # PriceHistory hardcodes currency="VND" in the base; an index level is in
         # points, so correct the currency on the typed result (frozen -> replace).

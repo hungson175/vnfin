@@ -26,12 +26,25 @@ from vnfin.gold import (
 # Synthetic fixtures (hand-crafted to match the verified real shapes).        #
 # --------------------------------------------------------------------------- #
 
-# BTMC: indexed-key JSON. Prices = VND per CHỈ as integer STRINGS. @d = "DD/MM/YYYY HH:MM".
+# BTMC: indexed-key JSON. SYNTHETIC, obviously-fake names + fabricated round numbers that
+# preserve the REAL provider shape:
+#   * GOLD rows carry karat "24k" and quote a PER-CHỈ price (no weight token in the name).
+#   * Some GOLD rows are buy-only (partner quotes) with sell == 0 — those must be skipped.
+#   * SILVER rows carry karat "" and a "BẠC ..." name, and quote the TOTAL price for a
+#     stated weight (1 LƯỢNG / 5 LƯỢNG / 1 KG / 500 GRAM) — those must be excluded entirely.
+#   * A weighted GOLD row ("... 5 LƯỢNG") proves weight parsing -> canonical VND/lượng.
+# Canonical unit is VND/LƯỢNG (1 lượng = 10 chỉ = 37.5 g).
+# Fabricated per-chỉ gold tick: buy 10,000,000 / sell 20,000,000  -> per-lượng 100M / 200M.
 _BTMC_ROWS = [
     # name, karat, buy, sell, worldflag, datetime
-    ("VÀNG MIẾNG SJC (Vàng SJC)", "24k", "14880000", "15130000", "4322", "17/06/2026 15:38"),
-    ("NHẪN TRÒN TRƠN (Vàng Rồng Thăng Long)", "24k", "14880000", "15130000", "4322", "17/06/2026 15:38"),
-    ("BẠC MIẾNG (BẠC RỒNG THĂNG LONG Ag 999)", "", "2637000", "2719000", "4322", "17/06/2026 15:38"),
+    ("VÀNG MIẾNG TESTCO (Vàng TESTCO)", "24k", "10000000", "20000000", "4322", "17/06/2026 15:38"),
+    ("NHẪN TRÒN ZZZ (Vàng ZZZ)", "24k", "10000000", "20000000", "4322", "17/06/2026 15:38"),
+    # buy-only partner gold row: sell == 0, must be skipped (not emitted, not a 0-price quote)
+    ("VÀNG THƯƠNG HIỆU FAKEPARTNER (Vàng Đối Tác)", "24k", "9000000", "0", "4322", "17/06/2026 15:38"),
+    # silver bars: total price for a stated weight, must be EXCLUDED (not gold)
+    ("BẠC MIẾNG FAKE1 Ag 999 1 LƯỢNG (FAKE1)", "", "2000000", "3000000", "4322", "17/06/2026 15:38"),
+    ("BẠC MIẾNG FAKE1 Ag 999 5 LƯỢNG (FAKE1)", "", "10000000", "15000000", "4322", "17/06/2026 15:38"),
+    ("BẠC THỎI FAKE2 999 1 KG (1000 GRAM) (FAKE2)", "", "50000000", "55000000", "4322", "17/06/2026 15:38"),
 ]
 
 
@@ -54,11 +67,13 @@ def _btmc_json(rows=None):
     return json.dumps({"DataList": {"Data": data}})
 
 
-# PNJ: prices in THOUSAND VND per CHỈ (giaban 15130 -> 15,130,000 VND). No timestamp.
+# PNJ: prices in THOUSAND VND per CHỈ (giaban/giamua). Canonical = VND/LƯỢNG = x1000 x10.
+# SYNTHETIC obviously-fake codes/names + fabricated round numbers.
+# giaban 20000 (thousand VND/chỉ) -> 20,000,000 VND/chỉ -> 200,000,000 VND/lượng.
 _PNJ_ROWS = [
-    ("SJC", "Vàng miếng SJC 999.9", 15130, 14880),
-    ("N24K", "Nhẫn Trơn PNJ 999.9", 15130, 14830),
-    ("24K", "Vàng nữ trang 999.9", 15030, 14630),
+    ("TESTCO", "Vàng miếng TESTCO 999.9", 20000, 10000),
+    ("ZZZ", "Nhẫn Trơn ZZZ 999.9", 20000, 9000),
+    ("FAKE1", "Vàng nữ trang FAKE1 999.9", 19000, 8000),
 ]
 
 
@@ -130,10 +145,10 @@ def test_capability_flags():
 def test_quote_is_frozen():
     q = GoldQuote(
         time=datetime(2026, 6, 17, tzinfo=timezone.utc),
-        product="SJC",
-        buy=14_880_000.0,
-        sell=15_130_000.0,
-        unit="VND/chi",
+        product="TESTCO",
+        buy=100_000_000.0,
+        sell=200_000_000.0,
+        unit="VND/luong",
         currency="VND",
         source="btmc",
         fetched_at_utc=datetime.now(timezone.utc),
@@ -149,36 +164,70 @@ def test_gold_errors_are_vnfin_errors():
 
 
 # --------------------------------------------------------------------------- #
-# BTMC (VN domestic, VND/chỉ full-digit strings)                              #
+# BTMC (VN domestic, canonical VND/lượng; gold-only, weight-normalized)        #
 # --------------------------------------------------------------------------- #
 
 
 def test_btmc_parses_quotes():
     s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
     quotes = s.get_quotes()
-    assert len(quotes) == 3
-    sjc = next(q for q in quotes if "SJC" in q.product)
-    assert sjc.buy == pytest.approx(14_880_000.0)
-    assert sjc.sell == pytest.approx(15_130_000.0)
-    assert sjc.currency == "VND"
-    assert sjc.unit == "VND/chi"
-    assert sjc.source == "btmc"
-    assert sjc.fetched_at_utc is not None
+    # gold-only: 2 priced per-chỉ rows + 0 buy-only (sell==0) + 0 silver rows
+    assert len(quotes) == 2
+    testco = next(q for q in quotes if "TESTCO" in q.product)
+    # per-chỉ tick buy 10M / sell 20M  -> canonical per-lượng 100M / 200M (x10)
+    assert testco.buy == pytest.approx(100_000_000.0)
+    assert testco.sell == pytest.approx(200_000_000.0)
+    assert testco.currency == "VND"
+    assert testco.unit == "VND/luong"
+    assert testco.source == "btmc"
+    assert testco.fetched_at_utc is not None
+
+
+def test_btmc_excludes_silver():
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
+    quotes = s.get_quotes()
+    # no BẠC/silver products survive the gold filter
+    assert all("BẠC" not in q.product.upper() for q in quotes)
+    assert all(q.karat for q in quotes)  # gold rows carry a karat; silver karat is ""
+
+
+def test_btmc_skips_buy_only_zero_sell_rows():
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
+    quotes = s.get_quotes()
+    # the FAKEPARTNER gold row has sell == 0 (buy-only) and must not be emitted
+    assert all("FAKEPARTNER" not in q.product for q in quotes)
+    assert all(q.sell > 0 for q in quotes)
+
+
+def test_btmc_normalizes_weighted_gold_to_per_luong():
+    # A gold row that states its weight (5 LƯỢNG) quoting the TOTAL price must be
+    # divided back to the canonical per-lượng price, matching the per-chỉ rows.
+    rows = [
+        ("VÀNG MIẾNG TESTCO (Vàng TESTCO)", "24k", "10000000", "20000000", "4322", "17/06/2026 15:38"),
+        ("VÀNG MIẾNG TESTCO 5 LƯỢNG (Vàng TESTCO)", "24k", "500000000", "1000000000", "4322", "17/06/2026 15:38"),
+    ]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=rows)))
+    quotes = s.get_quotes()
+    assert len(quotes) == 2
+    for q in quotes:
+        assert q.unit == "VND/luong"
+        assert q.buy == pytest.approx(100_000_000.0)
+        assert q.sell == pytest.approx(200_000_000.0)
 
 
 def test_btmc_parses_dd_mm_yyyy_timestamp_as_vn_tz():
     s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
-    sjc = next(q for q in s.get_quotes() if "SJC" in q.product)
+    q = next(q for q in s.get_quotes() if "TESTCO" in q.product)
     # 17/06/2026 15:38 Asia/Ho_Chi_Minh (+07)
-    assert sjc.time.utcoffset().total_seconds() == 7 * 3600
-    assert sjc.time.date() == date(2026, 6, 17)
-    assert (sjc.time.hour, sjc.time.minute) == (15, 38)
+    assert q.time.utcoffset().total_seconds() == 7 * 3600
+    assert q.time.date() == date(2026, 6, 17)
+    assert (q.time.hour, q.time.minute) == (15, 38)
 
 
 def test_btmc_get_quote_by_product_substring():
     s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
-    q = s.get_quote("sjc")  # case-insensitive substring
-    assert "SJC" in q.product
+    q = s.get_quote("testco")  # case-insensitive substring
+    assert "TESTCO" in q.product
 
 
 def test_btmc_no_match_raises_empty():
@@ -193,22 +242,32 @@ def test_btmc_empty_datalist_raises_empty():
         s.get_quotes()
 
 
+def test_btmc_only_silver_raises_empty():
+    # a feed with no gold rows (all silver) yields no quotes -> EmptyData
+    rows = [
+        ("BẠC MIẾNG FAKE1 Ag 999 1 LƯỢNG (FAKE1)", "", "2000000", "3000000", "4322", "17/06/2026 15:38"),
+    ]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=rows)))
+    with pytest.raises(EmptyData):
+        s.get_quotes()
+
+
 def test_btmc_malformed_price_raises_invalid():
-    bad = [("VÀNG MIẾNG SJC", "24k", "not-a-number", "15130000", "4322", "17/06/2026 15:38")]
+    bad = [("VÀNG MIẾNG TESTCO", "24k", "not-a-number", "20000000", "4322", "17/06/2026 15:38")]
     s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=bad)))
     with pytest.raises(InvalidData):
         s.get_quotes()
 
 
 def test_btmc_negative_price_raises_invalid():
-    bad = [("VÀNG MIẾNG SJC", "24k", "-5", "15130000", "4322", "17/06/2026 15:38")]
+    bad = [("VÀNG MIẾNG TESTCO", "24k", "-5", "20000000", "4322", "17/06/2026 15:38")]
     s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=bad)))
     with pytest.raises(InvalidData):
         s.get_quotes()
 
 
 def test_btmc_bad_timestamp_raises_invalid():
-    bad = [("VÀNG MIẾNG SJC", "24k", "14880000", "15130000", "4322", "garbage-time")]
+    bad = [("VÀNG MIẾNG TESTCO", "24k", "10000000", "20000000", "4322", "garbage-time")]
     s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=bad)))
     with pytest.raises(InvalidData):
         s.get_quotes()
@@ -233,38 +292,50 @@ def test_btmc_history_not_supported():
 
 
 # --------------------------------------------------------------------------- #
-# PNJ (VN domestic, THOUSAND-VND/chỉ -> x1000)                                #
+# PNJ (VN domestic, THOUSAND-VND/chỉ -> canonical VND/lượng = x1000 x10)       #
 # --------------------------------------------------------------------------- #
 
 
-def test_pnj_scales_thousand_vnd_to_vnd():
+def test_pnj_scales_thousand_vnd_chi_to_vnd_luong():
     s = PNJGoldSource(http_get=_static_get(_pnj_json()))
     quotes = s.get_quotes()
-    sjc = next(q for q in quotes if q.product == "SJC" or "SJC" in q.product)
-    # giaban 15130 (thousand VND) -> 15,130,000 VND
-    assert sjc.sell == pytest.approx(15_130_000.0)
-    assert sjc.buy == pytest.approx(14_880_000.0)
-    assert sjc.currency == "VND"
-    assert sjc.unit == "VND/chi"
-    assert sjc.source == "pnj"
+    testco = next(q for q in quotes if q.product == "TESTCO" or "TESTCO" in q.product)
+    # giaban 20000 (thousand VND/chỉ) -> 20,000,000 VND/chỉ -> 200,000,000 VND/lượng
+    assert testco.sell == pytest.approx(200_000_000.0)
+    assert testco.buy == pytest.approx(100_000_000.0)
+    assert testco.currency == "VND"
+    assert testco.unit == "VND/luong"
+    assert testco.source == "pnj"
+
+
+def test_pnj_uses_same_canonical_unit_as_btmc():
+    # Cross-source parity at the unit level: identical synthetic per-chỉ tick must yield
+    # identical canonical VND/lượng numbers from both dealers.
+    btmc = BTMCGoldSource(http_get=_static_get(_btmc_json()))
+    pnj = PNJGoldSource(http_get=_static_get(_pnj_json()))
+    b = next(q for q in btmc.get_quotes() if "TESTCO" in q.product)
+    p = next(q for q in pnj.get_quotes() if "TESTCO" in q.product)
+    assert b.unit == p.unit == "VND/luong"
+    assert b.buy == pytest.approx(p.buy)
+    assert b.sell == pytest.approx(p.sell)
 
 
 def test_pnj_skips_blank_buy_only_rows():
     # Real feed includes RAW_* "raw gold purchase" rows where giaban (sell) is "" because
     # PNJ buys but does not sell that grade. Those rows must be skipped, not fail the feed.
     rows = [
-        ("SJC", "Vàng miếng SJC 999.9", 15130, 14880),
-        ("RAW_9999", "Vàng nguyên liệu mua ngoài 99.99", "", 13930),
-        ("RAW_9900", "Vàng nguyên liệu mua ngoài 99", "", 13567),
+        ("TESTCO", "Vàng miếng TESTCO 999.9", 20000, 10000),
+        ("RAW_9999", "Vàng nguyên liệu mua ngoài 99.99", "", 9000),
+        ("RAW_9900", "Vàng nguyên liệu mua ngoài 99", "", 8000),
     ]
     s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
     quotes = s.get_quotes()
     assert len(quotes) == 1
-    assert quotes[0].product == "SJC"
+    assert quotes[0].product == "TESTCO"
 
 
 def test_pnj_all_rows_blank_raises_empty():
-    rows = [("RAW_9999", "Vàng nguyên liệu mua ngoài", "", 13930)]
+    rows = [("RAW_9999", "Vàng nguyên liệu mua ngoài", "", 9000)]
     s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
     with pytest.raises(EmptyData):
         s.get_quotes()
@@ -277,14 +348,14 @@ def test_pnj_empty_data_raises_empty():
 
 
 def test_pnj_malformed_price_raises_invalid():
-    bad = [("SJC", "Vàng miếng SJC 999.9", "oops", 14880)]
+    bad = [("TESTCO", "Vàng miếng TESTCO 999.9", "oops", 10000)]
     s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=bad)))
     with pytest.raises(InvalidData):
         s.get_quotes()
 
 
 def test_pnj_negative_price_raises_invalid():
-    bad = [("SJC", "Vàng miếng SJC 999.9", -1, 14880)]
+    bad = [("TESTCO", "Vàng miếng TESTCO 999.9", -1, 10000)]
     s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=bad)))
     with pytest.raises(InvalidData):
         s.get_quotes()

@@ -26,7 +26,7 @@ import json
 import math
 from datetime import date, datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..exceptions import EmptyData, InvalidData, SourceUnavailable, VnfinError
 from .base import FundamentalSource
 from .itemcodes import item_name
 from .models import FinancialReport, LineItem, Period, StatementType
@@ -69,6 +69,20 @@ class VNDirectFundamentalSource(FundamentalSource):
     def normalize_symbol(self, symbol: str) -> str:
         return symbol.strip().upper()
 
+    def _validate_symbol(self, symbol) -> str:
+        """Reject empty/whitespace-only symbols before touching the network.
+
+        Bad caller input is a usage error, not a recoverable source failure, so
+        we raise the public ``VnfinError`` base rather than a ``SourceError``."""
+        if not isinstance(symbol, str) or not symbol.strip():
+            raise VnfinError("symbol must be a non-empty string")
+        return self.normalize_symbol(symbol)
+
+    @staticmethod
+    def _validate_limit(limit) -> None:
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0:
+            raise VnfinError(f"limit must be a positive integer, got {limit!r}")
+
     @staticmethod
     def model_type_for(statement: StatementType, *, is_bank: bool) -> int:
         table = _BANK_MODEL if is_bank else _CORP_MODEL
@@ -84,7 +98,8 @@ class VNDirectFundamentalSource(FundamentalSource):
         is_bank: bool = False,
         limit: int = 8,
     ) -> tuple[FinancialReport, ...]:
-        psym = self.normalize_symbol(symbol)
+        psym = self._validate_symbol(symbol)
+        self._validate_limit(limit)
         if statement is StatementType.RATIOS:
             return self._get_ratios(psym, period, is_bank=is_bank, limit=limit)
         return self._get_statements(psym, statement, period, is_bank=is_bank, limit=limit)
@@ -132,6 +147,7 @@ class VNDirectFundamentalSource(FundamentalSource):
                 item_code=code,
                 name=item_name(code, is_bank=is_bank),
                 value=value,
+                value_unit="VND",  # statement money lines are raw, unscaled VND
             )
             if fd not in buckets:
                 buckets[fd] = []
@@ -184,18 +200,30 @@ class VNDirectFundamentalSource(FundamentalSource):
             if ratio_code in seen[rd]:
                 continue  # keep first (newest) occurrence within a date
             seen[rd].add(ratio_code)
-            buckets[rd].append(LineItem(item_code=ratio_code, name=name, value=value))
+            buckets[rd].append(
+                LineItem(
+                    item_code=ratio_code,
+                    name=name,
+                    value=value,
+                    value_unit="ratio",  # dimensionless / per-share, NOT VND
+                )
+            )
 
         fetched = datetime.now(timezone.utc)
         reports = [
             FinancialReport(
                 symbol=psym,
                 statement_type=StatementType.RATIOS,
-                period=period,
+                # The ratios endpoint has no period filter (rows are keyed by
+                # reportDate only), so do NOT echo the caller's requested period
+                # — that would falsely label dimensionless ratios as quarterly/
+                # annual figures.
+                period=Period.UNKNOWN,
                 fiscal_date=self._parse_date(rd),
                 items=tuple(buckets[rd]),
                 source=self.name,
-                currency="VND",
+                # ratios are dimensionless / per-share, not monetary VND
+                currency=None,
                 is_bank=is_bank,
                 model_type=None,
                 provider_symbol=psym,

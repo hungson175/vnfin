@@ -9,7 +9,7 @@ Every result object states its unit/currency explicitly so callers never guess.
 | Fundamentals | **raw VND** | Unscaled (e.g. total assets in trillions of VND as integer VND). |
 | Funds (NAV) | **VND / fund unit** | Fmarket. |
 | Gold — world | **USD / troy oz** | currency-api + gold-api. |
-| Gold — VN domestic | **VND** (intended `VND/chi`) | ⚠️ **OPEN BUG — see below.** |
+| Gold — VN domestic | **VND/lượng** | Canonical VN gold quote. BTMC + PNJ both normalize to `VND/luong` (1 lượng = 10 chỉ = 37.5 g); silver excluded; weight parsed from product name. Verified by cross-source live test. |
 | Crypto | **USD** | Binance USDT pairs. |
 | Macro | per-indicator `unit` + `currency` | World Bank; unit is indicator-specific (%, USD, local-cur, index). |
 
@@ -20,18 +20,24 @@ sources to agree — catching unit/scale mismatches, stale/bad data, with no fix
 Tolerances: equity adjusted close <2% (must be unit-identical); magnitude bands elsewhere
 (catch order-of-magnitude unit errors without being brittle to market moves).
 
-## OPEN BUG — VN domestic gold unit normalization
+## RESOLVED — VN domestic gold unit normalization
 
-Found 2026-06-18 by the cross-source test (BTMC median 26.6M vs PNJ 14.6M "VND/chi", 83% apart).
+Found 2026-06-18 by the cross-source test (BTMC median ~26.6M vs PNJ ~14.6M, 83% apart).
+**Fixed 2026-06-18** — canonical unit is now **VND/lượng**; BTMC and PNJ agree to ~3% on
+live data (BTMC ~150.0M vs PNJ ~145.3M VND/lượng).
 
-Root cause: BTMC `api.btmc.vn` returns **934 rows mixing GOLD and SILVER** (`BẠC` = silver),
-each quoting the **total price for the product's stated weight** (1 lượng, 5 lượng, 1 kg, 500 g) —
-**not** a per-*chỉ* price. The adapter labels every row `VND/chi`, which is wrong for any row
-whose weight ≠ 1 chỉ and for all silver rows.
+Root cause: BTMC `api.btmc.vn` returns ~934 rows **mixing GOLD and SILVER** (`BẠC` = silver)
+across many intraday snapshots. Silver rows quote the **total price for the product's stated
+weight** (1 lượng, 5 lượng, 1 kg, 500 g); a few partner gold rows are buy-only (`sell == 0`).
+The old adapter labeled every row `VND/chi` and never filtered metal/weight, so the median was
+dominated by silver total-weight rows.
 
-Fix plan (TDD + reviewer):
-1. Filter to GOLD products only (exclude `BẠC`/silver).
-2. Parse the product weight from the name (lượng/chỉ/kg/gram) and normalize to ONE canonical
-   unit — recommend **VND/lượng** (the standard VN gold quote) or consistent VND/chỉ.
-3. Re-verify PNJ uses the same normalization.
-4. Re-enable the strict VN-gold cross-source parity assertion (currently `xfail`).
+Fix applied (`vnfin/gold/vn.py`):
+1. **Exclude silver** — any product whose accent-stripped name contains `bac` (BẠC) is dropped.
+2. **Parse weight** from the product name (lượng / chỉ / kg / gram) and normalize the total to
+   the canonical **VND/lượng** (gold rows carry no weight token → treated as per-chỉ = 0.1 lượng).
+3. **Skip buy-only rows** (`sell == 0` or `buy == 0`) and keep the latest snapshot per product.
+4. **PNJ** converts thousand-VND/chỉ → VND/lượng (×1000 ×10) and emits `unit="VND/luong"`.
+5. The cross-source parity test (`tests/test_cross_source_live.py::test_vn_gold_dealers_same_magnitude`)
+   is **no longer xfail**; it asserts both dealers are `VND/luong`, inside the per-lượng band,
+   and within a <0.5 relative spread.

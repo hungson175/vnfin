@@ -113,8 +113,16 @@ class FmarketFundSource:
         ``toDate`` upper bound server-side, so we always send a default pair and
         additionally filter the lower bound client-side for an exact window.
         """
-        lo_str = _to_ymd(from_date) if from_date is not None else _DEFAULT_FROM
-        hi_str = _to_ymd(to_date) if to_date is not None else _today_ymd()
+        # Parse/validate both bounds up front so a malformed caller date raises
+        # InvalidData (never a raw ValueError) and an inverted window is rejected.
+        lo = _coerce_date(from_date, "from_date") if from_date is not None else None
+        hi = _coerce_date(to_date, "to_date") if to_date is not None else None
+        if lo is not None and hi is not None and lo > hi:
+            raise InvalidData(
+                f"fmarket: from_date {lo.isoformat()} is after to_date {hi.isoformat()}"
+            )
+        lo_str = lo.isoformat() if lo is not None else _DEFAULT_FROM
+        hi_str = hi.isoformat() if hi is not None else _today_ymd()
         body = {
             "isAllData": 1,
             "productId": int(product_id),
@@ -125,12 +133,15 @@ class FmarketFundSource:
         rows = parsed.get("data")
         if not rows:
             raise EmptyData(f"fmarket: no NAV history for product {product_id}")
-        lo = _parse_ymd(lo_str) if from_date is not None else None
         points = sorted(
             (self._parse_nav_point(r) for r in rows), key=lambda p: p.date
         )
+        # The server only reliably enforces toDate, and not even that near recent
+        # boundaries — so filter BOTH bounds client-side for an exact window.
         if lo is not None:
             points = [p for p in points if p.date >= lo]
+        if hi is not None:
+            points = [p for p in points if p.date <= hi]
         if not points:
             raise EmptyData(f"fmarket: no NAV history for product {product_id} in range")
         return NavHistory(
@@ -169,8 +180,14 @@ class FmarketFundSource:
         if nav < 0:
             raise InvalidData(f"fmarket: negative nav for fund {code}")
         owner = row.get("owner") or {}
+        if not isinstance(owner, dict):
+            raise InvalidData(f"fmarket: fund {code} owner is not an object")
         manager = owner.get("name") or owner.get("shortName") or ""
         asset = row.get("dataFundAssetType") or {}
+        if not isinstance(asset, dict):
+            raise InvalidData(
+                f"fmarket: fund {code} dataFundAssetType is not an object"
+            )
         asset_type = asset.get("code") or ""
         return Fund(
             code=str(code),
@@ -212,13 +229,19 @@ class FmarketFundSource:
             )
         industry = row.get("industry")
         price = row.get("price")
+        price_unit = None
         if price is not None:
+            # Provider price scale is unverified/ambiguous — keep it RAW, never
+            # normalize. Surface the value plus an explicit "raw" unit tag so
+            # callers never mistake it for a canonical money unit.
             price = _as_float(price, f"holding {stock_code} price")
+            price_unit = "raw"
         return FundHolding(
             stock_code=str(stock_code),
             weight_pct=weight,
             industry=str(industry) if industry is not None else None,
-            price=price,
+            price_raw=price,
+            price_unit=price_unit,
         )
 
     # --- transport --------------------------------------------------------
@@ -248,6 +271,25 @@ class FmarketFundSource:
     def _unwrap(parsed, who):
         if not isinstance(parsed, dict):
             raise InvalidData(f"fmarket: unexpected top-level JSON from {who}")
+        # The provider wraps every response in an application-level status/code
+        # envelope. A 2xx HTTP transport can still carry an application error
+        # (e.g. status:500). Treat any non-2xx application status as a source
+        # failure so it never parses as success.
+        for key in ("status", "code"):
+            raw = parsed.get(key)
+            if raw is None:
+                continue
+            try:
+                status = int(raw)
+            except (TypeError, ValueError) as exc:
+                raise InvalidData(
+                    f"fmarket: non-integer {key} in {who} envelope: {raw!r}"
+                ) from exc
+            if not (200 <= status < 300):
+                msg = parsed.get("message") or ""
+                raise SourceUnavailable(
+                    f"fmarket: {who} returned application {key}={status} {msg}".strip()
+                )
         return parsed
 
     def _default_http_get(self, url, params=None, headers=None, json_body=None):  # pragma: no cover - network
@@ -266,14 +308,20 @@ class FmarketFundSource:
 _DEFAULT_FROM = "2000-01-01"  # far before any VN fund inception
 
 
-def _to_ymd(value) -> str:
-    if isinstance(value, (date, datetime)):
-        return value.strftime("%Y-%m-%d")
-    return str(value)
+def _coerce_date(value, label) -> date:
+    """Coerce a ``date``/``datetime``/``YYYY-MM-DD`` string to a ``date``.
 
-
-def _parse_ymd(value) -> date:
-    return datetime.strptime(str(value), "%Y-%m-%d").date()
+    Raises :class:`InvalidData` (never a raw ``ValueError``/``TypeError``) on a
+    malformed caller-supplied date so the public method stays failover-safe.
+    """
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d").date()
+    except (TypeError, ValueError) as exc:
+        raise InvalidData(f"fmarket: malformed {label} {value!r}") from exc
 
 
 def _today_ymd() -> str:

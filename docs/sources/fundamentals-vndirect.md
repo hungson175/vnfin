@@ -28,12 +28,19 @@ derivative material consulted, cited, or copied.
 - Ratio rows: `{code, group, reportDate, itemCode(str), ratioCode, itemName,
   value}` — pivoted by `reportDate`; `LineItem.item_code` holds the `ratioCode`
   and the API-supplied `itemName` becomes `LineItem.name`.
+  The ratios endpoint has **no period filter** (rows are keyed by `reportDate`
+  only), so the adapter does NOT echo the caller's requested `Period`: ratio
+  reports carry `period == Period.UNKNOWN`.
 
 ## Units
 
-- **RAW VND, unscaled** for statements (e.g. FPT total assets in full VND).
-  No PRICE_SCALE applied. `FinancialReport.currency == "VND"`.
-- Ratio `value` is dimensionless or per-share VND depending on `ratioCode`.
+- **RAW VND, unscaled** for statements (full VND, no PRICE_SCALE applied).
+  Each statement `LineItem.value_unit == "VND"` and the report-wide
+  `FinancialReport.currency == "VND"` (currency is reserved for actual monetary
+  denomination).
+- **Ratios are NOT monetary**: each ratio `LineItem.value_unit == "ratio"`
+  (dimensionless / per-share) and the report's `currency is None`. Do not treat
+  ratio values as VND amounts.
 
 ## Bank vs corporate template (modelType)
 
@@ -56,7 +63,11 @@ derivative material consulted, cited, or copied.
   published redistribution grant; no robots.txt or ToS served at the API host.
 - Treat as **runtime-fetch only** for personal/internal research — do NOT bundle
   or redistribute bulk fundamentals. No real provider rows are committed; all
-  test fixtures are synthetic.
+  test fixtures in `tests/test_fundamentals.py` use **obviously-fake symbols**
+  (`TESTCO`, `ZZBANK`) and **fabricated round numbers** that only preserve the
+  provider's JSON shape, units, the bank/corporate `modelType` split, and the
+  validation cases. Real proof snippets live only in the research/provenance
+  docs (`docs/research/...`), never in tests.
 
 ## itemCode -> name map
 

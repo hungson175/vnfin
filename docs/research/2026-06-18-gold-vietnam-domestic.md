@@ -11,14 +11,14 @@ VNStock clean-room exclusion applied; endpoints from providers' own servers + pu
 ### BTMC (Bảo Tín Minh Châu) public price API
 - **Host:** `api.btmc.vn`
 - **Data:** Buy/sell prices for VN gold + silver products: VÀNG MIẾNG SJC, NHẪN TRÒN TRƠN (Vàng Rồng Thăng Long / VRTL), VÀNG MIẾNG VRTL, BẢN VÀNG ĐẮC LỘC, TRANG SỨC 999.9/99.9, plus silver (BẠC) bars. Each row: product name, karat (24k), buy (pb), sell (ps), world-price flag (pt), timestamp (d). Response includes 934 rows = many intraday snapshots (83 distinct timestamps) so intraday history is included.
-- **Auth:** None per se, but a fixed query-string 'key' is required (public, embedded in BTMC's own widget): key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v. No login/header token.
+- **Auth:** None per se, but a fixed query-string 'key' is required (public widget key, embedded in BTMC's own widget): key=<redacted>. No login/header token. Risk posture: low — a public client-side widget key, but treat as config (env/source constructor), do not hardcode.
 - **History:** Intraday only: one call returns ~83 distinct timestamps spanning the day; the SJC-gold product appeared in 8 intraday snapshots (price moved 15,180,000 -> 15,130,000 sell). No multi-day/EOD history. Snapshot every few mi
 - **Coverage:** BTMC's own products + SJC bar + partner brands (DOJI/PNJ/Phú Quý buy quote) + market raw gold + silver. National (HCM/HN same quote in feed).
 - **Format:** JSON. Shape: {"DataList":{"Data":[ {"@row":"N","@n_N":name,"@k_N":karat,"@h_N":"","@pb_N":buy,"@ps_N":sell,"@pt_N":worldflag,"@d_N":"DD/MM/YYYY HH:MM"}, ...]}}. Index N is appended to every key (n,k,h,pb,ps,pt,d) per row. Prices = VND per CHỈ as integer strings (e.g. "15130000"). karat field e.g. "24k".
 - **Endpoints:** http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key={KEY}  (KEY is the fixed public widget key above)
 - **Terms:** http://api.btmc.vn/robots.txt returns 200 (no blanket disallow observed for the API path). Public widget endpoint intended for embedding BTMC's own ticker; key is shipped client-side. Lawful read of provider's own publis
 ```bash
-curl -4 -s -m 25 -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' 'http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v'
+curl -4 -s -m 25 -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' 'http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=<redacted>'
 ```
 _proof:_ VÀNG MIẾNG SJC (Vàng SJC) | karat 24k | buy 14880000 | sell 15130000 | d 17/06/2026 15:38 ; NHẪN TRÒN TRƠN (Vàng Rồng Thăng Long) | 24k | buy 14880000 | sell 15130000 ; intraday: 17/06/2026 13:59 buy 14980000 sell 15180000 -> 15:38 buy 14880000 sell 15130000
 
@@ -39,14 +39,14 @@ _proof:_ {"masp":"SJC","tensp":"Vàng miếng SJC 999.9","giaban":15130,"giamua"
 ### DOJI gold-price XML feed
 - **Host:** `giavang.doji.vn`
 - **Data:** DOJI domestic gold buy/sell: DOJI HN lẻ (retail), DOJI HN buôn (wholesale), DOJI HCM lẻ, DOJI HCM buôn; plus USD/VND rate and a jewelry list. Each <Row> has Name, Key, Sell, Buy.
-- **Auth:** None for the feed itself, but an api_key query param is expected (public, embedded in DOJI's widget): api_key=REDACTED.
+- **Auth:** None for the feed itself, but an api_key query param is expected (public widget key, embedded in DOJI's widget): api_key=<redacted>. Risk posture: low — public client-side widget key, but treat as config (env/source constructor), do not hardcode.
 - **History:** Spot only. (Feed also references a Kitco international gold chart GIF, not data.)
 - **Coverage:** DOJI HN + HCM, retail + wholesale.
 - **Format:** XML: <GoldList><DGPlist><DateTime>..</DateTime><Row Name='DOJI HN lẻ' Key='..' Sell='151,300' Buy='148,800'/>...</DGPlist><IGPList>(USD/VND)</IGPList><JewelryList>...</JewelryList></GoldList>. UNITS INCONSISTENT: HN rows use comma-grouped values that read 10x (Sell='151,300'); HCM rows read as thousand-VND/chỉ (Sell='15,130'). Strip commas and normalize. DGPlist <DateTime> shows 01/01/1970 (stale 
 - **Endpoints:** http://giavang.doji.vn/api/giavang/?api_key={KEY}  (KEY = fixed public widget key above)
 - **Terms:** robots.txt = 403 (Apache, not served). DOJI's own public price widget feed. Stale DGPlist timestamp means: do NOT trust the gold-list time; validate prices against BTMC/PNJ before use. Attribute DOJI.
 ```bash
-curl -4 -s -m 25 -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' 'http://giavang.doji.vn/api/giavang/?api_key=REDACTED'
+curl -4 -s -m 25 -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' 'http://giavang.doji.vn/api/giavang/?api_key=<redacted>'
 ```
 _proof:_ <Row Name='DOJI HN lẻ' Key='dojihanoile' Sell='151,300' Buy='148,800' /> ; <Row Name='DOJI HCM lẻ' Sell='15,130' Buy='14,880' /> ; <Row Name='USD/VND' Sell='22,611' Buy='22,517' /> (IGPList DateTime 22:46 17/06/2026)
 

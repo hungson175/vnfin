@@ -31,21 +31,29 @@ class StatementType(str, Enum):
 
 
 class Period(str, Enum):
-    """Reporting cadence. Maps directly to VNDirect ``reportType``."""
+    """Reporting cadence. ``QUARTER``/``ANNUAL`` map directly to VNDirect
+    ``reportType``. ``UNKNOWN`` is the period-agnostic sentinel for reports
+    whose source has no period dimension (e.g. ratios, which are keyed by
+    ``reportDate`` only) so we never falsely claim a requested cadence."""
 
     QUARTER = "QUARTER"
     ANNUAL = "ANNUAL"
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclass(frozen=True)
 class LineItem:
     """A single statement line: a stable provider code, a best-effort human
-    name, and the numeric value. For statements ``value`` is RAW VND; for
-    ratios it is the ratio value (dimensionless or per-share VND)."""
+    name, the numeric value, and the unit that value is denominated in.
+
+    ``value_unit`` is explicit per-line so callers never guess: statement money
+    lines are ``"VND"`` (raw, unscaled); ratio lines are ``"ratio"``
+    (dimensionless / per-share — NOT a monetary VND amount)."""
 
     item_code: str
     name: str
     value: float
+    value_unit: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +63,11 @@ class FinancialReport:
     ``items`` are the pivoted line items for this period. ``model_type`` and
     ``is_bank`` record the VNDirect template used (corporate 1/2/3 vs bank
     101/102/103) so downstream code can pick the right line-item interpretation.
+
+    ``currency`` is the report-wide monetary denomination and is reserved for
+    statements whose lines are actual money (``"VND"``). For non-monetary
+    reports (ratios — dimensionless / per-share) it is ``None``; per-line units
+    always live on ``LineItem.value_unit`` regardless.
     """
 
     symbol: str
@@ -63,7 +76,7 @@ class FinancialReport:
     fiscal_date: date
     items: tuple[LineItem, ...]
     source: str
-    currency: str = "VND"
+    currency: Optional[str] = "VND"
     is_bank: bool = False
     model_type: Optional[int] = None
     provider_symbol: Optional[str] = None
@@ -89,10 +102,15 @@ class FinancialReport:
         import pandas as pd
 
         rows = [
-            {"item_code": li.item_code, "name": li.name, "value": li.value}
+            {
+                "item_code": li.item_code,
+                "name": li.name,
+                "value": li.value,
+                "value_unit": li.value_unit,
+            }
             for li in self.items
         ]
-        df = pd.DataFrame(rows, columns=["item_code", "name", "value"])
+        df = pd.DataFrame(rows, columns=["item_code", "name", "value", "value_unit"])
         df.attrs.update(
             symbol=self.symbol,
             statement_type=self.statement_type.value,

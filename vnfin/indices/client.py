@@ -15,6 +15,7 @@ from datetime import date
 from typing import Optional, Union
 
 from ..client import FailoverPriceClient
+from ..exceptions import VnfinError
 from ..models import Interval, PriceHistory
 from .models import IndexConstituents
 from .sources import (
@@ -31,6 +32,36 @@ _DEFAULT_INDEX_SOURCE_CLASSES = (VPSIndexSource, SSIIndexSource, VNDirectIndexSo
 def default_index_sources(http_get=None, timeout: float = 25.0):
     """Instantiate the default index-value failover chain (values in points)."""
     return [c(http_get=http_get, timeout=timeout) for c in _DEFAULT_INDEX_SOURCE_CLASSES]
+
+
+def _validate_date_range(start, end) -> None:
+    """Validate the requested window before any source call.
+
+    ``start`` and ``end`` are required (a ``date`` or ``datetime``). Missing dates
+    or an inverted range raise a stable ``VnfinError`` so the public API never
+    leaks the underlying ``datetime.combine(None, ...)`` ``TypeError`` and never
+    burns failover attempts on a caller-input mistake.
+    """
+    if start is None or end is None:
+        missing = [n for n, v in (("start", start), ("end", end)) if v is None]
+        raise VnfinError(
+            "index_history requires both 'start' and 'end' dates; missing: "
+            + ", ".join(missing)
+        )
+    if not isinstance(start, date) or not isinstance(end, date):
+        raise VnfinError(
+            "index_history 'start' and 'end' must be datetime.date or datetime.datetime"
+        )
+    try:
+        reversed_range = start > end
+    except TypeError as exc:  # mixing naive date with datetime, etc.
+        raise VnfinError(
+            "index_history 'start' and 'end' must be comparable (same date/datetime type)"
+        ) from exc
+    if reversed_range:
+        raise VnfinError(
+            f"index_history requires start <= end, got start={start} > end={end}"
+        )
 
 
 class IndexClient:
@@ -62,7 +93,13 @@ class IndexClient:
         end: Union[date, None] = None,
         interval: Interval = Interval.D1,
     ) -> PriceHistory:
-        """Index VALUE history (OHLCV in index points) with source failover."""
+        """Index VALUE history (OHLCV in index points) with source failover.
+
+        ``start`` and ``end`` are required and validated up front. Omitting either,
+        or passing ``start > end``, raises a stable :class:`~vnfin.exceptions.VnfinError`
+        BEFORE any source/failover call — never a raw ``TypeError``/``ValueError``.
+        """
+        _validate_date_range(start, end)
         return self._client.get_history(symbol, interval, start, end)
 
     def constituents(self, index: str) -> IndexConstituents:
