@@ -65,6 +65,13 @@ All notable changes to `vnfin` are documented here. The format follows
   `ReportType` disagrees with the requested `Period` (e.g. annual-tagged rows in a quarterly pull),
   surfaced via a `warnings` note, instead of silently relabeling them. Ratios remain period-agnostic.
   ([#45](https://github.com/hungson175/vnfin/issues/45))
+- **CafeF statement row ReportType vocabulary** — `CafeFFundamentalSource` now accepts the
+  documented response row tags `HK` (annual) and `H` (quarterly) in addition to the request-side
+  strings `NAM`/`QUY`, so real CafeF payloads are no longer rejected as `EmptyData`.
+  ([#44](https://github.com/hungson175/vnfin/issues/44))
+- **CafeF `is_bank` strict validation** — `CafeFFundamentalSource` now resolves `is_bank` through
+  `resolve_is_bank()`, rejecting non-boolean values such as the string `"False"` with `VnfinError`
+  instead of truthy-coercing them. ([#11](https://github.com/hungson175/vnfin/issues/11))
 - **VNDirect statement contract strictness** — `VNDirectFundamentalSource` now skips rows whose
   `reportType` or `modelType` contradicts the request, and raises `InvalidData` on duplicate
   `itemCode` values within the same fiscal period. ([#44](https://github.com/hungson175/vnfin/issues/44),

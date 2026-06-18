@@ -39,7 +39,7 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
-from .base import AUTO, FundamentalSource, is_known_bank
+from .base import AUTO, FundamentalSource, resolve_is_bank
 from .models import (
     FinancialReport,
     LineItem,
@@ -74,6 +74,12 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     #: NOT dimensionless ratios. These are scaled to raw VND/share and labelled
     #: ``vnd_per_share``.
     _PER_SHARE_CODES = frozenset({"EPS", "BV"})
+    #: CafeF response rows tag annual reports as ``HK`` and quarterly as ``H``,
+    #: even though the request params use ``NAM``/``QUY``. We accept both the
+    #: documented row vocabulary and the request-side strings so real payloads are
+    #: not misclassified as ``EmptyData``.
+    _ANNUAL_ROW_TAGS = frozenset({"NAM", "HK"})
+    _QUARTERLY_ROW_TAGS = frozenset({"QUY", "H"})
     BASE_URL = "https://cafef.vn/du-lieu/Ajax/PageNew"
     FINANCE_REPORT_PATH = "/FinanceReport.ashx"
     RATIOS_PATH = "/GetDataChiSoTaiChinh.ashx"
@@ -129,7 +135,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         pd = _coerce_period(period)
         if pd is Period.UNKNOWN and st is not StatementType.RATIOS:
             raise VnfinError(f"cafef: Period.UNKNOWN is not valid for {st.value} statements")
-        resolved = is_known_bank(psym) if is_bank is AUTO else bool(is_bank)
+        resolved = resolve_is_bank(psym, is_bank)
         if st is StatementType.RATIOS:
             return self._get_ratios(psym, pd, is_bank=resolved, limit=limit)
         return self._get_statements(psym, st, pd, is_bank=resolved, limit=limit)
@@ -141,6 +147,17 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     @staticmethod
     def _report_type(period: Period) -> str:
         return "QUY" if period is Period.QUARTER else "NAM"
+
+    def _row_period_tags(self, period: Period) -> frozenset[str]:
+        """Accepted ReportType values in CafeF response rows for ``period``.
+
+        Request params use ``NAM``/``QUY``; response rows use ``HK`` (annual) and
+        ``H`` (quarterly) per the source docs. Accept both to stay compatible with
+        real provider payloads and with synthetic fixtures.
+        """
+        if period is Period.QUARTER:
+            return self._QUARTERLY_ROW_TAGS
+        return self._ANNUAL_ROW_TAGS
 
     def _periods(self, parsed) -> list:
         """Validate the outer envelope and return the list of period objects.
@@ -184,16 +201,18 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         parsed = self._fetch_json(self.BASE_URL + self.FINANCE_REPORT_PATH, params)
         periods = self._periods(parsed)
 
-        expected_report_type = self._report_type(period)
+        expected_tags = self._row_period_tags(period)
         fetched = datetime.now(timezone.utc)
         reports = []
         skipped = 0
         for pobj in periods:
             # Skip rows whose ReportType contradicts the requested period, e.g. a
-            # quarterly request returning annual-tagged rows (or vice versa). That
-            # is a provider-side mislabel and must not be silently relabelled.
+            # quarterly request returning annual-tagged rows (or vice versa). CafeF
+            # response rows use ``HK`` for annual and ``H`` for quarterly even
+            # though the request params are ``NAM``/``QUY``, so we compare against
+            # the normalized set of accepted row tags rather than the request string.
             row_report_type = str(pobj.get("ReportType") or "").strip().upper()
-            if row_report_type and row_report_type != expected_report_type:
+            if row_report_type and row_report_type not in expected_tags:
                 skipped += 1
                 continue
             # Line-item data stays STRICT: a malformed/NaN/missing-Code row means a
@@ -379,11 +398,11 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
 
     @staticmethod
     def _with_skip_warning(reports: list, skipped: int) -> list:
-        """Surface skipped (period-marker-anomalous) rows on every returned report,
-        so a partial response is never a *silent* drop."""
+        """Surface skipped rows on every returned report, so a partial response is
+        never a *silent* drop."""
         if not skipped:
             return reports
-        note = f"skipped {skipped} period row(s) with an unparseable fiscal-date marker"
+        note = f"skipped {skipped} period row(s)"
         return [dataclasses.replace(r, warnings=tuple(r.warnings) + (note,)) for r in reports]
 
     # ------------------------------------------------------------------ #

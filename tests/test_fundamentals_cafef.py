@@ -41,7 +41,10 @@ from vnfin.fundamentals import (
 # --------------------------------------------------------------------------- #
 # Synthetic fixtures — FAKE symbols + FABRICATED numbers, real CafeF shape.
 # --------------------------------------------------------------------------- #
-def _period(time, year, quater, items, report_type="NAM", conten="Đã kiểm toán "):
+def _period(time, year, quater, items, report_type="HK", conten="Đã kiểm toán "):
+    # CafeF response rows use "HK" for annual and "H" for quarterly report tags,
+    # even though the request params are NAM/QUY. Fixtures default to the
+    # documented provider shape (see docs/sources/fundamentals-cafef.md).
     return {
         "Time": time,
         "Year": year,
@@ -102,14 +105,14 @@ def corp_income_two_quarters():
             2026,
             1,
             [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 3_000_000_000)],
-            report_type="QUY",
+            report_type="H",
         ),
         _period(
             "Q4-2025",
             2025,
             4,
             [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 2_500_000_000)],
-            report_type="QUY",
+            report_type="H",
         ),
     ]
     return _envelope(periods, count=85)
@@ -593,6 +596,15 @@ def test_explicit_is_bank_false_overrides_heuristic_for_known_bank():
     assert reports[0].is_bank is False
 
 
+@pytest.mark.parametrize("bad", ["False", "True", 0, 1, "yes"])
+def test_cafef_non_bool_is_bank_raises_vnfin_error(bad):
+    """Issue #11: non-bool is_bank values are rejected, never truthy-coerced."""
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_years()).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=bad
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Regression — issue #1: CafeF annual rows use Quater=5 (older ReportType=NAM)
 # and must NOT abort the whole annual response (synthetic fixtures, FAKE values).
@@ -628,12 +640,38 @@ def test_annual_income_with_quater_5_rows_returns_all_reports():
     assert all(not r.warnings for r in reports)  # no rows skipped here
 
 
-def test_quarterly_skips_odd_quater_marker_row_not_aborting():
+# --------------------------------------------------------------------------- #
+# Regression — issue #44: CafeF response rows use ReportType="HK" (annual) and
+# "H" (quarterly), not the request-side NAM/QUY strings.
+# --------------------------------------------------------------------------- #
+def test_annual_request_accepts_hk_report_type():
+    periods = [
+        _period("2025", 2025, 0, [("REV", "Revenue", 1_000_000)], report_type="HK")
+    ]
+    reports = _src(_envelope(periods)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    assert len(reports) == 1
+    assert reports[0].fiscal_date == date(2025, 12, 31)
+
+
+def test_quarterly_request_accepts_h_report_type():
+    periods = [
+        _period("Q1-2026", 2026, 1, [("REV", "Revenue", 1_000_000)], report_type="H")
+    ]
+    reports = _src(_envelope(periods)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.QUARTER
+    )
+    assert len(reports) == 1
+    assert reports[0].fiscal_date == date(2026, 3, 31)
+
+
+def test_quarterly_request_skips_annual_tagged_rows():
     # a QUARTER pull with one anomalous marker row among valid quarterly rows
     periods = [
-        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)], report_type="QUY"),
-        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)], report_type="QUY"),
-        _period("odd", 2024, 9, [("REV", "Revenue", 30_000)], report_type="QUY"),  # out-of-range quarter marker
+        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)], report_type="H"),
+        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)], report_type="H"),
+        _period("odd", 2024, 9, [("REV", "Revenue", 30_000)], report_type="H"),  # out-of-range quarter marker
     ]
     reports = _src(_envelope(periods)).get_financials(
         "TESTCO", StatementType.INCOME, Period.QUARTER
@@ -654,13 +692,13 @@ def test_all_rows_unparseable_fiscal_date_raises_emptydata():
 
 
 def test_quarterly_request_skips_annual_tagged_rows():
-    # Issue #45: a quarterly request must not relabel rows tagged ReportType=NAM
+    # Issue #45: a quarterly request must not relabel rows tagged ReportType=HK
     # as quarterly. Such rows should be skipped (with a warning) rather than
     # misreported under the requested period.
     periods = [
-        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)], report_type="QUY"),
-        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)], report_type="QUY"),
-        _period("2024 annual", 2024, 0, [("REV", "Revenue", 90_000)], report_type="NAM"),
+        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)], report_type="H"),
+        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)], report_type="H"),
+        _period("2024 annual", 2024, 0, [("REV", "Revenue", 90_000)], report_type="HK"),
     ]
     reports = _src(_envelope(periods)).get_financials(
         "TESTCO", StatementType.INCOME, Period.QUARTER
@@ -672,11 +710,11 @@ def test_quarterly_request_skips_annual_tagged_rows():
 
 
 def test_annual_request_skips_quarterly_tagged_rows():
-    # Issue #45: an annual request must not relabel rows tagged ReportType=QUY
+    # Issue #45: an annual request must not relabel rows tagged ReportType=H
     # as annual.
     periods = [
-        _period("2025", 2025, 0, [("REV", "Revenue", 100_000)], report_type="NAM"),
-        _period("Q4 2024", 2024, 4, [("REV", "Revenue", 30_000)], report_type="QUY"),
+        _period("2025", 2025, 0, [("REV", "Revenue", 100_000)], report_type="HK"),
+        _period("Q4 2024", 2024, 4, [("REV", "Revenue", 30_000)], report_type="H"),
     ]
     reports = _src(_envelope(periods)).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL
