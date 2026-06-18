@@ -10,7 +10,7 @@
 
 > ⚠️ **Redistribution (applies to ALL sources):** every endpoint serves HOSE/HNX/UPCOM *exchange* market data via a broker/portal. None publish an explicit redistribution grant. Treat all as fine for **personal research / backtesting / internal analytics**; do **NOT** re-host, resell, or bundle the raw OHLCV as a commercial dataset/API without a written license from the provider/exchange. The library should fetch at runtime with no bundled data.
 
-> 🔑 **Architecture insight:** most working sources speak the **TradingView UDF** protocol — `GET .../history?symbol=&resolution=&from=&to=` returning parallel arrays `{t,o,h,l,c,v,s}`. A *single* UDF client class with a pluggable base-URL + a small per-provider quirks map (path, resolution tokens, adjustment) gives the library near-instant multi-source **failover** across VNDirect, SSI, Vietstock, VPS, KIS, Pinetree, Wichart (and DNSE/Yahoo with minor shape tweaks). Vietcap (POST/JSON), Simplize, CafeF, FireAnt are bespoke shapes.
+> 🔑 **Architecture insight:** most working sources speak the **TradingView UDF** protocol — `GET .../history?symbol=&resolution=&from=&to=` returning parallel arrays `{t,o,h,l,c,v,s}`. A *single* UDF client class with a pluggable base-URL + a small per-provider quirks map (path, resolution tokens, adjustment) gives the library near-instant multi-source **failover** across VNDirect, SSI, Vietstock, VPS, KIS, Pinetree (and DNSE/Yahoo with minor shape tweaks). Vietcap (POST/JSON), Simplize, CafeF are bespoke shapes. (FireAnt and Wichart are EXCLUDED — bearer-gated and encrypted/anti-circumvention respectively — and are not part of the default chain.)
 
 > 📐 **Adjustment caveat (schema-relevant):** most feeds return **split/dividend-ADJUSTED** prices (e.g. FPT ~7 in 2015 → ~72 in 2026). **Simplize and CafeF return RAW/unadjusted** — useful as an unadjusted cross-check. The library's contract must label adjustment explicitly.
 
@@ -28,11 +28,11 @@
 | 8 | VPS Securities | 2 | none | ≥2010 | yes | ✅ |
 | 9 | KIS Securities Vietnam | 2 | none | ≥2000 | yes | ✅ |
 | 10 | Pinetree / DSC Securities | 2 | none | ≥2010 | yes | ✅ |
-| 11 | FireAnt historical-quotes | 3 | bearer token (long-liv | ≥2010 | no | ✅ |
-| 12 | Wichart | 3 | none | ≥2014 | yes | ✅ |
+| 11 | FireAnt historical-quotes | EXCLUDED | bearer-gated | — | — | excluded |
+| 12 | Wichart | EXCLUDED | encrypted (anti-circumvention) | — | — | excluded |
 | 13 | Yahoo Finance chart API | 3 | none | ≥2010 | yes | ✅ |
 
-*Tier 1 = best primaries (no-auth, deep daily, single-request/UDF). Tier 2 = strong no-auth backups. Tier 3 = conditional (token / throttling / encrypted).*
+*Tier 1 = best primaries (no-auth, deep daily, single-request/UDF). Tier 2 = strong no-auth backups. EXCLUDED = not used in the default chain (bearer-gated or encrypted/anti-circumvention). Tier 3 / conditional = Yahoo only (throttling-prone global backup).*
 
 ## Source details (all independently reproduced)
 
@@ -225,46 +225,29 @@ curl -s -4 -m 25 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537
 curl -s -4 -m 25 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' "https://charts.pinetree.vn/tv/history?symbol=FPT&resolution=1D&from=$(date -d '2015-01-01' +%s)&to=$(date -d '2026-06-17' +%s)"
 ```
 
-### FireAnt historical-quotes (restv2.fireant.vn)
+### FireAnt historical-quotes — EXCLUDED (bearer-gated)
 
-- **Host:** `restv2.fireant.vn`
-- **Auth:** bearer token (long-lived anonymous web-app JWT). The exact endpoint requires `Authorization: Bearer <token>`; without it returns HTTP 401 {"message":"Authorization has been denied for this request."}. NO user account / login needed — a long-lived public JWT is embedded in fireant.vn's frontend HTML (client_id=fireant.tradestation, scope includes symbols-read/finance-read/companies-read, exp=2029-11-17, valid ~3.5 more years). Token harvested from https://fireant.vn/ page source.
-- **Daily endpoint:** `GET https://restv2.fireant.vn/symbols/{SYMBOL}/historical-quotes?startDate={YYYY-MM-DD}&endDate={YYYY-MM-DD}&offset={int}&limit={int}`
-- **Daily history depth:** FPT: real data returned back to 2010-01-04 (4101 daily rows in a single request with limit=5000, range 2010-01-01 to 2026-06-17). VCB: back to 2015-01-05 (2856 rows for 2015-2026). Deep multi-year history confirmed; no truncation at limit=5000.
-- **Intraday:** none via public endpoint
-- **Format:** JSON array of daily objects, newest-first. Each row keys: date (ISO, e.g. "2026-06-17T00:00:00"), symbol, priceOpen, priceHigh, priceLow, priceClose, priceAverage, priceBasic (ref price), totalVolume, dealVolume, putthroughVolume, totalValue, putthroughValue, buyForeignQuantity/Value, sellForeignQuantity/Value, buyCount, buyQuantity, sellCount, sellQuantity, adjRatio (split/adjust factor), current
-- **Rate limits:** No rate limiting observed: 8 rapid back-to-back requests all returned HTTP 200, no 429, no Retry-After, no rate-limit headers. Server is Microsoft-IIS/10.0 / ASP.NET; response headers carry cache-control: no-cache only. Be polite anyway (add a small delay between calls).
-- **robots/ToS:** restv2.fireant.vn has NO robots.txt (returns 404). Main site https://fireant.vn/robots.txt (Cloudflare-managed) sets Content-Signal: search=yes,ai-train=no and Allow: / for generic User-agent: *, but explicitly Disallows several AI bots by name including ClaudeBot, GPTBot, CCBot, Google-Extended, By
-- **Redistribution:** FireAnt is a commercial financial-data service; the historical-quotes data is proprietary and almost certainly NOT licensed for redistribution. The Bearer token is a leaked/embedded web-app credential, not a sanctioned public API key, and could be revoked or rotated at any time. The main domain's robots.txt explicitly forbids AI-training crawlers (ClaudeBot/GPTBot etc.) and sets ai-train=no. Recom
-- **Verified:** reproduced=True, daily_confirmed=True, intraday_confirmed=False
+- **Status:** EXCLUDED from the default source chain.
+- **Exclusion rationale:** the historical-quotes endpoint requires an `Authorization: Bearer`
+  token. That token is an embedded web-app credential, not a sanctioned public API key, and can
+  be revoked/rotated at any time. FireAnt's main-site robots.txt sets `ai-train=no` and disallows
+  AI crawlers (ClaudeBot/GPTBot/CCBot/...) by name, and the data is proprietary with no
+  redistribution grant. For a clean-room OSS library we do not depend on bearer-gated brokerage
+  credentials, and we do not commit, reproduce, or document how to obtain/replay that token. No
+  curl/header recipe is kept here.
+- **If ever reconsidered:** conditional/end-user-only, with the user supplying their own
+  credential at runtime; never bundle or hardcode a token.
 
-```bash
-# reproduce (uses curl -4 + browser UA):
-curl -s -4 -m 25 -H 'Authorization: Bearer <REDACTED-public-fireant-web-token; fetch at runtime, never commit>' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' 'https://restv2.fireant.vn/symbols/FPT/historical-quotes?startDate=2026-01-01&endDate=2026-06-17&offset=0&limit=20'
-```
+### Wichart (Wigroup) — EXCLUDED (encrypted daily payload, anti-circumvention)
 
-### Wichart (Wigroup) public charting API — chart.wichart.vn TradingView UDF datafeed
-
-- **Host:** `chart.wichart.vn (the data API host the hinted api.wichart.vn root pointed me toward; the UDF datafeed lives on chart.wichart.vn/data, while api.wichart.vn is the same Wigroup backend reachable as wichart.vn/wichartapi -> api.wichart.vn/v2)`
-- **Auth:** none (no cookie, no token, no API key, no Referer/Origin required; bare curl works)
-- **Daily endpoint:** `https://chart.wichart.vn/data/history?symbol={TICKER}&resolution=1D&from={UNIX_FROM}&to={UNIX_TO}  (response is AES-encrypted: {"enc":"<base64 OpenSSL Salted__ AES-256-CBC>"} ; the CryptoJS-style decryption passphrase is <redacted> — anti-circumvention material intentionally NOT reproduced. Decrypting it bypasses an access-control mechanism; excluded from the default chain.)`
-- **Daily history depth:** Daily goes back to 2014-12-31 for both FPT and VCB (2856 bars to 2026-06-16) even when requesting from 2015-01-01; ~10+ years available. Prices are split/dividend-ADJUSTED (FPT 2014 close 7.37, VCB 2014 close 9.37). Timestamps are session-open epoch (UTC).
-- **Intraday:** Confirmed working: 60 (hourly), 15 (15-min), 1 (1-min). Config advertises supported_resolutions ["15","60","1D","1W","1M"]; symbol meta also lists has_intraday=true, intraday_multipliers ["1"], session 0900-1500. Intraday history depth is shallower: hourly (res=60) goes back only to ~2023-06-19 (3727 bars) even when requesting from 2015. Weekly (1W) and monthly (1M) also supported (encrypted like daily).
-  - endpoint: `https://chart.wichart.vn/data/history?symbol={TICKER}&resolution={60|15|1}&from={UNIX_FROM}&to={UNIX_TO}  (IMPORTANT: intraday is returned as PLAINTEXT UDF JSON — NOT encrypted — so no decryption step is needed for intraday, only for 1D/1W/1M)`
-- **Format:** TradingView UDF: JSON object with parallel arrays {"t":[...epoch...],"o":[...],"h":[...],"l":[...],"c":[...],"v":[...]} (and a status "s" field on empty/error responses, e.g. s:"no_data"). For 1D/1W/1M the whole object is wrapped as {"enc":"<base64>"} AES-256-CBC OpenSSL "Salted__" format; intraday (1/15/60) is delivered unwrapped/plaintext. Companion UDF endpoints also live and auth-free: /data/c
-- **Rate limits:** No rate limiting observed: 12 rapid sequential /data/symbols requests all returned HTTP 200 with no throttling, 429, or block. No Retry-After or quota headers seen. (Be polite anyway — single small host.)
-- **robots/ToS:** chart.wichart.vn/robots.txt returns the Next.js 404 page (no robots file). www.wichart.vn/robots.txt = "User-agent: * / Disallow:" (allows all). api.wichart.vn/robots.txt returns "Page Not Found !". The wichart.vn frontend (now branded WiData/widata.vn) meta robots = "index,follow". No robots rule f
-- **Redistribution:** Do NOT assume redistribution is permitted. This is a commercial, paid financial-data platform (WiData/WiGroup) with subscription tiers; the datafeed being unauthenticated is an implementation gap, not a grant of rights. Treat retrieved OHLCV as licensed third-party data: safe for private/internal research, but redistribution, resale, or republishing very likely breaches WiGroup's terms. The AES "e
-- **Verified:** reproduced=True, daily_confirmed=True, intraday_confirmed=True
-
-```bash
-# reproduce (uses curl -4 + browser UA):
-# NOTE: the 1D/1W/1M response is AES-256-CBC encrypted. The decryption passphrase is
-# <redacted> and the decrypt step is intentionally omitted: decrypting bypasses an
-# access-control mechanism (anti-circumvention). Risk posture: requires response
-# decryption; excluded from the default source chain. Intraday (1/15/60) is plaintext.
-curl -s -4 -m 30 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' "https://chart.wichart.vn/data/history?symbol=FPT&resolution=1D&from=$(date -d '2015-01-01' +%s)&to=$(date -d '2026-06-17' +%s)"  # response is {"enc":"<base64 AES-256-CBC>"}; passphrase <redacted>
-```
+- **Status:** EXCLUDED from the default source chain.
+- **Exclusion rationale:** Wichart's daily/weekly/monthly history is returned as an encrypted
+  payload protected by a client-side decryption secret. Decrypting it would circumvent an
+  access-control mechanism, which we will not do in a clean-room OSS library regardless of
+  robots.txt being permissive. The decryption passphrase is anti-circumvention material and is
+  intentionally NOT recorded, reproduced, or hinted at anywhere in this repo. Wichart is a
+  commercial paid platform with no redistribution grant; the unauthenticated datafeed is an
+  implementation gap, not a license. No curl/header/decryption recipe is kept here.
 
 ### Yahoo Finance chart API (.VN tickers for HOSE)
 
@@ -306,7 +289,7 @@ curl -s -4 -m 25 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537
 2. **Primary chain (daily):** SSI iBoard → VNDirect dchart → Vietstock. All no-auth, deep, UDF-shaped. Failover on empty/error.
 3. **Backup pool:** VPS, DNSE/Entrade, KIS, Pinetree, Vietcap. All no-auth and intraday-capable.
 4. **Raw (unadjusted) cross-check:** Simplize and CafeF — use to validate adjustment math and corporate-action handling.
-5. **Conditional / last resort:** FireAnt (anonymous Bearer token — can be revoked), Yahoo `.VN` (global backup, aggressive IP 429 — needs strict rate control), Wichart (AES-encrypted payload — fragile, deprioritize).
+5. **Conditional / last resort:** Yahoo `.VN` (global backup, aggressive IP 429 — needs strict rate control). FireAnt (bearer-gated) and Wichart (encrypted, anti-circumvention) are EXCLUDED from the default chain — see their sections above.
 6. **Compliance:** runtime fetch only, no bundled data; expose source attribution; gate any redistribution behind a documented license check.
 
 *Generated by the `vn-price-scrape-probe` workflow (30 agents, adversarial reproduction). Provider Terms of Use were not individually signed — treat redistribution conservatively per the global caveat above.*

@@ -27,7 +27,7 @@ from .failover import FailoverGoldClient
 from .gold_api import GoldApiSource
 from .models import GoldBar, GoldHistory, GoldQuote
 from .stooq import StooqGoldSource
-from .vn import BTMCGoldSource, PNJGoldSource
+from .vn import BTMC_PUBLIC_WIDGET_KEY, BTMCGoldSource, PNJGoldSource
 
 __all__ = [
     # models
@@ -39,6 +39,7 @@ __all__ = [
     # VN domestic (spot-only)
     "BTMCGoldSource",
     "PNJGoldSource",
+    "BTMC_PUBLIC_WIDGET_KEY",
     # world
     "GoldApiSource",
     "CurrencyApiGoldSource",

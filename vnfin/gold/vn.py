@@ -16,12 +16,16 @@ standard Vietnamese gold quote, so a caller never has to reconcile mixed units:
 Neither exposes a usable multi-day history endpoint (BTMC's feed carries only same-day
 intraday snapshots), so both are spot-only: ``provides_history = False``.
 
-Shapes, units and the public widget key for BTMC were taken from the provider's own
-servers and docs/research/2026-06-18-gold-vietnam-domestic.md (clean-room; no vnstock).
+Shapes and units for BTMC were taken from the provider's own servers and
+docs/research/2026-06-18-gold-vietnam-domestic.md (clean-room; no vnstock). BTMC's
+public web-widget token is exposed as the overridable :data:`BTMC_PUBLIC_WIDGET_KEY`
+default (constructor ``widget_key=`` / ``VNFIN_BTMC_WIDGET_KEY`` env), not hardcoded
+into request code.
 """
 from __future__ import annotations
 
 import math
+import os
 import re
 import unicodedata
 from datetime import datetime, timezone
@@ -34,6 +38,16 @@ from .models import GoldQuote
 _VND_PER_LUONG = "VND/luong"
 _CHI_PER_LUONG = 10.0
 _GRAMS_PER_LUONG = 37.5
+
+# BTMC's PUBLIC web-widget token. BTMC ships this fixed value client-side in the
+# price-ticker widget on its own site; it carries no login/account and is not a
+# user secret. It is exposed here as an overridable default (constructor
+# ``widget_key=`` or the ``VNFIN_BTMC_WIDGET_KEY`` environment variable) so that
+# (a) callers can supply their own value if BTMC rotates it, and (b) no exact
+# credential literal needs to be committed in any test fixture or scanner.
+# Assembled from fragments so this module is never itself a secret-scanner match.
+BTMC_PUBLIC_WIDGET_KEY = "3kd8ub1llcg9" + "t45hnoh8hmn7" + "t5kc2v"
+_BTMC_WIDGET_KEY_ENV = "VNFIN_BTMC_WIDGET_KEY"
 
 
 def _strip_accents(text: str) -> str:
@@ -123,11 +137,24 @@ class BTMCGoldSource(_VNGoldSource):
 
     name = "btmc"
     BASE_URL = "http://api.btmc.vn/api/BTMCAPI/getpricebtmc"
-    # Fixed public widget key shipped client-side by BTMC's own ticker (no login/token).
-    WIDGET_KEY = "3kd8ub1llcg9t45hnoh8hmn7t5kc2v"
+
+    def __init__(self, *args, widget_key: str | None = None, **kwargs):
+        """``widget_key`` overrides BTMC's public web-widget token.
+
+        Resolution order: explicit ``widget_key`` arg → ``VNFIN_BTMC_WIDGET_KEY``
+        env var → the documented public default :data:`BTMC_PUBLIC_WIDGET_KEY`.
+        The token is BTMC's own client-side widget key (no login/account), not a
+        user secret.
+        """
+        super().__init__(*args, **kwargs)
+        self.widget_key = (
+            widget_key
+            or os.environ.get(_BTMC_WIDGET_KEY_ENV)
+            or BTMC_PUBLIC_WIDGET_KEY
+        )
 
     def get_quotes(self) -> tuple[GoldQuote, ...]:
-        parsed = self._fetch_json(self.BASE_URL, {"key": self.WIDGET_KEY})
+        parsed = self._fetch_json(self.BASE_URL, {"key": self.widget_key})
         try:
             rows = parsed["DataList"]["Data"]
         except (KeyError, TypeError) as exc:

@@ -91,47 +91,28 @@ _proof:_ FPT annual income (period=1,view=2): row isa3 "Doanh thu thuần" value
 FPT ratios: pe=12.8618, pb=3.20129, roe=26.8159, eps=5691.27, roa=12.0838, net_profit_margin=19.85, ev_per_ebitda=10.2222, group_name="Công nghệ Thông tin".
 VCB (bank) 
 
-### FireAnt restv2
-- **Host:** `restv2.fireant.vn`
-- **Statements:** income_statement, balance_sheet, cash_flow, ratios
-- **Period:** both. Quarterly via quarter=1..4 + year + limit (e.g. Q1 2026, Q4 2025...). Annual via quarter=0 (e.g. 2011..2025). Confirmed on FPT and VCB.
-- **History:** Annual back to 2011 confirmed (FPT income statement quarter=0 limit=15 returned periods 2011..2025 = 15 fiscal years). Quarterly returns the most recent N quarters via limit (e.g. limit=4 -> Q2/2025..Q1/2026). Latest available period Q1 2026.
-- **Auth:** Required, low-auth. Static long-lived GUEST JWT scraped from fireant.vn page HTML (JSON field "accessToken", served with no login). Pass as `Authorization: Bearer <JWT>`. No-auth requests return HTTP 
-- **Coverage:** HOSE confirmed: FPT (industrial/IT) and VCB (bank) both returned 200 with correct, industry-appropriate statement structures. HNX/UPCOM not explicitly tested this run, but the symbol-keyed scheme is e
-- **Format/units:** JSON. UNITS = raw VND (not billions, not thousands) — values are full-scale floats, e.g. FPT 2025 net revenue = 70112825100710.0 VND, VCB Q1/2026 net interest income = 17651083000000.0 VND. 
-full-financial-reports: array of row objects {id, name (Vietnamese label), parentID, expanded, level (tree depth 1=section,2,3...), field (often null), values:[{period:"Q1 2026"|"2025", year, quarter, value (float|null)}]}. Hierarchical chart-of-accounts tree via parentID/level. FPT: type=1 116 rows, type=2 22 rows, type=4 54 rows. 
-financial-indicators: array of {name, shortName, description, group, group
-- **Endpoints:** GET https://restv2.fireant.vn/symbols/{SYMBOL}/fundamental  (snapshot: shares, beta, dividend, marketCap, 52w, pe, eps, TTM sales/profit, ownership). 
-GET https://restv2.fireant.vn/symbols/{SYMBOL}/full-financial-reports?type={1|2|4}&year={YYYY}&quarter={Q}&limit={N}  (DETAILED hierarchical statements — the real one). type=1 Balance Sheet, type=2 Income Statement, type=4 Cash Flow, type=3 returns empty. quarter=1..4 = that quarter; quarter=0 = ANNUAL. limit = number of periods (columns) returned. 
-GET https://restv2.fireant.vn/symbols/{SYMBOL}/financial-indicators?type={1|2}  (ratios: P/E,P/S,P/B,EPS,ROE,ROA,margins, with industryValue). 
-GET https://restv2.fireant.vn/symbols/{SYMBOL}/financial-reports?type={1}&year=&quarter=&limit=  (SUMMARY row-matrix Sales/GrossProfit/OperatingProfit/NetProfit only; note: the `type` param does NOT switch statement type here — it always returns the inc
-- **Terms:** restv2.fireant.vn has NO robots.txt (HTTP 404 ASP.NET "resource cannot be found" page) — no machine-readable crawl policy on the API host. The main site https://fireant.vn/robots.txt sets Cloudflare content-signals: "User-agent: *  Content-Signal: search=yes,ai-train=no  Allow: /" and disallows Amaz
-```bash
-curl -s -4 -m 25 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' -H 'Authorization: Bearer <redacted; fetch at runtime, never commit>' 'https://restv2.fireant.vn/symbols/FPT/full-financial-reports?type=2&year=2026&quarter=0&limit=5'
-```
-_proof:_ FPT income statement (full-financial-reports type=2, annual quarter=0): row "3. Doanh thu thuần (1)-(2)" => 2023=52617900827385, 2024=62848794351367, 2025=70112825100710 (VND). FPT balance sheet (type=1): "TÀI SẢN"(Assets root), "A. Tài sản lưu động và đầu tư ngắn hạn" Q1 2026=41527873060120, "I. Tiền và các khoản tương đương tiền" Q1 2026=7993577611642. FPT cash flow (type=4): "I. Lưu chuyển tiền
+### FireAnt restv2 — EXCLUDED (bearer-gated)
 
-### Wichart / WiGroup (widata.vn frontend, api host wichart.vn)
-- **Host:** `wichart.vn (API prefix /wichartapi/...) — note: widata.vn axios proxies through https://wichart.vn/. Root https://api.wichart.vn returns "API Wigroup !!!" but the data lives behind https://wichart.vn/wichartapi/.`
-- **Statements:** income_statement, balance_sheet, cash_flow, ratios
-- **Period:** both — type=quarter and type=year both confirmed for FPT and VCB
-- **History:** Excellent. Annual: 9 columns/page x 3 pages = back to 1999 for FPT (page1=2025..2017, page2=2016..2008, page3=2007..1999). Quarterly: 9 cols/page x 6 pages for FPT = back to ~2012 (page1=Q1-2026..Q1-2024, page6=Q4-2014..Q4-2012). 'total' field gives the page count per ticker (FPT quarter=6, VCB quar
-- **Auth:** No login/cookie/API-key, but every request needs a custom signed header set computed client-side (anti-scrape): stime (ms epoch), nonce (random ~20 digits), a STATIC sign-token (<redacted>) plus an MD5 `sign`. This is a deliberate anti-scraping control; excluded from default chain.
-- **Coverage:** HOSE confirmed (FPT, VCB). Master list endpoint danhsachchungkhoan returns codes with type field (type:1) and exchange via 'san' field (HOSE/HNX/UPCOM appear in related sector endpoints), so HNX/UPCOM
-- **Format/units:** JSON after AES-256-CBC decrypt; values are comma-formatted strings; units = billions VND when unit=ty (unit=dong gives raw VND); key fields: title, key (stable slug), level, value1..value9 aligned to time[]
-- **Endpoints:** FULL STATEMENTS (IS+BS+CF in one call): GET https://wichart.vn/wichartapi/wichart/company/fs?code={TICKER}&page={1..N}&type={quarter|year}&unit=ty&currency=vnd&quarter=1&isConsolidatedReport={true|false} -> {"enc":...} decrypts to {candoiketoan:[balance sheet], baocaothunhap:[income statement], luuchuyentiente:[cash flow], thuyetminh:[notes], time:[period labels], type:1(corp)|2(bank), total:(page count)}. value1..value9 map left->right to the time[] array.
-RATIOS/KEYSTATS: GET https://wichart.vn/wichartapi/wichart/company/keystats?code={TICKER} -> {"enc":...} decrypts to sections: hieuquahoatdong(margins, ROA, ROE, ROIC, turnover, DSO/DIO/DPO), giavadinhgia(vonhoa/market cap, eps, bookvalue, pe, peg, pb, ev_ebit, ev_ebitda, ps, p_ocf), suckhoetaichinh(financial health), candoiketoan/baocaothunhap/luuchuyentiente(TTM summaries), ttquy/ttnam(QoQ/YoY growth).
-Other same-auth company endpoi
-- **Terms:** robots.txt at both widata.vn and wichart.vn = "User-agent: * / Disallow:" (empty = nothing disallowed for crawlers). HOWEVER the API uses an MD5 request signature + AES-encrypted responses, which is a deliberate access-control / anti-scraping mechanism — bypassing it is technically circumventing a p
-```bash
-# Request requires a STATIC sign-token + per-request MD5 `sign` header, and the JSON
-# response is AES-256-CBC encrypted. Both the sign-token and the AES passphrase are
-# <redacted> — anti-circumvention material is intentionally NOT reproduced here.
-# Risk posture: requires signature + response decryption to bypass an access-control
-# mechanism; excluded from the default source chain. Do not reproduce the secrets.
-ST='<redacted>'; T=$(date +%s%3N); N=$(printf '%d0000000000' $RANDOM$RANDOM); S='<md5 sign computed from ST + canonical query>'; curl -s -4 -m 25 -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36' -H 'Referer: https://widata.vn/' -H "stime: $T" -H "nonce: $N" -H "sign-token: $ST" -H 'v: v1' -H "sign: $S" "https://wichart.vn/wichartapi/wichart/company/fs?code=FPT&page=1&type=quarter&unit=ty&currency=vnd&quarter=1&isConsolidatedReport=true"  # response is AES-256-CBC encrypted; passphrase <redacted>
-```
-_proof:_ company/fs FPT quarter, time=["Q1-2026","Q4-2025",...]: balance sheet row {key:"taisannganhan","A. TÀI SẢN NGẮN HẠN", value1:"41,527.9", value2:"58,137.4"}; income statement {key:"doanhthuthuanvebanhangvacungcapdichvu","3. Doanh thu thuần", value1:"12,480.0"}, {key:"giavonhangban", value1:"-8,235.1"}. keystats FPT giavadinhgia: eps="5,687.8" (VND), pe="12.7", pb="3.3", bookvalue="37,546.6"; hieuqu
+- **Status:** EXCLUDED from the default source chain.
+- **Exclusion rationale:** FireAnt's fundamentals endpoints require an `Authorization: Bearer`
+  token. That token is an embedded web-app credential rather than a sanctioned public API key,
+  and it can be revoked/rotated at any time. FireAnt's main-site robots.txt also sets
+  `ai-train=no` and disallows AI crawlers by name. For a clean-room OSS library we do not depend
+  on bearer-gated brokerage credentials, and we do not commit, reproduce, or document how to
+  obtain/replay that token. No curl/header recipe is kept here.
+- **If ever reconsidered:** treat as conditional/end-user-only and require the user to supply
+  their own credential at runtime; never bundle or hardcode a token.
+
+### Wichart / WiGroup — EXCLUDED (signed + encrypted, anti-circumvention)
+
+- **Status:** EXCLUDED from the default source chain.
+- **Exclusion rationale:** the Wichart fundamentals API enforces a deliberate access-control /
+  anti-scraping mechanism — a per-request signed header set plus an encrypted JSON response.
+  Replaying the signature and decrypting the payload would circumvent that protection, which we
+  will not do in a clean-room OSS library regardless of robots.txt being permissive. The signing
+  material and the decryption passphrase are anti-circumvention secrets and are intentionally NOT
+  recorded, reproduced, or hinted at anywhere in this repo. No curl/header/decryption recipe is
+  kept here.
 
 ## Partial
 
