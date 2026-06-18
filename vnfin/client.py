@@ -12,8 +12,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from datetime import datetime
-
+from .calendar import as_date, expected_latest_trading_day
 from .exceptions import AllSourcesFailed, UnsupportedInterval
 from .failover import FailoverClient
 from .models import Interval, PriceHistory
@@ -86,13 +85,18 @@ class FailoverPriceClient:
 
         We warn (not fail) when the returned series starts well after the requested
         start or ends well before the requested end — partial coverage may be a clamped
-        history, a recent listing, or a stale source. Hard rejection awaits a VN
-        trading-calendar + listing-date source (avoids weekend/holiday false-fails).
+        history, a recent listing, or a stale source. These remain soft warnings: this
+        method never hard-fails.
+
+        The ``partial_end_coverage`` (staleness) check is VN trading-calendar aware: a
+        market does not trade on weekends or public holidays, so the latest bar an
+        up-to-date source could possibly have for a request ending at ``end`` is
+        :func:`vnfin.calendar.expected_latest_trading_day` ``(end)``. If the last bar is
+        already at (or past) that expected trading day, the series is NOT stale and we
+        do not warn — this avoids false staleness over a weekend or holiday. Only when
+        the last bar is behind the expected latest trading day do we fall back to the
+        day-gap tolerance. ``partial_start_coverage`` is unchanged.
         """
-
-        def as_date(d):
-            return d.date() if isinstance(d, datetime) else d
-
         warns: list[str] = []
         if not hist.bars:
             return ()
@@ -104,8 +108,13 @@ class FailoverPriceClient:
             warns.append(
                 f"partial_start_coverage: first bar {first} is >{tolerance_days}d after requested start {sd}"
             )
-        if ed is not None and (ed - last).days > tolerance_days:
-            warns.append(
-                f"partial_end_coverage: last bar {last} is >{tolerance_days}d before requested end {ed}"
-            )
+        if ed is not None:
+            expected_last = expected_latest_trading_day(ed)
+            # Up to date relative to the calendar: the last bar is the most recent
+            # expected trading day (or newer) -> no staleness, regardless of raw gap.
+            if last < expected_last and (ed - last).days > tolerance_days:
+                warns.append(
+                    f"partial_end_coverage: last bar {last} is >{tolerance_days}d before "
+                    f"requested end {ed} (expected latest trading day {expected_last})"
+                )
         return tuple(warns)

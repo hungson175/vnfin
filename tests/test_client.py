@@ -116,6 +116,86 @@ def test_partial_start_coverage_warning_with_datetime_inputs(synth):
     assert any("partial_start_coverage" in w for w in h.warnings)
 
 
+def _history_through(source, last_day, n=3):
+    """Synthetic daily PriceHistory whose final bar lands exactly on ``last_day``.
+
+    Obviously-fake symbol + fabricated OHLCV; no real provider rows.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from vnfin.models import AdjustmentPolicy, PriceBar, PriceHistory
+
+    days = [last_day - timedelta(days=n - 1 - i) for i in range(n)]
+    bars = tuple(
+        PriceBar(
+            time=datetime(d.year, d.month, d.day, tzinfo=timezone.utc),
+            open=72.0,
+            high=73.0,
+            low=71.0,
+            close=72.5,
+            volume=1000 + i,
+        )
+        for i, d in enumerate(days)
+    )
+    return PriceHistory(
+        symbol="ZZZFAKE",
+        interval=Interval.D1,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED,
+        source=source,
+        bars=bars,
+        exchange="HOSE",
+        provider_symbol="ZZZFAKE",
+    )
+
+
+def test_no_false_staleness_over_weekend():
+    # Last bar Fri 2024-01-05; request ends Sun 2024-01-07 (weekend).
+    # The market did not trade Sat/Sun, so the series is NOT stale -> no warning.
+    from datetime import date
+
+    s = FakeSource("s1", _history_through("s1", date(2024, 1, 5)))
+    client = FailoverPriceClient([s])
+    h = client.get_daily("ZZZFAKE", date(2023, 12, 1), date(2024, 1, 7))
+    assert not any("partial_end_coverage" in w for w in h.warnings)
+
+
+def test_no_false_staleness_over_holiday_block():
+    # Last bar Fri 2023-12-29; request ends Mon 2024-01-01 (New Year holiday).
+    # Latest expected trading day is 2023-12-29, which the series already has.
+    # Even though the raw gap could look large, there is no staleness.
+    from datetime import date
+
+    s = FakeSource("s1", _history_through("s1", date(2023, 12, 29)))
+    client = FailoverPriceClient([s])
+    h = client.get_daily("ZZZFAKE", date(2023, 12, 1), date(2024, 1, 1))
+    assert not any("partial_end_coverage" in w for w in h.warnings)
+
+
+def test_no_false_staleness_over_long_tet_break():
+    # 2024 Tet weekday closures span Feb 8-14 (plus the weekend Feb 10-11).
+    # Last bar is the last pre-Tet trading day (Wed 2024-02-07); request ends on the
+    # last Tet holiday (Wed 2024-02-14). The >7d raw gap would have falsely warned
+    # under the old day-gap-only rule; the calendar suppresses it.
+    from datetime import date
+
+    s = FakeSource("s1", _history_through("s1", date(2024, 2, 7)))
+    client = FailoverPriceClient([s])
+    h = client.get_daily("ZZZFAKE", date(2024, 1, 1), date(2024, 2, 14))
+    assert not any("partial_end_coverage" in w for w in h.warnings)
+
+
+def test_genuine_staleness_still_warns():
+    # Last bar 2024-01-04 but request ends a full month later on a normal trading day
+    # (Wed 2024-01-31). Latest expected trading day is 2024-01-31; the series is behind
+    # it by far more than the tolerance -> the staleness warning still fires.
+    from datetime import date
+
+    s = FakeSource("s1", _history_through("s1", date(2024, 1, 4)))
+    client = FailoverPriceClient([s])
+    h = client.get_daily("ZZZFAKE", date(2024, 1, 1), date(2024, 1, 31))
+    assert any("partial_end_coverage" in w for w in h.warnings)
+
+
 def _unit_source(name, unit, synth):
     s = FakeSource(name, synth.make_history(name, 2))
     s.unit = unit
