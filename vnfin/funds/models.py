@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
+from ..timeseries import TimeSeriesResult
+
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
@@ -62,41 +64,37 @@ class NavPoint:
 
 
 @dataclass(frozen=True)
-class NavHistory:
-    """A NAV time series for one fund plus provenance/diagnostics metadata."""
+class NavHistory(TimeSeriesResult):
+    """A NAV time series for one fund plus provenance/diagnostics metadata.
+
+    ``value_unit`` is ``"VND/unit"`` — NAV is a money amount *per fund unit*, so
+    ``currency`` is ``"VND"`` and the explicit value unit records the per-unit basis.
+    """
 
     product_id: int
     points: tuple[NavPoint, ...]
     source: str
     currency: str = "VND"
+    value_unit: str = "VND/unit"
     code: Optional[str] = None
     fetched_at_utc: Optional[datetime] = None
     warnings: tuple[str, ...] = ()
 
-    def __len__(self) -> int:
-        return len(self.points)
+    _items_attr = "points"
+    _index_column = "date"
+    _df_columns = ("date", "nav")
 
-    def __iter__(self):
-        return iter(self.points)
+    def _row_record(self, p: NavPoint) -> dict:
+        return {"date": p.date, "nav": p.nav}
 
-    def to_dataframe(self) -> "pd.DataFrame":
-        """Return a pandas DataFrame indexed by date with a single ``nav`` column.
-
-        Metadata (source, currency, product_id, code) is attached to ``df.attrs``.
-        """
-        import pandas as pd
-
-        rows = [{"date": p.date, "nav": p.nav} for p in self.points]
-        df = pd.DataFrame(rows, columns=["date", "nav"])
-        if not df.empty:
-            df = df.set_index("date")
-        df.attrs.update(
+    def _df_attrs(self) -> dict:
+        return dict(
             source=self.source,
             currency=self.currency,
+            value_unit=self.value_unit,
             product_id=self.product_id,
             code=self.code,
         )
-        return df
 
 
 @dataclass(frozen=True)

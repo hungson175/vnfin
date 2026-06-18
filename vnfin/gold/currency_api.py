@@ -108,6 +108,7 @@ class CurrencyApiGoldSource(GoldSource):
         return GoldHistory(
             product="XAU",
             unit=_USD_PER_OZ,
+            value_unit=_USD_PER_OZ,  # world gold series is USD per troy ounce
             currency="USD",
             source=self.name,
             bars=tuple(bars),

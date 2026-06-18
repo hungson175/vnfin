@@ -142,6 +142,7 @@ class FmarketFundSource(HttpDataSource):
             points=tuple(points),
             source=self.name,
             currency="VND",
+            value_unit="VND/unit",  # NAV is money per fund unit
             fetched_at_utc=datetime.now(timezone.utc),
         )
 

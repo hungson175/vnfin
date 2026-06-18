@@ -85,6 +85,7 @@ class UDFSource(HttpDataSource, PriceSource):
             source=self.name,
             bars=tuple(bars),
             currency="VND",
+            value_unit="VND",  # equity prices are money in VND
             exchange=self.EXCHANGE,
             provider_symbol=psym,
             fetched_at_utc=datetime.now(timezone.utc),

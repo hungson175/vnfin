@@ -6,6 +6,8 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
+from .timeseries import TimeSeriesResult
+
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
@@ -42,7 +44,14 @@ class AdjustmentPolicy(str, Enum):
 
 @dataclass(frozen=True)
 class PriceBar:
-    """A single OHLCV bar. Prices are in VND; ``time`` is timezone-aware (Asia/Ho_Chi_Minh)."""
+    """A single OHLCV bar.
+
+    For equities, prices are money in the result's ``currency``/``value_unit`` (VND).
+    The same bar shape is reused by the index domain, where values are *index points*
+    (``value_unit="points"``), not a money amount — always read the unit off the
+    enclosing :class:`PriceHistory` rather than assuming VND. ``time`` is
+    timezone-aware (Asia/Ho_Chi_Minh).
+    """
 
     time: datetime
     open: float
@@ -62,8 +71,14 @@ class SourceAttempt:
 
 
 @dataclass(frozen=True)
-class PriceHistory:
-    """A normalized OHLCV series plus provenance/diagnostics metadata."""
+class PriceHistory(TimeSeriesResult):
+    """A normalized OHLCV series plus provenance/diagnostics metadata.
+
+    ``value_unit`` states the price unit explicitly: ``"VND"`` for equities (a money
+    amount, so ``currency`` is also ``"VND"``) and ``"points"`` for index levels (an
+    index level is not a money amount). ``currency`` is reserved for money-denominated
+    values; sources set both directly rather than relying on a post-hoc patch.
+    """
 
     symbol: str
     interval: Interval
@@ -71,42 +86,34 @@ class PriceHistory:
     source: str
     bars: tuple[PriceBar, ...]
     currency: str = "VND"
+    value_unit: str = "VND"
     exchange: Optional[str] = None
     provider_symbol: Optional[str] = None
     fetched_at_utc: Optional[datetime] = None
     warnings: tuple[str, ...] = ()
     attempts: tuple[SourceAttempt, ...] = ()
 
-    def __len__(self) -> int:
-        return len(self.bars)
+    _items_attr = "bars"
+    _index_column = "time"
+    _df_columns = ("time", "open", "high", "low", "close", "volume")
 
-    def __iter__(self):
-        return iter(self.bars)
+    def _row_record(self, b: PriceBar) -> dict:
+        return {
+            "time": b.time,
+            "open": b.open,
+            "high": b.high,
+            "low": b.low,
+            "close": b.close,
+            "volume": b.volume,
+        }
 
-    def to_dataframe(self) -> "pd.DataFrame":
-        """Return a pandas DataFrame indexed by time. Metadata is attached to ``df.attrs``."""
-        import pandas as pd
-
-        rows = [
-            {
-                "time": b.time,
-                "open": b.open,
-                "high": b.high,
-                "low": b.low,
-                "close": b.close,
-                "volume": b.volume,
-            }
-            for b in self.bars
-        ]
-        df = pd.DataFrame(rows, columns=["time", "open", "high", "low", "close", "volume"])
-        if not df.empty:
-            df = df.set_index("time")
-        df.attrs.update(
+    def _df_attrs(self) -> dict:
+        return dict(
             symbol=self.symbol,
             interval=self.interval.value,
             adjustment_policy=self.adjustment_policy.value,
             source=self.source,
             currency=self.currency,
+            value_unit=self.value_unit,
             exchange=self.exchange,
         )
-        return df

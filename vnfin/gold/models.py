@@ -20,6 +20,8 @@ from datetime import date as date_type
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+from ..timeseries import TimeSeriesResult
+
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
@@ -64,35 +66,43 @@ class GoldBar:
 
 
 @dataclass(frozen=True)
-class GoldHistory:
-    """A normalized daily gold price series plus provenance metadata."""
+class GoldHistory(TimeSeriesResult):
+    """A normalized daily gold price series plus provenance metadata.
+
+    ``unit`` is the historical/primary unit field (e.g. ``"USD/oz"``). ``value_unit``
+    is the explicit cross-domain alias kept consistent with ``unit`` so callers can
+    read the value unit uniformly across every time-series result; it defaults to
+    ``unit`` when a source does not set it explicitly.
+    """
 
     product: str
     unit: str
     currency: str
     source: str
     bars: tuple[GoldBar, ...]
+    value_unit: Optional[str] = None
     fetched_at_utc: Optional[datetime] = None
     warnings: tuple[str, ...] = ()
 
-    def __len__(self) -> int:
-        return len(self.bars)
+    _items_attr = "bars"
+    _index_column = "date"
+    _df_columns = ("date", "price")
 
-    def __iter__(self):
-        return iter(self.bars)
+    def __post_init__(self):
+        # value_unit mirrors the primary `unit` when a source omits it, so the
+        # explicit cross-domain value-unit field is always populated. Frozen
+        # dataclass: assign via object.__setattr__.
+        if self.value_unit is None:
+            object.__setattr__(self, "value_unit", self.unit)
 
-    def to_dataframe(self) -> "pd.DataFrame":
-        """Return a pandas DataFrame indexed by date. Metadata is on ``df.attrs``."""
-        import pandas as pd
+    def _row_record(self, b: GoldBar) -> dict:
+        return {"date": b.date, "price": b.price}
 
-        rows = [{"date": b.date, "price": b.price} for b in self.bars]
-        df = pd.DataFrame(rows, columns=["date", "price"])
-        if not df.empty:
-            df = df.set_index("date")
-        df.attrs.update(
+    def _df_attrs(self) -> dict:
+        return dict(
             product=self.product,
             unit=self.unit,
+            value_unit=self.value_unit,
             currency=self.currency,
             source=self.source,
         )
-        return df

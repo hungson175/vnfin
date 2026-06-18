@@ -208,6 +208,7 @@ class BinanceCryptoSource(HttpDataSource):
             source=self.name,
             bars=tuple(all_bars),
             currency=currency,
+            value_unit=currency,  # price unit IS the quote asset / currency
             provider_symbol=psym,
             fetched_at_utc=datetime.now(timezone.utc),
             warnings=tuple(warnings),

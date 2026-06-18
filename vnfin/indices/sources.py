@@ -51,7 +51,8 @@ class _IndexUDFMixin:
 
     PRICE_SCALE = 1.0  # index values are in points already — never x1000
     ADJUSTMENT_POLICY = AdjustmentPolicy.RAW  # index levels are not adjusted
-    CURRENCY = "points"
+    VALUE_UNIT = "points"  # an index level is points, not a money amount
+    CURRENCY = "points"  # kept "points" for backward compatibility (not money)
     ALIASES: dict = {}
 
     def normalize_symbol(self, symbol: str) -> str:
@@ -71,10 +72,12 @@ class _IndexUDFMixin:
                 f"got {self.PRICE_SCALE} — indices are points, not VND"
             )
         hist = super().get_history(symbol, interval, start, end)
-        # PriceHistory hardcodes currency="VND" in the base; an index level is in
-        # points, so correct the currency on the typed result (frozen -> replace).
-        if hist.currency != self.CURRENCY:
-            hist = replace(hist, currency=self.CURRENCY)
+        # An index level is in POINTS, not VND money. State the explicit unit on the
+        # typed result: value_unit="points". ``currency`` historically also carries
+        # "points" here (callers/tests rely on it), so keep both consistent. (frozen
+        # dataclass -> replace; the equity base sets value_unit/currency="VND".)
+        if hist.value_unit != self.VALUE_UNIT or hist.currency != self.CURRENCY:
+            hist = replace(hist, value_unit=self.VALUE_UNIT, currency=self.CURRENCY)
         return hist
 
 

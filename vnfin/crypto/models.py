@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from ..models import Interval
+from ..timeseries import TimeSeriesResult
 
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
@@ -39,14 +40,17 @@ class CryptoBar:
 
 
 @dataclass(frozen=True)
-class CryptoHistory:
+class CryptoHistory(TimeSeriesResult):
     """A normalized crypto OHLCV series plus provenance metadata.
 
     Mirrors :class:`vnfin.models.PriceHistory` for the crypto domain. Every result
     carries source attribution and ``fetched_at_utc`` and states its units:
 
-    - ``currency`` — the price unit. ``"USD"`` for USD-stablecoin quote pairs
-      (USDT/USDC/...); otherwise the actual quote asset (e.g. ``"BTC"`` for ETHBTC).
+    - ``currency`` — the price unit (the pair's QUOTE asset). ``"USD"`` for
+      USD-stablecoin quote pairs (USDT/USDC/...); otherwise the actual quote asset
+      (e.g. ``"BTC"`` for ETHBTC).
+    - ``value_unit`` — the explicit price unit string; for crypto it equals the quote
+      asset / ``currency`` (prices ARE money in the quote asset).
     - ``base_asset`` / ``quote_asset`` — the parsed pair legs (prices are
       quote-per-base; ``volume`` is denominated in ``base_asset``).
     - ``price_unit`` / ``volume_unit`` — human-readable unit strings for callers.
@@ -57,6 +61,7 @@ class CryptoHistory:
     source: str
     bars: tuple[CryptoBar, ...]
     currency: str = "USD"
+    value_unit: str = "USD"
     provider_symbol: Optional[str] = None
     fetched_at_utc: Optional[datetime] = None
     warnings: tuple[str, ...] = ()
@@ -65,39 +70,30 @@ class CryptoHistory:
     price_unit: Optional[str] = None
     volume_unit: Optional[str] = None
 
-    def __len__(self) -> int:
-        return len(self.bars)
+    _items_attr = "bars"
+    _index_column = "time"
+    _df_columns = ("time", "open", "high", "low", "close", "volume")
 
-    def __iter__(self):
-        return iter(self.bars)
+    def _row_record(self, b: CryptoBar) -> dict:
+        return {
+            "time": b.time,
+            "open": b.open,
+            "high": b.high,
+            "low": b.low,
+            "close": b.close,
+            "volume": b.volume,
+        }
 
-    def to_dataframe(self) -> "pd.DataFrame":
-        """Return a pandas DataFrame indexed by time. Metadata is attached to ``df.attrs``."""
-        import pandas as pd
-
-        rows = [
-            {
-                "time": b.time,
-                "open": b.open,
-                "high": b.high,
-                "low": b.low,
-                "close": b.close,
-                "volume": b.volume,
-            }
-            for b in self.bars
-        ]
-        df = pd.DataFrame(rows, columns=["time", "open", "high", "low", "close", "volume"])
-        if not df.empty:
-            df = df.set_index("time")
-        df.attrs.update(
+    def _df_attrs(self) -> dict:
+        return dict(
             symbol=self.symbol,
             interval=self.interval.value,
             source=self.source,
             currency=self.currency,
+            value_unit=self.value_unit,
             provider_symbol=self.provider_symbol,
             base_asset=self.base_asset,
             quote_asset=self.quote_asset,
             price_unit=self.price_unit,
             volume_unit=self.volume_unit,
         )
-        return df
