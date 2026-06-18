@@ -26,7 +26,7 @@ def test_pricehistory_len_and_iter(synth):
 
 
 def test_to_dataframe(synth):
-    pd = pytest.importorskip("pandas")
+    import pandas as pd
     df = synth.make_history(source="ssi", n=3).to_dataframe()
     assert list(df.columns) == ["open", "high", "low", "close", "volume"]
     assert len(df) == 3
@@ -37,7 +37,7 @@ def test_to_dataframe(synth):
 
 
 def test_to_dataframe_empty(synth):
-    pytest.importorskip("pandas")
+    import pandas  # noqa: F401
     df = synth.make_history(n=0).to_dataframe()
     assert len(df) == 0
     assert df.attrs["source"] == "fake"

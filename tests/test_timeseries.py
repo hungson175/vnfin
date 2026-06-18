@@ -81,7 +81,7 @@ def test_mixin_len_iter_and_dataframe_on_a_minimal_subclass():
     assert len(s) == 3
     assert [p.v for p in s] == [1.0, 2.0, 3.0]
 
-    pd = pytest.importorskip("pandas")
+    import pandas as pd
     df = s.to_dataframe()
     assert list(df.columns) == ["v"]
     assert df.index.name == "when"
@@ -106,7 +106,7 @@ def test_mixin_dataframe_empty_series_keeps_attrs():
         def _df_attrs(self):
             return {"source": "empty"}
 
-    pytest.importorskip("pandas")
+    import pandas  # noqa: F401
     s = _Series()
     assert len(s) == 0
     df = s.to_dataframe()
@@ -137,7 +137,7 @@ def test_equity_udf_source_emits_vnd_unit_directly(synth):
 
 
 def test_equity_to_dataframe_carries_value_unit(synth):
-    pytest.importorskip("pandas")
+    import pandas  # noqa: F401
     df = synth.make_history(n=2).to_dataframe()
     assert df.attrs["value_unit"] == "VND"
     assert df.attrs["currency"] == "VND"
@@ -191,7 +191,7 @@ def test_index_to_dataframe_carries_points_value_unit():
     from vnfin.indices.sources import VNDirectIndexSource
     from vnfin.models import Interval
 
-    pytest.importorskip("pandas")
+    import pandas  # noqa: F401
     s = VNDirectIndexSource(http_get=lambda u, p, h: _index_bare_udf())
     df = s.get_history("ZZZINDEX", Interval.D1, *_INDEX_WIDE).to_dataframe()
     assert df.attrs["value_unit"] == "points"

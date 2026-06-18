@@ -4,23 +4,19 @@ Independent sources for the same quantity must AGREE. This catches the nastiest 
 of bug — silent unit/scale mismatches (VND vs thousand-VND, per-chi vs per-luong,
 USD/oz vs total) — plus stale/bad data, with NO committed fixtures.
 
-Opt-in and CI-skipped: run with ``VNFIN_LIVE=1 ./.venv/bin/python -m pytest -m integration``.
+Live-only: outside the default test collection; requires ``VNFIN_LIVE=1`` (enforced by
+``live_tests/conftest.py``). Run with ``VNFIN_LIVE=1 ./.venv/bin/python -m pytest live_tests/``.
 Tolerances are deliberately wide where appropriate: tight (<2%) for adjusted equity
 closes that must be unit-identical; loose magnitude bands elsewhere so the tests catch
 order-of-magnitude unit errors without being brittle to real market moves.
 """
 from __future__ import annotations
 
-import os
 from datetime import date, timedelta
 
 import pytest
 
-_LIVE = os.getenv("VNFIN_LIVE") == "1"
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.skipif(not _LIVE, reason="set VNFIN_LIVE=1 to run live cross-source tests"),
-]
+pytestmark = pytest.mark.integration
 
 
 def _rel_spread(values):

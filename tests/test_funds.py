@@ -418,7 +418,7 @@ def test_nav_history_transport_error_wrapped():
 
 
 def test_nav_history_to_dataframe():
-    pd = pytest.importorskip("pandas")
+    import pandas as pd
     hist = _src(_nav_history_payload()).nav_history(FAKE_ID_A)
     df = hist.to_dataframe()
     assert list(df.columns) == ["nav"]
