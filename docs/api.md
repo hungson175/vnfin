@@ -34,9 +34,11 @@ and `timeout=25.0`; price/index clients also accept `max_attempts`.
 
 ```python
 # prices — equity OHLCV (VND). Failover over the default broker chain.
+# start/end dates are REQUIRED; omitting them raises vnfin.exceptions.InvalidData.
+from datetime import date
 c    = vnfin.prices.client()                 # FailoverPriceClient
-hist = vnfin.prices.history("FAKECORP")      # one-shot PriceHistory
-hist = vnfin.default_client().get_history("FAKECORP")   # long-standing equivalent
+hist = vnfin.prices.history("FAKECORP", start=date(2024, 1, 1), end=date(2024, 6, 30))   # one-shot PriceHistory
+hist = vnfin.default_client().get_history("FAKECORP", start=date(2024, 1, 1), end=date(2024, 6, 30))  # long-standing equivalent
 
 # fundamentals — financial statements (raw VND).
 src     = vnfin.fundamentals.client()        # == .source(), VNDirectFundamentalSource

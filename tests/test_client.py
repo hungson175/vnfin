@@ -232,3 +232,68 @@ def test_default_equity_chain_is_homogeneous_vnd():
 
     client = FailoverPriceClient(default_sources())
     assert {s.unit for s in client.sources} == {"VND"}
+
+
+# --- B5: REQUIRE-DATES contract -------------------------------------------- #
+# start/end are required and validated BEFORE any source call. Missing/invalid
+# dates raise a stable VnfinError (InvalidData), never a raw TypeError, and never
+# burn a failover attempt.
+
+
+def test_get_history_without_dates_raises_vnfin_error_not_typeerror(synth):
+    from vnfin.exceptions import InvalidData, VnfinError
+
+    s = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s])
+    with pytest.raises(VnfinError) as ei:
+        client.get_history("FAKECO")  # no start/end
+    assert isinstance(ei.value, InvalidData)
+    assert not isinstance(ei.value, TypeError)
+    assert s.calls == 0  # validated up front, no source call / failover attempt
+
+
+def test_default_client_get_history_without_dates_raises_vnfin_error():
+    import vnfin
+    from vnfin.exceptions import VnfinError
+
+    with pytest.raises(VnfinError):
+        vnfin.default_client().get_history("FAKECO")  # no start/end
+
+
+def test_prices_history_facade_without_dates_raises_vnfin_error():
+    import vnfin
+    from vnfin.exceptions import VnfinError
+
+    with pytest.raises(VnfinError):
+        # http_get injected so we never touch the network; validation fires first.
+        vnfin.prices.history("FAKECO", http_get=lambda url, params, headers: "{}")
+
+
+def test_get_history_with_only_start_raises_vnfin_error(synth):
+    from vnfin.exceptions import InvalidData
+
+    s = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s])
+    with pytest.raises(InvalidData):
+        client.get_history("FAKECO", Interval.D1, date(2024, 1, 1), None)
+    assert s.calls == 0
+
+
+def test_get_history_with_inverted_range_raises_vnfin_error(synth):
+    from vnfin.exceptions import InvalidData
+
+    s = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s])
+    with pytest.raises(InvalidData):
+        client.get_history("FAKECO", Interval.D1, date(2024, 1, 31), date(2024, 1, 1))
+    assert s.calls == 0
+
+
+def test_get_daily_without_dates_raises_vnfin_error(synth):
+    from vnfin.exceptions import InvalidData
+
+    s = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s])
+    with pytest.raises(InvalidData):
+        client.get_daily("FAKECO", None, None)
+    assert s.calls == 0

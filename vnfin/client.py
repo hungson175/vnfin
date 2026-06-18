@@ -12,8 +12,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from datetime import date
+
 from .calendar import as_date, expected_latest_trading_day
-from .exceptions import AllSourcesFailed, UnsupportedInterval
+from .exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from .failover import FailoverClient
 from .models import Interval, PriceHistory
 
@@ -21,6 +23,38 @@ from .models import Interval, PriceHistory
 def _price_unit(source):
     """Declared price unit of a source (``"VND"`` / ``"points"`` / ``None``)."""
     return getattr(source, "unit", None)
+
+
+def _require_date_range(start, end) -> None:
+    """Validate the requested window BEFORE any source/failover call (B5).
+
+    The price API requires an explicit ``start`` and ``end`` (a ``date`` or
+    ``datetime``). Missing dates, a wrong type, or an inverted range raise a stable
+    :class:`~vnfin.exceptions.InvalidData` (a ``VnfinError``) up front. This keeps
+    the public surface from leaking the raw ``TypeError`` that
+    ``datetime.combine(None, ...)`` would otherwise produce deep inside a source,
+    and avoids burning failover attempts on a caller-input mistake.
+    """
+    if start is None or end is None:
+        missing = [n for n, v in (("start", start), ("end", end)) if v is None]
+        raise InvalidData(
+            "price history requires both 'start' and 'end' dates; missing: "
+            + ", ".join(missing)
+        )
+    if not isinstance(start, date) or not isinstance(end, date):
+        raise InvalidData(
+            "price history 'start' and 'end' must be datetime.date or datetime.datetime"
+        )
+    try:
+        reversed_range = start > end
+    except TypeError as exc:  # mixing naive date with datetime, etc.
+        raise InvalidData(
+            "price history 'start' and 'end' must be comparable (same date/datetime type)"
+        ) from exc
+    if reversed_range:
+        raise InvalidData(
+            f"price history requires start <= end, got start={start} > end={end}"
+        )
 
 
 class FailoverPriceClient:
@@ -61,6 +95,7 @@ class FailoverPriceClient:
         return self._engine.max_attempts
 
     def get_history(self, symbol, interval: Interval = Interval.D1, start=None, end=None) -> PriceHistory:
+        _require_date_range(start, end)
         return self._engine.run(symbol, interval, start, end)
 
     def get_daily(self, symbol, start, end) -> PriceHistory:

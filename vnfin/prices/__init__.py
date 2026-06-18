@@ -15,14 +15,19 @@ Nothing here changes price behavior — it is composition over the existing
 :mod:`vnfin.client`, :mod:`vnfin.models`, and :mod:`vnfin.sources` stack. Equity prices
 are quoted in **VND** (see ``docs/units.md``).
 
+Both ``start`` and ``end`` dates are **required** (see :func:`history`); omitting
+either raises :class:`~vnfin.exceptions.InvalidData` up front rather than leaking a
+raw ``TypeError``.
+
 Example::
 
     import vnfin
+    from datetime import date
 
     c = vnfin.prices.client()
-    hist = c.get_history("FAKECORP")          # PriceHistory, VND
+    hist = c.get_history("FAKECORP", start=date(2024, 1, 1), end=date(2024, 6, 30))  # PriceHistory, VND
     # or one-shot:
-    hist = vnfin.prices.history("FAKECORP")
+    hist = vnfin.prices.history("FAKECORP", start=date(2024, 1, 1), end=date(2024, 6, 30))
 """
 from __future__ import annotations
 
@@ -63,7 +68,13 @@ def history(
     http_get=None,
     timeout: float = 25.0,
 ) -> PriceHistory:
-    """Convenience: one-shot equity price history over the default failover chain."""
+    """Convenience: one-shot equity price history over the default failover chain.
+
+    ``start`` and ``end`` are **required** (a ``date`` or ``datetime``) and are
+    validated before any source call. Omitting either, passing a non-date, or
+    passing ``start > end`` raises a stable :class:`~vnfin.exceptions.InvalidData`
+    (a ``VnfinError``) — never a raw ``TypeError``.
+    """
     return client(max_attempts=max_attempts, http_get=http_get, timeout=timeout).get_history(
         symbol, interval, start, end
     )
