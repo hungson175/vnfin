@@ -1,5 +1,34 @@
-"""vnfin — clean-room OSS Python library for Vietnam financial-market data."""
-from . import exceptions
+"""vnfin — clean-room OSS Python library for Vietnam financial-market data.
+
+Coherent facade / naming standard
+---------------------------------
+There is **one obvious entry per domain**, reachable as an attribute of ``vnfin``::
+
+    import vnfin
+
+    vnfin.prices        # equity OHLCV (VND)            -> .client() / .history()
+    vnfin.fundamentals  # financial statements (VND)    -> .client()/.source() / get_financials()
+    vnfin.funds         # mutual fund NAV (VND/unit)     -> .client()/.source()
+    vnfin.indices       # index value (points) + members -> .client() / index_history()
+    vnfin.gold          # gold spot/history              -> .vn() / .world() / .source()
+    vnfin.crypto        # crypto OHLCV (USD)             -> .client()/.source()
+    vnfin.macro         # macro indicators               -> .client()/.source()
+
+Each domain keeps its own typed models and units (see ``docs/api.md`` and
+``docs/units.md``); they are **not** funnelled through one client that returns
+incompatible models. Every domain factory exposes the standard verbs ``client(...)``
+and/or ``source(...)``; all existing submodule imports keep working unchanged.
+"""
+from . import (
+    crypto,
+    exceptions,
+    fundamentals,
+    funds,
+    gold,
+    indices,
+    macro,
+    prices,
+)
 from .client import FailoverPriceClient
 from .failover import FailoverClient
 from .models import (
@@ -11,6 +40,7 @@ from .models import (
 )
 
 __all__ = [
+    # price models / engines (long-standing top-level surface)
     "AdjustmentPolicy",
     "Interval",
     "PriceBar",
@@ -19,6 +49,14 @@ __all__ = [
     "FailoverClient",
     "FailoverPriceClient",
     "default_client",
+    # facade: domain namespaces (one obvious entry per domain)
+    "prices",
+    "fundamentals",
+    "funds",
+    "indices",
+    "gold",
+    "crypto",
+    "macro",
     "exceptions",
 ]
 __version__ = "0.0.1"

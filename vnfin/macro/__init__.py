@@ -18,4 +18,20 @@ __all__ = [
     "IndicatorSeries",
     "WorldBankMacroSource",
     "FREDMacroSource",
+    "client",
+    "source",
 ]
+
+
+def source(http_get=None, timeout: float = 25.0) -> WorldBankMacroSource:
+    """Primary macro entry: the default :class:`WorldBankMacroSource` (World Bank, no-key).
+
+    Standard ``<domain>.source(...)`` factory. Use ``.get_indicator(...)`` on the
+    returned object. ``FREDMacroSource`` is an advanced/opt-in alternative and is not
+    the default (it is currently a stub requiring ``FRED_API_KEY``).
+    """
+    return WorldBankMacroSource(http_get=http_get, timeout=timeout)
+
+
+# Default macro backbone is World Bank; ``client`` aliases ``source`` for consistency.
+client = source

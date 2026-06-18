@@ -43,4 +43,14 @@ __all__ = [
     "VPSIndexSource",
     "SSIIndexSource",
     "VNDirectIndexSource",
+    "client",
 ]
+
+
+def client(http_get=None, timeout: float = 25.0, max_attempts: int = 3) -> IndexClient:
+    """Primary indices entry: the default :class:`IndexClient` (VN index VALUE + members).
+
+    Standard ``<domain>.client(...)`` factory. Use ``.index_history(...)`` for value
+    history (in *points*) and ``.constituents(index)`` for membership.
+    """
+    return IndexClient(http_get=http_get, timeout=timeout, max_attempts=max_attempts)

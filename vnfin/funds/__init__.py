@@ -13,6 +13,8 @@ Example::
     hist = src.nav_history(funds[0].id)         # full NAV history (VND/unit)
     holdings = src.holdings(funds[0].id)        # top disclosed holdings
 """
+from __future__ import annotations
+
 from .fmarket import FmarketFundSource
 from .models import Fund, FundHolding, FundList, NavHistory, NavPoint
 
@@ -23,4 +25,20 @@ __all__ = [
     "NavHistory",
     "FundHolding",
     "FmarketFundSource",
+    "client",
+    "source",
 ]
+
+
+def source(http_get=None, timeout: float = 25.0) -> FmarketFundSource:
+    """Primary funds entry: the default :class:`FmarketFundSource` (Fmarket, no-auth).
+
+    Standard ``<domain>.source(...)`` factory. Use ``.list_funds()``, ``.nav_history(id)``
+    and ``.holdings(id)`` on the returned object.
+    """
+    return FmarketFundSource(http_get=http_get, timeout=timeout)
+
+
+# ``client`` is an alias of ``source`` so the funds domain matches the shared
+# ``<domain>.client(...)`` naming used elsewhere; funds has a single source surface.
+client = source

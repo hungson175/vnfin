@@ -29,7 +29,23 @@ __all__ = [
     "FundamentalSource",
     "VNDirectFundamentalSource",
     "get_financials",
+    "client",
+    "source",
 ]
+
+
+def source(http_get=None, timeout: float = 25.0) -> VNDirectFundamentalSource:
+    """Primary fundamentals entry: the default :class:`VNDirectFundamentalSource`.
+
+    Standard ``<domain>.source(...)`` factory. Use ``.get_financials(symbol, statement,
+    period, ...)`` on the returned object, or the module-level :func:`get_financials`
+    convenience. Reports are RAW VND.
+    """
+    return VNDirectFundamentalSource(http_get=http_get, timeout=timeout)
+
+
+# Single-source domain: ``client`` aliases ``source`` for naming consistency.
+client = source
 
 
 def _coerce_statement(statement) -> StatementType:

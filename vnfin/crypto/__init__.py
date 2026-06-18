@@ -19,4 +19,17 @@ from __future__ import annotations
 from .binance import BinanceCryptoSource
 from .models import CryptoBar, CryptoHistory
 
-__all__ = ["BinanceCryptoSource", "CryptoBar", "CryptoHistory"]
+__all__ = ["BinanceCryptoSource", "CryptoBar", "CryptoHistory", "client", "source"]
+
+
+def source(http_get=None, timeout: float = 25.0) -> BinanceCryptoSource:
+    """Primary crypto entry: the default :class:`BinanceCryptoSource` (Binance, no-auth).
+
+    Standard ``<domain>.source(...)`` factory. Use ``.get_klines(symbol, interval, ...)``
+    on the returned object. Crypto OHLCV is USD-denominated.
+    """
+    return BinanceCryptoSource(http_get=http_get, timeout=timeout)
+
+
+# Single-source domain: ``client`` aliases ``source`` for naming consistency.
+client = source
