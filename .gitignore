@@ -16,7 +16,7 @@ build/
 dist/
 
 # Private maintainer tooling (operator-only; not part of the published library)
-.claude/
+.kimi/
 bin/gh-maintainer
 bin/poll-and-nudge.sh
 state/

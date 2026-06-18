@@ -60,7 +60,7 @@ Work with `vnfin-oss-reviewer` (tmux) at all important checkpoints — never shi
 
 This repo is published at `https://github.com/hungson175/vnfin` and is maintained by the
 `vnfin-oss` agent. The maintainer playbook is a **private, project-local skill** (gitignored, not
-published): **`.claude/skills/vnfin-maintainer/SKILL.md`** — read/follow it whenever handling
+published): **`.kimi/skills/vnfin-maintainer/SKILL.md`** — read/follow it whenever handling
 GitHub activity (issues/PRs/comments) or when nudged by the poller.
 
 - **Detect→handle→ack loop:** a deterministic system-cron poller (`bin/poll-and-nudge.sh`, every
@@ -77,7 +77,7 @@ GitHub activity (issues/PRs/comments) or when nudged by the poller.
   the skill.
 - **Kill switch:** `touch state/STOP` pauses the poller/handling; `rm state/STOP` resumes.
 
-Private maintainer tooling (`.claude/`, `bin/gh-maintainer`, `bin/poll-and-nudge.sh`, `state/`) is
+Private maintainer tooling (`.kimi/`, `bin/gh-maintainer`, `bin/poll-and-nudge.sh`, `state/`) is
 gitignored — operator-only, never part of the published package.
 
 ## Layout
