@@ -32,7 +32,20 @@ from datetime import date, datetime, timezone
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
 
+from .indicators import MacroIndicator, canonical_unit, normalize_indicator
 from .models import IndicatorSeries
+
+# Canonical indicator -> (WDI code, canonical unit). World Bank is the primary,
+# so its units define the canonical unit for the percent indicators and the USD
+# GDP level used by the failover chain.
+_WB_MAP: dict[MacroIndicator, tuple[str, str]] = {
+    MacroIndicator.GDP: ("NY.GDP.MKTP.CD", "current US$"),
+    MacroIndicator.GDP_GROWTH: ("NY.GDP.MKTP.KD.ZG", "%"),
+    MacroIndicator.INFLATION: ("FP.CPI.TOTL.ZG", "%"),
+    MacroIndicator.UNEMPLOYMENT: ("SL.UEM.TOTL.ZS", "%"),
+    # World Bank has no CPI *index* (only inflation %); CPI index is served by
+    # DBnomics. WB therefore does not map MacroIndicator.CPI.
+}
 
 
 class WorldBankMacroSource(HttpDataSource):
@@ -58,6 +71,41 @@ class WorldBankMacroSource(HttpDataSource):
     @staticmethod
     def normalize_country(country_iso3: str) -> str:
         return country_iso3.strip().upper()
+
+    # --- canonical-indicator interface (used by the macro failover chain) -- #
+    def supports(self, indicator) -> bool:
+        """True if World Bank maps the canonical ``indicator`` (no network call)."""
+        try:
+            return normalize_indicator(indicator) in _WB_MAP
+        except ValueError:
+            return False
+
+    def unit_for(self, indicator) -> str:
+        """Canonical unit World Bank emits for ``indicator``."""
+        ind = normalize_indicator(indicator)
+        try:
+            return _WB_MAP[ind][1]
+        except KeyError as exc:
+            raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
+
+    def get_canonical_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
+        """Fetch a canonical :class:`MacroIndicator` (maps it to a WDI code).
+
+        Unlike :meth:`get_indicator` (which takes a raw WDI code), this takes a
+        logical :class:`MacroIndicator` so it composes with the failover chain.
+        The result's ``unit`` is stamped to the canonical unit (WB percent series
+        often omit ``unit`` in the payload).
+        """
+        ind = normalize_indicator(indicator)
+        try:
+            code, unit = _WB_MAP[ind]
+        except KeyError as exc:
+            raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
+        series = self.get_indicator(country_iso3, code)
+        # Pin the canonical unit (WB ZG/ZS series frequently report an empty unit).
+        from dataclasses import replace
+
+        return replace(series, unit=unit, value_unit=unit)
 
     def get_indicator(
         self,

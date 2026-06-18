@@ -387,12 +387,16 @@ def test_to_dataframe_has_value_column_and_attrs():
 
 
 # ---------------------------------------------------------------------------
-# FRED stub — present but clearly TODO/unimplemented (no key in env yet)
+# FRED — now optional BYOK (official API). No key -> cleanly skippable
+# (catchable SourceUnavailable), NOT NotImplementedError. Full FRED coverage
+# lives in tests/test_macro_fred.py.
 # ---------------------------------------------------------------------------
 
-def test_fred_stub_raises_not_implemented_without_key():
+def test_fred_without_key_raises_catchable_source_error(monkeypatch):
+    from vnfin.exceptions import SourceUnavailable
     from vnfin.macro import FREDMacroSource
 
-    s = FREDMacroSource()  # no key
-    with pytest.raises(NotImplementedError):
-        s.get_series("CPIAUCSL")
+    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    s = FREDMacroSource()  # no key -> BYOK skip, not a hard crash
+    with pytest.raises(SourceUnavailable):
+        s.get_series("FAKESERIES")

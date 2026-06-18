@@ -88,6 +88,9 @@ class BinanceCryptoSource(HttpDataSource):
     BASE_URL = "https://api.binance.com"
     KLINES_PATH = "/api/v3/klines"
     CURRENCY = "USD"
+    #: Declared unit for the failover unit-homogeneity guard. USD-stablecoin quote
+    #: pairs (USDT/USDC/...) are reported as USD, so the default chain is unit-homogeneous.
+    unit = "USD"
     MAX_LIMIT = 1000
 
     # All vnfin intervals map to a Binance interval token (all verified live).

@@ -25,6 +25,8 @@ class GoldApiSource(GoldSource):
     name = "gold-api"
     provides_spot = True
     provides_history = False
+    #: Declared unit for the failover unit-homogeneity guard (world gold = USD/oz).
+    unit = _USD_PER_OZ
     BASE_URL = "https://api.gold-api.com/price"
 
     def __init__(self, http_get=None, timeout: float = 25.0, symbol: str = "XAU"):

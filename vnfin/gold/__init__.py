@@ -23,8 +23,10 @@ from __future__ import annotations
 
 from .base import GoldSource
 from .currency_api import CurrencyApiGoldSource
+from .failover import FailoverGoldClient
 from .gold_api import GoldApiSource
 from .models import GoldBar, GoldHistory, GoldQuote
+from .stooq import StooqGoldSource
 from .vn import BTMCGoldSource, PNJGoldSource
 
 __all__ = [
@@ -40,6 +42,11 @@ __all__ = [
     # world
     "GoldApiSource",
     "CurrencyApiGoldSource",
+    "StooqGoldSource",
+    # failover (world XAU/USD daily history)
+    "FailoverGoldClient",
+    "default_world_gold_sources",
+    "default_world_gold_client",
     # facade
     "vn",
     "world",
@@ -48,6 +55,34 @@ __all__ = [
 
 _VN_PROVIDERS = {"btmc": BTMCGoldSource, "pnj": PNJGoldSource}
 _WORLD_PROVIDERS = {"currency_api": CurrencyApiGoldSource, "gold_api": GoldApiSource}
+
+
+def default_world_gold_sources(*, http_get=None, timeout: float = 25.0) -> list[GoldSource]:
+    """Default world-gold (XAU/USD) **daily-history** failover chain.
+
+    Order: :class:`CurrencyApiGoldSource` (primary) then :class:`StooqGoldSource`
+    (backup). Both emit **USD/oz** and provide daily history, so they form a valid
+    same-unit chain for :class:`FailoverGoldClient`. ``GoldApiSource`` is spot-only
+    and is intentionally not in the history chain.
+    """
+    return [
+        CurrencyApiGoldSource(http_get=http_get, timeout=timeout),
+        StooqGoldSource(http_get=http_get, timeout=timeout),
+    ]
+
+
+def default_world_gold_client(
+    sources=None, *, http_get=None, timeout: float = 25.0, max_attempts: int = 3
+) -> FailoverGoldClient:
+    """Build the world-gold daily-history failover client (USD/oz).
+
+    Pass ``sources`` to supply a custom chain (e.g. with injected ``http_get`` stubs
+    for testing); otherwise the default ``[CurrencyApiGoldSource, StooqGoldSource]``
+    chain is used. The unit-homogeneity guard enforces a single ``USD/oz`` chain.
+    """
+    if sources is None:
+        sources = default_world_gold_sources(http_get=http_get, timeout=timeout)
+    return FailoverGoldClient(sources, max_attempts=max_attempts)
 
 
 def vn(provider: str = "btmc", *, http_get=None, timeout: float = 25.0) -> GoldSource:

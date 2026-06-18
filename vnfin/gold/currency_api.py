@@ -37,6 +37,8 @@ class CurrencyApiGoldSource(GoldSource):
     name = "currency-api"
     provides_spot = True
     provides_history = True
+    #: Declared unit for the failover unit-homogeneity guard (world gold = USD/oz).
+    unit = _USD_PER_OZ
 
     def _url(self, tag: str) -> str:
         return _CDN.format(tag=tag)

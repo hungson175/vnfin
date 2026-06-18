@@ -20,6 +20,7 @@ from datetime import date as date_type
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+from ..models import SourceAttempt
 from ..timeseries import TimeSeriesResult
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -83,6 +84,9 @@ class GoldHistory(TimeSeriesResult):
     value_unit: Optional[str] = None
     fetched_at_utc: Optional[datetime] = None
     warnings: tuple[str, ...] = ()
+    #: Per-source failover diagnostics, attached by the failover client's
+    #: ``finalize`` step. Empty for a series fetched directly from one source.
+    attempts: tuple[SourceAttempt, ...] = ()
 
     _items_attr = "bars"
     _index_column = "date"

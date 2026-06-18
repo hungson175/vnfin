@@ -67,9 +67,10 @@ def test_prices_entry():
 
 
 def test_fundamentals_entry():
-    from vnfin.fundamentals import VNDirectFundamentalSource
+    from vnfin.fundamentals import FailoverFundamentalClient, VNDirectFundamentalSource
 
-    assert isinstance(vnfin.fundamentals.client(http_get=_fake_get), VNDirectFundamentalSource)
+    # client() = multi-source failover (consistent with prices); source() = primary
+    assert isinstance(vnfin.fundamentals.client(http_get=_fake_get), FailoverFundamentalClient)
     assert isinstance(vnfin.fundamentals.source(http_get=_fake_get), VNDirectFundamentalSource)
     assert callable(vnfin.fundamentals.get_financials)
 
@@ -89,16 +90,18 @@ def test_indices_entry():
 
 
 def test_crypto_entry():
-    from vnfin.crypto import BinanceCryptoSource
+    from vnfin.crypto import BinanceCryptoSource, FailoverCryptoClient
 
-    assert isinstance(vnfin.crypto.client(http_get=_fake_get), BinanceCryptoSource)
+    # client() = Binance->Coinbase failover (USD); source() = primary Binance
+    assert isinstance(vnfin.crypto.client(http_get=_fake_get), FailoverCryptoClient)
     assert isinstance(vnfin.crypto.source(http_get=_fake_get), BinanceCryptoSource)
 
 
 def test_macro_entry():
-    from vnfin.macro import WorldBankMacroSource
+    from vnfin.macro import MacroClient, WorldBankMacroSource
 
-    assert isinstance(vnfin.macro.client(http_get=_fake_get), WorldBankMacroSource)
+    # client() = World Bank->IMF->DBnomics no-key failover; source() = primary World Bank
+    assert isinstance(vnfin.macro.client(http_get=_fake_get), MacroClient)
     assert isinstance(vnfin.macro.source(http_get=_fake_get), WorldBankMacroSource)
 
 

@@ -18,6 +18,12 @@ from __future__ import annotations
 
 from ..exceptions import VnfinError
 from .base import FundamentalSource
+from .cafef import CafeFFundamentalSource
+from .client import (
+    FailoverFundamentalClient,
+    default_fundamental_client,
+    default_fundamental_sources,
+)
 from .models import FinancialReport, LineItem, Period, StatementType
 from .vndirect import VNDirectFundamentalSource
 
@@ -28,6 +34,10 @@ __all__ = [
     "StatementType",
     "FundamentalSource",
     "VNDirectFundamentalSource",
+    "CafeFFundamentalSource",
+    "FailoverFundamentalClient",
+    "default_fundamental_sources",
+    "default_fundamental_client",
     "get_financials",
     "client",
     "source",
@@ -35,17 +45,28 @@ __all__ = [
 
 
 def source(http_get=None, timeout: float = 25.0) -> VNDirectFundamentalSource:
-    """Primary fundamentals entry: the default :class:`VNDirectFundamentalSource`.
+    """Primary fundamentals SOURCE: the default :class:`VNDirectFundamentalSource`.
 
-    Standard ``<domain>.source(...)`` factory. Use ``.get_financials(symbol, statement,
-    period, ...)`` on the returned object, or the module-level :func:`get_financials`
-    convenience. Reports are RAW VND.
+    Standard ``<domain>.source(...)`` factory — a single primary adapter (no
+    failover). Use ``.get_financials(symbol, statement, period, ...)`` on it, or
+    prefer :func:`client` / :func:`get_financials` for the failover chain.
+    Reports are RAW VND.
     """
     return VNDirectFundamentalSource(http_get=http_get, timeout=timeout)
 
 
-# Single-source domain: ``client`` aliases ``source`` for naming consistency.
-client = source
+def client(
+    http_get=None, timeout: float = 25.0, max_attempts: int = 3
+) -> FailoverFundamentalClient:
+    """Primary fundamentals CLIENT: failover over VNDirect -> CafeF (RAW VND).
+
+    Standard ``<domain>.client(...)`` factory. Returns a
+    :class:`FailoverFundamentalClient` whose sources all emit RAW VND (the
+    unit-homogeneity guard enforces this). Use ``.get_financials(...)`` on it.
+    """
+    return default_fundamental_client(
+        http_get=http_get, timeout=timeout, max_attempts=max_attempts
+    )
 
 
 def _coerce_statement(statement) -> StatementType:
@@ -76,16 +97,35 @@ def get_financials(
     is_bank: bool = False,
     limit: int = 8,
     source: FundamentalSource | None = None,
+    sources=None,
+    max_attempts: int = 3,
+    http_get=None,
+    timeout: float = 25.0,
 ) -> tuple[FinancialReport, ...]:
     """Fetch typed fundamental reports for ``symbol``, newest fiscal period first.
+
+    Fails over VNDirect (primary) -> CafeF (backup) by default; both emit RAW VND
+    so the unit-homogeneity guard accepts the chain.
 
     ``statement`` accepts a ``StatementType`` or its string value (e.g. "income",
     "balance", "cashflow", "ratios"); ``period`` accepts a ``Period`` or
     "QUARTER"/"ANNUAL" (case-insensitive). Pass ``is_bank=True`` for banks so the
-    VNDirect bank statement template (modelType 101/102/103) is used. ``source``
-    is injectable; defaults to ``VNDirectFundamentalSource``.
+    VNDirect bank statement template (modelType 101/102/103) is used.
+
+    Source selection (most specific wins):
+
+    * ``source=`` — a single :class:`FundamentalSource` (no failover; back-compat).
+    * ``sources=`` — an explicit list to chain (must share one unit).
+    * neither — the default failover chain (VNDirect -> CafeF).
     """
     st = _coerce_statement(statement)
     pd = _coerce_period(period)
-    src = source or VNDirectFundamentalSource()
-    return src.get_financials(symbol, st, pd, is_bank=is_bank, limit=limit)
+    if source is not None:
+        return source.get_financials(symbol, st, pd, is_bank=is_bank, limit=limit)
+    chain = (
+        sources
+        if sources is not None
+        else default_fundamental_sources(http_get=http_get, timeout=timeout)
+    )
+    client_ = FailoverFundamentalClient(chain, max_attempts=max_attempts)
+    return client_.get_financials(symbol, st, pd, is_bank=is_bank, limit=limit)

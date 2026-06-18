@@ -16,6 +16,11 @@ class FundamentalSource(ABC):
     """
 
     name: str = "base"
+    #: Unit/currency this source's monetary statement lines are denominated in,
+    #: used by the failover unit-homogeneity guard. Statement money is RAW VND,
+    #: so adapters serving raw-VND statements declare ``unit = "VND"``. ``None``
+    #: means undeclared (treated as compatible with any chain).
+    unit: str | None = None
 
     @abstractmethod
     def get_financials(

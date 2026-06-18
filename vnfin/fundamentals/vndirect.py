@@ -48,6 +48,9 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
     """Fundamental reports from VNDirect api-finfo (statements + ratios)."""
 
     NAME = "vndirect"
+    #: Statement money lines are RAW VND (unscaled) — declared for the failover
+    #: unit-homogeneity guard so a same-unit backup (CafeF) can be chained.
+    unit = "VND"
     BASE_URL = "https://api-finfo.vndirect.com.vn"
     STATEMENTS_PATH = "/v4/financial_statements"
     RATIOS_PATH = "/v4/ratios"
