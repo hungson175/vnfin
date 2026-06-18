@@ -215,6 +215,23 @@ def test_run_probe_falls_back_to_declared_source_when_result_has_none():
     assert h.source == "ssi"
 
 
+def test_default_fundamentals_probe_uses_enum_args_not_strings():
+    # regression for the reviewer's PR#2 blocker: the fundamentals probe calls the
+    # SOURCE (not the string-coercing module fn), which requires enum statement/period.
+    # Executing the fetch must NOT raise an arg-type error (AttributeError/TypeError);
+    # a dummy response failing as a SourceError is fine — it means the args were accepted.
+    from vnfin.exceptions import SourceError
+
+    probes = default_probes(http_get=lambda url, params=None, headers=None, json_body=None: '{"data": []}')
+    fp = next(p for p in probes if p.domain == "fundamentals")
+    try:
+        fp.fetch()
+    except SourceError:
+        pass  # args accepted; only the dummy data failed — exactly what we want
+    except (AttributeError, TypeError) as exc:
+        pytest.fail(f"fundamentals probe passed wrong arg types to the source: {exc!r}")
+
+
 def test_fx_probe_is_opt_in_not_in_default():
     # FX providers are rate-limited -> FX must NOT be in the routine scheduled set
     assert all(p.domain != "fx" for p in default_probes())

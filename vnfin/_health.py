@@ -305,8 +305,10 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
         )
 
     def _fetch_fundamentals() -> Any:
+        # NB: the SOURCE.get_financials requires ENUMS (only the module-level
+        # get_financials coerces strings) — passing strings raises AttributeError.
         return vnfin.fundamentals.source(http_get=http_get, timeout=timeout).get_financials(
-            "FPT", "income", "annual"
+            "FPT", vnfin.fundamentals.StatementType.INCOME, vnfin.fundamentals.Period.ANNUAL
         )
 
     def _fetch_gold() -> Any:
