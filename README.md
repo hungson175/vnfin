@@ -18,12 +18,25 @@ and major crypto — with multi-source **failover** so a single provider outage 
 
 ## Install
 
+**One line, no clone** (install straight from GitHub):
+
 ```bash
-pip install -e .            # core (httpx only)
-pip install -e ".[pandas]"  # + pandas, enables .to_dataframe()
+pip install git+https://github.com/hungson175/vnfin.git                      # core (httpx only)
+pip install "vnfin[pandas] @ git+https://github.com/hungson175/vnfin.git"     # + pandas (.to_dataframe())
 ```
 
-Requires Python ≥ 3.10.
+**From a clone** (for development / offline):
+
+```bash
+git clone https://github.com/hungson175/vnfin.git && cd vnfin
+pip install -e .            # core            (or:  pip install -e ".[pandas]")
+```
+
+Requires Python ≥ 3.10. **No API key needed** for the default path of any domain.
+
+> **Using vnfin from an AI agent?** Point it at [`docs/ai-usage.md`](docs/ai-usage.md) (a
+> comprehensive, copy-paste, progressive-disclosure reference) or install the
+> [`skills/vnfin/`](skills/vnfin/SKILL.md) skill. The repo root [`llms.txt`](llms.txt) indexes both.
 
 ## Quickstart
 
