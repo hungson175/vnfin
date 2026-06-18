@@ -372,7 +372,67 @@ def test_cache_key_redacts_secret_params():
         f"https://fake.invalid/obs?api_key={FAKE_API_KEY}",
         {"series_id": "FAKESERIES", "api_key": FAKE_API_KEY},
         None,
+        {"Authorization": f"Bearer {FAKE_API_KEY}"},
     )
     flat = repr(key)
     assert FAKE_API_KEY not in flat
     assert "FAKESERIES" in flat  # non-secret survives, key stays useful
+
+
+def test_invalid_max_retries_non_numeric_raises():
+    with pytest.raises(TypeError):
+        HttpDataSource(http_get=lambda *a: "ok", max_retries="not-an-int")
+
+
+def test_invalid_max_retries_negative_raises():
+    with pytest.raises(ValueError):
+        HttpDataSource(http_get=lambda *a: "ok", max_retries=-1)
+
+
+def test_invalid_cache_ttl_non_numeric_raises():
+    with pytest.raises(TypeError):
+        HttpDataSource(http_get=lambda *a: "ok", cache_ttl="x")
+
+
+def test_invalid_cache_ttl_negative_raises():
+    with pytest.raises(ValueError):
+        HttpDataSource(http_get=lambda *a: "ok", cache_ttl=-1.0)
+
+
+def test_cache_includes_headers_in_key():
+    """Issue #31: different auth headers must not share cache entries."""
+    calls = []
+    now = [0.0]
+
+    def fake_get(url, params, headers):
+        calls.append(dict(headers or {}))
+        return f"response-for-{headers.get('Authorization')}"
+
+    probe = HttpDataSource(http_get=fake_get, cache_ttl=3600, clock=lambda: now[0])
+    assert probe._request_text("u", headers={"Authorization": "Bearer A"}) == "response-for-Bearer A"
+    assert probe._request_text("u", headers={"Authorization": "Bearer B"}) == "response-for-Bearer B"
+    assert len(calls) == 2
+
+
+def test_cache_distinguishes_requests_with_different_secret_params():
+    """Issue #22: requests differing only by secret param values must not collide."""
+    calls = []
+    now = [0.0]
+
+    def fake_get(url, params, headers):
+        calls.append(dict(params or {}))
+        return f"response-for-{params.get('api_key')}"
+
+    probe = HttpDataSource(http_get=fake_get, cache_ttl=3600, clock=lambda: now[0])
+    assert probe._request_text("u", params={"api_key": "A", "q": "x"}) == "response-for-A"
+    assert probe._request_text("u", params={"api_key": "B", "q": "x"}) == "response-for-B"
+    assert len(calls) == 2
+
+
+def test_redact_secrets_covers_access_key_and_apikey():
+    """Issue #38: common API-key variants must be redacted."""
+    for name in ("access_key", "apikey", "apiKey"):
+        raw = f"url?{name}=SECRET123&x=1"
+        out = redact_secrets(raw)
+        assert "SECRET123" not in out
+        assert f"{name}=REDACTED" in out

@@ -36,10 +36,27 @@ from .exceptions import InvalidData, SourceUnavailable
 #: message, a cache/debug string, or a log line. Matching is case-insensitive.
 #: ``key`` is intentionally last so the longer, more specific names win when a
 #: param name contains another (e.g. ``api_key`` is matched as a whole word).
-SENSITIVE_PARAMS = ("api_key", "access_token", "token", "key")
+SENSITIVE_PARAMS = (
+    "access_key",
+    "api_key",
+    "apikey",
+    "api_token",
+    "app_key",
+    "auth_token",
+    "secret_key",
+    "access_token",
+    "token",
+    "key",
+)
 
 #: Placeholder substituted for any redacted secret value.
 _REDACTED = "REDACTED"
+
+#: Names whose values are secrets for the purpose of cache-key identity. We still
+#: redact them in logs/errors, but we keep a deterministic hash of the original
+#: value in the cache key so two requests with different credentials do not share
+#: a cached response (issues #22, #31).
+_SECRET_HASH_KEYS = frozenset(SENSITIVE_PARAMS + ("Authorization",))
 
 # Matches ``<name>=<value>`` for a sensitive param inside a URL query string or a
 # (JSON/repr) dict, e.g. ``api_key=...``, ``"api_key": "..."``, ``'key': '...'``.
@@ -174,7 +191,11 @@ class HttpDataSource:
         # ``max_retries`` is the number of *extra* attempts after the first. ``0``
         # (default) reproduces the historical single-attempt behavior exactly, so no
         # existing test changes timing or call count.
-        self._max_retries = max(0, int(max_retries))
+        if not isinstance(max_retries, int) or isinstance(max_retries, bool):
+            raise TypeError(f"max_retries must be an int, got {type(max_retries).__name__}")
+        if max_retries < 0:
+            raise ValueError(f"max_retries must be non-negative, got {max_retries}")
+        self._max_retries = max_retries
         self._backoff_base = backoff_base
         self._backoff_max = backoff_max
         # Injectable so tests run instantly and deterministically.
@@ -183,7 +204,13 @@ class HttpDataSource:
 
         # --- response cache (opt-in, OFF by default) --------------------- #
         # ``cache_ttl=None`` (default) means no caching: behavior is unchanged. A
-        # positive TTL enables an in-memory cache keyed by (url, params, json_body).
+        # positive TTL enables an in-memory cache keyed by (url, params, json_body,
+        # headers) so authenticated/entitlement-specific responses are isolated.
+        if cache_ttl is not None:
+            if not isinstance(cache_ttl, (int, float)) or isinstance(cache_ttl, bool):
+                raise TypeError(f"cache_ttl must be a number or None, got {type(cache_ttl).__name__}")
+            if cache_ttl <= 0:
+                raise ValueError(f"cache_ttl must be positive, got {cache_ttl}")
         self._cache_ttl = cache_ttl
         self._clock = clock or _time.monotonic
         self._cache: dict = {} if cache_ttl is not None else None
@@ -200,25 +227,49 @@ class HttpDataSource:
 
     # --- cache key ------------------------------------------------------- #
     @staticmethod
-    def _cache_key(url, params, json_body):
+    def _cache_key(url, params, json_body, headers):
         """Stable, hashable key for the response cache.
 
-        ``params``/``json_body`` are dict-like, so they are normalized to a sorted,
-        JSON-serialized form to be hashable and order-independent. Sensitive values
-        (api_key/key/token/access_token) are redacted from every component (B4) so a
-        secret can never surface if the cache is dumped/logged for debugging; the key
-        stays stable because the redaction is deterministic.
+        ``params``/``json_body``/``headers`` are dict-like, so they are normalized to
+        a sorted, JSON-serialized form to be hashable and order-independent. Sensitive
+        values (api_key/key/token/access_token and Authorization) are redacted from
+        the loggable key components (B4), but their *hashes* participate in the key
+        so requests with different credentials remain isolated (issues #22, #31).
         """
-        def _norm(obj):
+        import hashlib
+
+        def _secret_hash(value):
+            # Deterministic, one-way identity for a secret value. Never store the
+            # plaintext secret; never embed it in a repr/log/error.
+            return hashlib.sha256(str(value).encode("utf-8")).hexdigest()[:16]
+
+        def _norm(obj, keep_secret_identity=False):
             if obj is None:
                 return None
             try:
                 serialized = _json.dumps(obj, sort_keys=True, default=str)
             except TypeError:
                 serialized = repr(obj)
+            if keep_secret_identity:
+                # Build a parallel identity token for each secret value so two
+                # requests with different credentials do not collide.
+                identity = {}
+                if isinstance(obj, dict):
+                    for k, v in obj.items():
+                        if k.lower() in (name.lower() for name in _SECRET_HASH_KEYS):
+                            identity[k] = _secret_hash(v)
+                # Redact first, then pair with identity hashes. This guarantees the
+                # plaintext secret never appears in the returned key tuple.
+                serialized = (redact_secrets(serialized), _json.dumps(identity, sort_keys=True))
+                return serialized
             return redact_secrets(serialized)
 
-        return (redact_secrets(url), _norm(params), _norm(json_body))
+        return (
+            redact_secrets(url),
+            _norm(params, keep_secret_identity=True),
+            _norm(json_body, keep_secret_identity=True),
+            _norm(headers, keep_secret_identity=True),
+        )
 
     # --- transport helpers ----------------------------------------------- #
     def _request_text(self, url, params=None, headers=None, json_body=None) -> str:
@@ -241,7 +292,7 @@ class HttpDataSource:
         # --- cache lookup ------------------------------------------------ #
         key = None
         if self._cache is not None:
-            key = self._cache_key(url, params, json_body)
+            key = self._cache_key(url, params, json_body, headers)
             hit = self._cache.get(key)
             if hit is not None:
                 expires_at, value = hit

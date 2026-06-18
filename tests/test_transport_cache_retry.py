@@ -236,13 +236,13 @@ def test_cache_distinguishes_post_json_body():
     assert len(get.calls) == 2
 
 
-def test_cache_ignores_headers_in_key():
+def test_cache_includes_headers_in_key():
     get = _seq_get("CACHED", "FRESH")
     probe = _Probe(http_get=get, cache_ttl=60.0, clock=_FakeClock())
     assert probe._request_text(FAKE_URL, headers={"X": "1"}) == "CACHED"
-    # Different headers, same url+params => still a cache hit.
-    assert probe._request_text(FAKE_URL, headers={"X": "2"}) == "CACHED"
-    assert len(get.calls) == 1
+    # Different headers, same url+params => cache miss (headers carry auth/entitlement).
+    assert probe._request_text(FAKE_URL, headers={"X": "2"}) == "FRESH"
+    assert len(get.calls) == 2
 
 
 # --- TTL expiry ---------------------------------------------------------- #
