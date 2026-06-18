@@ -324,6 +324,44 @@ def test_fred_5xx_does_not_leak_api_key_in_source_unavailable():
         assert FAKE_API_KEY not in str(ei.value)
 
 
+def test_transport_error_does_not_leak_api_key_via_cause_or_traceback():
+    """B4 regression: the redacted SourceUnavailable must NOT re-expose the BYOK key
+    through Python's exception chaining (``__cause__``) or a formatted traceback.
+
+    The raw ``httpx.HTTPStatusError`` carries the full request URL (api_key and all)
+    in its own ``str``. Chaining it with ``raise ... from exc`` would surface that
+    secret in ``exc.__cause__`` and in ``traceback.format_exception(...)`` even though
+    the user-facing message is redacted. The wrap must use ``from None`` (or chain a
+    sanitized exception) so the secret never travels with the exception.
+    """
+    import traceback
+
+    err = _fred_style_http_status_error()
+    # Sanity: the raw cause really does contain the secret (this is the leak source).
+    assert FAKE_API_KEY in str(err)
+
+    probe = _Probe(http_get=_raising(err))
+    with pytest.raises(SourceUnavailable) as ei:
+        probe._request_text(
+            "https://api.stlouisfed.org/fred/series/observations",
+            params={"series_id": "FAKESERIES", "api_key": FAKE_API_KEY, "file_type": "json"},
+        )
+    raised = ei.value
+
+    # (a) The user-facing message is redacted.
+    assert FAKE_API_KEY not in str(raised)
+
+    # (b) The exception chain carries no secret: either no cause at all, or a cause
+    #     whose string is itself free of the key.
+    assert raised.__cause__ is None or FAKE_API_KEY not in str(raised.__cause__)
+
+    # (c) A fully-formatted traceback (the realistic log/CI failure path) is clean.
+    formatted = "".join(
+        traceback.format_exception(type(raised), raised, raised.__traceback__)
+    )
+    assert FAKE_API_KEY not in formatted
+
+
 def test_cache_key_redacts_secret_params():
     """The response cache key must not embed BYOK secrets (B4)."""
     key = HttpDataSource._cache_key(
