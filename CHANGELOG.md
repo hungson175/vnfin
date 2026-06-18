@@ -61,6 +61,22 @@ All notable changes to `vnfin` are documented here. The format follows
   application-level envelope fields `status` or `code` in every response. A response missing both
   raises `InvalidData`; non-2xx application statuses continue to raise `SourceUnavailable`.
   ([#41](https://github.com/hungson175/vnfin/issues/41))
+- **CafeF statement period-tag honesty** — `CafeFFundamentalSource` now skips rows whose
+  `ReportType` disagrees with the requested `Period` (e.g. annual-tagged rows in a quarterly pull),
+  surfaced via a `warnings` note, instead of silently relabeling them. Ratios remain period-agnostic.
+  ([#45](https://github.com/hungson175/vnfin/issues/45))
+- **VNDirect statement contract strictness** — `VNDirectFundamentalSource` now skips rows whose
+  `reportType` or `modelType` contradicts the request, and raises `InvalidData` on duplicate
+  `itemCode` values within the same fiscal period. ([#44](https://github.com/hungson175/vnfin/issues/44),
+  [#26](https://github.com/hungson175/vnfin/issues/26))
+- **VNDirect ratio units** — EPS and BV are per-share monetary values; the VNDirect adapter now
+  labels them `"vnd_per_share"` instead of `"ratio"`. ([#19](https://github.com/hungson175/vnfin/issues/19))
+- **`is_bank` strict validation** — `resolve_is_bank()` now rejects non-boolean, non-`AUTO`
+  values such as the string `"False"` with `VnfinError`, eliminating truthiness bugs.
+  ([#11](https://github.com/hungson175/vnfin/issues/11))
+- **Fundamental statement `Period.UNKNOWN` guard** — Both CafeF and VNDirect adapters reject
+  `Period.UNKNOWN` for income/balance/cashflow statements (it is only meaningful for ratios).
+  ([#10](https://github.com/hungson175/vnfin/issues/10))
 
 ## [0.2.0] — 2026-06-18
 

@@ -25,9 +25,11 @@ from __future__ import annotations
 import math
 from datetime import date, datetime, timezone
 
+import dataclasses
+
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
-from .base import AUTO, FundamentalSource, is_known_bank
+from .base import AUTO, FundamentalSource, is_known_bank, resolve_is_bank
 from .itemcodes import item_name
 from .models import (
     FinancialReport,
@@ -119,15 +121,17 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         self._validate_limit(limit)
         st = _coerce_statement(statement)
         pd = _coerce_period(period)
+        if pd is Period.UNKNOWN and st is not StatementType.RATIOS:
+            raise VnfinError(f"vndirect: Period.UNKNOWN is not valid for {st.value} statements")
+        # Resolve is_bank once, with strict bool validation (rejects strings).
+        resolved = resolve_is_bank(psym, is_bank)
         if st is StatementType.RATIOS:
-            # Ratios have no modelType template; ``is_bank`` is only metadata, so
-            # resolve the AUTO sentinel via the cheap heuristic (no probing).
-            resolved = is_known_bank(psym) if is_bank is AUTO else bool(is_bank)
+            # Ratios have no modelType template; ``is_bank`` is only metadata.
             return self._get_ratios(psym, pd, is_bank=resolved, limit=limit)
         if is_bank is AUTO:
             return self._get_statements_auto(psym, st, pd, limit=limit)
         return self._get_statements(
-            psym, st, pd, is_bank=bool(is_bank), limit=limit
+            psym, st, pd, is_bank=resolved, limit=limit
         )
 
     def _get_statements_auto(self, psym, statement, period, *, limit):
@@ -228,10 +232,24 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         # group rows by fiscalDate, preserving first-seen order (API is desc)
         order: list[str] = []
         buckets: dict[str, list[LineItem]] = {}
+        skipped_rows = 0
         for row in rows:
             fd = row.get("fiscalDate")
             if not fd:
                 raise InvalidData(f"{self.name}: row missing fiscalDate")
+            # Skip rows that contradict the requested contract (wrong reportType
+            # or modelType). These are provider-side mislabels, not fatal errors.
+            row_report = str(row.get("reportType") or "").strip().upper()
+            if row_report and row_report != period.value:
+                skipped_rows += 1
+                continue
+            try:
+                row_model = int(float(row.get("modelType")))
+            except (TypeError, ValueError):
+                row_model = None
+            if row_model is not None and row_model != model_type:
+                skipped_rows += 1
+                continue
             code = self._item_code_str(row.get("itemCode"))
             value = self._num(row.get("numericValue"))
             li = LineItem(
@@ -243,6 +261,9 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             if fd not in buckets:
                 buckets[fd] = []
                 order.append(fd)
+            # Duplicate itemCode within the same period is a contract violation.
+            if any(existing.item_code == code for existing in buckets[fd]):
+                raise InvalidData(f"{self.name}: duplicate itemCode {code} for {fd}")
             buckets[fd].append(li)
 
         fetched = datetime.now(timezone.utc)
@@ -262,6 +283,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             )
             for fd in order
         ]
+        reports = self._with_skip_warning(reports, skipped_rows)
         # newest first by fiscal_date (defensive; API already sorts desc)
         reports.sort(key=lambda r: r.fiscal_date, reverse=True)
         return tuple(reports[:limit])
@@ -291,12 +313,17 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             if ratio_code in seen[rd]:
                 continue  # keep first (newest) occurrence within a date
             seen[rd].add(ratio_code)
+            # EPS/BV are per-share monetary values; everything else is dimensionless.
+            if ratio_code in {"EPS", "BV"}:
+                unit = "vnd_per_share"
+            else:
+                unit = "ratio"
             buckets[rd].append(
                 LineItem(
                     item_code=ratio_code,
                     name=name,
                     value=value,
-                    value_unit="ratio",  # dimensionless / per-share, NOT VND
+                    value_unit=unit,
                 )
             )
 
@@ -332,6 +359,14 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         # so ``limit`` distinct periods come back. 200 covers headline lines for
         # several periods; callers wanting deep history can subclass/override.
         return max(50, min(1000, limit * 80))
+
+    @staticmethod
+    def _with_skip_warning(reports: list, skipped: int) -> list:
+        """Surface skipped (contract-violating) rows on every returned report."""
+        if not skipped:
+            return reports
+        note = f"skipped {skipped} row(s) with mismatched reportType/modelType"
+        return [dataclasses.replace(r, warnings=tuple(r.warnings) + (note,)) for r in reports]
 
     @staticmethod
     def _item_code_str(raw) -> str:

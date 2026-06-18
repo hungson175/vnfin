@@ -41,7 +41,7 @@ from vnfin.fundamentals import (
 # --------------------------------------------------------------------------- #
 # Synthetic fixtures — FAKE symbols + FABRICATED numbers, real CafeF shape.
 # --------------------------------------------------------------------------- #
-def _period(time, year, quater, items, report_type="HK", conten="Đã kiểm toán "):
+def _period(time, year, quater, items, report_type="NAM", conten="Đã kiểm toán "):
     return {
         "Time": time,
         "Year": year,
@@ -102,14 +102,14 @@ def corp_income_two_quarters():
             2026,
             1,
             [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 3_000_000_000)],
-            report_type="H",
+            report_type="QUY",
         ),
         _period(
             "Q4-2025",
             2025,
             4,
             [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 2_500_000_000)],
-            report_type="H",
+            report_type="QUY",
         ),
     ]
     return _envelope(periods, count=85)
@@ -495,7 +495,7 @@ def test_malformed_value_raises_invalid():
 def test_nan_value_raises_invalid():
     payload = (
         '{"Data":{"Count":1,"Value":[{"Time":"2025","Year":2025,"Quater":0,'
-        '"ReportType":"HK","Conten":"x","Value":[{"Code":"DTTBHCCDV","Name":"x",'
+        '"ReportType":"NAM","Conten":"x","Value":[{"Code":"DTTBHCCDV","Name":"x",'
         '"Value":NaN}]}]},"Message":null,"Success":true}'
     )
     with pytest.raises(InvalidData):
@@ -509,7 +509,7 @@ def test_period_missing_code_raises_invalid():
                 "Time": "2025",
                 "Year": 2025,
                 "Quater": 0,
-                "ReportType": "HK",
+                "ReportType": "NAM",
                 "Conten": "x",
                 "Value": [{"Name": "no code", "Value": 1.0}],
             }
@@ -631,9 +631,9 @@ def test_annual_income_with_quater_5_rows_returns_all_reports():
 def test_quarterly_skips_odd_quater_marker_row_not_aborting():
     # a QUARTER pull with one anomalous marker row among valid quarterly rows
     periods = [
-        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)]),
-        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)]),
-        _period("odd", 2024, 9, [("REV", "Revenue", 30_000)]),  # out-of-range quarter marker
+        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)], report_type="QUY"),
+        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)], report_type="QUY"),
+        _period("odd", 2024, 9, [("REV", "Revenue", 30_000)], report_type="QUY"),  # out-of-range quarter marker
     ]
     reports = _src(_envelope(periods)).get_financials(
         "TESTCO", StatementType.INCOME, Period.QUARTER
@@ -651,6 +651,47 @@ def test_all_rows_unparseable_fiscal_date_raises_emptydata():
     ]
     with pytest.raises(EmptyData):
         _src(_envelope(periods)).get_financials("TESTCO", StatementType.INCOME, Period.QUARTER)
+
+
+def test_quarterly_request_skips_annual_tagged_rows():
+    # Issue #45: a quarterly request must not relabel rows tagged ReportType=NAM
+    # as quarterly. Such rows should be skipped (with a warning) rather than
+    # misreported under the requested period.
+    periods = [
+        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)], report_type="QUY"),
+        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)], report_type="QUY"),
+        _period("2024 annual", 2024, 0, [("REV", "Revenue", 90_000)], report_type="NAM"),
+    ]
+    reports = _src(_envelope(periods)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.QUARTER
+    )
+    assert len(reports) == 2
+    assert all(r.period is Period.QUARTER for r in reports)
+    assert all(r.fiscal_date.year == 2025 for r in reports)
+    assert all(any("skipped" in w for w in r.warnings) for r in reports)
+
+
+def test_annual_request_skips_quarterly_tagged_rows():
+    # Issue #45: an annual request must not relabel rows tagged ReportType=QUY
+    # as annual.
+    periods = [
+        _period("2025", 2025, 0, [("REV", "Revenue", 100_000)], report_type="NAM"),
+        _period("Q4 2024", 2024, 4, [("REV", "Revenue", 30_000)], report_type="QUY"),
+    ]
+    reports = _src(_envelope(periods)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    assert len(reports) == 1
+    assert reports[0].fiscal_date == date(2025, 12, 31)
+    assert any("skipped" in w for w in reports[0].warnings)
+
+
+def test_period_unknown_rejected_for_statements():
+    # Issue #10: Period.UNKNOWN is only meaningful for ratios; statements must
+    # reject it before touching the network.
+    src = CafeFFundamentalSource(http_get=lambda *a: _envelope([]))  # must not be called
+    with pytest.raises(VnfinError):
+        src.get_financials("TESTCO", StatementType.INCOME, Period.UNKNOWN)
 
 
 # --------------------------------------------------------------------------- #

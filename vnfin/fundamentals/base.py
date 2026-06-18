@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from ..exceptions import VnfinError
 from .models import FinancialReport, Period, StatementType
 
 #: ``is_bank`` sentinel meaning "the caller did not declare bank vs corporate —
@@ -58,15 +59,17 @@ def is_known_bank(symbol: str) -> bool:
 def resolve_is_bank(symbol: str, is_bank) -> bool:
     """Collapse an ``is_bank`` request into a concrete bank/corporate flag.
 
-    Explicit ``True``/``False`` is returned unchanged (caller override always
-    wins). The :data:`AUTO` sentinel (``None``) falls back to the known-bank
-    heuristic, defaulting to corporate (``False``) for anything unrecognised.
-    Adapters that can probe the provider should prefer their own probe over this
-    static guess; this helper is the cheap last resort.
+    Explicit ``True``/``False`` is required (caller override always wins). The
+    :data:`AUTO` sentinel (``None``) falls back to the known-bank heuristic,
+    defaulting to corporate (``False``) for anything unrecognised. Strings such
+    as ``"False"`` are rejected because their truthiness is a common source of
+    bugs.
     """
     if is_bank is AUTO:
         return is_known_bank(symbol)
-    return bool(is_bank)
+    if not isinstance(is_bank, bool):
+        raise VnfinError(f"is_bank must be True, False, or AUTO (None), got {is_bank!r}")
+    return is_bank
 
 
 class FundamentalSource(ABC):

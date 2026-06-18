@@ -19,6 +19,7 @@ Real shapes (synthesized below):
 from __future__ import annotations
 
 import json
+from datetime import date
 
 import pytest
 
@@ -310,12 +311,16 @@ def test_auto_detected_bank_uses_bank_name_map():
 
 
 def test_explicit_is_bank_false_overrides_auto_on_bank_rows():
-    """Explicit is_bank=False wins even when the rows look like a bank template.
+    """Explicit is_bank=False uses the corporate query and label.
 
-    The corporate query is used (modelType:102 must NOT appear) and the report
-    is labelled corporate regardless of the row tags — the override is honoured.
+    The corporate query is used (modelType:102 must NOT appear). Rows returned
+    for that query are parsed; mismatched bank-template rows are skipped as a
+    provider contract violation.
     """
-    src, captured = _capturing_src(bank_income_one_period())
+    rows = [
+        _stmt_row("ZZBANK", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+    ]
+    src, captured = _capturing_src(_stmt_envelope(rows))
     reports = src.get_financials(
         "ZZBANK", StatementType.INCOME, Period.ANNUAL, is_bank=False
     )
@@ -326,8 +331,11 @@ def test_explicit_is_bank_false_overrides_auto_on_bank_rows():
 
 
 def test_explicit_is_bank_true_overrides_auto_on_corporate_rows():
-    """Explicit is_bank=True wins even when the rows look corporate."""
-    src, captured = _capturing_src(corp_income_two_periods())
+    """Explicit is_bank=True uses the bank query and label."""
+    rows = [
+        _stmt_row("TESTCO", 421601, 5_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
+    ]
+    src, captured = _capturing_src(_stmt_envelope(rows))
     reports = src.get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=True
     )
@@ -377,6 +385,84 @@ def test_auto_raises_empty_when_both_templates_empty():
     src = _src(_stmt_envelope([], total=0))
     with pytest.raises(EmptyData):
         src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)  # AUTO
+
+
+def test_period_unknown_rejected_for_statements():
+    # Issue #10: Period.UNKNOWN is only meaningful for ratios; statements must
+    # reject it before touching the network.
+    src = VNDirectFundamentalSource(http_get=lambda *a: _stmt_envelope([]))
+    with pytest.raises(VnfinError):
+        src.get_financials("TESTCO", StatementType.INCOME, Period.UNKNOWN)
+
+
+def test_vndirect_rejects_wrong_report_type_rows():
+    # Issue #44: rows whose reportType does not match the requested period are
+    # provider contract violations and must be skipped (with a warning).
+    rows = [
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2025-09-30", "QUARTER", 1),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    assert len(reports) == 1
+    assert reports[0].fiscal_date == date(2025, 12, 31)
+    assert any("skipped" in w for w in reports[0].warnings)
+
+
+def test_vndirect_rejects_wrong_model_type_rows():
+    # Issue #44: rows whose modelType does not match the requested/corporate bank
+    # template are provider contract violations and must be skipped.
+    rows = [
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2024-12-31", "ANNUAL", 101),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+    )
+    assert len(reports) == 1
+    assert reports[0].fiscal_date == date(2025, 12, 31)
+    assert reports[0].is_bank is False
+    assert any("skipped" in w for w in reports[0].warnings)
+
+
+def test_vndirect_duplicate_item_code_in_same_period_raises_invalid():
+    # Issue #26: duplicate itemCode within one fiscal period is a contract
+    # violation and must raise InvalidData.
+    rows = [
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+    ]
+    with pytest.raises(InvalidData):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )
+
+
+def test_vndirect_ratio_eps_bv_use_vnd_per_share_unit():
+    # Issue #19: VNDirect EPS/BV ratio codes are per-share monetary values, not
+    # dimensionless ratios, and must carry value_unit="vnd_per_share".
+    rows = [
+        _ratio_row("TESTCO", "EPS", 5_000.0, "2025-12-31", "EPS"),
+        _ratio_row("TESTCO", "BV", 20_000.0, "2025-12-31", "BV"),
+        _ratio_row("TESTCO", "PRICE_TO_EARNINGS", 10.0, "2025-12-31", "PE"),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.ANNUAL
+    )
+    units = {li.item_code: li.value_unit for li in reports[0].items}
+    assert units["EPS"] == "vnd_per_share"
+    assert units["BV"] == "vnd_per_share"
+    assert units["PRICE_TO_EARNINGS"] == "ratio"
+
+
+def test_is_bank_string_false_treated_as_false():
+    # Issue #11: a string "False" must not be truthy; explicit is_bank must be
+    # a real bool (or AUTO/None). String values are rejected with VnfinError.
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_periods()).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank="False"
+        )
 
 
 def test_get_financials_function_auto_detects_without_is_bank():

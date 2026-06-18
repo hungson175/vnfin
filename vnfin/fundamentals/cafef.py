@@ -127,6 +127,8 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         self._validate_limit(limit)
         st = _coerce_statement(statement)
         pd = _coerce_period(period)
+        if pd is Period.UNKNOWN and st is not StatementType.RATIOS:
+            raise VnfinError(f"cafef: Period.UNKNOWN is not valid for {st.value} statements")
         resolved = is_known_bank(psym) if is_bank is AUTO else bool(is_bank)
         if st is StatementType.RATIOS:
             return self._get_ratios(psym, pd, is_bank=resolved, limit=limit)
@@ -182,10 +184,18 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         parsed = self._fetch_json(self.BASE_URL + self.FINANCE_REPORT_PATH, params)
         periods = self._periods(parsed)
 
+        expected_report_type = self._report_type(period)
         fetched = datetime.now(timezone.utc)
         reports = []
         skipped = 0
         for pobj in periods:
+            # Skip rows whose ReportType contradicts the requested period, e.g. a
+            # quarterly request returning annual-tagged rows (or vice versa). That
+            # is a provider-side mislabel and must not be silently relabelled.
+            row_report_type = str(pobj.get("ReportType") or "").strip().upper()
+            if row_report_type and row_report_type != expected_report_type:
+                skipped += 1
+                continue
             # Line-item data stays STRICT: a malformed/NaN/missing-Code row means a
             # broken response -> raise so the failover chain moves on.
             items = self._line_items(pobj, value_unit="VND")
@@ -240,7 +250,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         for pobj in periods:
             items = self._ratio_line_items(pobj)
             try:
-                fiscal_date = self._fiscal_date(pobj, period)
+                fiscal_date = self._fiscal_date(pobj, Period.ANNUAL)
             except InvalidData:
                 skipped += 1
                 continue
@@ -359,8 +369,9 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         # Annual context: the fiscal date is the year-end no matter the Quater
         # marker (0, 5, ...). This is the fix for CafeF's older annual rows that
         # carry Quater=5 and previously aborted the whole annual response.
-        if period is Period.ANNUAL or q == 0:
+        if period is Period.ANNUAL:
             return date(year, 12, 31)
+        # Quarterly context: Quater must be 1..4.
         if q in _QUARTER_END:
             month, day = _QUARTER_END[q]
             return date(year, month, day)
