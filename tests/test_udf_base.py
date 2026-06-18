@@ -73,6 +73,28 @@ def test_status_no_data_raises_empty(synth):
         s.get_history("FPT", Interval.D1, *WIDE)
 
 
+def test_status_error_raises_empty(synth):
+    s = src_with(synth.bare(status="error"))
+    with pytest.raises(EmptyData):
+        s.get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_status_unknown_raises_invalid(synth):
+    # Issue #39: any UDF status other than "ok" must be treated as bad data.
+    s = src_with(synth.bare(status="unexpected"))
+    with pytest.raises(InvalidData):
+        s.get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_status_missing_raises_invalid(synth):
+    # Issue #39: a missing `s` field must NOT be silently accepted as success.
+    payload = json.dumps(
+        {"t": [synth.ts("2024-01-02")], "o": [72.0], "h": [72.5], "l": [71.8], "c": [72.0], "v": [1000]}
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
 def test_empty_arrays_raise_empty(synth):
     s = src_with(synth.bare(rows=[]))
     with pytest.raises(EmptyData):

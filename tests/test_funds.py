@@ -203,6 +203,11 @@ def test_list_funds_non_json_raises_invalid():
         _src("<html>nope</html>").list_funds()
 
 
+def test_list_funds_non_dict_top_level_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src("[1, 2, 3]").list_funds()
+
+
 def test_list_funds_malformed_nav_raises_invalid():
     rows = [
         {
@@ -276,6 +281,25 @@ def test_list_funds_application_error_status_raises_unavailable():
 def test_list_funds_application_error_code_raises_unavailable():
     with pytest.raises(SourceUnavailable):
         _src(_fund_list_payload(code=403)).list_funds()
+
+
+def test_list_funds_non_integer_envelope_status_raises_invalid():
+    payload = json.dumps({"status": "not-an-int", "code": 200, "data": {"rows": []}})
+    with pytest.raises(InvalidData):
+        _src(payload).list_funds()
+
+
+def test_list_funds_missing_envelope_status_and_code_raises_invalid():
+    # Issue #41: an Fmarket response without `status` or `code` is not a valid envelope.
+    payload = json.dumps({"message": "ok", "data": {"total": 0, "page": 1, "pageSize": 100, "rows": []}})
+    with pytest.raises(InvalidData):
+        _src(payload).list_funds()
+
+
+def test_list_funds_missing_envelope_but_with_data_raises_invalid():
+    payload = json.dumps({"data": {"total": 1, "page": 1, "pageSize": 100, "rows": [{"id": FAKE_ID_A, "code": "TESTCO", "shortName": "TESTCO", "name": "X", "nav": 100.0, "dataFundAssetType": {"code": "STOCK"}, "owner": {"name": "M"}}]}})
+    with pytest.raises(InvalidData):
+        _src(payload).list_funds()
 
 
 def test_list_funds_transport_error_wrapped():
@@ -388,6 +412,13 @@ def test_nav_history_application_error_status_raises_unavailable():
         _src(_nav_history_payload(status=500)).nav_history(FAKE_ID_A)
 
 
+def test_nav_history_missing_envelope_status_and_code_raises_invalid():
+    # Issue #41: NAV history response missing both `status` and `code` is invalid.
+    payload = json.dumps({"message": "ok", "data": [{"navDate": "2024-01-02", "nav": 100.0, "productId": FAKE_ID_A}]})
+    with pytest.raises(InvalidData):
+        _src(payload).nav_history(FAKE_ID_A)
+
+
 def test_nav_history_malformed_nav_raises_invalid():
     rows = [{"navDate": "2024-01-02", "nav": None, "productId": FAKE_ID_A}]
     with pytest.raises(InvalidData):
@@ -474,6 +505,24 @@ def test_holdings_empty_raises_empty():
 def test_holdings_application_error_status_raises_unavailable():
     with pytest.raises(SourceUnavailable):
         _src(_holdings_payload(status=500)).holdings(FAKE_ID_A)
+
+
+def test_holdings_missing_envelope_status_and_code_raises_invalid():
+    # Issue #41: holdings response missing both `status` and `code` is invalid.
+    payload = json.dumps(
+        {
+            "message": "ok",
+            "data": {
+                "id": FAKE_ID_A,
+                "code": "TESTCO",
+                "shortName": "TESTCO",
+                "nav": FAKE_NAV_A,
+                "productTopHoldingList": [{"stockCode": "FAKE1", "netAssetPercent": 5.0}],
+            },
+        }
+    )
+    with pytest.raises(InvalidData):
+        _src(payload).holdings(FAKE_ID_A)
 
 
 def test_holdings_malformed_weight_raises_invalid():

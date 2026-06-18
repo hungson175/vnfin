@@ -49,6 +49,18 @@ All notable changes to `vnfin` are documented here. The format follows
   `InvalidData` instead of silently stamping the requested date onto the wrong day's price. If the
   document omits `date`, the requested loop date is still used as a documented fallback.
   ([#35](https://github.com/hungson175/vnfin/issues/35))
+- **UDF status strictness** — shared `UDFSource` now requires the inner UDF status field `s`
+  to equal `"ok"` for success. `"no_data"` / `"error"` still raise `EmptyData`, but missing or
+  unknown status values now raise `InvalidData` so a failover chain does not silently treat a
+  drifting provider response as valid price data. ([#39](https://github.com/hungson175/vnfin/issues/39))
+- **SSI envelope validation** — `SSIiBoardSource` now validates the outer response envelope
+  (`code == "SUCCESS"` and `status == "ok"`) before unwrapping `data`. Provider-side failures
+  raise `SourceUnavailable`; malformed or missing envelope fields raise `InvalidData`.
+  ([#40](https://github.com/hungson175/vnfin/issues/40))
+- **Fmarket envelope requirement** — `FmarketFundSource` now requires at least one of the
+  application-level envelope fields `status` or `code` in every response. A response missing both
+  raises `InvalidData`; non-2xx application statuses continue to raise `SourceUnavailable`.
+  ([#41](https://github.com/hungson175/vnfin/issues/41))
 
 ## [0.2.0] — 2026-06-18
 

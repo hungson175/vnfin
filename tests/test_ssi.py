@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from vnfin.exceptions import EmptyData, UnsupportedInterval
+from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable, UnsupportedInterval
 from vnfin.models import AdjustmentPolicy, Interval
 from vnfin.sources.ssi import SSIiBoardSource
 
@@ -29,7 +29,7 @@ def _ts(d: str) -> int:
     return int(datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
 
 
-def _envelope(rows=None, status="ok") -> str:
+def _envelope(rows=None, status="ok", outer_code="SUCCESS", outer_status="ok") -> str:
     """Synthetic SSI envelope. Status `s` lives inside `data`."""
     rows = _ROWS if rows is None else rows
     data = {
@@ -43,7 +43,7 @@ def _envelope(rows=None, status="ok") -> str:
         "nextTime": None,
     }
     return json.dumps(
-        {"code": "SUCCESS", "message": "ok", "data": data, "status": "ok"}
+        {"code": outer_code, "message": "ok", "data": data, "status": outer_status}
     )
 
 
@@ -84,6 +84,35 @@ def test_range_filter():
 def test_status_no_data_raises_empty():
     with pytest.raises(EmptyData):
         _src(_envelope(status="no_data")).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_outer_code_failure_raises_unavailable():
+    # Issue #40: outer envelope `code` must be SUCCESS before unwrapping `data`.
+    with pytest.raises(SourceUnavailable):
+        _src(_envelope(outer_code="FAIL")).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_outer_status_not_ok_raises_source_unavailable():
+    # Issue #40: outer envelope `status` must be "ok" before unwrapping `data`.
+    # The provider uses status="error" for explicit failures, so it should be a
+    # failover-triggering SourceUnavailable rather than silent success.
+    with pytest.raises(SourceUnavailable):
+        _src(_envelope(outer_status="error")).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_outer_status_missing_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(_envelope(outer_status=None)).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_outer_code_missing_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(_envelope(outer_code=None)).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_envelope_top_level_not_dict_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src("[1, 2, 3]").get_history("FPT", Interval.D1, *WIDE)
 
 
 def test_empty_arrays_raise_empty():

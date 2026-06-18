@@ -45,10 +45,19 @@ The response is a JSON **envelope** wrapping the UDF arrays in a `data` object:
 
 The UDF status field `s` lives **inside** `data` (values seen: `"ok"`). The
 adapter overrides `_extract` to return `parsed["data"]` so the shared base sees a
-plain UDF dict. The base treats `s in {"no_data","error"}` as `EmptyData`. A
-request for a non-existent symbol returns `code:"SUCCESS"`, `s:"ok"`, and **empty
-arrays**, which the base also surfaces as `EmptyData` ("no bars in requested
-range").
+plain UDF dict. The base treats only `s == "ok"` as success; `s in {"no_data","error"}`
+raises `EmptyData`, and any other/missing value raises `InvalidData`. A request for
+a non-existent symbol returns `code:"SUCCESS"`, `s:"ok"`, and **empty arrays**,
+which the base also surfaces as `EmptyData` ("no bars in requested range").
+
+Before unwrapping `data`, `_extract` validates the outer envelope:
+
+- `code` must equal `"SUCCESS"` (observed success value). `code in {"FAIL","ERROR"}`
+  raises `SourceUnavailable`; any other/missing value raises `InvalidData`.
+- `status` must equal `"ok"` (observed success value). `status == "error"` raises
+  `SourceUnavailable`; any other/missing value raises `InvalidData`.
+
+This ensures a provider-side error envelope never parses as empty/success data.
 
 ## Price magnitude and `PRICE_SCALE`
 

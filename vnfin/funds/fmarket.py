@@ -265,9 +265,14 @@ class FmarketFundSource(HttpDataSource):
         # The provider wraps every response in an application-level status/code
         # envelope. A 2xx HTTP transport can still carry an application error
         # (e.g. status:500). Treat any non-2xx application status as a source
-        # failure so it never parses as success.
-        for key in ("status", "code"):
-            raw = parsed.get(key)
+        # failure so it never parses as success. The envelope is required: missing
+        # both status and code means the response shape is not a valid Fmarket
+        # envelope and must raise InvalidData (issue #41).
+        status_raw = parsed.get("status")
+        code_raw = parsed.get("code")
+        if status_raw is None and code_raw is None:
+            raise InvalidData(f"fmarket: missing status/code envelope from {who}")
+        for key, raw in (("status", status_raw), ("code", code_raw)):
             if raw is None:
                 continue
             try:

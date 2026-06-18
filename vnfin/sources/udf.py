@@ -72,8 +72,14 @@ class UDFSource(HttpDataSource, PriceSource):
         parsed = self._request_json(url, params=params, headers=self._headers())
         data = self._extract(parsed) or {}
         status = data.get("s")
-        if status in ("no_data", "error"):
-            raise EmptyData(f"{self.name}: status={status}")
+        if status != "ok":
+            # UDF status is strictly "ok" for success. "no_data" / "error" mean
+            # empty for this request; anything else (missing, unknown, garbage) is
+            # malformed data and must raise InvalidData so failover does not mask
+            # provider contract drift.
+            if status in ("no_data", "error"):
+                raise EmptyData(f"{self.name}: status={status}")
+            raise InvalidData(f"{self.name}: unexpected UDF status {status!r}")
 
         bars = [b for b in self._build_bars(data) if lo <= b.time <= hi]
         if not bars:

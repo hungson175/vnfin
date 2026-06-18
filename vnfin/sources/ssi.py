@@ -16,6 +16,7 @@ redistribution of provider data.
 """
 from __future__ import annotations
 
+from ..exceptions import InvalidData, SourceUnavailable
 from ..models import AdjustmentPolicy, Interval
 from .udf import UDFSource
 
@@ -51,5 +52,19 @@ class SSIiBoardSource(UDFSource):
         return {"resolution": resolution, "symbol": provider_symbol, "from": frm, "to": to}
 
     def _extract(self, parsed):
-        # Envelope: the UDF arrays (and status `s`) live under "data".
+        # Envelope: the UDF arrays (and status `s`) live under "data". Validate the
+        # outer envelope before returning the inner UDF dict so a provider-side
+        # error (e.g. code="FAIL" or status="error") never parses as empty/success.
+        if not isinstance(parsed, dict):
+            raise InvalidData(f"{self.name}: envelope is not an object")
+        code = parsed.get("code")
+        if code != "SUCCESS":
+            if code in ("FAIL", "ERROR"):
+                raise SourceUnavailable(f"{self.name}: envelope code={code}")
+            raise InvalidData(f"{self.name}: unexpected envelope code={code!r}")
+        status = parsed.get("status")
+        if status != "ok":
+            if status == "error":
+                raise SourceUnavailable(f"{self.name}: envelope status={status}")
+            raise InvalidData(f"{self.name}: unexpected envelope status={status!r}")
         return parsed.get("data") or {}

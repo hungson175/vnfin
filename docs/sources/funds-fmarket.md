@@ -157,6 +157,9 @@ weights are **percent of NAV (0–100)**. `NavPoint.date` is a plain
 | Condition | Exception |
 |-----------|-----------|
 | Transport / network / non-2xx | `SourceUnavailable` |
+| Non-2xx application `status`/`code` (e.g. 500/403) | `SourceUnavailable` |
+| Missing both `status` and `code` envelope fields | `InvalidData` |
+| Non-integer `status`/`code` envelope value | `InvalidData` |
 | Non-JSON / unexpected top-level shape | `InvalidData` |
 | Malformed scalar (bad/`null` nav, bad date, out-of-range weight, negative nav) | `InvalidData` |
 | Missing required field (id, stockCode, navDate) | `InvalidData` |
