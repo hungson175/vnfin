@@ -231,3 +231,63 @@ def test_open_er_api_transport_error_propagates_as_source_error():
     src = OpenErApiFXSource(http_get=_raise(SourceUnavailable("boom")))
     with pytest.raises(SourceUnavailable):
         src.get_rate("USD")
+
+
+# --------------------------------------------------------------------------- #
+# gate-4 hardening: wrong-base guard, base_code validation, caching, ISO shape
+# --------------------------------------------------------------------------- #
+class _WrongBaseFX:
+    name = "wrong"
+    unit = "VND-per-foreign-unit"
+
+    def get_rate(self, base, quote="VND"):  # ignores requested base -> always EUR
+        return FXRate(base="EUR", quote="VND", rate=27000.0, unit="VND per 1 EUR",
+                      as_of_utc=_NOW, source="wrong")
+
+
+def test_failover_rejects_wrong_base_and_falls_over():
+    c = FailoverFXClient([_WrongBaseFX(), _FakeFX("b", rate=26000.0)])
+    r = c.get_rate("USD")
+    assert r.source == "b" and r.base == "USD"
+
+
+def test_failover_wrong_base_with_no_backup_raises():
+    from vnfin.exceptions import AllSourcesFailed
+
+    with pytest.raises(AllSourcesFailed):
+        FailoverFXClient([_WrongBaseFX()]).get_rate("USD")
+
+
+def test_open_er_api_rejects_non_usd_base_code():
+    # drifted payload claiming a non-USD base must not be cross-rated with the USD formula
+    bad = '{"result":"success","base_code":"EUR","rates":{"USD":1.1,"EUR":1,"VND":27000}}'
+    with pytest.raises(InvalidData):
+        OpenErApiFXSource(http_get=_http(bad)).get_rate("USD")
+
+
+def _counting(text):
+    state = {"n": 0}
+
+    def _get(url, params=None, headers=None, json_body=None):
+        state["n"] += 1
+        return text
+
+    _get.state = state
+    return _get
+
+
+def test_open_er_api_caches_within_ttl():
+    getter = _counting(_OPEN_ER)
+    src = OpenErApiFXSource(http_get=getter)
+    src.get_rate("USD")
+    src.get_rate("EUR")  # served from the cached daily response, no second HTTP call
+    assert getter.state["n"] == 1
+
+
+@pytest.mark.parametrize("bad_code", ["US", "USDD", "12A", "U$D"])
+def test_malformed_iso_rejected_before_network(bad_code):
+    getter = _counting(_OPEN_ER)
+    src = OpenErApiFXSource(http_get=getter)
+    with pytest.raises(InvalidData):
+        src.get_rate(bad_code)
+    assert getter.state["n"] == 0  # rejected before any network call

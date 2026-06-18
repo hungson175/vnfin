@@ -19,9 +19,10 @@ Canonical vnfin unit: **VND per 1 unit of the base** (`unit = "VND per 1 {base}"
 
 ## Behaviour / limits
 
-- Updates ~once/24h; **HTTP 429 if requested more than ~once/day** (window resets ~20 min).
-  → the library caches the daily rate; the health probe is opt-in (`scripts/healthcheck.py --fx`),
-  never in the default scheduled sweep.
+- Updates ~once/24h; **HTTP 429 if requested too often** (window resets ~20 min).
+  → the adapter enables a **response cache by default** (`FXSource.DEFAULT_CACHE_TTL = 3600 s`),
+  so repeated calls reuse one fetch; the health probe is opt-in (`scripts/healthcheck.py --fx`),
+  never in the default scheduled sweep. Override the TTL via the `cache_ttl` constructor arg.
 - Spot/current only — **no historical** series on the open (no-key) tier.
 - 166 currencies; CDN-backed, globally reachable (live-verified 2026-06-18).
 

@@ -8,11 +8,14 @@ shape, positive/finite rate) and the per-rate construction so each adapter only 
 from __future__ import annotations
 
 import math
+import re
 from datetime import datetime
 
 from ..exceptions import EmptyData, InvalidData
 from ..transport import HttpDataSource
 from .models import FXRate
+
+_ISO4217 = re.compile(r"[A-Za-z]{3}")
 
 
 class FXSource(HttpDataSource):
@@ -20,6 +23,16 @@ class FXSource(HttpDataSource):
     QUOTE = "VND"
     #: convention family for the unit-homogeneity guard (all FX sources quote VND-per-foreign-unit)
     unit = "VND-per-foreign-unit"
+    #: Cache the daily-ish rate by default so repeated calls don't hammer the provider
+    #: (open.er-api 429s above ~once/day; VCB asks for ≤1 request/5 min). Override via ctor.
+    DEFAULT_CACHE_TTL = 3600.0
+
+    def __init__(self, http_get=None, timeout: float = 25.0, cache_ttl: float | None = None):
+        super().__init__(
+            http_get=http_get,
+            timeout=timeout,
+            cache_ttl=self.DEFAULT_CACHE_TTL if cache_ttl is None else cache_ttl,
+        )
 
     @property
     def name(self) -> str:
@@ -45,8 +58,10 @@ class FXSource(HttpDataSource):
             )
 
     def _normalize_ccy(self, code) -> str:
-        if not isinstance(code, str) or not code.strip().isalpha():
-            raise InvalidData(f"{self.name}: invalid currency code {code!r}")
+        # ISO 4217 alphabetic codes are exactly 3 letters; reject malformed codes BEFORE
+        # any network call (a syntactically-valid but unsupported code becomes EmptyData later).
+        if not isinstance(code, str) or not _ISO4217.fullmatch(code.strip()):
+            raise InvalidData(f"{self.name}: invalid ISO-4217 currency code {code!r}")
         return code.strip().upper()
 
     def _rate_unit(self, base: str) -> str:

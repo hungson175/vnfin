@@ -32,6 +32,12 @@ class OpenErApiFXSource(FXSource):
             raise InvalidData(f"{self.name}: unexpected payload type {type(payload).__name__}")
         if payload.get("result") != "success":
             raise EmptyData(f"{self.name}: provider result {payload.get('result')!r}")
+        # The cross-rate math assumes USD-base data (rates[X] == X per 1 USD). If the
+        # provider ever drifts the base, refuse rather than silently mis-derive rates.
+        if payload.get("base_code") != "USD":
+            raise InvalidData(
+                f"{self.name}: expected USD-base payload, got base_code={payload.get('base_code')!r}"
+            )
         rates = payload.get("rates")
         if not isinstance(rates, dict):
             raise InvalidData(f"{self.name}: missing rates object")

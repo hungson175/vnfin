@@ -7,6 +7,7 @@ chain; an inverted/mismatched result is caught by ``reject`` (the two-layer guar
 """
 from __future__ import annotations
 
+from ..exceptions import InvalidData
 from ..failover import FailoverClient
 from .models import FXRate
 from .open_er_api import OpenErApiFXSource
@@ -21,18 +22,32 @@ def default_fx_sources(http_get=None, timeout: float = 25.0):
     ]
 
 
-def _reject(result) -> str | None:
-    if result is None:
-        return "empty result"
+def _validate(result, req_base: str, req_quote: str) -> str | None:
+    """Request-aware result guard: the returned rate must answer THIS request, in the
+    canonical unit, with a positive value. (`reject` only sees the result, so this runs
+    inside the operation where the requested base/quote are in scope.)"""
     if not isinstance(result, FXRate):
         return f"unexpected result type {type(result).__name__}"
-    if result.quote != "VND":
-        return f"quote {result.quote!r} != VND"
-    if result.unit != f"VND per 1 {result.base}":
-        return f"unit {result.unit!r} != canonical 'VND per 1 {result.base}'"
+    if result.base != req_base:
+        return f"base {result.base!r} != requested {req_base!r}"
+    if result.quote != req_quote:
+        return f"quote {result.quote!r} != requested {req_quote!r}"
+    if result.unit != f"{req_quote} per 1 {req_base}":
+        return f"unit {result.unit!r} != '{req_quote} per 1 {req_base}'"
     if not (result.rate > 0):
         return f"non-positive rate {result.rate!r}"
     return None
+
+
+def _operation(src, base, quote="VND"):
+    req_base = base.strip().upper() if isinstance(base, str) else base
+    req_quote = quote.strip().upper() if isinstance(quote, str) else quote
+    result = src.get_rate(base, quote)
+    reason = _validate(result, req_base, req_quote)
+    if reason:
+        # raise a SourceError so failover records the attempt and moves to the next source
+        raise InvalidData(f"{getattr(src, 'name', '?')}: {reason}")
+    return result
 
 
 class FailoverFXClient:
@@ -41,8 +56,7 @@ class FailoverFXClient:
     def __init__(self, sources, *, max_attempts: int = 3):
         self._engine = FailoverClient(
             sources,
-            operation=lambda src, base, quote="VND": src.get_rate(base, quote),
-            reject=_reject,
+            operation=_operation,
             unit_of=lambda src: getattr(src, "unit", None),
             max_attempts=max_attempts,
         )

@@ -28,12 +28,13 @@ def test_usd_vnd_cross_source_parity():
     from vnfin.fx import OpenErApiFXSource, VietcombankFXSource
 
     rates = {}
+    errors = {}
     for src in (OpenErApiFXSource(), VietcombankFXSource()):
         try:
             rates[src.name] = src.get_rate("USD").rate
-        except Exception:  # a single dead source must not fail the differential check
-            pass
-    assert len(rates) >= 2, f"need both FX sources reachable, got {rates}"
+        except Exception as exc:  # capture per-source reason for fast diagnosis (no skip/fake)
+            errors[src.name] = f"{type(exc).__name__}: {exc}"
+    assert len(rates) >= 2, f"need both FX sources reachable; got rates={rates} errors={errors}"
     lo, hi = min(rates.values()), max(rates.values())
     spread = (hi - lo) / lo
     # market vs commercial-bank transfer quote: allow a modest spread, catch inversion/unit bugs
