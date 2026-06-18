@@ -13,7 +13,7 @@ probing of the provider's own endpoint.
 
 | Source | Endpoint | Auth | Reachable (non-VN IP) | Clean-room risk | Redistribution |
 |--------|----------|------|----------------------|-----------------|----------------|
-| VNDirect finfo `/v4/events` | `GET https://api-finfo.vndirect.com.vn/v4/events?q=code:FPT~type:DIVIDEND&size=50&sort=effectiveDate:desc&q=...locale:EN_GB` | none | yes | **LOW** | **MEDIUM** — no published data license; runtime-fetch only, no bundling (same posture as all domains) |
+| VNDirect finfo `/v4/events` | `GET https://api-finfo.vndirect.com.vn/v4/events?q=code:FPT~type:DIVIDEND&size=50&sort=effectiveDate:desc&q=...locale:EN_GB` | none | probed from a VN IP — **non-VN/overseas reachability must be verified before implementation** | **LOW** | **MEDIUM** — no published data license; runtime-fetch only, no bundling (same posture as all domains) |
 
 This is the **same host we already use for fundamentals** (`api-finfo.vndirect.com.vn`), so the
 adapter reuses the existing `HttpDataSource` transport. **Single-source** (an accepted pattern,
