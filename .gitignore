@@ -13,3 +13,4 @@ __pycache__/
 .coverage
 tests/cassettes_private/
 build/
+dist/
