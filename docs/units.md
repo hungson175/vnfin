@@ -2,16 +2,20 @@
 
 Every result object states its unit/currency explicitly so callers never guess.
 
-| Domain | Canonical unit | Notes |
-|--------|----------------|-------|
-| Prices (equities) | **VND** | Verified identical across all 5 broker sources (72,300 VND for FPT). SSI/VNDirect/VPS feed ×1000; Pinetree/KIS ×1. |
-| Indices | **points** | NOT VND. Index sources use scale 1.0; do not route through the ×1000 price sources. |
-| Fundamentals | **raw VND** | Unscaled (e.g. total assets in trillions of VND as integer VND). |
-| Funds (NAV) | **VND / fund unit** | Fmarket. |
-| Gold — world | **USD / troy oz** | currency-api + gold-api. |
-| Gold — VN domestic | **VND/lượng** | Canonical VN gold quote. BTMC + PNJ both normalize to `VND/luong` (1 lượng = 10 chỉ = 37.5 g); silver excluded; weight parsed from product name. Verified by cross-source live test. |
-| Crypto | **USD** | Binance USDT pairs. |
-| Macro | per-indicator `unit` + `currency` | World Bank; unit is indicator-specific (%, USD, local-cur, index). |
+Each domain's `client()` is the **failover client** (multi-source where a homogeneous
+backup exists); `source()` is the primary adapter only. The unit-homogeneity guard
+keeps every chain on one unit so failover can never mix scales/units.
+
+| Domain | Canonical unit | Source stack (`client()`) |
+|--------|----------------|---------------------------|
+| Prices (equities) | **VND** | 5-broker failover. Verified identical across all 5 broker sources (72,300 VND for FPT). SSI/VNDirect/VPS feed ×1000; Pinetree/KIS ×1. |
+| Indices | **points** | Multi-source failover. NOT VND — index sources use scale 1.0; do not route through the ×1000 price sources. |
+| Fundamentals | **raw VND** | **VNDirect (primary) → CafeF (backup).** Unscaled (e.g. total assets in trillions of VND as integer VND). Income/balance/ratios have true redundancy; **cashflow is VNDirect-only** (CafeF summary handlers don't serve it). |
+| Funds (NAV) | **VND / fund unit** | **Single-source (Fmarket)** — no clean no-auth backup exists; accepted single-source for v0.1. `client() == source()`. |
+| Gold — world | **USD / troy oz** | **currency-api** (default, daily history); **Stooq is opt-in** only (server-IP anti-bot challenge — not a reliable default). gold-api is spot-only (not in the history chain). |
+| Gold — VN domestic | **VND/lượng** | **BTMC + PNJ** (2 dealers). Canonical VN gold quote; both normalize to `VND/luong` (1 lượng = 10 chỉ = 37.5 g); silver excluded; weight parsed from product name. Verified by cross-source live test. |
+| Crypto | **USD** | **Binance (primary) → Coinbase (backup)** failover. USD / USD-stablecoin pairs only; the result-level USD guard rejects a non-USD (e.g. BTC-quoted) series. |
+| Macro | per-indicator `unit` + indicator-specific `currency` (None for non-money) | **No-key: World Bank (primary) → IMF DataMapper → DBnomics**, plus optional **FRED BYOK** (excluded from the no-key default chain). Sources are unit pre-filtered to the canonical unit before failover; unit is indicator-specific (%, USD, USD bn, local-cur, index). |
 
 ## Cross-source differential testing
 

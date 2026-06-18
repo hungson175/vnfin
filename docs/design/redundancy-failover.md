@@ -1,45 +1,59 @@
 # Design: per-domain redundancy via the generic FailoverClient
 
-**Date:** 2026-06-18  **Status:** PROPOSAL for reviewer (pre-implementation).
+**Date:** 2026-06-18  **Status:** IMPLEMENTED (was a proposal; shipped 2026-06-18).
 **Builds on:** generic `vnfin.failover.FailoverClient` + unit-homogeneity guard (P1.3),
 and `docs/design/macro-no-key-byok.md`.
 
 ## Goal
 
-Boss's redundancy requirement: no domain should depend on a single source. Use the generic
-`FailoverClient` (sequential, ≤3 attempts, **unit-homogeneity guard**) to chain a primary +
-backup(s) per domain. All backups are clean-room, no-auth-first; live cross-source tests in
-`live_tests/` assert agreement.
+Boss's redundancy requirement: no domain should depend on a single source where a
+clean-room, no-auth backup exists. The generic `FailoverClient` (sequential, ≤3
+attempts, **unit-homogeneity guard**) chains a primary + backup(s) per domain. All
+backups are clean-room, no-auth-first; live cross-source tests in `live_tests/`
+assert agreement (require `VNFIN_LIVE=1`).
 
-## Current coverage vs. plan
+## Implemented coverage
 
-| Domain | Today | Add (backup) | Unit guard |
-|--------|-------|--------------|-----------|
-| Prices | 5 sources, failover ✅ | — | VND |
-| Indices | multi-source failover ✅ | — | points |
-| **Fundamentals** | VNDirect only | **CafeF** (no-auth AJAX, researched) | raw VND |
-| **Crypto** | Binance only | **Coinbase** (`api.exchange.coinbase.com`), opt. Kraken | USD |
-| **Gold (world)** | currency-api | **stooq** (`xauusd` CSV) | USD/oz |
-| **Gold (VN)** | BTMC + PNJ (2 dealers) | opt. SJC | VND/lượng |
-| **Macro** | World Bank only | **IMF DataMapper → DBnomics** (no-key) + BYOK (FRED/BEA/BLS-v2) | per-indicator |
-| **Funds** | Fmarket only | *no clean no-auth backup exists* → document as accepted single-source (BETA flag) | VND/unit |
+| Domain | `source()` (primary) | `client()` (failover chain) | Unit guard |
+|--------|----------------------|-----------------------------|-----------|
+| Prices | one broker | 5-broker failover ✅ | VND |
+| Indices | one source | multi-source failover ✅ | points |
+| **Fundamentals** | VNDirect | **VNDirect → CafeF** ✅ (income/balance/ratios; cashflow is VNDirect-only — CafeF summary handlers don't serve it) | raw VND |
+| **Crypto** | Binance | **Binance → Coinbase** ✅ (USD / USD-stablecoin only; result-level USD guard) | USD |
+| **Gold (world)** | currency-api | **currency-api** ✅; **Stooq opt-in only** (server-IP anti-bot challenge — not a reliable default) | USD/oz |
+| **Gold (VN)** | BTMC | **BTMC + PNJ** (2 dealers, cross-source parity) ✅ | VND/lượng |
+| **Macro** | World Bank | **World Bank → IMF DataMapper → DBnomics** (no-key) ✅ + **FRED BYOK** (excluded from no-key default chain) | per-indicator |
+| **Funds** | Fmarket | **single-source** (no clean no-auth backup exists — accepted single-source for v0.1; `client() == source()`) | VND/unit |
+
+`client()` returns the failover chain; `source()` returns just the primary adapter.
+They are **not** aliases except for the two accepted single-source cases (Funds, and
+world-gold history when Stooq is not opted in).
 
 ## Wiring
 
-Each domain gets `default_<domain>_sources()` + a `FailoverClient` (or domain wrapper) where a
-homogeneous backup exists. The unit-homogeneity guard prevents mixing scales/units (already
-proven for prices=VND, indices=points). Cross-domain models are never funneled through one
-client (crypto USD vs prices VND stay separate clients).
+Each domain exposes `default_<domain>_sources()` + a `FailoverClient` (or domain
+wrapper). The unit-homogeneity guard prevents mixing scales/units (proven for
+prices=VND, indices=points, and now fundamentals=VND, crypto=USD, gold=USD/oz,
+macro=per-indicator). Cross-domain models are never funneled through one client
+(crypto USD vs prices VND stay separate clients).
+
+Macro is special: the `FailoverClient` is reused **only after** the macro layer
+filters sources by a canonical `MacroIndicatorSpec` registry (unit pre-filter) so the
+chain serves the SAME canonical indicator across providers — never just "same unit".
 
 ## TDD per backup
 
-Each new backup adapter ships with synthetic-fixture unit tests (failover-safe errors, unit
-correctness) and a `live_tests/` cross-source agreement check (primary vs backup within
-tolerance). No real rows committed.
+Each backup adapter ships with synthetic-fixture unit tests (failover-safe errors,
+unit correctness) and a `live_tests/` cross-source agreement check (primary vs backup
+within tolerance). No real provider rows are committed.
 
-## Open question for reviewer
+## Resolved open questions
 
-- Funds: accept single-source (Fmarket) for v0.1 with a BETA flag, or invest in scraping
-  individual fund-manager NAV pages (fragile)? Proposed: accept single-source now.
-- Order of macro chain + which BYOK sources to wire in v0.1 (proposed: no-key trio now; FRED
-  BYOK stub wired, BEA/BLS-v2 deferred).
+- **Funds:** accepted single-source (Fmarket) for v0.1 (BETA). No fragile per-manager
+  NAV scraping.
+- **Macro chain order:** no-key trio now (World Bank → IMF DataMapper → DBnomics);
+  FRED wired as BYOK opt-in (official API only, never `fredgraph.csv`); BEA/BLS-v2
+  deferred.
+- **Stooq (world gold):** removed from the default chain (server-IP anti-bot
+  challenge); kept as an explicit opt-in backup. See
+  `docs/sources/gold-adapters.md`.

@@ -89,10 +89,17 @@ See `docs/api.md` (facade), `docs/units.md` (canonical units), `docs/design/` an
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # offline, deterministic — 0 skipped / 0 xfail
-VNFIN_LIVE=1 pytest live_tests/          # real cross-source/network checks — 0 skipped, opt-in
-python scripts/diagnostics_live.py       # manual probes for host-flaky upstreams (e.g. IMF)
+pytest                                            # offline, deterministic — 0 skipped / 0 xfail
+pytest --cov=vnfin --cov-fail-under=85            # CI release gate (currently ~94%)
+VNFIN_LIVE=1 pytest live_tests/                   # real cross-source/network checks — 0 skipped, opt-in
+python scripts/diagnostics_live.py                # manual probes for host-flaky upstreams (e.g. IMF)
 ```
+
+**CI release gate.** `.github/workflows/ci.yml` runs on every push and pull request
+(Python 3.10/3.11/3.12): it `pip install -e .[dev]`, then runs the **offline** suite with
+`pytest --cov=vnfin --cov-fail-under=85` — the job fails if line coverage drops below
+**85%** (the repo currently sits ~94%, so the gate guards against regressions). CI never
+sets `VNFIN_LIVE`, so the live network suite is never collected there.
 
 `live_tests/` are real network checks (never mocked) and are kept out of the default suite;
 running them without `VNFIN_LIVE=1` fails clearly rather than skipping, and with it they pass
