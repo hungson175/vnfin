@@ -148,6 +148,7 @@ class FREDMacroSource(HttpDataSource):
         units = data.get("units") if isinstance(data.get("units"), str) else ""
 
         points: list[tuple[date, float]] = []
+        seen_dates: set[date] = set()
         for obs in observations:
             if not isinstance(obs, dict):
                 raise InvalidData(f"{self.NAME}: observation is not an object")
@@ -161,6 +162,11 @@ class FREDMacroSource(HttpDataSource):
                 raise InvalidData(f"{self.NAME}: malformed observation for {sid}") from exc
             if not math.isfinite(value):
                 raise InvalidData(f"{self.NAME}: non-finite value for {sid}")
+            if d in seen_dates:
+                raise InvalidData(
+                    f"{self.NAME}: duplicate observation date for {sid}: {d.isoformat()}"
+                )
+            seen_dates.add(d)
             points.append((d, value))
         points.sort(key=lambda p: p[0])
         return units, points

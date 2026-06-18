@@ -436,3 +436,59 @@ def test_redact_secrets_covers_access_key_and_apikey():
         out = redact_secrets(raw)
         assert "SECRET123" not in out
         assert f"{name}=REDACTED" in out
+
+
+def test_redact_secrets_covers_required_camelcase_variants():
+    """B2 regression: issue #38 camelCase secret names must be redacted."""
+    for name in ("accessKey", "secretKey", "authToken", "apiToken", "appKey"):
+        raw = f"url?{name}=SECRET123&x=1"
+        out = redact_secrets(raw)
+        assert "SECRET123" not in out, name
+        assert f"{name}=REDACTED" in out, name
+
+
+def test_cache_key_hashes_url_secret_identity():
+    """B1 regression: secret values embedded directly in the URL must participate
+    in the cache key identity so different credentials do not share a cache entry.
+    """
+    key_a = HttpDataSource._cache_key("https://fake.invalid/data?api_key=ALPHA", None, None, None)
+    key_b = HttpDataSource._cache_key("https://fake.invalid/data?api_key=BETA", None, None, None)
+    assert key_a != key_b
+    flat = repr(key_a) + repr(key_b)
+    assert "ALPHA" not in flat
+    assert "BETA" not in flat
+    assert "REDACTED" in flat
+
+
+def test_cache_distinguishes_url_secret_query_values():
+    """B1 regression end-to-end: URLs differing only by a secret query value."""
+    calls = []
+    now = [0.0]
+
+    def fake_get(url, params=None, headers=None, json_body=None):
+        calls.append(url)
+        return "response-for-" + url.rsplit("=", 1)[-1]
+
+    probe = HttpDataSource(http_get=fake_get, cache_ttl=3600, clock=lambda: now[0])
+    assert probe._request_text("https://fake.invalid/data?api_key=ALPHA") == "response-for-ALPHA"
+    assert probe._request_text("https://fake.invalid/data?api_key=BETA") == "response-for-BETA"
+    assert len(calls) == 2
+
+
+def test_cache_distinguishes_x_api_key_header_values():
+    """B3 regression: X-API-Key header values must participate in cache identity."""
+    calls = []
+    now = [0.0]
+
+    def fake_get(url, params=None, headers=None, json_body=None):
+        calls.append(dict(headers or {}))
+        return "response-for-" + headers.get("X-API-Key", "")
+
+    probe = HttpDataSource(http_get=fake_get, cache_ttl=3600, clock=lambda: now[0])
+    assert probe._request_text("u", headers={"X-API-Key": "ALPHA"}) == "response-for-ALPHA"
+    assert probe._request_text("u", headers={"X-API-Key": "BETA"}) == "response-for-BETA"
+    assert len(calls) == 2
+    # The cached key representation must not leak the plaintext header value.
+    flat = repr(list(probe._cache.keys()))
+    assert "ALPHA" not in flat
+    assert "BETA" not in flat

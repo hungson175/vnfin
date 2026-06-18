@@ -287,3 +287,28 @@ def test_stripped_api_key_is_used():
 
     FREDMacroSource(api_key="  secret123  ", http_get=_g).get_series("GDPC1")
     assert captured["params"]["api_key"] == "secret123"
+
+
+# --- Issue #24: duplicate observation dates must be rejected at the source -------
+
+def test_duplicate_observation_dates_raise_invalid_from_get_series():
+    # The source must reject duplicate dates BEFORE returning an IndicatorSeries,
+    # so failover chains do not accept invalid provider output.
+    payload = fred_success(obs=[("2024-01-01", "1.0"), ("2024-01-01", "2.0")])
+    with pytest.raises(InvalidData) as exc_info:
+        _src(payload).get_series("FAKESERIES")
+    assert "2024-01-01" in str(exc_info.value)
+
+
+def test_duplicate_observation_dates_out_of_order_raise_invalid():
+    # Duplicates must be detected even when they are not adjacent in the response.
+    payload = fred_success(
+        obs=[
+            ("2024-01-01", "1.0"),
+            ("2024-01-02", "2.0"),
+            ("2024-01-01", "3.0"),
+        ]
+    )
+    with pytest.raises(InvalidData) as exc_info:
+        _src(payload).get_series("FAKESERIES")
+    assert "2024-01-01" in str(exc_info.value)

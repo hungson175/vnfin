@@ -78,8 +78,9 @@ class TimeSeriesResult:
         code keeps provenance after a merge/concat.
 
         Raises :class:`~vnfin.exceptions.InvalidData` if the index contains duplicate
-        keys, because duplicate observations are a provider contract violation that
-        should trigger failover rather than silently dropping or duplicating rows.
+        keys. Duplicate observations are a provider contract violation; sources are
+        expected to reject them while parsing, and this check acts as a backstop so
+        invalid data never silently drop or duplicate rows.
         """
         import pandas as pd
 

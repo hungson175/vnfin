@@ -369,6 +369,90 @@ def test_list_funds_non_positive_id_raises_invalid():
         _src(_fund_list_payload(rows=rows)).list_funds()
 
 
+def test_list_funds_float_id_raises_invalid():
+    # Blocker: float provider IDs must NOT silently truncate.
+    rows = [
+        {
+            "id": 3.7,
+            "code": "TESTCO",
+            "shortName": "TESTCO",
+            "name": "X",
+            "nav": 100.0,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        }
+    ]
+    with pytest.raises(InvalidData):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
+def test_list_funds_bool_id_raises_invalid():
+    # Blocker: bool provider IDs must NOT be accepted as integers.
+    rows = [
+        {
+            "id": True,
+            "code": "TESTCO",
+            "shortName": "TESTCO",
+            "name": "X",
+            "nav": 100.0,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        }
+    ]
+    with pytest.raises(InvalidData):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
+def test_list_funds_non_string_code_raises_invalid():
+    # Blocker: numeric/list/object fund codes must NOT leak AttributeError.
+    for bad_code in (123, ["TESTCO"], {"code": "TESTCO"}):
+        rows = [
+            {
+                "id": FAKE_ID_A,
+                "code": bad_code,
+                "shortName": "TESTCO",
+                "name": "X",
+                "nav": 100.0,
+                "dataFundAssetType": {"code": "STOCK"},
+                "owner": {"name": "M"},
+            }
+        ]
+        with pytest.raises(InvalidData):
+            _src(_fund_list_payload(rows=rows)).list_funds()
+
+
+def test_list_funds_non_string_shortName_fallback_raises_invalid():
+    # Blocker: numeric/list/object shortName fallback must NOT leak AttributeError.
+    for bad_short in (123, ["TESTCO"], {"code": "TESTCO"}):
+        rows = [
+            {
+                "id": FAKE_ID_A,
+                "code": None,
+                "shortName": bad_short,
+                "name": "X",
+                "nav": 100.0,
+                "dataFundAssetType": {"code": "STOCK"},
+                "owner": {"name": "M"},
+            }
+        ]
+        with pytest.raises(InvalidData):
+            _src(_fund_list_payload(rows=rows)).list_funds()
+
+
+def test_list_funds_missing_code_and_shortName_raises_invalid():
+    rows = [
+        {
+            "id": FAKE_ID_A,
+            "name": "X",
+            "nav": 100.0,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        }
+    ]
+    with pytest.raises(InvalidData):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
 def test_list_funds_transport_error_wrapped():
     src = FmarketFundSource(http_get=_raising_get(ConnectionError("boom")))
     with pytest.raises(SourceUnavailable):
@@ -514,16 +598,68 @@ def test_nav_history_zero_nav_raises_invalid():
 
 def test_nav_history_invalid_product_id_rejected():
     # Issue #8: invalid product_id types/values must raise InvalidData before request.
-    for bad in (-1, 0, "x", 3.7, None):
+    for bad in (-1, 0, "x", 3.7, None, "003", True):
         with pytest.raises(InvalidData):
             _src("{}").nav_history(bad)
 
 
 def test_holdings_invalid_product_id_rejected():
     # Issue #8: invalid product_id types/values must raise InvalidData before request.
-    for bad in (-1, 0, "x", 3.7, None, "003"):
+    for bad in (-1, 0, "x", 3.7, None, "003", True):
         with pytest.raises(InvalidData):
             _src("{}").holdings(bad)
+
+
+def test_nav_history_string_numeric_product_id_no_transport():
+    # Blocker: numeric strings must NOT be silently coerced and must NOT reach transport.
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None, json_body=None):
+        called["n"] += 1
+        return "{}"
+
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_g).nav_history("003")
+    assert called["n"] == 0
+
+
+def test_nav_history_bool_float_product_id_no_transport():
+    for bad in (True, 3.7):
+        called = {"n": 0}
+
+        def _g(url, params=None, headers=None, json_body=None):
+            called["n"] += 1
+            return "{}"
+
+        with pytest.raises(InvalidData):
+            FmarketFundSource(http_get=_g).nav_history(bad)
+        assert called["n"] == 0, f"transport was called for {bad!r}"
+
+
+def test_holdings_string_numeric_product_id_no_transport():
+    # Blocker: numeric strings must NOT be silently coerced and must NOT reach transport.
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None, json_body=None):
+        called["n"] += 1
+        return "{}"
+
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_g).holdings("003")
+    assert called["n"] == 0
+
+
+def test_holdings_bool_float_product_id_no_transport():
+    for bad in (True, 3.7):
+        called = {"n": 0}
+
+        def _g(url, params=None, headers=None, json_body=None):
+            called["n"] += 1
+            return "{}"
+
+        with pytest.raises(InvalidData):
+            FmarketFundSource(http_get=_g).holdings(bad)
+        assert called["n"] == 0, f"transport was called for {bad!r}"
 
 
 def test_nav_history_non_json_raises_invalid():

@@ -148,7 +148,7 @@ class FmarketFundSource(HttpDataSource):
         if not points:
             raise EmptyData(f"fmarket: no NAV history for product {product_id} in range")
         return NavHistory(
-            product_id=int(product_id),
+            product_id=fid,
             points=tuple(points),
             source=self.name,
             currency="VND",
@@ -174,16 +174,26 @@ class FmarketFundSource(HttpDataSource):
     def _parse_fund(row) -> Fund:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: fund row is not an object")
-        code = (row.get("code") or row.get("shortName") or "").strip()
-        fid = row.get("id")
+        code = row.get("code")
+        short = row.get("shortName")
+        if code is not None:
+            if not isinstance(code, str):
+                raise InvalidData("fmarket: fund row code is not a string")
+            raw_code = code
+        elif short is not None:
+            if not isinstance(short, str):
+                raise InvalidData("fmarket: fund row shortName is not a string")
+            raw_code = short
+        else:
+            raise InvalidData("fmarket: fund row missing code")
+        code = raw_code.strip()
         if not code:
             raise InvalidData("fmarket: fund row missing code")
+        fid = row.get("id")
         if fid is None:
             raise InvalidData("fmarket: fund row missing id")
-        try:
-            fid = int(fid)
-        except (TypeError, ValueError) as exc:
-            raise InvalidData("fmarket: fund row has non-integer id") from exc
+        if isinstance(fid, bool) or not isinstance(fid, int):
+            raise InvalidData(f"fmarket: fund row has non-integer id {fid!r}")
         if fid <= 0:
             raise InvalidData(f"fmarket: fund row has non-positive id {fid}")
         nav = _as_float(row.get("nav"), f"fund {code} nav")
@@ -344,12 +354,8 @@ def _validate_product_id(product_id) -> int:
     Raises :class:`InvalidData` for non-integers, non-positive values, or types
     that would otherwise silently truncate (e.g. ``3.7 -> 3``) or crash.
     """
-    if isinstance(product_id, bool) or not isinstance(product_id, (int, str)):
+    if isinstance(product_id, bool) or not isinstance(product_id, int):
         raise InvalidData(f"fmarket: product_id must be a positive integer, got {type(product_id).__name__}")
-    try:
-        fid = int(product_id)
-    except (TypeError, ValueError) as exc:
-        raise InvalidData(f"fmarket: product_id must be a positive integer, got {product_id!r}") from exc
-    if fid <= 0:
+    if product_id <= 0:
         raise InvalidData(f"fmarket: product_id must be positive, got {product_id!r}")
-    return fid
+    return product_id

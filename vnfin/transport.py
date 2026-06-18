@@ -36,15 +36,23 @@ from .exceptions import InvalidData, SourceUnavailable
 #: message, a cache/debug string, or a log line. Matching is case-insensitive.
 #: ``key`` is intentionally last so the longer, more specific names win when a
 #: param name contains another (e.g. ``api_key`` is matched as a whole word).
+#: Camel-case variants are included for issue #38.
 SENSITIVE_PARAMS = (
     "access_key",
+    "accessKey",
     "api_key",
+    "apiKey",
     "apikey",
     "api_token",
+    "apiToken",
     "app_key",
+    "appKey",
     "auth_token",
+    "authToken",
     "secret_key",
+    "secretKey",
     "access_token",
+    "accessToken",
     "token",
     "key",
 )
@@ -55,8 +63,36 @@ _REDACTED = "REDACTED"
 #: Names whose values are secrets for the purpose of cache-key identity. We still
 #: redact them in logs/errors, but we keep a deterministic hash of the original
 #: value in the cache key so two requests with different credentials do not share
-#: a cached response (issues #22, #31).
+#: a cached response (issues #22, #31, #37, #38).
 _SECRET_HASH_KEYS = frozenset(SENSITIVE_PARAMS + ("Authorization",))
+
+
+def _norm_secret_name(name):
+    """Normalize a key name for case/separator-insensitive secret matching.
+
+    Strips ``-`` and ``_`` and lowercases so ``api_key``, ``api-key``,
+    ``apiKey`` and ``APIKEY`` all collapse to the same token.
+    """
+    return str(name).lower().replace("-", "").replace("_", "")
+
+
+#: Normalized set used for exact-match identity hashing.
+_NORMALIZED_SECRET_HASH_KEYS = frozenset(_norm_secret_name(k) for k in _SECRET_HASH_KEYS)
+
+
+def _is_secret_key_name(name):
+    """Return True if ``name`` looks like a secret-bearing key.
+
+    Matches exact normalized names (e.g. ``api_key``, ``Authorization``) and
+    also tokenizes on ``-``/``_`` so API-key-style headers such as
+    ``X-API-Key`` are recognized via their ``key``/``api`` tokens.
+    """
+    norm = _norm_secret_name(name)
+    if norm in _NORMALIZED_SECRET_HASH_KEYS:
+        return True
+    # Split on separators so X-API-Key -> {'x', 'api', 'key'} and check tokens.
+    tokens = {t.lower() for t in _re.split(r"[-_]", str(name)) if t}
+    return bool(tokens & _NORMALIZED_SECRET_HASH_KEYS)
 
 # Matches ``<name>=<value>`` for a sensitive param inside a URL query string or a
 # (JSON/repr) dict, e.g. ``api_key=...``, ``"api_key": "..."``, ``'key': '...'``.
@@ -237,6 +273,7 @@ class HttpDataSource:
         so requests with different credentials remain isolated (issues #22, #31).
         """
         import hashlib
+        from urllib.parse import parse_qsl, urlparse
 
         def _secret_hash(value):
             # Deterministic, one-way identity for a secret value. Never store the
@@ -256,7 +293,7 @@ class HttpDataSource:
                 identity = {}
                 if isinstance(obj, dict):
                     for k, v in obj.items():
-                        if k.lower() in (name.lower() for name in _SECRET_HASH_KEYS):
+                        if _is_secret_key_name(k):
                             identity[k] = _secret_hash(v)
                 # Redact first, then pair with identity hashes. This guarantees the
                 # plaintext secret never appears in the returned key tuple.
@@ -264,8 +301,22 @@ class HttpDataSource:
                 return serialized
             return redact_secrets(serialized)
 
+        def _url_secret_identity(url):
+            # Secret values embedded directly in the URL query string are redacted
+            # in the display portion of the key; keep a deterministic hash of each
+            # so two credentials do not share a cached response (issue #37/B1).
+            parsed = urlparse(url)
+            identity = {}
+            for k, v in parse_qsl(parsed.query, keep_blank_values=True):
+                if _is_secret_key_name(k):
+                    identity[k] = _secret_hash(v)
+            if not identity:
+                return None
+            return _json.dumps(identity, sort_keys=True)
+
         return (
             redact_secrets(url),
+            _url_secret_identity(url),
             _norm(params, keep_secret_identity=True),
             _norm(json_body, keep_secret_identity=True),
             _norm(headers, keep_secret_identity=True),
@@ -287,7 +338,8 @@ class HttpDataSource:
         HTTP 429/5xx) are retried with jittered exponential backoff; non-transient
         errors raise immediately. When a positive ``cache_ttl`` was configured, a hit
         within the TTL window returns the cached text without calling ``http_get``.
-        ``headers`` does not participate in the cache key.
+        ``headers`` participates in the cache key so auth/entitlement-specific
+        responses remain isolated.
         """
         # --- cache lookup ------------------------------------------------ #
         key = None
