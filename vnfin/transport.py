@@ -26,6 +26,8 @@ to change. Only when ``json_body`` is given does the 4-arg form get used.
 from __future__ import annotations
 
 import json as _json
+import random as _random
+import time as _time
 
 from .exceptions import InvalidData, SourceUnavailable
 
@@ -38,6 +40,52 @@ DEFAULT_UA = (
 
 #: Default per-request timeout (seconds).
 DEFAULT_TIMEOUT = 25.0
+
+#: Default number of *extra* attempts after the first on a transient failure. ``0``
+#: keeps the historical behavior (one attempt, no backoff) so existing behavior and
+#: test timing are unchanged. Opt in by passing ``max_retries=N`` (small, e.g. 3).
+DEFAULT_MAX_RETRIES = 0
+
+#: Base backoff (seconds) for the first retry; doubles each subsequent retry and is
+#: then jittered. Only used when ``max_retries`` > 0.
+DEFAULT_BACKOFF_BASE = 0.5
+
+#: Upper bound (seconds) on any single backoff sleep, before jitter.
+DEFAULT_BACKOFF_MAX = 8.0
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """Return True if ``exc`` is a *transient* transport failure worth retrying.
+
+    Transient = the request might well succeed if retried shortly:
+
+    * stdlib :class:`ConnectionError` / :class:`TimeoutError` (covers
+      ``ConnectionResetError`` and friends),
+    * any ``httpx.TransportError`` (connect/read/write/pool timeouts, network resets,
+      protocol errors) — detected structurally so ``httpx`` need not be importable,
+    * an HTTP ``429`` or ``5xx`` surfaced as ``httpx.HTTPStatusError``.
+
+    Everything else (e.g. a ``4xx`` other than 429, a ``ValueError``) is treated as
+    non-transient and re-raised immediately by the caller.
+    """
+    # stdlib network failures (ConnectionResetError is a ConnectionError subclass).
+    if isinstance(exc, (ConnectionError, TimeoutError)):
+        return True
+
+    # httpx is optional at import time; classify by attribute/structure so this module
+    # never hard-depends on httpx being installed for the injected-stub path.
+    try:
+        import httpx  # noqa: WPS433 (local import keeps stdlib-only callers light)
+    except Exception:  # pragma: no cover - httpx is a declared dep; defensive only
+        return False
+
+    if isinstance(exc, httpx.TransportError):
+        # Connect/read/write/pool timeouts + network/protocol errors are all transient.
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        return status == 429 or (isinstance(status, int) and 500 <= status <= 599)
+    return False
 
 
 class HttpDataSource:
@@ -58,12 +106,41 @@ class HttpDataSource:
     #: and/or expose a ``name`` property; this is the fallback.
     NAME = "http"
 
-    def __init__(self, http_get=None, timeout: float = DEFAULT_TIMEOUT):
+    def __init__(
+        self,
+        http_get=None,
+        timeout: float = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_base: float = DEFAULT_BACKOFF_BASE,
+        backoff_max: float = DEFAULT_BACKOFF_MAX,
+        cache_ttl: float | None = None,
+        sleep=None,
+        rand=None,
+        clock=None,
+    ):
         # ``http_get`` is injectable for testing. GET callers use the
         # ``(url, params, headers)`` signature; POST callers additionally pass
         # ``json_body`` as a 4th positional arg. The default client accepts both.
         self._http_get = http_get or self._default_http_get
         self._timeout = timeout
+
+        # --- retry/backoff (opt-in) -------------------------------------- #
+        # ``max_retries`` is the number of *extra* attempts after the first. ``0``
+        # (default) reproduces the historical single-attempt behavior exactly, so no
+        # existing test changes timing or call count.
+        self._max_retries = max(0, int(max_retries))
+        self._backoff_base = backoff_base
+        self._backoff_max = backoff_max
+        # Injectable so tests run instantly and deterministically.
+        self._sleep = sleep or _time.sleep
+        self._rand = rand or _random.random
+
+        # --- response cache (opt-in, OFF by default) --------------------- #
+        # ``cache_ttl=None`` (default) means no caching: behavior is unchanged. A
+        # positive TTL enables an in-memory cache keyed by (url, params, json_body).
+        self._cache_ttl = cache_ttl
+        self._clock = clock or _time.monotonic
+        self._cache: dict = {} if cache_ttl is not None else None
 
     # --- name used in error messages ------------------------------------- #
     @property
@@ -74,6 +151,24 @@ class HttpDataSource:
         if isinstance(name, str) and name:
             return name
         return self.NAME
+
+    # --- cache key ------------------------------------------------------- #
+    @staticmethod
+    def _cache_key(url, params, json_body):
+        """Stable, hashable key for the response cache.
+
+        ``params``/``json_body`` are dict-like, so they are normalized to a sorted,
+        JSON-serialized form to be hashable and order-independent.
+        """
+        def _norm(obj):
+            if obj is None:
+                return None
+            try:
+                return _json.dumps(obj, sort_keys=True, default=str)
+            except TypeError:
+                return repr(obj)
+
+        return (url, _norm(params), _norm(json_body))
 
     # --- transport helpers ----------------------------------------------- #
     def _request_text(self, url, params=None, headers=None, json_body=None) -> str:
@@ -86,15 +181,63 @@ class HttpDataSource:
         The injected ``http_get`` is invoked with the exact positional arity each
         domain already used: 3 args (``url, params, headers``) for GET and 4 args
         (``..., json_body``) for POST. This keeps every existing test stub valid.
+
+        When ``max_retries`` > 0, *transient* failures (timeouts, connection resets,
+        HTTP 429/5xx) are retried with jittered exponential backoff; non-transient
+        errors raise immediately. When a positive ``cache_ttl`` was configured, a hit
+        within the TTL window returns the cached text without calling ``http_get``.
+        ``headers`` does not participate in the cache key.
         """
-        try:
-            if json_body is not None:
-                return self._http_get(url, params, headers, json_body)
-            return self._http_get(url, params, headers)
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(
-                f"{self._source_name} transport error: {exc}"
-            ) from exc
+        # --- cache lookup ------------------------------------------------ #
+        key = None
+        if self._cache is not None:
+            key = self._cache_key(url, params, json_body)
+            hit = self._cache.get(key)
+            if hit is not None:
+                expires_at, value = hit
+                if self._clock() < expires_at:
+                    return value
+                # expired entry: drop it and fall through to a fresh fetch.
+                del self._cache[key]
+
+        text = self._fetch_with_retry(url, params, headers, json_body)
+
+        # --- cache store ------------------------------------------------- #
+        if self._cache is not None:
+            self._cache[key] = (self._clock() + self._cache_ttl, text)
+        return text
+
+    def _fetch_with_retry(self, url, params, headers, json_body):
+        """Call ``http_get`` with bounded, jittered exponential backoff on transients.
+
+        Returns the response text. Non-transient errors (and transient errors after the
+        retry budget is exhausted) are wrapped as
+        :class:`~vnfin.exceptions.SourceUnavailable`.
+        """
+        attempt = 0
+        while True:
+            try:
+                if json_body is not None:
+                    return self._http_get(url, params, headers, json_body)
+                return self._http_get(url, params, headers)
+            except Exception as exc:  # transport-level
+                # Retry only transient failures, and only while budget remains.
+                if attempt < self._max_retries and _is_transient(exc):
+                    self._sleep(self._backoff_delay(attempt))
+                    attempt += 1
+                    continue
+                raise SourceUnavailable(
+                    f"{self._source_name} transport error: {exc}"
+                ) from exc
+
+    def _backoff_delay(self, attempt: int) -> float:
+        """Jittered exponential backoff for retry ``attempt`` (0-based).
+
+        ``base * 2**attempt`` capped at ``backoff_max``, then full-jittered into
+        ``[0, capped]`` so concurrent clients don't retry in lockstep.
+        """
+        capped = min(self._backoff_base * (2 ** attempt), self._backoff_max)
+        return self._rand() * capped
 
     def _request_json(self, url, params=None, headers=None, json_body=None):
         """:meth:`_request_text` then JSON-decode.
