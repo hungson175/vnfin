@@ -32,12 +32,19 @@ from datetime import date, datetime, timezone
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
 
-from .indicators import MacroIndicator, canonical_unit, normalize_indicator
+from .indicators import (
+    Frequency,
+    MacroIndicator,
+    canonical_currency,
+    normalize_indicator,
+)
 from .models import IndicatorSeries
 
-# Canonical indicator -> (WDI code, canonical unit). World Bank is the primary,
-# so its units define the canonical unit for the percent indicators and the USD
-# GDP level used by the failover chain.
+# Canonical indicator -> (WDI code, unit World Bank emits). World Bank is the
+# primary, so its units define the canonical unit for the percent indicators and
+# the USD GDP level used by the failover chain. All WB macro series here are
+# ANNUAL. Currency is indicator-specific (only GDP is money-denominated) and comes
+# from ``canonical_currency`` — never hardcoded USD for percent series (B7).
 _WB_MAP: dict[MacroIndicator, tuple[str, str]] = {
     MacroIndicator.GDP: ("NY.GDP.MKTP.CD", "current US$"),
     MacroIndicator.GDP_GROWTH: ("NY.GDP.MKTP.KD.ZG", "%"),
@@ -102,10 +109,17 @@ class WorldBankMacroSource(HttpDataSource):
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
         series = self.get_indicator(country_iso3, code)
-        # Pin the canonical unit (WB ZG/ZS series frequently report an empty unit).
+        # Pin the per-indicator unit (WB ZG/ZS series frequently report an empty
+        # unit) and the indicator-specific currency (None for percent series).
         from dataclasses import replace
 
-        return replace(series, unit=unit, value_unit=unit)
+        return replace(
+            series,
+            unit=unit,
+            value_unit=unit,
+            currency=canonical_currency(ind),
+            frequency=Frequency.ANNUAL,
+        )
 
     def get_indicator(
         self,
@@ -162,7 +176,11 @@ class WorldBankMacroSource(HttpDataSource):
             points=tuple(points),
             source=self.NAME,
             unit=unit,
-            currency="USD",
+            # Raw WDI fetch: the canonical indicator is unknown here, so the
+            # money currency is unknown -> leave it None rather than guess USD.
+            # The canonical entry point (get_canonical_indicator) sets it.
+            currency=None,
+            frequency=Frequency.ANNUAL,
             country_name=country_name,
             fetched_at_utc=datetime.now(timezone.utc),
         )

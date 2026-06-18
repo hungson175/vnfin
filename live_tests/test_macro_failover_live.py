@@ -40,9 +40,11 @@ def test_percent_indicator_agrees_across_no_key_providers():
 
     assert wb.unit == "%" and imf.unit == "%", f"unit mismatch: WB={wb.unit} IMF={imf.unit}"
 
-    # Compare the most recent COMMON year (IMF carries projections WB may not have).
-    wb_by_year = {d.year: v for (d, v) in wb.points}
-    imf_by_year = {d.year: v for (d, v) in imf.points}
+    # Compare the most recent COMMON year using ACTUALS only — IMF carries WEO
+    # projections (years >= current) that WB realizes later; comparing those would
+    # spuriously disagree. `actual_points` drops IMF's forecast years (B8).
+    wb_by_year = {d.year: v for (d, v) in wb.actual_points}
+    imf_by_year = {d.year: v for (d, v) in imf.actual_points}
     common = sorted(set(wb_by_year) & set(imf_by_year))
     assert common, "no overlapping years between WB and IMF GDP-growth"
     year = common[-1]
@@ -61,6 +63,35 @@ def test_failover_chain_serves_percent_indicator_for_vietnam():
     assert val is not None
     # Inflation % sanity band — catches an index-level leak (would be ~100+).
     assert -20.0 < val < 60.0, f"VN inflation {val} outside plausible % band (unit bug?)"
+
+
+def test_imf_weo_projections_excluded_from_latest():
+    """IMF WEO carries forecast years; latest() must return a realized actual."""
+    from datetime import datetime, timezone
+
+    from vnfin.macro import IMFDataMapperSource, MacroIndicator
+
+    imf = IMFDataMapperSource().get_indicator("USA", MacroIndicator.GDP_GROWTH)
+    now_year = datetime.now(timezone.utc).year
+    # WEO always projects beyond the current year -> a projection cut must exist.
+    assert imf.projection_from_year is not None
+    latest = imf.latest()
+    assert latest is not None
+    # latest() is an actual: strictly before the projection cut.
+    assert latest[0].year < imf.projection_from_year
+    # the raw series does extend into forecast years.
+    assert imf.latest_including_projections()[0].year >= now_year
+
+
+def test_default_gdp_chain_returns_usd_level_live():
+    """Default GDP chain must return a USD level (World Bank) without UnitMismatch."""
+    from vnfin.macro import MacroIndicator, get_indicator
+
+    series = get_indicator("USA", MacroIndicator.GDP)
+    assert series.unit == "current US$"
+    assert series.currency == "USD"
+    latest = series.latest()
+    assert latest is not None and latest[1] > 0
 
 
 def test_failover_falls_through_to_imf_when_worldbank_blocked():

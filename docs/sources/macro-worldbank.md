@@ -40,6 +40,20 @@ Each observation object: `indicator{id,value}`, `country{id,value}`, `countryiso
 
 `IndicatorSeries(country, indicator_code, indicator_name, points: tuple[(date, float), ...], source, unit, currency="USD", country_name, fetched_at_utc, warnings)` — frozen, ascending-by-date, `len()`/iter/`latest()`/`to_dataframe()`.
 
-## FRED (deferred)
+## Related macro sources
 
-`vnfin.macro.FREDMacroSource` is a stub. **TODO(requires FRED_API_KEY env):** the FRED JSON API needs a free 32-char key not yet in `~/dev/.env`. `get_series` raises `NotImplementedError` until provisioned. Use World Bank in the meantime.
+- `docs/sources/macro-imf.md` — IMF DataMapper (no-key backup, WEO + projections).
+- `docs/sources/macro-dbnomics.md` — DBnomics IMF/IFS (no-key backup, CPI index).
+- `docs/sources/macro-fred.md` — FRED official JSON API, optional **BYOK**
+  (`FRED_API_KEY`). No key → the source is **not capable** and is skipped without a
+  network call (never `NotImplementedError`). `fredgraph.csv` scraping is disallowed.
+
+## Default no-key chain + unit safety
+
+`vnfin.macro.client()` chains World Bank → IMF DataMapper → DBnomics, serving the
+SAME canonical `MacroIndicator` across providers. Before the generic failover engine
+is built, sources are **pre-filtered by unit** so only sources emitting the exact
+canonical unit for the indicator survive (`vnfin/macro/indicators.py:eligible_sources`).
+This is why GDP resolves to World Bank (`current US$`), CPI-index to DBnomics, and the
+percent indicators to all three — without ever tripping `UnitMismatchError`. See
+`docs/design/macro-no-key-byok.md` for the full semantic contract.

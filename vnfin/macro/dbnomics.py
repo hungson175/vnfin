@@ -38,13 +38,16 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
-from .indicators import MacroIndicator, normalize_indicator
+from .indicators import Frequency, MacroIndicator, normalize_indicator
 from .models import IndicatorSeries
 
-# Canonical indicator -> (IFS frequency, IFS concept code, unit DBnomics emits).
-_DBN_MAP: dict[MacroIndicator, tuple[str, str, str]] = {
-    MacroIndicator.GDP: ("A", "NGDP_XDC", "national currency"),
-    MacroIndicator.CPI: ("M", "PCPI_IX", "index"),
+# Canonical indicator -> (IFS frequency code, IFS concept code, unit DBnomics
+# emits, result frequency). GDP NGDP_XDC is annual national currency (the actual
+# currency varies by country, so the result carries no fixed currency); CPI
+# PCPI_IX is a monthly index level (no currency).
+_DBN_MAP: dict[MacroIndicator, tuple[str, str, str, Frequency]] = {
+    MacroIndicator.GDP: ("A", "NGDP_XDC", "national currency", Frequency.ANNUAL),
+    MacroIndicator.CPI: ("M", "PCPI_IX", "index", Frequency.MONTHLY),
 }
 
 # Minimal ISO3 -> IMF/IFS 2-letter country code map for the documented coverage
@@ -90,6 +93,14 @@ class DBnomicsSource(HttpDataSource):
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
 
+    def frequency_for(self, indicator) -> Frequency:
+        """Result frequency DBnomics emits for ``indicator``."""
+        ind = normalize_indicator(indicator)
+        try:
+            return _DBN_MAP[ind][3]
+        except KeyError as exc:
+            raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
+
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one IMF/IFS series for one country via DBnomics."""
         ind = normalize_indicator(indicator)
@@ -97,7 +108,7 @@ class DBnomicsSource(HttpDataSource):
         if not country:
             raise InvalidData(f"{self.NAME}: empty country code")
         try:
-            freq, concept, unit = _DBN_MAP[ind]
+            freq, concept, unit, result_freq = _DBN_MAP[ind]
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
         cc = _ISO3_TO_IFS_CC.get(country)
@@ -120,7 +131,10 @@ class DBnomicsSource(HttpDataSource):
             points=tuple(points),
             source=self.NAME,
             unit=unit,
-            currency="USD",
+            # GDP is in *national* currency (varies by country) and CPI is an
+            # index — neither is a fixed USD figure, so carry no currency (B7).
+            currency=None,
+            frequency=result_freq,
             fetched_at_utc=datetime.now(timezone.utc),
         )
 

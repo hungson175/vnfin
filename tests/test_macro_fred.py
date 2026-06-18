@@ -88,6 +88,26 @@ def test_key_from_param_overrides_env(monkeypatch):
     assert s.has_key is True
 
 
+def test_supports_false_without_key(monkeypatch):
+    # C4: capability probe is False without a key (so a chain skips it pre-network).
+    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    from vnfin.macro.indicators import MacroIndicator
+
+    assert FREDMacroSource().supports(MacroIndicator.GDP_GROWTH) is False
+
+
+def test_supports_true_with_key():
+    from vnfin.macro.indicators import MacroIndicator
+
+    assert FREDMacroSource(api_key="k").supports(MacroIndicator.GDP_GROWTH) is True
+
+
+def test_currency_not_hardcoded_usd(monkeypatch):
+    # B7: an arbitrary FRED series carries no guessed USD currency.
+    res = _src(fred_success(units="Percent")).get_series("FAKESERIES")
+    assert res.currency is None
+
+
 # --- parsing (with key) ----------------------------------------------------
 
 def test_parses_observations_into_series():

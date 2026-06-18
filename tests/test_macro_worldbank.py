@@ -142,10 +142,39 @@ def test_carries_source_and_fetched_at_utc():
     assert res.fetched_at_utc.tzinfo == timezone.utc
 
 
-def test_currency_is_usd_default():
-    # World Bank world money series are US$; the result states currency explicitly.
+def test_raw_indicator_carries_no_guessed_currency():
+    # B7: a raw WDI fetch does not know the canonical indicator, so the money
+    # currency is unknown -> currency is None (never a hardcoded USD guess).
     res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
-    assert res.currency == "USD"
+    assert res.currency is None
+
+
+def test_canonical_gdp_carries_usd_currency_percent_carries_none():
+    # B7: currency is indicator-specific. GDP (money-denominated) -> "USD";
+    # a percent series (e.g. GDP_GROWTH) -> None.
+    from vnfin.macro import MacroIndicator
+
+    gdp_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, 999000000.0, name="Fake GDP (current US$)",
+              code="NY.GDP.MKTP.CD", unit="current US$")],
+    ])
+    gdp = WorldBankMacroSource(http_get=lambda u, p, h: gdp_text).get_canonical_indicator(
+        COUNTRY, MacroIndicator.GDP
+    )
+    assert gdp.currency == "USD"
+    assert gdp.unit == "current US$"
+
+    pct_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, 4.2, name="Fake growth (%)",
+              code="NY.GDP.MKTP.KD.ZG", unit="")],
+    ])
+    pct = WorldBankMacroSource(http_get=lambda u, p, h: pct_text).get_canonical_indicator(
+        COUNTRY, MacroIndicator.GDP_GROWTH
+    )
+    assert pct.currency is None
+    assert pct.unit == "%"
 
 
 # ---------------------------------------------------------------------------
@@ -379,11 +408,15 @@ def test_indicator_series_is_frozen():
 def test_to_dataframe_has_value_column_and_attrs():
     res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     df = res.to_dataframe()
-    assert list(df.columns) == ["value"]
+    # B8: an explicit per-point projection flag is part of the frame.
+    assert list(df.columns) == ["value", "is_projection"]
     assert df.attrs["country"] == COUNTRY
     assert df.attrs["indicator_code"] == INDICATOR
     assert df.attrs["source"] == "worldbank"
+    assert df.attrs["frequency"] == "annual"
     assert len(df) == 3
+    # Annual WB series carry no projections -> all actuals.
+    assert not df["is_projection"].any()
 
 
 # ---------------------------------------------------------------------------

@@ -64,6 +64,17 @@ class FREDMacroSource(HttpDataSource):
     def has_key(self) -> bool:
         return bool(self._api_key)
 
+    def supports(self, indicator) -> bool:
+        """Capability probe for failover chains (no network call).
+
+        C4 contract: a missing ``FRED_API_KEY`` makes the source **not capable**
+        (returns ``False``) so a failover chain skips it BEFORE any network call —
+        it is never advertised-as-implemented-then-crashing. With a key, capability
+        is left to the actual fetch (FRED series are not pre-enumerated here), so
+        this returns ``True`` whenever a key is configured.
+        """
+        return self.has_key
+
     def get_series(self, series_id: str, start=None, end=None) -> IndicatorSeries:
         """Fetch one FRED series via the official observations endpoint.
 
@@ -100,7 +111,9 @@ class FREDMacroSource(HttpDataSource):
             points=tuple(points),
             source=self.NAME,
             unit=units or "",
-            currency="USD",
+            # An arbitrary FRED series may be any unit (%, index, USD, persons,
+            # ...); the money currency is unknown here, so do not stamp USD (B7).
+            currency=None,
             fetched_at_utc=datetime.now(timezone.utc),
         )
 

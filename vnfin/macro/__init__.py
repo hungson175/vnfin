@@ -1,16 +1,25 @@
 """vnfin.macro — cross-country macroeconomic indicator data (no-key-first + BYOK).
 
 Public API:
-- ``IndicatorSeries`` — frozen typed result (country, indicator, points, source).
+- ``IndicatorSeries`` — frozen typed result (country, indicator, points, source,
+  unit, value_unit, indicator-specific ``currency`` (None for non-money series),
+  ``frequency``, ``projection_from_year``). ``latest()`` excludes future
+  projections; ``actual_points`` / ``latest_including_projections()`` expose them.
 - ``MacroIndicator`` — canonical, provider-independent indicator enum (GDP,
   GDP_GROWTH, CPI, INFLATION, UNEMPLOYMENT).
+- ``Frequency`` — annual/quarterly/monthly/daily observation cadence.
+- ``MacroIndicatorSpec`` / ``canonical_unit`` / ``canonical_currency`` /
+  ``eligible_sources`` — the canonical registry + the unit pre-filter that keeps
+  only canonical-unit sources before failover (so default GDP/CPI/percent never
+  raise ``UnitMismatchError``).
 - No-key sources (default chain): ``WorldBankMacroSource`` (primary) ->
   ``IMFDataMapperSource`` -> ``DBnomicsSource``.
 - ``FREDMacroSource`` — optional bring-your-own-key (``FRED_API_KEY``), official
-  API only, excluded from the no-key default chain.
+  API only, excluded from the no-key default chain; keyless -> not capable, skipped
+  without a network call.
 - ``default_macro_sources()`` / ``default_macro_client()`` / ``get_indicator()`` —
-  the failover chain that serves the SAME canonical indicator across providers
-  with a per-indicator unit-homogeneity guard.
+  the failover chain that serves the SAME canonical indicator across providers,
+  unit-pre-filtered then guarded.
 
 World Bank is the recommended backbone: no auth, deep annual history (1960+),
 all countries (US/CHN/JPN/DEU/VNM and ~217 others), one consistent JSON schema.
@@ -28,14 +37,26 @@ from .client import (
 from .dbnomics import DBnomicsSource
 from .fred import FREDMacroSource
 from .imf import IMFDataMapperSource
-from .indicators import MacroIndicator, canonical_unit, normalize_indicator
+from .indicators import (
+    Frequency,
+    MacroIndicator,
+    MacroIndicatorSpec,
+    canonical_currency,
+    canonical_unit,
+    eligible_sources,
+    normalize_indicator,
+)
 from .models import IndicatorSeries
 from .worldbank import WorldBankMacroSource
 
 __all__ = [
     "IndicatorSeries",
     "MacroIndicator",
+    "MacroIndicatorSpec",
+    "Frequency",
     "canonical_unit",
+    "canonical_currency",
+    "eligible_sources",
     "normalize_indicator",
     "WorldBankMacroSource",
     "IMFDataMapperSource",

@@ -3,11 +3,24 @@
 Wraps the generic :class:`vnfin.failover.FailoverClient` for the macro domain,
 mirroring how :class:`vnfin.client.FailoverPriceClient` wraps it for prices. The
 chain serves the SAME logical :class:`~vnfin.macro.indicators.MacroIndicator`
-across providers via the canonical indicator map, with a **per-indicator
-unit-homogeneity guard**: a fresh engine is built per ``get_indicator`` call whose
-``unit_of`` returns each source's unit *for that indicator*, so the guard refuses
-to fail over between providers that emit different units for the same logical
-indicator (e.g. WB GDP in current US$ vs DBnomics GDP in national currency).
+across providers via the canonical indicator registry.
+
+Unit safety (B6/B7) — the macro client does TWO things before the generic engine
+ever runs:
+
+1. **Pre-filter by unit** (:func:`~vnfin.macro.indicators.eligible_sources`):
+   keep only sources whose declared unit for the requested indicator equals the
+   canonical unit. This means the surviving chain is already unit-homogeneous, so
+   the default GDP/CPI/percent chains never raise ``UnitMismatchError`` (the old
+   bug) and a source that would emit a noncanonical unit (e.g. IMF GDP in
+   ``USD bn`` vs canonical ``current US$``) is dropped up front rather than having
+   its values relabelled.
+2. **Validate on finalize** (not relabel): the result is checked to already carry
+   the canonical unit; it is never blindly stamped over a different unit.
+
+The generic :class:`vnfin.failover.FailoverClient` is built only AFTER step 1, and
+its unit-homogeneity guard remains as a structural backstop (it can only ever see
+already-homogeneous sources).
 
 Default no-key chain (order): World Bank -> IMF DataMapper -> DBnomics. FRED/BEA/
 BLS-v2 are optional BYOK and are deliberately excluded from this default chain.
@@ -20,11 +33,17 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from ..exceptions import AllSourcesFailed, InvalidData
+from ..exceptions import AllSourcesFailed, InvalidData, UnitMismatchError
 from ..failover import FailoverClient
 from .dbnomics import DBnomicsSource
 from .imf import IMFDataMapperSource
-from .indicators import MacroIndicator, canonical_unit, normalize_indicator
+from .indicators import (
+    MacroIndicator,
+    canonical_currency,
+    canonical_unit,
+    eligible_sources,
+    normalize_indicator,
+)
 from .models import IndicatorSeries
 from .worldbank import WorldBankMacroSource
 
@@ -122,8 +141,19 @@ class MacroClient:
         if not (country_iso3 or "").strip():
             # Fail fast on bad caller input (failover-safe) before any source call.
             raise InvalidData("macro: empty country code")
+
+        # B6/B7: filter to sources whose declared unit == the canonical unit for
+        # this indicator BEFORE building the engine. The surviving chain is
+        # unit-homogeneous (so default GDP/CPI/percent never raise
+        # UnitMismatchError) and no value can be relabelled into a foreign unit.
+        sources = eligible_sources(self._sources, ind)
+        if not sources:
+            # No source can serve this indicator in the canonical unit; this is a
+            # capability outcome, not a network failure -> AllSourcesFailed (no attempts).
+            raise AllSourcesFailed(f"{country_iso3}/{ind.value}", None, ())
+
         engine = FailoverClient(
-            self._sources,
+            sources,
             operation=lambda src, country, i: _fetch(src, country, i),
             capability=lambda src, country, i: _capable(src, country, i),
             reject=self._reject_reason,
@@ -148,13 +178,29 @@ class MacroClient:
     @staticmethod
     def _finalize_for(indicator):
         unit = canonical_unit(indicator)
+        currency = canonical_currency(indicator)
 
         def _finalize(series, attempts, country, i) -> IndicatorSeries:
-            # Stamp the canonical unit so the returned series is consistent across
-            # providers, and attach the failover diagnostics via warnings.
+            # B7: validate — never relabel a foreign unit. Because sources were
+            # pre-filtered to the canonical unit, the result must already match;
+            # if a source emitted an empty/placeholder unit we pin the canonical
+            # one, but a genuinely DIFFERENT unit is a contract violation we refuse
+            # rather than silently overwrite.
+            got = series.unit or ""
+            if got and got != unit:
+                raise UnitMismatchError(
+                    f"macro {getattr(i, 'value', i)}: source {series.source!r} returned "
+                    f"unit {got!r} but the canonical unit is {unit!r}; refusing to relabel"
+                )
             note = "; ".join(f"{a.name}:{a.reason}" for a in attempts)
             warnings = tuple(series.warnings) + ((f"failover: {note}",) if len(attempts) > 1 else ())
-            return replace(series, unit=unit, value_unit=unit, warnings=warnings)
+            return replace(
+                series,
+                unit=unit,
+                value_unit=unit,
+                currency=currency,
+                warnings=warnings,
+            )
 
         return _finalize
 

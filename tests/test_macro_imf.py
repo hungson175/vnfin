@@ -146,6 +146,58 @@ def test_null_obs_skipped_not_invalid():
     assert years == [2021, 2023]
 
 
+# --- projections vs actuals (B8) -------------------------------------------
+
+def test_future_projections_flagged_and_excluded_from_latest():
+    # IMF WEO mixes actuals + forecasts. Build a series spanning past..future
+    # relative to "now"; the future years must be flagged as projections and
+    # latest() must return the most recent ACTUAL, never a forecast.
+    from datetime import datetime, timezone
+
+    now_year = datetime.now(timezone.utc).year
+    past1, past2 = now_year - 2, now_year - 1
+    future = now_year + 1
+    obs = {str(past1): 1.0, str(past2): 2.0, str(now_year): 3.0, str(future): 4.0}
+
+    res = _src(imf_success(obs=obs)).get_indicator(COUNTRY, MacroIndicator.GDP_GROWTH)
+
+    # current year and beyond are projections.
+    assert res.projection_from_year == now_year
+    # latest() returns the last realized actual (the year BEFORE the projection cut).
+    d, v = res.latest()
+    assert d.year == past2
+    assert v == pytest.approx(2.0)
+    # the forecast is still available explicitly.
+    di, vi = res.latest_including_projections()
+    assert di.year == future
+    assert vi == pytest.approx(4.0)
+    # actual_points excludes the projected years.
+    assert [d.year for (d, _v) in res.actual_points] == [past1, past2]
+
+
+def test_all_historical_series_has_no_projection_flag():
+    # A series that never reaches the current year carries no projection cut.
+    res = _src(imf_success(obs={"2018": 1.0, "2019": 2.0, "2020": 3.0})).get_indicator(
+        COUNTRY, MacroIndicator.GDP_GROWTH
+    )
+    assert res.projection_from_year is None
+    assert res.actual_points == res.points
+    assert res.latest()[0].year == 2020
+
+
+def test_gdp_carries_usd_currency_percent_carries_none():
+    # B7: IMF GDP (USD bn money level) -> currency USD; percent series -> None.
+    gdp = _src(imf_success(code="NGDPD", obs={"2018": 1000.0})).get_indicator(
+        COUNTRY, MacroIndicator.GDP
+    )
+    assert gdp.currency == "USD"
+    assert gdp.unit == "USD bn"
+    pct = _src(imf_success(obs={"2018": 2.0})).get_indicator(
+        COUNTRY, MacroIndicator.GDP_GROWTH
+    )
+    assert pct.currency is None
+
+
 # --- malformed -------------------------------------------------------------
 
 def test_non_json_raises_invalid():

@@ -123,12 +123,98 @@ def test_all_fail_raises_all_sources_failed():
 
 # ---- per-indicator unit guard ---------------------------------------------
 
-def test_unit_guard_rejects_mixed_units_for_indicator():
-    # Two sources claim to serve GDP but in different units -> guard must raise.
+def test_noncanonical_unit_source_is_filtered_out_not_raised():
+    # B6/B7: the canonical GDP unit is "current US$". A source declaring a
+    # different unit ("national currency") must be DROPPED before the engine is
+    # built (so the default GDP chain never raises UnitMismatchError), and the
+    # canonical-unit source must serve the request.
     a = FakeMacroSource("a", {MacroIndicator.GDP: "current US$"})
     b = FakeMacroSource("b", {MacroIndicator.GDP: "national currency"})
-    with pytest.raises(UnitMismatchError):
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[a, b])
+    assert res.source == "a"
+    assert res.unit == "current US$"
+
+
+def test_only_noncanonical_unit_sources_raises_all_sources_failed():
+    # If EVERY source for the indicator emits a noncanonical unit, none are
+    # eligible -> a clean AllSourcesFailed (capability), never a wrong-unit result.
+    a = FakeMacroSource("a", {MacroIndicator.GDP: "national currency"})
+    b = FakeMacroSource("b", {MacroIndicator.GDP: "USD bn"})
+    with pytest.raises(AllSourcesFailed):
         get_indicator("ZZZ", MacroIndicator.GDP, sources=[a, b])
+
+
+def test_finalize_refuses_to_relabel_a_drifted_unit():
+    # B7 backstop: a source declares the canonical unit (passes the pre-filter)
+    # but its returned series carries a DIFFERENT non-empty unit. finalize must
+    # refuse to relabel it -> UnitMismatchError, not a silently relabelled result.
+    class DriftingSource:
+        name = "drift"
+
+        def unit_for(self, indicator):
+            return "current US$"  # declares canonical -> survives pre-filter
+
+        def supports(self, indicator):
+            return MacroIndicator(indicator) == MacroIndicator.GDP
+
+        def get_indicator(self, country_iso3, indicator):
+            return IndicatorSeries(
+                country=country_iso3.upper(),
+                indicator_code="DRIFT_GDP",
+                indicator_name="Drift GDP",
+                points=((date(2022, 1, 1), 1000.0),),
+                source=self.name,
+                unit="national currency",  # drifted away from canonical at fetch time
+                fetched_at_utc=datetime.now(timezone.utc),
+            )
+
+    with pytest.raises(UnitMismatchError):
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[DriftingSource()])
+
+
+def test_default_gdp_chain_does_not_raise_unit_mismatch():
+    # The real default chain (WB current US$, IMF USD bn, DBnomics national
+    # currency) must NOT raise UnitMismatchError for GDP: only WB is canonical, so
+    # the chain reduces to WB and serves a synthetic GDP level.
+    import json as _json
+    from vnfin.macro import default_macro_client
+
+    wb_text = _json.dumps([
+        {"page": 1, "pages": 1, "per_page": 50, "total": 1},
+        [{"indicator": {"id": "NY.GDP.MKTP.CD", "value": "Fake GDP"},
+          "country": {"id": "ZZ", "value": "Fakeland"}, "countryiso3code": "ZZZ",
+          "date": "2022", "value": 777000000.0, "unit": "current US$"}],
+    ])
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: wb_text)
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: _json.dumps({"values": {}}))
+    dbn = DBnomicsSource(http_get=lambda u, p, h: _json.dumps({"series": {"docs": []}}))
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.GDP)
+    assert res.source == "worldbank"
+    assert res.unit == "current US$"
+    assert res.currency == "USD"
+    assert res.points[0][1] == pytest.approx(777000000.0)
+
+
+def test_default_cpi_chain_does_not_raise_unit_mismatch():
+    # CPI canonical unit is "index"; only DBnomics serves it -> chain reduces to
+    # DBnomics, returns a synthetic monthly index without UnitMismatchError.
+    import json as _json
+    from vnfin.macro import default_macro_client
+
+    dbn_text = _json.dumps({"series": {"docs": [{
+        "series_code": "M.ZZ.PCPI_IX",
+        "period_start_day": ["2022-01-01", "2022-02-01"],
+        "period": ["2022", "2022"],
+        "value": [110.0, 111.0],
+    }]}})
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: _json.dumps([{"total": 0}, None]))
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: _json.dumps({"values": {}}))
+    dbn = DBnomicsSource(http_get=lambda u, p, h: dbn_text)
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.CPI)
+    assert res.source == "dbnomics"
+    assert res.unit == "index"
+    assert res.currency is None
+    assert res.frequency.value == "monthly"
 
 
 def test_unit_guard_allows_same_unit_chain():
@@ -153,6 +239,43 @@ def test_no_source_supports_indicator_raises():
     b = FakeMacroSource("b", {MacroIndicator.GDP_GROWTH: "%"})
     with pytest.raises((AllSourcesFailed, InvalidData)):
         get_indicator("ZZZ", MacroIndicator.UNEMPLOYMENT, sources=[a, b])
+
+
+# ---- BYOK skip-without-network (C4) ---------------------------------------
+
+def test_keyless_fred_skipped_without_network_in_chain(monkeypatch):
+    # C4: a BYOK source with no key must be skipped BEFORE any network call when
+    # placed in a failover chain (not advertised-then-crashing, no NotImplemented).
+    from vnfin.macro import FREDMacroSource
+
+    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    calls = {"fred": 0}
+
+    def fred_get(url, params, headers):
+        calls["fred"] += 1
+        return "{}"
+
+    keyless_fred = FREDMacroSource(http_get=fred_get)  # no key
+    wb = FakeMacroSource("wb", PCT)  # canonical percent source serves it
+    res = get_indicator("ZZZ", MacroIndicator.GDP_GROWTH, sources=[keyless_fred, wb])
+    assert res.source == "wb"
+    assert calls["fred"] == 0  # keyless FRED never touched the network
+
+
+def test_keyless_fred_supports_is_false_no_network(monkeypatch):
+    # The capability probe itself must not hit the network.
+    from vnfin.macro import FREDMacroSource
+
+    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    calls = {"n": 0}
+
+    def fred_get(url, params, headers):
+        calls["n"] += 1
+        return "{}"
+
+    s = FREDMacroSource(http_get=fred_get)
+    assert s.supports(MacroIndicator.GDP_GROWTH) is False
+    assert calls["n"] == 0
 
 
 # ---- client object ---------------------------------------------------------

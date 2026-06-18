@@ -2,6 +2,16 @@
 
 **Date:** 2026-06-18  **Domain:** Macro — Vietnam  **Working sources:** 3
 
+> **⚠️ SUPERSEDED / PARTIALLY DISALLOWED (2026-06-18, B-fix close-out):** The
+> no-key **FRED `fredgraph.csv`** recommendation in this note is **SUPERSEDED and
+> DISALLOWED**. The only sanctioned FRED access is the official JSON API
+> (`/fred/series/observations`) with a user-supplied `FRED_API_KEY` (BYOK) — see
+> `docs/design/macro-no-key-byok.md` and `docs/sources/macro-fred.md`. FRED's
+> Terms of Use prohibit automated scraping outside the API, so the implementation
+> **must never** call `fredgraph.csv`; that path is kept here only as a record of
+> what was rejected. The sanctioned no-key Vietnam macro chain is World Bank →
+> IMF DataMapper → DBnomics.
+
 VNStock clean-room exclusion applied; endpoints from providers' own servers + public protocols.
 
 > Verified 3 working no-auth structured sources for Vietnam macro, all curl-tested live: (1) World Bank Indicators API — the cleanest, deepest single source (GDP, CPI/inflation, USD/VND rate, M2, trade, FDI in one consistent annual JSON schema, ~1486 indicators); (2) IMF DataMapper API — same indicators plus forecasts to ~2031; (3) FRED fredgraph.csv — no-key CSV fallback for a few WB-sourced VN series. Official VN portals fall short: GSO (gso.gov.vn) is unreachable (TLS hangs -> HTTP 000, WAF/geo block) and SBV is a Liferay HTML portal with no stable public JSON API (exchange/rate widgets are Chart.js + govt CDN, legacy .jspx endpoints now 404). All data is ANNUAL only; no no-auth daily/month
@@ -36,7 +46,11 @@ curl -s 'https://www.imf.org/external/datamapper/api/v1/PCPIPCH/VNM'
 ```
 _proof:_ PCPIPCH (CPI inflation %% avg) VNM: 2023=3.3, 2024=3.6, 2025=3.3, 2026=4.9(fcast). NGDP_RPCH (real GDP growth %%) VNM: 2023=5.1, 2024=7, 2025=8, 2026=7.1(fcast). BCA (current acct bal US$ bn) VNM 2024=30.385. Range 1980..2031 (52 pts).
 
-### FRED public CSV (St. Louis Fed, World-Bank-sourced VN series)
+### FRED public CSV (St. Louis Fed, World-Bank-sourced VN series) — ⚠️ SUPERSEDED / DISALLOWED
+> **DO NOT IMPLEMENT.** `fredgraph.csv` no-key scraping is disallowed (FRED ToU
+> forbids non-API automated access). Use the official BYOK JSON API only
+> (`vnfin.macro.FREDMacroSource`, `FRED_API_KEY`). This section is retained for
+> provenance/record only.
 - **Host:** `fred.stlouisfed.org`
 - **Data:** Convenience CSV download of select VN macro series (WB-sourced): CPI inflation %% YoY (FPCPITOTLZGVNM), GDP current US$ (MKTGDPVNA646NWDB), nominal exchange-rate index (DDOE01VNA086NWDB). Good as a no-key CSV fallback; for the full indicator set World Bank API is richer.
 - **Auth:** None for the fredgraph.csv download path (the /fred/series JSON API does require an api_key — returns HTTP 400/needs key).

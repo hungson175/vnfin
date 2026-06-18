@@ -15,6 +15,14 @@ Provider contract (verified):
   Years are annual (WEO), 1980.. incl. projections; values are floats.
 - A requested country absent from ``values[indicator]`` means "no data".
 
+Projections (B8): IMF WEO mixes historical actuals with multi-year forecasts and
+the basic DataMapper response carries no per-point actual/forecast flag. We use a
+deterministic, conservative rule — any year **>= the current calendar year** is a
+projection — and stamp ``projection_from_year`` on the result so ``latest()``
+returns the most recent actual and never a forecast. This rule is intentionally
+cautious (it may mark a not-yet-published current year as a projection rather than
+ever returning a forecast as an actual).
+
 Indicator coverage (canonical -> WEO code), percent-unit only so the chain is
 unit-homogeneous with World Bank for these indicators:
 - GDP_GROWTH  -> NGDP_RPCH (real GDP growth, %)
@@ -37,7 +45,7 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
-from .indicators import MacroIndicator, normalize_indicator
+from .indicators import Frequency, MacroIndicator, normalize_indicator
 from .models import IndicatorSeries
 
 # Canonical indicator -> (IMF WEO code, unit IMF emits).
@@ -100,6 +108,20 @@ class IMFDataMapperSource(HttpDataSource):
         if not points:
             raise EmptyData(f"{self.NAME}: no observations for {country}/{code}")
 
+        # IMF WEO mixes actuals with forecasts. Conservatively mark the current
+        # calendar year and beyond as projections so latest() never returns a
+        # forecast as an actual (B8). Only flag if the series actually reaches it.
+        proj_from = datetime.now(timezone.utc).year
+        max_year = max(d.year for (d, _v) in points)
+        projection_from_year = proj_from if max_year >= proj_from else None
+
+        warnings = ()
+        if projection_from_year is not None:
+            warnings = (
+                f"imf_weo: years >= {projection_from_year} are WEO projections "
+                "(forecasts), excluded from latest()",
+            )
+
         return IndicatorSeries(
             country=country,
             indicator_code=code,
@@ -107,7 +129,12 @@ class IMFDataMapperSource(HttpDataSource):
             points=tuple(points),
             source=self.NAME,
             unit=unit,
-            currency="USD",
+            # Currency is meaningful only for the money-denominated GDP level
+            # (USD bn); percent indicators carry no currency (B7).
+            currency="USD" if ind == MacroIndicator.GDP else None,
+            frequency=Frequency.ANNUAL,
+            projection_from_year=projection_from_year,
+            warnings=warnings,
             fetched_at_utc=datetime.now(timezone.utc),
         )
 
