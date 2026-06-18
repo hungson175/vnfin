@@ -200,6 +200,21 @@ def test_default_probes_constructed_without_network():
         assert p.domain and p.source and p.probe_id and callable(p.fetch)
 
 
+def test_run_probe_reports_actual_result_source_not_static_label():
+    # issue #1: a probe may run a failover client and be served by a backup; the
+    # health row must report the ACTUAL serving source, not the declared primary.
+    class _Result:
+        source = "vps"
+
+    h = run_probe(_probe(lambda: _Result()), now=_NOW)  # probe declares source="ssi"
+    assert h.source == "vps"
+
+
+def test_run_probe_falls_back_to_declared_source_when_result_has_none():
+    h = run_probe(_probe(lambda: {"rates": {"VND": 26000.0}}), now=_NOW)  # dict has no .source
+    assert h.source == "ssi"
+
+
 def test_fx_probe_is_opt_in_not_in_default():
     # FX providers are rate-limited -> FX must NOT be in the routine scheduled set
     assert all(p.domain != "fx" for p in default_probes())

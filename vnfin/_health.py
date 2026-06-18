@@ -178,9 +178,17 @@ def run_probe(probe: Probe, *, now: dt.datetime | None = None) -> SourceHealth:
         notes.append("value out of band")
     note = "; ".join(notes) if notes else (probe.value_desc or "ok")
 
+    # Report the ACTUAL serving source when the typed result exposes one (the
+    # probe may run a failover client, so the bar/quote can come from a backup —
+    # don't mislabel it as the primary). Falls back to the probe's declared source.
+    actual_source = probe.source
+    result_source = getattr(data, "source", None)
+    if isinstance(result_source, str) and result_source:
+        actual_source = result_source
+
     return SourceHealth(
         domain=probe.domain,
-        source=probe.source,
+        source=actual_source,
         probe_id=probe.probe_id,
         status=status,
         reachable=True,
@@ -275,26 +283,30 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
         end = dt.date.today()
         return end - dt.timedelta(days=days), end
 
+    # Each probe targets the PRIMARY single source (source()/vn()), not the failover
+    # client, so a probe diagnoses whether THAT specific source is healthy (and its
+    # label is honest — a failover client could be served by a backup and mislabel it).
+    # Cross-source failover behaviour is validated by the live cross-source tests.
     def _fetch_prices() -> Any:
         start, end = _recent(30)
-        return vnfin.prices.client(http_get=http_get, timeout=timeout).get_history(
-            "FPT", start=start, end=end
+        return vnfin.prices.source(http_get=http_get, timeout=timeout).get_history(
+            "FPT", interval=vnfin.Interval.D1, start=start, end=end
         )
 
     def _fetch_crypto() -> Any:
         start, end = _recent(10)
-        return vnfin.crypto.client(http_get=http_get, timeout=timeout).get_klines(
+        return vnfin.crypto.source(http_get=http_get, timeout=timeout).get_klines(
             "BTCUSDT", vnfin.Interval.D1, start, end
         )
 
     def _fetch_macro() -> Any:
-        return vnfin.macro.client(http_get=http_get, timeout=timeout).get_indicator(
+        return vnfin.macro.source(http_get=http_get, timeout=timeout).get_indicator(
             "VNM", vnfin.macro.MacroIndicator.CPI
         )
 
     def _fetch_fundamentals() -> Any:
-        return vnfin.fundamentals.get_financials(
-            "FPT", "income", "annual", http_get=http_get, timeout=timeout
+        return vnfin.fundamentals.source(http_get=http_get, timeout=timeout).get_financials(
+            "FPT", "income", "annual"
         )
 
     def _fetch_gold() -> Any:
