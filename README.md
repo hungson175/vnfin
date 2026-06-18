@@ -62,7 +62,7 @@ btc = vnfin.crypto.client().get_klines("BTCUSDT", vnfin.Interval.D1,
 | Fundamentals | VNDirect `api-finfo` → CafeF | raw VND | — |
 | Funds | Fmarket | VND/unit | — |
 | Gold (VN) | BTMC, PNJ | VND/lượng | — |
-| Gold (world) | currency-api → stooq | USD/oz | — |
+| Gold (world) | currency-api (Stooq opt-in) | USD/oz | — |
 | Crypto | Binance → Coinbase | USD | — |
 | Macro | World Bank → IMF DataMapper → DBnomics | per-indicator | FRED / BEA / BLS-v2 |
 
