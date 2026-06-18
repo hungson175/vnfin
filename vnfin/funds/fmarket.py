@@ -21,12 +21,8 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..transport import DEFAULT_UA, HttpDataSource
 from .models import Fund, FundHolding, FundList, NavHistory, NavPoint
-
-_UA = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 
 _BASE_URL = "https://api.fmarket.vn"
 _FILTER_PATH = "/res/products/filter"
@@ -58,19 +54,16 @@ def _as_float(value, ctx):
     return out
 
 
-class FmarketFundSource:
+class FmarketFundSource(HttpDataSource):
     """Adapter for Fmarket's public fund-data API.
 
     ``http_get(url, params=None, headers=None, json_body=None) -> text``. When
-    ``json_body`` is provided the default transport issues a POST with that JSON
+    ``json_body`` is provided the shared transport issues a POST with that JSON
     body; otherwise it issues a GET. Injectable for testing.
     """
 
+    NAME = "fmarket"
     name = "fmarket"
-
-    def __init__(self, http_get=None, timeout: float = 25.0):
-        self._http_get = http_get or self._default_http_get
-        self._timeout = timeout
 
     # --- public API -------------------------------------------------------
 
@@ -248,23 +241,20 @@ class FmarketFundSource:
 
     def _headers(self) -> dict:
         return {
-            "User-Agent": _UA,
+            "User-Agent": DEFAULT_UA,
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
 
     def _post(self, url, body, who):
-        try:
-            text = self._http_get(url, None, self._headers(), body)
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"fmarket transport error ({who}): {exc}") from exc
+        # ``json_body`` makes the shared transport issue a POST; transport errors are
+        # wrapped as SourceUnavailable by the base. Keep ``_parse_json`` (who-context
+        # message) and ``_unwrap`` (application-status envelope check) here.
+        text = self._request_text(url, params=None, headers=self._headers(), json_body=body)
         return self._unwrap(_parse_json(text, who), who)
 
     def _get(self, url, who):
-        try:
-            text = self._http_get(url, None, self._headers(), None)
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"fmarket transport error ({who}): {exc}") from exc
+        text = self._request_text(url, params=None, headers=self._headers())
         return self._unwrap(_parse_json(text, who), who)
 
     @staticmethod
@@ -291,18 +281,6 @@ class FmarketFundSource:
                     f"fmarket: {who} returned application {key}={status} {msg}".strip()
                 )
         return parsed
-
-    def _default_http_get(self, url, params=None, headers=None, json_body=None):  # pragma: no cover - network
-        import httpx
-
-        transport = httpx.HTTPTransport(local_address="0.0.0.0")  # force IPv4
-        with httpx.Client(transport=transport, timeout=self._timeout, headers=headers) as client:
-            if json_body is not None:
-                resp = client.post(url, params=params, json=json_body)
-            else:
-                resp = client.get(url, params=params)
-            resp.raise_for_status()
-            return resp.text
 
 
 _DEFAULT_FROM = "2000-01-01"  # far before any VN fund inception

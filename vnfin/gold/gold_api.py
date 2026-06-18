@@ -9,11 +9,10 @@ Shape from docs/research/2026-06-18-gold-world.md and the provider's own server
 """
 from __future__ import annotations
 
-import json
 import math
 from datetime import datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..exceptions import EmptyData, InvalidData
 from .base import GoldSource
 from .models import GoldQuote
 
@@ -37,14 +36,7 @@ class GoldApiSource(GoldSource):
 
     def get_quote(self) -> GoldQuote:
         url = f"{self.BASE_URL}/{self.symbol}"
-        try:
-            text = self._http_get(url, None, None)
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"{self.name} transport error: {exc}") from exc
-        try:
-            parsed = json.loads(text)
-        except (ValueError, TypeError) as exc:
-            raise InvalidData(f"{self.name}: non-JSON response") from exc
+        parsed = self._request_json(url, params=None, headers=None)
         if not isinstance(parsed, dict):
             raise InvalidData(f"{self.name}: unexpected payload type")
         # Provider signals an unknown symbol with {"error": "..."}.

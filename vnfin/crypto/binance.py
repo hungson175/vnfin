@@ -31,23 +31,17 @@ as ``EmptyData``.
 """
 from __future__ import annotations
 
-import json
 import math
 from datetime import date, datetime, time, timezone
 
 from ..exceptions import (
     EmptyData,
     InvalidData,
-    SourceUnavailable,
     UnsupportedInterval,
 )
 from ..models import Interval
+from ..transport import DEFAULT_UA, HttpDataSource
 from .models import CryptoBar, CryptoHistory
-
-_UA = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 
 # Binance kline array index map (verified live).
 _OPEN_TIME = 0
@@ -83,7 +77,7 @@ _INTERVAL_MS = {
 _MAX_PAGES = 5000
 
 
-class BinanceCryptoSource:
+class BinanceCryptoSource(HttpDataSource):
     """Adapter over Binance public ``/api/v3/klines``.
 
     Constructed once and reused. Prices are denominated in the pair's quote asset;
@@ -111,8 +105,7 @@ class BinanceCryptoSource:
 
     def __init__(self, http_get=None, timeout: float = 25.0):
         # http_get(url, params, headers) -> response text. Injectable for testing.
-        self._http_get = http_get or self._default_http_get
-        self._timeout = timeout
+        super().__init__(http_get=http_get, timeout=timeout)
 
     @property
     def name(self) -> str:
@@ -238,15 +231,7 @@ class BinanceCryptoSource:
             "startTime": start_ms,
             "endTime": end_ms,
         }
-        try:
-            text = self._http_get(url, params, self._headers())
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"{self.name} transport error: {exc}") from exc
-
-        try:
-            parsed = json.loads(text)
-        except (ValueError, TypeError) as exc:
-            raise InvalidData(f"{self.name}: non-JSON response") from exc
+        parsed = self._request_json(url, params=params, headers=self._headers())
 
         # Binance returns an error as a JSON object {"code":..,"msg":..}; success is a list.
         if isinstance(parsed, dict):
@@ -292,7 +277,7 @@ class BinanceCryptoSource:
     # --- helpers ------------------------------------------------------------
 
     def _headers(self) -> dict:
-        return {"User-Agent": _UA}
+        return {"User-Agent": DEFAULT_UA}
 
     @staticmethod
     def _range_bounds(start, end):
@@ -315,12 +300,3 @@ class BinanceCryptoSource:
         lo = norm(start, False, datetime(1970, 1, 1, tzinfo=timezone.utc))
         hi = norm(end, True, datetime.now(timezone.utc))
         return lo, hi
-
-    def _default_http_get(self, url, params, headers):  # pragma: no cover - network
-        import httpx
-
-        transport = httpx.HTTPTransport(local_address="0.0.0.0")  # force IPv4
-        with httpx.Client(transport=transport, timeout=self._timeout, headers=headers) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            return resp.text

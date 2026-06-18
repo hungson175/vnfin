@@ -22,19 +22,14 @@ the research doc. No vnstock or derivative material was consulted.
 """
 from __future__ import annotations
 
-import json
 import math
 from datetime import date, datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData, SourceUnavailable, VnfinError
+from ..exceptions import EmptyData, InvalidData, VnfinError
+from ..transport import DEFAULT_UA, HttpDataSource
 from .base import FundamentalSource
 from .itemcodes import item_name
 from .models import FinancialReport, LineItem, Period, StatementType
-
-_UA = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 
 # Corporate (single-digit) modelType per statement; bank adds the 10x prefix.
 _CORP_MODEL = {
@@ -49,7 +44,7 @@ _BANK_MODEL = {
 }
 
 
-class VNDirectFundamentalSource(FundamentalSource):
+class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
     """Fundamental reports from VNDirect api-finfo (statements + ratios)."""
 
     NAME = "vndirect"
@@ -59,8 +54,7 @@ class VNDirectFundamentalSource(FundamentalSource):
 
     def __init__(self, http_get=None, timeout: float = 25.0):
         # http_get(url, params, headers) -> response text. Injectable for tests.
-        self._http_get = http_get or self._default_http_get
-        self._timeout = timeout
+        super().__init__(http_get=http_get, timeout=timeout)
 
     @property
     def name(self) -> str:
@@ -106,15 +100,7 @@ class VNDirectFundamentalSource(FundamentalSource):
 
     # ------------------------------------------------------------------ #
     def _fetch_json(self, url, params):
-        try:
-            text = self._http_get(url, params, self._headers())
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"{self.name} transport error: {exc}") from exc
-        try:
-            parsed = json.loads(text)
-        except (ValueError, TypeError) as exc:
-            raise InvalidData(f"{self.name}: non-JSON response") from exc
-        return parsed
+        return self._request_json(url, params=params, headers=self._headers())
 
     def _rows(self, parsed) -> list:
         if not isinstance(parsed, dict) or "data" not in parsed:
@@ -273,13 +259,4 @@ class VNDirectFundamentalSource(FundamentalSource):
             raise InvalidData(f"vndirect: bad date {raw!r}") from exc
 
     def _headers(self) -> dict:
-        return {"User-Agent": _UA}
-
-    def _default_http_get(self, url, params, headers):  # pragma: no cover - network
-        import httpx
-
-        transport = httpx.HTTPTransport(local_address="0.0.0.0")  # force IPv4
-        with httpx.Client(transport=transport, timeout=self._timeout, headers=headers) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            return resp.text
+        return {"User-Agent": DEFAULT_UA}

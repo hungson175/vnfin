@@ -28,16 +28,15 @@ derivatives were excluded from research per the clean-room rule.
 """
 from __future__ import annotations
 
-import json
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..exceptions import EmptyData, InvalidData
 from ..models import AdjustmentPolicy
 from ..sources.ssi import SSIiBoardSource
-from ..sources.udf import _UA
 from ..sources.vndirect import VNDirectSource
 from ..sources.vps import VPSSource
+from ..transport import DEFAULT_UA, HttpDataSource
 from .models import IndexConstituents, IndexMember
 
 # Canonical index symbol -> provider-specific symbol, per source. Only entries that
@@ -111,7 +110,7 @@ _GROUP_ALIASES = {
 }
 
 
-class IndexConstituentsSource:
+class IndexConstituentsSource(HttpDataSource):
     """Current index membership from the public SSI iBoard query group endpoint.
 
         GET https://iboard-query.ssi.com.vn/stock/group/{GROUP}
@@ -125,10 +124,6 @@ class IndexConstituentsSource:
     BASE_URL = "https://iboard-query.ssi.com.vn"
     GROUP_PATH = "/stock/group"
 
-    def __init__(self, http_get=None, timeout: float = 25.0):
-        self._http_get = http_get or self._default_http_get
-        self._timeout = timeout
-
     @property
     def name(self) -> str:
         return self.NAME
@@ -140,17 +135,9 @@ class IndexConstituentsSource:
     def get_constituents(self, index: str) -> IndexConstituents:
         group = self.normalize_group(index)
         url = f"{self.BASE_URL}{self.GROUP_PATH}/{group}"
-        headers = {"User-Agent": _UA, "Accept": "application/json"}
+        headers = {"User-Agent": DEFAULT_UA, "Accept": "application/json"}
 
-        try:
-            text = self._http_get(url, None, headers)
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"{self.name} transport error: {exc}") from exc
-
-        try:
-            parsed = json.loads(text)
-        except (ValueError, TypeError) as exc:
-            raise InvalidData(f"{self.name}: non-JSON response") from exc
+        parsed = self._request_json(url, params=None, headers=headers)
 
         if not isinstance(parsed, dict):
             raise InvalidData(f"{self.name}: unexpected response shape")
@@ -193,12 +180,3 @@ class IndexConstituentsSource:
             as_of=None,
             warnings=("weights_not_available: SSI group endpoint exposes membership only",),
         )
-
-    def _default_http_get(self, url, params, headers):  # pragma: no cover - network
-        import httpx
-
-        transport = httpx.HTTPTransport(local_address="0.0.0.0")  # force IPv4
-        with httpx.Client(transport=transport, timeout=self._timeout, headers=headers) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            return resp.text

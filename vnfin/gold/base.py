@@ -1,12 +1,13 @@
-"""The gold-source port plus a shared injectable HTTP helper.
+"""The gold-source port plus the shared injectable HTTP transport.
 
 Every adapter implements :class:`GoldSource`. Spot is the common denominator (every
 gold source can quote a current price); daily history is a capability only some sources
 have, gated by :attr:`GoldSource.provides_history`.
 
 ``http_get(url, params, headers) -> text`` is injectable for trivial unit testing; the
-default forces IPv4 (datacenter IPv6 is frequently blocked by these providers), sends a
-browser User-Agent, and applies a 25s timeout — mirroring the price-source convention.
+default (from :class:`vnfin.transport.HttpDataSource`) forces IPv4 (datacenter IPv6 is
+frequently blocked by these providers), sends a browser User-Agent, and applies a 25s
+timeout — the shared transport convention.
 """
 from __future__ import annotations
 
@@ -14,31 +15,13 @@ from abc import ABC, abstractmethod
 from datetime import date
 from zoneinfo import ZoneInfo
 
+from ..transport import HttpDataSource
 from .models import GoldHistory, GoldQuote
 
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
-_UA = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 
-
-def _default_http_get(url, params=None, headers=None, timeout: float = 25.0) -> str:  # pragma: no cover - network
-    """Default transport: IPv4-forced httpx GET returning response text."""
-    import httpx
-
-    transport = httpx.HTTPTransport(local_address="0.0.0.0")  # force IPv4
-    hdrs = {"User-Agent": _UA}
-    if headers:
-        hdrs.update(headers)
-    with httpx.Client(transport=transport, timeout=timeout, headers=hdrs) as client:
-        resp = client.get(url, params=params)
-        resp.raise_for_status()
-        return resp.text
-
-
-class GoldSource(ABC):
+class GoldSource(HttpDataSource, ABC):
     """A swappable gold price source. Adapters are constructed once and reused.
 
     Capability flags let a caller (or a future failover layer) pick the right source
@@ -51,15 +34,6 @@ class GoldSource(ABC):
     name: str = "base"
     provides_spot: bool = True
     provides_history: bool = False
-
-    def __init__(self, http_get=None, timeout: float = 25.0):
-        self._timeout = timeout
-        if http_get is None:
-            self._http_get = lambda url, params=None, headers=None: _default_http_get(
-                url, params, headers, timeout
-            )
-        else:
-            self._http_get = http_get
 
     @abstractmethod
     def get_quotes(self) -> tuple[GoldQuote, ...]:

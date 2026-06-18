@@ -17,7 +17,6 @@ docs/research/2026-06-18-gold-world.md (clean-room; no vnstock).
 """
 from __future__ import annotations
 
-import json
 import math
 from datetime import date, datetime, timedelta, timezone
 
@@ -44,14 +43,10 @@ class CurrencyApiGoldSource(GoldSource):
 
     def _fetch_doc(self, tag: str) -> dict:
         url = self._url(tag)
-        try:
-            text = self._http_get(url, None, None)
-        except Exception as exc:  # transport-level (incl. 404 for missing dates)
-            raise SourceUnavailable(f"{self.name} transport error: {exc}") from exc
-        try:
-            parsed = json.loads(text)
-        except (ValueError, TypeError) as exc:
-            raise InvalidData(f"{self.name}: non-JSON response") from exc
+        # Transport errors (incl. a 404 for a missing date) surface as
+        # SourceUnavailable from the shared base; get_history catches that to skip
+        # missing days.
+        parsed = self._request_json(url, params=None, headers=None)
         if not isinstance(parsed, dict):
             raise InvalidData(f"{self.name}: unexpected payload type")
         return parsed

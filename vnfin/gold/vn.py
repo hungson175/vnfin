@@ -21,13 +21,12 @@ servers and docs/research/2026-06-18-gold-vietnam-domestic.md (clean-room; no vn
 """
 from __future__ import annotations
 
-import json
 import math
 import re
 import unicodedata
 from datetime import datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..exceptions import EmptyData, InvalidData
 from .base import VN_TZ, GoldSource
 from .models import GoldQuote
 
@@ -89,14 +88,7 @@ class _VNGoldSource(GoldSource):
     provides_history = False
 
     def _fetch_json(self, url, params=None):
-        try:
-            text = self._http_get(url, params, None)
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"{self.name} transport error: {exc}") from exc
-        try:
-            return json.loads(text)
-        except (ValueError, TypeError) as exc:
-            raise InvalidData(f"{self.name}: non-JSON response") from exc
+        return self._request_json(url, params=params, headers=None)
 
     @staticmethod
     def _price(raw, name: str) -> float:

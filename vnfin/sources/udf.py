@@ -8,21 +8,16 @@ subclasses this and overrides only what differs: ``BASE_URL``, ``HISTORY_PATH``,
 """
 from __future__ import annotations
 
-import json
 import math
 from datetime import date, datetime, time, timezone
 
-from ..exceptions import EmptyData, InvalidData, SourceUnavailable, UnsupportedInterval
+from ..exceptions import EmptyData, InvalidData, UnsupportedInterval
 from ..models import AdjustmentPolicy, Interval, PriceBar, PriceHistory
+from ..transport import DEFAULT_UA, HttpDataSource
 from .base import VN_TZ, PriceSource
 
-_UA = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 
-
-class UDFSource(PriceSource):
+class UDFSource(HttpDataSource, PriceSource):
     # --- per-adapter configuration (override in subclasses) ---
     NAME = "udf"
     BASE_URL = ""
@@ -36,8 +31,7 @@ class UDFSource(PriceSource):
 
     def __init__(self, http_get=None, timeout: float = 25.0):
         # http_get(url, params, headers) -> response text. Injectable for testing.
-        self._http_get = http_get or self._default_http_get
-        self._timeout = timeout
+        super().__init__(http_get=http_get, timeout=timeout)
 
     @property
     def name(self) -> str:
@@ -54,7 +48,7 @@ class UDFSource(PriceSource):
         raise NotImplementedError
 
     def _headers(self) -> dict:
-        return {"User-Agent": _UA}
+        return {"User-Agent": DEFAULT_UA}
 
     def _extract(self, parsed):
         """Return the UDF dict (arrays t/o/h/l/c/v + status s). Override for envelopes."""
@@ -74,16 +68,7 @@ class UDFSource(PriceSource):
         url = self.BASE_URL + self.HISTORY_PATH
         params = self._build_params(psym, resolution, frm, to)
 
-        try:
-            text = self._http_get(url, params, self._headers())
-        except Exception as exc:  # transport-level
-            raise SourceUnavailable(f"{self.name} transport error: {exc}") from exc
-
-        try:
-            parsed = json.loads(text)
-        except (ValueError, TypeError) as exc:
-            raise InvalidData(f"{self.name}: non-JSON response") from exc
-
+        parsed = self._request_json(url, params=params, headers=self._headers())
         data = self._extract(parsed) or {}
         status = data.get("s")
         if status in ("no_data", "error"):
@@ -151,12 +136,3 @@ class UDFSource(PriceSource):
             return datetime.combine(d, tt, tzinfo=VN_TZ)
 
         return norm(start, False), norm(end, True)
-
-    def _default_http_get(self, url, params, headers):  # pragma: no cover - network
-        import httpx
-
-        transport = httpx.HTTPTransport(local_address="0.0.0.0")  # force IPv4
-        with httpx.Client(transport=transport, timeout=self._timeout, headers=headers) as client:
-            resp = client.get(url, params=params)
-            resp.raise_for_status()
-            return resp.text
