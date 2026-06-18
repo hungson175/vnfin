@@ -302,6 +302,47 @@ def test_list_funds_missing_envelope_but_with_data_raises_invalid():
         _src(payload).list_funds()
 
 
+def test_list_funds_invalid_page_size_rejected():
+    # Issue #18: invalid page_size must raise InvalidData before reaching provider.
+    for bad in (-1, 0, "x", 10000):
+        with pytest.raises(InvalidData):
+            _src("{}").list_funds(page_size=bad)
+
+
+def test_list_funds_malformed_fund_code_raises_invalid():
+    # Issue #33: blank/whitespace-only fund codes are not valid identifiers.
+    rows = [
+        {
+            "id": FAKE_ID_A,
+            "code": "   ",
+            "shortName": "   ",
+            "name": "X",
+            "nav": 100.0,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        }
+    ]
+    with pytest.raises(InvalidData):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
+def test_list_funds_non_positive_id_raises_invalid():
+    # Issue #33: provider IDs must be positive integers.
+    rows = [
+        {
+            "id": 0,
+            "code": "TESTCO",
+            "shortName": "TESTCO",
+            "name": "X",
+            "nav": 100.0,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        }
+    ]
+    with pytest.raises(InvalidData):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
 def test_list_funds_transport_error_wrapped():
     src = FmarketFundSource(http_get=_raising_get(ConnectionError("boom")))
     with pytest.raises(SourceUnavailable):
@@ -437,6 +478,20 @@ def test_nav_history_negative_nav_raises_invalid():
         _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
 
 
+def test_nav_history_invalid_product_id_rejected():
+    # Issue #8: invalid product_id types/values must raise InvalidData before request.
+    for bad in (-1, 0, "x", 3.7, None):
+        with pytest.raises(InvalidData):
+            _src("{}").nav_history(bad)
+
+
+def test_holdings_invalid_product_id_rejected():
+    # Issue #8: invalid product_id types/values must raise InvalidData before request.
+    for bad in (-1, 0, "x", 3.7, None, "003"):
+        with pytest.raises(InvalidData):
+            _src("{}").holdings(bad)
+
+
 def test_nav_history_non_json_raises_invalid():
     with pytest.raises(InvalidData):
         _src("not json at all").nav_history(FAKE_ID_A)
@@ -500,6 +555,33 @@ def test_holdings_uses_id_in_path():
 def test_holdings_empty_raises_empty():
     with pytest.raises(EmptyData):
         _src(_holdings_payload(top=[])).holdings(FAKE_ID_A)
+
+
+def test_holdings_blank_stock_code_raises_invalid():
+    # Issue #34: blank/whitespace stock codes are not valid identifiers.
+    top = [
+        {"stockCode": "   ", "netAssetPercent": 5.0, "industry": "X"},
+    ]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+def test_holdings_duplicate_stock_code_raises_invalid():
+    # Issue #34: duplicate stock codes within one fund's holdings are a contract
+    # violation and must raise InvalidData.
+    top = [
+        {"stockCode": "FAKE1", "netAssetPercent": 5.0, "industry": "X"},
+        {"stockCode": "FAKE1", "netAssetPercent": 3.0, "industry": "X"},
+    ]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+def test_holdings_negative_raw_price_raises_invalid():
+    # Issue #29: negative raw prices are impossible and must raise InvalidData.
+    top = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "price": -10.0}]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
 
 
 def test_holdings_application_error_status_raises_unavailable():

@@ -73,6 +73,10 @@ class FmarketFundSource(HttpDataSource):
         ``asset_type`` optionally filters by provider asset-class code (e.g.
         ``"STOCK"``); ``search`` does a free-text name/code search.
         """
+        if not isinstance(page_size, int) or isinstance(page_size, bool):
+            raise InvalidData("fmarket: page_size must be an integer")
+        if not (1 <= page_size <= 1000):
+            raise InvalidData("fmarket: page_size must be between 1 and 1000")
         body = {
             "types": ["NEW_FUND", "TRADING_FUND"],
             "sortField": "navTo6Months",
@@ -106,6 +110,7 @@ class FmarketFundSource(HttpDataSource):
         ``toDate`` upper bound server-side, so we always send a default pair and
         additionally filter the lower bound client-side for an exact window.
         """
+        fid = _validate_product_id(product_id)
         # Parse/validate both bounds up front so a malformed caller date raises
         # InvalidData (never a raw ValueError) and an inverted window is rejected.
         lo = _coerce_date(from_date, "from_date") if from_date is not None else None
@@ -118,7 +123,7 @@ class FmarketFundSource(HttpDataSource):
         hi_str = hi.isoformat() if hi is not None else _today_ymd()
         body = {
             "isAllData": 1,
-            "productId": int(product_id),
+            "productId": fid,
             "fromDate": lo_str,
             "toDate": hi_str,
         }
@@ -148,13 +153,15 @@ class FmarketFundSource(HttpDataSource):
 
     def holdings(self, product_id: int) -> tuple[FundHolding, ...]:
         """Top disclosed portfolio holdings for a fund (by internal ``product_id``)."""
-        url = f"{_BASE_URL}{_DETAIL_PATH}/{int(product_id)}"
+        fid = _validate_product_id(product_id)
+        url = f"{_BASE_URL}{_DETAIL_PATH}/{fid}"
         parsed = self._get(url, who="holdings")
         data = parsed.get("data") or {}
         rows = data.get("productTopHoldingList")
         if not rows:
             raise EmptyData(f"fmarket: no holdings for product {product_id}")
-        return tuple(self._parse_holding(r) for r in rows)
+        seen: set[str] = set()
+        return tuple(self._parse_holding(r, seen) for r in rows)
 
     # --- row parsers ------------------------------------------------------
 
@@ -162,14 +169,18 @@ class FmarketFundSource(HttpDataSource):
     def _parse_fund(row) -> Fund:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: fund row is not an object")
-        code = row.get("code") or row.get("shortName")
+        code = (row.get("code") or row.get("shortName") or "").strip()
         fid = row.get("id")
-        if code is None or fid is None:
-            raise InvalidData("fmarket: fund row missing code/id")
+        if not code:
+            raise InvalidData("fmarket: fund row missing code")
+        if fid is None:
+            raise InvalidData("fmarket: fund row missing id")
         try:
             fid = int(fid)
         except (TypeError, ValueError) as exc:
             raise InvalidData("fmarket: fund row has non-integer id") from exc
+        if fid <= 0:
+            raise InvalidData(f"fmarket: fund row has non-positive id {fid}")
         nav = _as_float(row.get("nav"), f"fund {code} nav")
         if nav < 0:
             raise InvalidData(f"fmarket: negative nav for fund {code}")
@@ -210,12 +221,19 @@ class FmarketFundSource(HttpDataSource):
         return NavPoint(date=d, nav=nav)
 
     @staticmethod
-    def _parse_holding(row) -> FundHolding:
+    def _parse_holding(row, seen_codes=None) -> FundHolding:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: holding row is not an object")
-        stock_code = row.get("stockCode")
-        if not stock_code:
+        raw_code = row.get("stockCode")
+        if not raw_code or not isinstance(raw_code, str):
             raise InvalidData("fmarket: holding row missing stockCode")
+        stock_code = raw_code.strip().upper()
+        if not stock_code:
+            raise InvalidData("fmarket: holding row has blank stockCode")
+        if seen_codes is not None:
+            if stock_code in seen_codes:
+                raise InvalidData(f"fmarket: duplicate holding stock code {stock_code}")
+            seen_codes.add(stock_code)
         weight = _as_float(row.get("netAssetPercent"), f"holding {stock_code} weight")
         if not (0.0 <= weight <= 100.0):
             raise InvalidData(
@@ -229,9 +247,11 @@ class FmarketFundSource(HttpDataSource):
             # normalize. Surface the value plus an explicit "raw" unit tag so
             # callers never mistake it for a canonical money unit.
             price = _as_float(price, f"holding {stock_code} price")
+            if price < 0:
+                raise InvalidData(f"fmarket: holding {stock_code} price is negative: {price}")
             price_unit = "raw"
         return FundHolding(
-            stock_code=str(stock_code),
+            stock_code=stock_code,
             weight_pct=weight,
             industry=str(industry) if industry is not None else None,
             price_raw=price,
@@ -310,3 +330,20 @@ def _coerce_date(value, label) -> date:
 
 def _today_ymd() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _validate_product_id(product_id) -> int:
+    """Validate a fund ``product_id`` and return a clean positive int.
+
+    Raises :class:`InvalidData` for non-integers, non-positive values, or types
+    that would otherwise silently truncate (e.g. ``3.7 -> 3``) or crash.
+    """
+    if isinstance(product_id, bool) or not isinstance(product_id, (int, str)):
+        raise InvalidData(f"fmarket: product_id must be a positive integer, got {type(product_id).__name__}")
+    try:
+        fid = int(product_id)
+    except (TypeError, ValueError) as exc:
+        raise InvalidData(f"fmarket: product_id must be a positive integer, got {product_id!r}") from exc
+    if fid <= 0:
+        raise InvalidData(f"fmarket: product_id must be positive, got {product_id!r}")
+    return fid
