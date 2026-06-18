@@ -218,3 +218,51 @@ def test_naive_datetime_input_accepted(synth):
         "FPT", Interval.D1, datetime(2024, 1, 1), datetime(2024, 1, 31)
     )
     assert len(h) == 3
+
+
+# --- Issue #21: adapters must validate response identity before stamping identifiers
+
+def test_response_symbol_mismatch_raises_invalid(synth):
+    # The UDF payload claims the data is for "OTHER" but we requested "FPT".
+    payload = json.dumps(
+        {
+            "symbol": "OTHER",
+            "s": "ok",
+            "t": [synth.ts("2024-01-02")],
+            "o": [72.0],
+            "h": [73.0],
+            "l": [71.0],
+            "c": [72.0],
+            "v": [1000],
+        }
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+# --- Issue #13: price parsers must reject zero-valued market observations
+
+@pytest.mark.parametrize("zero_field", ["o", "h", "l", "c"])
+def test_zero_price_rejected_as_invalid(synth, zero_field):
+    row = {"t": [synth.ts("2024-01-02")], "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": [1000]}
+    row[zero_field] = [0.0]
+    payload = json.dumps({"s": "ok", **row})
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_zero_volume_is_allowed(synth):
+    # Volume can legitimately be zero; only prices must be positive.
+    payload = json.dumps(
+        {
+            "s": "ok",
+            "t": [synth.ts("2024-01-02")],
+            "o": [72.0],
+            "h": [73.0],
+            "l": [71.0],
+            "c": [72.0],
+            "v": [0],
+        }
+    )
+    h = src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+    assert h.bars[0].volume == 0

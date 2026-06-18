@@ -187,8 +187,8 @@ class FmarketFundSource(HttpDataSource):
         if fid <= 0:
             raise InvalidData(f"fmarket: fund row has non-positive id {fid}")
         nav = _as_float(row.get("nav"), f"fund {code} nav")
-        if nav < 0:
-            raise InvalidData(f"fmarket: negative nav for fund {code}")
+        if nav <= 0:
+            raise InvalidData(f"fmarket: non-positive nav for fund {code}")
         owner = row.get("owner") or {}
         if not isinstance(owner, dict):
             raise InvalidData(f"fmarket: fund {code} owner is not an object")
@@ -221,8 +221,9 @@ class FmarketFundSource(HttpDataSource):
         except (TypeError, ValueError) as exc:
             raise InvalidData(f"fmarket: malformed navDate {raw_date!r}") from exc
         nav = _as_float(row.get("nav"), f"nav on {raw_date}")
-        if nav < 0:
-            raise InvalidData(f"fmarket: negative nav on {raw_date}")
+        # Issue #13: zero NAV is not a valid market observation.
+        if nav <= 0:
+            raise InvalidData(f"fmarket: non-positive nav on {raw_date}")
         return NavPoint(date=d, nav=nav)
 
     @staticmethod

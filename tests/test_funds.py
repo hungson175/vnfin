@@ -504,6 +504,14 @@ def test_nav_history_negative_nav_raises_invalid():
         _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
 
 
+# --- Issue #13: NAV parsers must reject zero-valued market observations
+
+def test_nav_history_zero_nav_raises_invalid():
+    rows = [{"navDate": "2024-01-02", "nav": 0.0, "productId": FAKE_ID_A}]
+    with pytest.raises(InvalidData):
+        _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+
+
 def test_nav_history_invalid_product_id_rejected():
     # Issue #8: invalid product_id types/values must raise InvalidData before request.
     for bad in (-1, 0, "x", 3.7, None):

@@ -73,6 +73,12 @@ class _IndexUDFMixin:
                 f"got {self.PRICE_SCALE} — indices are points, not VND"
             )
         hist = super().get_history(symbol, interval, start, end)
+        # Issue #64: the public symbol must be the canonical symbol the caller asked
+        # for, not the provider alias actually sent in the request. provider_symbol
+        # already records the alias.
+        canonical = symbol.strip().upper()
+        if hist.symbol != canonical:
+            hist = replace(hist, symbol=canonical)
         # An index level is in POINTS, not VND money. State the explicit unit on the
         # typed result: value_unit="points". ``currency`` historically also carries
         # "points" here (callers/tests rely on it), so keep both consistent. (frozen
@@ -160,17 +166,25 @@ class IndexConstituentsSource(HttpDataSource):
             raise InvalidData(f"{self.name}: 'data' is not a list")
 
         members: list[IndexMember] = []
+        seen: set[str] = set()
         for i, row in enumerate(data):
             if not isinstance(row, dict):
                 raise InvalidData(f"{self.name}: member {i} is not an object")
             sym = row.get("stockSymbol")
             if not sym or not isinstance(sym, str):
                 raise InvalidData(f"{self.name}: member {i} missing stockSymbol")
+            sym = sym.strip().upper()
+            # Issue #30: reject empty/whitespace-only normalized symbols and duplicates.
+            if not sym:
+                raise InvalidData(f"{self.name}: member {i} has empty stockSymbol")
+            if sym in seen:
+                raise InvalidData(f"{self.name}: duplicate member symbol {sym}")
+            seen.add(sym)
             exch = row.get("exchange")
             name_en = row.get("companyNameEn") or row.get("companyNameVi")
             members.append(
                 IndexMember(
-                    symbol=sym.strip().upper(),
+                    symbol=sym,
                     exchange=exch.strip().upper() if isinstance(exch, str) else None,
                     company_name=name_en.strip() if isinstance(name_en, str) else None,
                     isin=row.get("isin") if isinstance(row.get("isin"), str) else None,

@@ -134,6 +134,26 @@ All notable changes to `vnfin` are documented here. The format follows
   `vnfin.macro.get_indicator()` so `MacroIndicator.CPI` maps to the correct provider series; the
   probe label is updated to `macro/canonical/VNM-CPI` to reflect that it exercises failover.
   ([#36](https://github.com/hungson175/vnfin/issues/36))
+- **Index history canonical symbol** — `IndexClient` and index UDF sources now return the
+  canonical symbol the caller requested (e.g. "UPCOM") while keeping the provider alias in
+  `provider_symbol`. Previously the provider alias leaked into the public `symbol` field.
+  ([#64](https://github.com/hungson175/vnfin/issues/64))
+- **Index constituents validation** — `IndexConstituentsSource` now rejects empty/whitespace
+  normalized member symbols and duplicate symbols as `InvalidData`.
+  ([#30](https://github.com/hungson175/vnfin/issues/30))
+- **Price interval validation** — `FailoverPriceClient.get_history()` validates that the
+  `interval` argument is an `Interval` enum before the failover engine touches it, preventing
+  a raw `AttributeError` from malformed caller input.
+  ([#23](https://github.com/hungson175/vnfin/issues/23))
+- **UDF response identity guard** — `UDFSource` now validates a provider-echoed `symbol` field
+  in the response against the requested symbol/alias, raising `InvalidData` on mismatch before
+  stamping identifiers onto the result. ([#21](https://github.com/hungson175/vnfin/issues/21))
+- **Zero market-observation rejection** — `UDFSource` now rejects zero OHLC prices and
+  `FmarketFundSource` rejects zero NAV values as `InvalidData`; volume may still be zero.
+  ([#13](https://github.com/hungson175/vnfin/issues/13))
+- **Price adjustment-policy guard** — `FailoverPriceClient` now rejects chains that mix declared
+  adjustment policies (e.g. `PROVIDER_ADJUSTED` with `RAW`/`MIXED`) at construction time, mirroring
+  the existing unit-homogeneity guard. ([#7](https://github.com/hungson175/vnfin/issues/7))
 
 ## [0.2.0] — 2026-06-18
 

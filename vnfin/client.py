@@ -17,7 +17,7 @@ from datetime import date
 from .calendar import as_date, expected_latest_trading_day
 from .exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from .failover import FailoverClient
-from .models import Interval, PriceHistory
+from .models import AdjustmentPolicy, Interval, PriceHistory
 
 
 def _price_unit(source):
@@ -57,6 +57,30 @@ def _require_date_range(start, end) -> None:
         )
 
 
+def _adjustment_policy_guard(sources):
+    """Issue #7: reject a price failover chain that mixes adjustment policies.
+
+    A chain is only safe when every source applies the same adjustment semantics.
+    Sources that do not declare a policy (UNKNOWN) are ignored for the guard; if all
+    sources are unknown the chain is allowed. A mixed declared-policy chain raises
+    ``InvalidData`` at construction time.
+    """
+    policies = set()
+    for src in sources:
+        pol = (
+            getattr(src, "ADJUSTMENT_POLICY", None)
+            or getattr(src, "adjustment_policy", None)
+            or AdjustmentPolicy.UNKNOWN
+        )
+        if pol is not AdjustmentPolicy.UNKNOWN:
+            policies.add(pol)
+    if len(policies) > 1:
+        raise InvalidData(
+            f"price failover chain mixes adjustment policies: "
+            f"{sorted(p.value for p in policies)}"
+        )
+
+
 class FailoverPriceClient:
     """Try sources in priority order, up to ``max_attempts`` actual calls.
 
@@ -64,10 +88,13 @@ class FailoverPriceClient:
     client records the failure reason and falls through to the next source. Sources
     that do not support the requested interval are skipped without a network call
     and do not count against ``max_attempts``. All configured sources must emit the
-    same unit/currency (see :class:`vnfin.failover.FailoverClient` unit guard).
+    same unit/currency (see :class:`vnfin.failover.FailoverClient` unit guard) and
+    the same adjustment policy.
     """
 
     def __init__(self, sources, max_attempts: int = 3):
+        # Issue #7: homogenous adjustment policies before the generic engine runs.
+        _adjustment_policy_guard(sources)
         self._engine = FailoverClient(
             sources,
             operation=lambda src, symbol, interval, start, end: src.get_history(
@@ -96,6 +123,13 @@ class FailoverPriceClient:
 
     def get_history(self, symbol, interval: Interval = Interval.D1, start=None, end=None) -> PriceHistory:
         _require_date_range(start, end)
+        # Issue #23: validate the interval is an Interval enum before the failover
+        # engine's capability probe / no_capable_factory touches it. This prevents
+        # a raw AttributeError from ``interval.value`` on a malformed caller value.
+        if not isinstance(interval, Interval):
+            raise InvalidData(
+                f"interval must be a vnfin.models.Interval, got {type(interval).__name__}"
+            )
         return self._engine.run(symbol, interval, start, end)
 
     def get_daily(self, symbol, start, end) -> PriceHistory:

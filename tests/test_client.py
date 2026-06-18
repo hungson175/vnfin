@@ -297,3 +297,43 @@ def test_get_daily_without_dates_raises_vnfin_error(synth):
     with pytest.raises(InvalidData):
         client.get_daily("FAKECO", None, None)
     assert s.calls == 0
+
+
+# --- Issue #23: invalid interval type must not leak AttributeError in failover path
+
+def test_invalid_interval_type_raises_vnfin_error_not_attributeerror(synth):
+    from vnfin.exceptions import InvalidData, VnfinError
+
+    s = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s])
+    with pytest.raises(VnfinError) as ei:
+        client.get_history("FAKECO", "D1", date(2024, 1, 1), date(2024, 1, 31))
+    assert isinstance(ei.value, InvalidData)
+    assert not isinstance(ei.value, AttributeError)
+    assert s.calls == 0  # rejected before any source call
+
+
+# --- Issue #7: price failover must guard against mixed adjustment policies
+
+def test_price_client_rejects_mixed_adjustment_policies(synth):
+    from vnfin.exceptions import VnfinError
+    from vnfin.models import AdjustmentPolicy
+
+    adj = FakeSource("adj", synth.make_history("adj", 2))
+    adj.adjustment_policy = AdjustmentPolicy.PROVIDER_ADJUSTED
+    raw = FakeSource("raw", synth.make_history("raw", 2))
+    raw.adjustment_policy = AdjustmentPolicy.RAW
+    with pytest.raises(VnfinError):
+        FailoverPriceClient([adj, raw])
+
+
+def test_price_client_allows_homogeneous_adjustment_policies(synth):
+    from vnfin.models import AdjustmentPolicy
+
+    a = FakeSource("a", synth.make_history("a", 2))
+    a.adjustment_policy = AdjustmentPolicy.PROVIDER_ADJUSTED
+    b = FakeSource("b", synth.make_history("b", 2))
+    b.adjustment_policy = AdjustmentPolicy.PROVIDER_ADJUSTED
+    client = FailoverPriceClient([a, b])
+    h = client.get_daily("FAKECO", *WIDE)
+    assert h.source == "a"

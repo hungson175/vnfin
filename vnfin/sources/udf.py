@@ -71,6 +71,20 @@ class UDFSource(HttpDataSource, PriceSource):
 
         parsed = self._request_json(url, params=params, headers=self._headers())
         data = self._extract(parsed) or {}
+
+        # Issue #21: when the provider echoes the requested symbol in the response,
+        # validate it matches what we asked for before stamping identifiers onto the
+        # result. Accept either the provider alias or the canonical caller symbol.
+        resp_symbol = data.get("symbol")
+        if resp_symbol is not None:
+            resp_sym_norm = str(resp_symbol).strip().upper()
+            canonical = symbol.strip().upper()
+            if resp_sym_norm and resp_sym_norm not in (psym, canonical):
+                raise InvalidData(
+                    f"{self.name}: response symbol {resp_symbol!r} does not match "
+                    f"requested {canonical!r} (provider alias {psym!r})"
+                )
+
         status = data.get("s")
         if status != "ok":
             # UDF status is strictly "ok" for success. "no_data" / "error" mean
@@ -133,6 +147,10 @@ class UDFSource(HttpDataSource, PriceSource):
                 raise InvalidData(f"{self.name}: malformed scalar at row {i}") from exc
             if not all(math.isfinite(x) for x in (op, hp, lp, cp, raw_vol)):
                 raise InvalidData(f"{self.name}: non-finite OHLCV at row {i}")
+            # Issue #13: zero price observations are not valid market data for an
+            # equity/index series; reject them as provider/parse drift.
+            if not all(x > 0 for x in (op, hp, lp, cp)):
+                raise InvalidData(f"{self.name}: non-positive price at row {i}")
             if raw_vol < 0:
                 raise InvalidData(f"{self.name}: negative volume at row {i}")
             vol = int(round(raw_vol))

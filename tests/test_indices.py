@@ -55,7 +55,6 @@ def _bare_udf(rows=None, status="ok") -> str:
     rows = _INDEX_ROWS if rows is None else rows
     return json.dumps(
         {
-            "symbol": "VNINDEX",
             "s": status,
             "t": [_ts(r[0]) for r in rows],
             "o": [r[1] for r in rows],
@@ -169,6 +168,22 @@ def test_provider_symbol_recorded_after_aliasing():
     h = s.get_history("UPCOM", Interval.D1, *WIDE)
     # Symbol the user asked for stays VNINDEX-style canonical-uppercased; provider_symbol
     # is the aliased provider symbol actually sent.
+    assert h.provider_symbol == "UPCOMINDEX"
+
+
+# --- Issue #64: index history must return the canonical symbol, not the provider alias
+
+def test_index_history_returns_canonical_symbol_not_provider_alias():
+    s = VPSIndexSource(http_get=_get(_bare_udf()))
+    h = s.get_history("UPCOM", Interval.D1, *WIDE)
+    assert h.symbol == "UPCOM"
+    assert h.provider_symbol == "UPCOMINDEX"
+
+
+def test_index_client_history_returns_canonical_symbol():
+    c = IndexClient(http_get=_get(_bare_udf()))
+    h = c.index_history("UPCOM", date(2024, 6, 1), date(2024, 6, 30))
+    assert h.symbol == "UPCOM"
     assert h.provider_symbol == "UPCOMINDEX"
 
 
@@ -410,6 +425,26 @@ def test_constituents_missing_symbol_field_raises_invalid():
     payload = json.dumps(
         {"code": "SUCCESS", "message": "ok", "data": [{"exchange": "hose"}]}  # no stockSymbol
     )
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
+
+
+# --- Issue #30: constituents must reject empty/duplicate normalized symbols --------
+
+def test_constituents_empty_symbol_raises_invalid():
+    payload = _constituents_payload(members=[("TESTCO", "hose"), ("", "hose")])
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
+
+
+def test_constituents_whitespace_symbol_raises_invalid():
+    payload = _constituents_payload(members=[("TESTCO", "hose"), ("   ", "hose")])
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
+
+
+def test_constituents_duplicate_symbol_raises_invalid():
+    payload = _constituents_payload(members=[("TESTCO", "hose"), ("testco", "hose")])
     with pytest.raises(InvalidData):
         IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
 
