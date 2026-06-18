@@ -250,6 +250,119 @@ def test_bank_reports_carry_bank_model_metadata():
 
 
 # --------------------------------------------------------------------------- #
+# Auto-detection of bank vs corporate (caller does NOT pass is_bank)
+# The response rows carry the provider's real modelType (corporate 1/2/3, bank
+# 101/102/103); the adapter must read that tag and classify the template without
+# the caller knowing. Explicit is_bank always overrides the auto-detection.
+# --------------------------------------------------------------------------- #
+def test_auto_detects_corporate_sample_as_corporate():
+    """A corporate response (modelType 1) is auto-detected as corporate."""
+    reports = _src(corp_income_two_periods()).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL  # no is_bank -> AUTO
+    )
+    assert reports[0].is_bank is False
+    assert reports[0].model_type == 1
+
+
+def test_auto_detects_bank_sample_as_bank():
+    """A bank response (modelType 102) is auto-detected as bank even when the
+    caller never passes is_bank and the ticker is not in the known-bank list."""
+    reports = _src(bank_income_one_period()).get_financials(
+        "ZZBANK", StatementType.INCOME, Period.ANNUAL  # no is_bank -> AUTO
+    )
+    assert reports[0].is_bank is True
+    assert reports[0].model_type == 102
+
+
+def test_auto_detected_bank_uses_bank_name_map():
+    """After auto-detecting a bank, line-item names come from the bank map."""
+    reports = _src(bank_income_one_period()).get_financials(
+        "ZZBANK", StatementType.INCOME, Period.ANNUAL  # AUTO
+    )
+    nii = next(li for li in reports[0].items if li.item_code == "22070")
+    assert nii.name == "Thu nhập lãi thuần"  # bank net interest income label
+
+
+def test_explicit_is_bank_false_overrides_auto_on_bank_rows():
+    """Explicit is_bank=False wins even when the rows look like a bank template.
+
+    The corporate query is used (modelType:102 must NOT appear) and the report
+    is labelled corporate regardless of the row tags — the override is honoured.
+    """
+    src, captured = _capturing_src(bank_income_one_period())
+    reports = src.get_financials(
+        "ZZBANK", StatementType.INCOME, Period.ANNUAL, is_bank=False
+    )
+    assert "modelType:1" in captured["params"]["q"]
+    assert "modelType:102" not in captured["params"]["q"]
+    assert reports[0].is_bank is False
+    assert reports[0].model_type == 1
+
+
+def test_explicit_is_bank_true_overrides_auto_on_corporate_rows():
+    """Explicit is_bank=True wins even when the rows look corporate."""
+    src, captured = _capturing_src(corp_income_two_periods())
+    reports = src.get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=True
+    )
+    assert "modelType:102" in captured["params"]["q"]
+    assert reports[0].is_bank is True
+    assert reports[0].model_type == 102
+
+
+def test_auto_prefers_corporate_query_first_for_unknown_ticker():
+    """An unrecognised ticker is probed as corporate first (modelType single-digit)."""
+    src, captured = _capturing_src(corp_income_two_periods())
+    src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)  # AUTO
+    assert "modelType:1" in captured["params"]["q"]
+
+
+def test_auto_prefers_bank_query_first_for_known_bank_ticker():
+    """A known-bank ticker is probed as the bank template first (modelType 10x)."""
+    src, captured = _capturing_src(bank_income_one_period())
+    src.get_financials("VCB", StatementType.INCOME, Period.ANNUAL)  # AUTO, VCB is a bank
+    assert "modelType:102" in captured["params"]["q"]
+
+
+def test_auto_falls_back_to_other_template_when_first_is_empty():
+    """If the heuristic-preferred template returns no rows, the other is probed.
+
+    A known bank (VCB) is tried as bank first; an empty bank response forces a
+    fall-back probe to the corporate template instead of failing outright.
+    """
+    queries = []
+
+    def _g(url, params, headers):
+        queries.append(params["q"])
+        # First (bank, modelType:102) probe -> empty; corporate probe -> data.
+        if "modelType:102" in params["q"]:
+            return _stmt_envelope([], total=0)
+        return corp_income_two_periods()
+
+    src = VNDirectFundamentalSource(http_get=_g)
+    reports = src.get_financials("VCB", StatementType.INCOME, Period.ANNUAL)  # AUTO
+    assert any("modelType:102" in q for q in queries)  # bank probed first
+    assert any("modelType:1" in q for q in queries)  # then corporate
+    assert reports[0].is_bank is False  # detected corporate from the fallback rows
+
+
+def test_auto_raises_empty_when_both_templates_empty():
+    """Both templates empty -> EmptyData so a failover chain can fall through."""
+    src = _src(_stmt_envelope([], total=0))
+    with pytest.raises(EmptyData):
+        src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)  # AUTO
+
+
+def test_get_financials_function_auto_detects_without_is_bank():
+    """The public get_financials() auto-detects a bank with no is_bank arg."""
+    reports = get_financials(
+        "ZZBANK", StatementType.INCOME, Period.ANNUAL, source=_src(bank_income_one_period())
+    )
+    assert reports[0].is_bank is True
+    assert reports[0].model_type == 102
+
+
+# --------------------------------------------------------------------------- #
 # Ratios path (different shape: ratioCode/reportDate/value)
 # Ratios are PERIOD-AGNOSTIC and NOT monetary: the report must not claim a
 # requested Period or report-wide VND currency.
@@ -486,3 +599,71 @@ def test_ratio_report_to_dataframe_has_no_vnd_currency():
     df = reports[0].to_dataframe()
     assert df.attrs["currency"] is None
     assert df.attrs["period"] == "UNKNOWN"
+
+
+# --------------------------------------------------------------------------- #
+# Known-bank heuristic + AUTO sentinel resolution helpers
+# --------------------------------------------------------------------------- #
+def test_is_known_bank_recognises_known_tickers_case_insensitively():
+    from vnfin.fundamentals import is_known_bank
+
+    assert is_known_bank("VCB") is True
+    assert is_known_bank("vcb") is True
+    assert is_known_bank(" Vcb ") is True
+
+
+def test_is_known_bank_rejects_non_bank_and_garbage():
+    from vnfin.fundamentals import is_known_bank
+
+    assert is_known_bank("TESTCO") is False  # fabricated non-bank ticker
+    assert is_known_bank("") is False
+    assert is_known_bank(None) is False  # type: ignore[arg-type]
+
+
+def test_resolve_is_bank_explicit_overrides_win():
+    from vnfin.fundamentals.base import AUTO, resolve_is_bank
+
+    # explicit flags ignore the heuristic entirely
+    assert resolve_is_bank("VCB", False) is False  # bank ticker, forced corporate
+    assert resolve_is_bank("TESTCO", True) is True  # non-bank, forced bank
+    # AUTO defers to the heuristic
+    assert resolve_is_bank("VCB", AUTO) is True
+    assert resolve_is_bank("TESTCO", AUTO) is False
+
+
+def test_auto_is_the_none_sentinel():
+    from vnfin.fundamentals import AUTO
+
+    assert AUTO is None
+
+
+# --------------------------------------------------------------------------- #
+# Expanded headline itemCode -> name map (more common lines than before)
+# --------------------------------------------------------------------------- #
+def test_item_name_maps_expanded_corporate_headlines():
+    from vnfin.fundamentals.itemcodes import item_name
+
+    # net income / total assets / equity / operating cash flow now mapped
+    assert item_name("21000") == "Lợi nhuận sau thuế"  # net income
+    assert item_name("25000") == "Tổng tài sản"  # total assets
+    assert item_name("40000") == "Vốn chủ sở hữu"  # equity
+    assert item_name("31000") == "Lưu chuyển tiền từ hoạt động kinh doanh"  # operating CF
+    # newly added headline lines
+    assert item_name("23400") == "Hàng tồn kho"  # inventories
+    assert item_name("40200") == "Lợi nhuận sau thuế chưa phân phối"  # retained earnings
+
+
+def test_item_name_maps_expanded_bank_headlines():
+    from vnfin.fundamentals.itemcodes import item_name
+
+    assert item_name("22070", is_bank=True) == "Thu nhập lãi thuần"  # net interest income
+    assert item_name("412000", is_bank=True) == "Tổng tài sản"  # total assets
+    # newly added bank headline lines
+    assert item_name("411600", is_bank=True) == "Cho vay khách hàng"  # loans to customers
+    assert item_name("413100", is_bank=True) == "Tiền gửi của khách hàng"  # deposits
+
+
+def test_item_name_unknown_code_falls_back():
+    from vnfin.fundamentals.itemcodes import item_name
+
+    assert item_name("99999") == "item_99999"

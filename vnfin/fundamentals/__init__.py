@@ -17,7 +17,7 @@ modelType 101/102/103; corporates use 1/2/3 — pass ``is_bank=True`` for banks.
 from __future__ import annotations
 
 from ..exceptions import VnfinError
-from .base import FundamentalSource
+from .base import AUTO, KNOWN_BANK_SYMBOLS, FundamentalSource, is_known_bank
 from .cafef import CafeFFundamentalSource
 from .client import (
     FailoverFundamentalClient,
@@ -41,6 +41,9 @@ __all__ = [
     "get_financials",
     "client",
     "source",
+    "AUTO",
+    "KNOWN_BANK_SYMBOLS",
+    "is_known_bank",
 ]
 
 
@@ -94,7 +97,7 @@ def get_financials(
     statement,
     period,
     *,
-    is_bank: bool = False,
+    is_bank: bool | None = AUTO,
     limit: int = 8,
     source: FundamentalSource | None = None,
     sources=None,
@@ -109,8 +112,13 @@ def get_financials(
 
     ``statement`` accepts a ``StatementType`` or its string value (e.g. "income",
     "balance", "cashflow", "ratios"); ``period`` accepts a ``Period`` or
-    "QUARTER"/"ANNUAL" (case-insensitive). Pass ``is_bank=True`` for banks so the
-    VNDirect bank statement template (modelType 101/102/103) is used.
+    "QUARTER"/"ANNUAL" (case-insensitive).
+
+    ``is_bank`` is OPTIONAL: by default (:data:`AUTO`) the bank-vs-corporate
+    template is auto-detected (known-bank heuristic + provider probe), so callers
+    need not know whether a ticker is a bank. Pass ``is_bank=True``/``False`` to
+    force the VNDirect bank (modelType 101/102/103) or corporate (1/2/3) template
+    explicitly; an explicit flag always wins over auto-detection.
 
     Source selection (most specific wins):
 

@@ -482,3 +482,40 @@ def test_report_to_dataframe():
     assert df.attrs["symbol"] == "TESTCO"
     assert df.attrs["currency"] == "VND"
     assert df.attrs["source"] == "cafef"
+
+
+# --------------------------------------------------------------------------- #
+# is_bank is optional (AUTO): CafeF has one shape for banks and corporates (no
+# modelType template), so is_bank is purely metadata. AUTO resolves via the
+# known-bank heuristic; an explicit flag always overrides it.
+# --------------------------------------------------------------------------- #
+def test_auto_without_is_bank_works_and_marks_corporate_for_unknown():
+    """No is_bank arg succeeds and labels an unknown ticker as corporate."""
+    reports = _src(corp_income_two_years()).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL  # AUTO
+    )
+    assert reports[0].is_bank is False
+
+
+def test_auto_marks_known_bank_ticker_as_bank():
+    """A known-bank ticker is labelled is_bank=True under AUTO (heuristic)."""
+    reports = _src(corp_income_two_years()).get_financials(
+        "VCB", StatementType.INCOME, Period.ANNUAL  # AUTO, VCB is a known bank
+    )
+    assert reports[0].is_bank is True
+
+
+def test_explicit_is_bank_true_overrides_auto():
+    """Explicit is_bank=True wins for an otherwise-unknown ticker."""
+    reports = _src(corp_income_two_years()).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=True
+    )
+    assert reports[0].is_bank is True
+
+
+def test_explicit_is_bank_false_overrides_heuristic_for_known_bank():
+    """Explicit is_bank=False wins even for a known-bank ticker."""
+    reports = _src(corp_income_two_years()).get_financials(
+        "VCB", StatementType.INCOME, Period.ANNUAL, is_bank=False
+    )
+    assert reports[0].is_bank is False

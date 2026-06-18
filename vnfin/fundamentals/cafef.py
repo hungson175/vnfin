@@ -34,7 +34,7 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
-from .base import FundamentalSource
+from .base import AUTO, FundamentalSource, is_known_bank
 from .models import FinancialReport, LineItem, Period, StatementType
 
 # FinanceReport.ashx ``Type`` per statement (income / balance only). CafeF's
@@ -91,14 +91,22 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         statement: StatementType,
         period: Period,
         *,
-        is_bank: bool = False,
+        is_bank: bool | None = AUTO,
         limit: int = 8,
     ) -> tuple[FinancialReport, ...]:
+        """Fetch typed reports; ``is_bank`` is optional.
+
+        CafeF's summary handlers use one shape for both banks and corporates (no
+        modelType template), so ``is_bank`` here is purely metadata. The
+        :data:`AUTO` sentinel (default) is resolved via the known-bank heuristic;
+        an explicit ``True``/``False`` overrides it (original behavior preserved).
+        """
         psym = self._validate_symbol(symbol)
         self._validate_limit(limit)
+        resolved = is_known_bank(psym) if is_bank is AUTO else bool(is_bank)
         if statement is StatementType.RATIOS:
-            return self._get_ratios(psym, period, is_bank=is_bank, limit=limit)
-        return self._get_statements(psym, statement, period, is_bank=is_bank, limit=limit)
+            return self._get_ratios(psym, period, is_bank=resolved, limit=limit)
+        return self._get_statements(psym, statement, period, is_bank=resolved, limit=limit)
 
     # ------------------------------------------------------------------ #
     def _fetch_json(self, url, params):

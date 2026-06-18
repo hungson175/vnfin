@@ -172,6 +172,24 @@ def test_failover_passes_is_bank_and_limit_through():
     assert captured == {"is_bank": True, "limit": 3}
 
 
+def test_failover_default_is_bank_is_auto_sentinel():
+    """With no is_bank arg, the client forwards the AUTO sentinel to sources so
+    each adapter auto-detects bank vs corporate without the caller knowing."""
+    from vnfin.fundamentals.base import AUTO
+
+    captured = {}
+
+    class Recorder(FakeSource):
+        def get_financials(self, symbol, statement, period, *, is_bank=False, limit=8):
+            captured["is_bank"] = is_bank
+            return super().get_financials(symbol, statement, period, is_bank=is_bank, limit=limit)
+
+    primary = Recorder("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))
+    client = FailoverFundamentalClient([primary])
+    client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)  # no is_bank
+    assert captured["is_bank"] is AUTO
+
+
 # --------------------------------------------------------------------------- #
 # default_fundamental_client() + module get_financials() failover
 # --------------------------------------------------------------------------- #

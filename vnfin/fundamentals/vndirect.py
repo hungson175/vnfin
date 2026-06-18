@@ -27,7 +27,7 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
-from .base import FundamentalSource
+from .base import AUTO, FundamentalSource, is_known_bank
 from .itemcodes import item_name
 from .models import FinancialReport, LineItem, Period, StatementType
 
@@ -92,14 +92,89 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         statement: StatementType,
         period: Period,
         *,
-        is_bank: bool = False,
+        is_bank: bool | None = AUTO,
         limit: int = 8,
     ) -> tuple[FinancialReport, ...]:
+        """Fetch typed reports, auto-detecting bank vs corporate when needed.
+
+        ``is_bank`` may be ``True``/``False`` (explicit override, original
+        behavior preserved) or :data:`AUTO` (the default ``None``) asking the
+        adapter to detect the template itself: it picks a starting guess from
+        the known-bank heuristic and, for statements, verifies it against the
+        provider's ``modelType``-filtered response — if that template returns no
+        rows it transparently re-probes the other template. Callers therefore no
+        longer need to know whether a ticker is a bank.
+        """
         psym = self._validate_symbol(symbol)
         self._validate_limit(limit)
         if statement is StatementType.RATIOS:
-            return self._get_ratios(psym, period, is_bank=is_bank, limit=limit)
-        return self._get_statements(psym, statement, period, is_bank=is_bank, limit=limit)
+            # Ratios have no modelType template; ``is_bank`` is only metadata, so
+            # resolve the AUTO sentinel via the cheap heuristic (no probing).
+            resolved = is_known_bank(psym) if is_bank is AUTO else bool(is_bank)
+            return self._get_ratios(psym, period, is_bank=resolved, limit=limit)
+        if is_bank is AUTO:
+            return self._get_statements_auto(psym, statement, period, limit=limit)
+        return self._get_statements(
+            psym, statement, period, is_bank=bool(is_bank), limit=limit
+        )
+
+    def _get_statements_auto(self, psym, statement, period, *, limit):
+        """Auto-detect bank vs corporate, then parse the matching statements.
+
+        Step 1: pick a starting template from the known-bank heuristic (corporate
+        for unrecognised tickers) and fetch with that ``modelType`` filter.
+
+        Step 2: read the dominant ``modelType`` actually present in the response
+        rows. The provider tags each row with its real template (corporate
+        1/2/3, bank 101/102/103), so the response itself reveals whether the
+        ticker is a bank — even if our starting guess was wrong. We re-derive
+        ``is_bank`` from that tag and parse the rows under the correct template
+        (so line-item names/metadata match).
+
+        Step 3: if the starting template returned NO rows (the provider filtered
+        them out because the guess was wrong), re-probe the other template once.
+        If both are empty we re-raise the first miss so a failover chain still
+        sees an ``EmptyData`` and can fall through to the backup source.
+        """
+        prefer_bank = is_known_bank(psym)
+        order = (True, False) if prefer_bank else (False, True)
+        first_miss: EmptyData | None = None
+        for candidate in order:
+            try:
+                rows = self._fetch_statement_rows(psym, statement, period, is_bank=candidate, limit=limit)
+            except EmptyData as exc:
+                if first_miss is None:
+                    first_miss = exc
+                continue
+            detected = self._detect_is_bank(rows, default=candidate)
+            return self._build_statement_reports(
+                psym, statement, period, rows, is_bank=detected, limit=limit
+            )
+        raise first_miss  # both templates empty -> failover-safe EmptyData
+
+    @staticmethod
+    def _detect_is_bank(rows, *, default: bool) -> bool:
+        """Infer bank vs corporate from the dominant ``modelType`` in the rows.
+
+        VNDirect tags every statement row with its template's ``modelType``
+        (corporate 1/2/3, bank 101/102/103). We pick the most common parseable
+        tag and classify it (>= 100 -> bank). Rows with no usable tag fall back
+        to ``default`` (the template we requested), so a tag-less response keeps
+        the original behavior.
+        """
+        votes = {True: 0, False: 0}
+        for row in rows:
+            raw = row.get("modelType") if isinstance(row, dict) else None
+            if raw is None:
+                continue
+            try:
+                mt = int(float(raw))
+            except (TypeError, ValueError):
+                continue
+            votes[mt >= 100] += 1
+        if votes[True] == 0 and votes[False] == 0:
+            return default
+        return votes[True] > votes[False]
 
     # ------------------------------------------------------------------ #
     def _fetch_json(self, url, params):
@@ -117,12 +192,27 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
 
     # --- statements (LONG/tall numeric-itemCode rows -> pivot per fiscalDate) #
     def _get_statements(self, psym, statement, period, *, is_bank, limit):
+        rows = self._fetch_statement_rows(psym, statement, period, is_bank=is_bank, limit=limit)
+        return self._build_statement_reports(
+            psym, statement, period, rows, is_bank=is_bank, limit=limit
+        )
+
+    def _fetch_statement_rows(self, psym, statement, period, *, is_bank, limit):
+        """Fetch the raw long/tall statement rows for one template (one network call)."""
         model_type = self.model_type_for(statement, is_bank=is_bank)
         q = f"code:{psym}~reportType:{period.value}~modelType:{model_type}"
         params = {"q": q, "sort": "fiscalDate:desc", "size": self._row_budget(limit)}
         parsed = self._fetch_json(self.BASE_URL + self.STATEMENTS_PATH, params)
-        rows = self._rows(parsed)
+        return self._rows(parsed)
 
+    def _build_statement_reports(self, psym, statement, period, rows, *, is_bank, limit):
+        """Pivot long/tall rows into one ``FinancialReport`` per fiscalDate.
+
+        ``is_bank`` here drives the line-item name map and report metadata; the
+        auto-detect path passes the *detected* flag so names/metadata match the
+        provider's actual template regardless of the initial guess.
+        """
+        model_type = self.model_type_for(statement, is_bank=is_bank)
         # group rows by fiscalDate, preserving first-seen order (API is desc)
         order: list[str] = []
         buckets: dict[str, list[LineItem]] = {}
