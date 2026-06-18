@@ -53,9 +53,11 @@ GET https://cafef.vn/du-lieu/Ajax/PageNew/GetDataChiSoTaiChinh.ashx
 
 ## Units
 
-- **RAW VND, unscaled** for statement money lines — the SAME scale/currency as the
-  VNDirect primary, so the source declares `unit = "VND"` and the failover
-  unit-homogeneity guard accepts the VNDirect → CafeF chain. Statement
+- **Emitted as RAW VND** for statement money lines. CafeF's feed reports statement money in
+  **thousand-VND**, so the adapter multiplies each monetary line by **1000** on ingest to emit
+  raw VND — the SAME scale/currency as the VNDirect primary, so the source declares `unit = "VND"`
+  and the failover unit-homogeneity guard accepts the VNDirect → CafeF chain **without a silent
+  scale mismatch** (ratio lines are dimensionless and are NOT scaled). Statement
   `LineItem.value_unit == "VND"` and `FinancialReport.currency == "VND"`.
 - **Ratios are NOT monetary**: ratio `LineItem.value_unit == "ratio"`
   (dimensionless / per-share) and the report's `currency is None`. Ratio reports

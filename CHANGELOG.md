@@ -16,6 +16,11 @@ All notable changes to `vnfin` are documented here. The format follows
   the typed result, and each default probe targets its **primary single source** directly, so a
   `prices` probe can no longer report `ssi` healthy when a backup actually served the bar.
   ([#1](https://github.com/hungson175/vnfin/issues/1))
+- **CafeF unit/scale (`thousand-VND`)** — CafeF reports statement money in **thousand-VND** but it
+  was labeled raw VND, so the failover unit-homogeneity guard accepted VNDirect (raw VND) and CafeF
+  (thousand-VND) with matching labels but a 1000× scale mismatch. The CafeF adapter now multiplies
+  monetary statement lines by **1000** to emit raw VND (ratios unscaled), matching the VNDirect
+  primary. Verified via cross-source magnitude. ([#3](https://github.com/hungson175/vnfin/issues/3))
 
 ## [0.2.0] — 2026-06-18
 

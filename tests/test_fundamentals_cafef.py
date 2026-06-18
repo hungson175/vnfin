@@ -66,7 +66,8 @@ def _envelope(periods, count=None, success=True):
 
 
 def corp_income_two_years():
-    """Corporate annual income, two fiscal years, fabricated round raw VND."""
+    """Corporate annual income, two fiscal years — fabricated thousand-VND inputs
+    (the adapter scales x1000, so assertions check raw-VND outputs)."""
     periods = [
         _period(
             "2025",
@@ -231,7 +232,8 @@ def test_reports_sorted_newest_first():
     assert dates == ["2025-12-31", "2024-12-31"]
 
 
-def test_units_are_raw_vnd_no_scaling():
+def test_statement_money_emitted_as_raw_vnd():
+    # CafeF thousand-VND input (12e9) -> raw-VND output (12e12) after the x1000 scale
     reports = _src(corp_income_two_years()).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL
     )
