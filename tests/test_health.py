@@ -10,6 +10,8 @@ from __future__ import annotations
 import datetime as dt
 import json
 
+import pytest
+
 from vnfin._health import (
     HealthStatus,
     Probe,
