@@ -211,6 +211,47 @@ def test_unknown_quote_asset_raises_invalid():
         src_with(_payload()).get_klines("FAKE1ZZZ", Interval.D1, *WIDE)
 
 
+# --- Issue #60: hyphenated product symbols must validate the quote leg ---------
+
+@pytest.mark.parametrize("symbol", ["BTC-FAKE", "BTC-123"])
+def test_hyphenated_unknown_quote_asset_raises_invalid(symbol):
+    with pytest.raises(InvalidData):
+        src_with(_payload()).get_klines(symbol, Interval.D1, *WIDE)
+
+
+def test_hyphenated_usdt_quote_redirects_to_usd_product():
+    captured = {}
+
+    def _g(url, params, headers):
+        captured["url"] = url
+        return _payload()
+
+    h = CoinbaseCryptoSource(http_get=_g).get_klines("BTC-USDT", Interval.D1, *WIDE)
+    assert h.currency == "USD"
+    assert h.quote_asset == "USD"
+    assert "BTC-USD" in captured["url"]
+
+
+def test_hyphenated_quote_validation_runs_before_network():
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return _payload()
+
+    with pytest.raises(InvalidData):
+        CoinbaseCryptoSource(http_get=_g).get_klines("BTC-FAKE", Interval.D1, *WIDE)
+    assert called["n"] == 0
+
+
+# --- Issue #59: all-zero candles are malformed ----------------------------------
+
+def test_all_zero_candle_raises_invalid():
+    zero = [[_sec(date(2026, 6, 15)), 0, 0, 0, 0, 0]]
+    with pytest.raises(InvalidData):
+        src_with(json.dumps(zero)).get_klines("BTC-USD", Interval.D1, *WIDE)
+
+
 # --- interval / granularity mapping -----------------------------------------
 
 
@@ -325,10 +366,11 @@ def test_negative_price_raises_invalid():
         src_with(json.dumps([bad])).get_klines("BTC-USD", Interval.D1, *WIDE)
 
 
-def test_zero_prices_allowed_if_invariants_hold():
-    ok = _candle((date(2026, 6, 15), 0.0, 0.0, 0.0, 0.0, 0.0))
-    h = src_with(json.dumps([ok])).get_klines("BTC-USD", Interval.D1, *WIDE)
-    assert h.bars[0].low == 0.0
+def test_zero_prices_rejected_as_invalid():
+    # Issue #59: an all-zero candle is not a valid market observation.
+    bad = _candle((date(2026, 6, 15), 0.0, 0.0, 0.0, 0.0, 0.0))
+    with pytest.raises(InvalidData):
+        src_with(json.dumps([bad])).get_klines("BTC-USD", Interval.D1, *WIDE)
 
 
 def test_ohlc_invariant_violation_raises_invalid():

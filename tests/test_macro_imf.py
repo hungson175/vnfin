@@ -120,6 +120,21 @@ def test_inflation_maps_to_pcpipch():
     assert captured["url"].endswith("/PCPIPCH/ZZZ")
 
 
+# --- Issue #61: out-of-range numeric years must raise InvalidData -----------------
+
+@pytest.mark.parametrize("bad_year", ["0", "10000", "-1", "-2023"])
+def test_out_of_range_year_raises_invalid(bad_year):
+    payload = imf_success(obs={bad_year: 1.23})
+    with pytest.raises(InvalidData):
+        _src(payload).get_indicator(COUNTRY, MacroIndicator.GDP_GROWTH)
+
+
+def test_valid_boundary_year_9999_accepted():
+    payload = imf_success(obs={"9999": 1.23})
+    res = _src(payload).get_indicator(COUNTRY, MacroIndicator.GDP_GROWTH)
+    assert res.points[0][0].year == 9999
+
+
 # --- empties ---------------------------------------------------------------
 
 def test_country_absent_raises_empty():

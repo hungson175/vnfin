@@ -270,11 +270,11 @@ def test_negative_open_price_raises_invalid():
         src_with(json.dumps([bad])).get_klines("BTCUSDT", Interval.D1, *WIDE)
 
 
-def test_zero_prices_allowed_if_invariants_hold():
-    # zero is not negative; an all-zero candle is degenerate but not malformed-negative.
-    ok = _kline((_ms(date(2026, 6, 15)), "0.00", "0.00", "0.00", "0.00", "0.0"))
-    h = src_with(json.dumps([ok])).get_klines("BTCUSDT", Interval.D1, *WIDE)
-    assert h.bars[0].low == 0.0
+def test_zero_prices_rejected_as_invalid():
+    # Issue #59: an all-zero candle is not a valid market observation.
+    bad = _kline((_ms(date(2026, 6, 15)), "0.00", "0.00", "0.00", "0.00", "0.0"))
+    with pytest.raises(InvalidData):
+        src_with(json.dumps([bad])).get_klines("BTCUSDT", Interval.D1, *WIDE)
 
 
 def test_ohlc_invariant_violation_raises_invalid():

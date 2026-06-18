@@ -465,6 +465,29 @@ def test_is_bank_string_false_treated_as_false():
         )
 
 
+def test_vndirect_malformed_ratio_row_raises_invalid():
+    # Issue #62: malformed ratioCode/itemName fields must raise InvalidData, not
+    # leak raw TypeError/AttributeError.
+    cases = [
+        {"ratioCode": ["EPS"], "itemName": "EPS"},
+        {"ratioCode": {"x": "EPS"}, "itemName": "EPS"},
+        {"ratioCode": 123, "itemName": None},
+        {"ratioCode": "PE", "itemName": ["PE"]},
+    ]
+    for overrides in cases:
+        row = {
+            "code": "TESTCO",
+            "reportDate": "2025-12-31",
+            "value": 1.0,
+            **overrides,
+        }
+        src = VNDirectFundamentalSource(
+            http_get=lambda *a, row=row: json.dumps({"data": [row]})
+        )
+        with pytest.raises(InvalidData):
+            src.get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+
+
 def test_get_financials_function_auto_detects_without_is_bank():
     """The public get_financials() auto-detects a bank with no is_bank arg."""
     reports = get_financials(

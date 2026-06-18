@@ -174,7 +174,13 @@ class IMFDataMapperSource(HttpDataSource):
                 raise InvalidData(f"{self.NAME}: malformed observation for {code}") from exc
             if not math.isfinite(value):
                 raise InvalidData(f"{self.NAME}: non-finite value for {code} at {year}")
-            points.append((date(year, 1, 1), value))
+            try:
+                d = date(year, 1, 1)
+            except ValueError as exc:
+                # Issue #61: out-of-range years must raise InvalidData, not leak
+                # raw ValueError from the date constructor.
+                raise InvalidData(f"{self.NAME}: invalid year {year} for {code}") from exc
+            points.append((d, value))
         points.sort(key=lambda p: p[0])
         return points
 

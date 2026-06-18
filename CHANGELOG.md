@@ -95,6 +95,22 @@ All notable changes to `vnfin` are documented here. The format follows
 - **Stooq OHLC validation** — `StooqGoldSource` now validates the full OHLC row (numeric, positive,
   self-consistent high/low/open/close) and rejects malformed rows as `InvalidData`.
   ([#53](https://github.com/hungson175/vnfin/issues/53))
+- **VNDirect ratio row strictness** — `VNDirectFundamentalSource._get_ratios()` now validates that
+  `ratioCode` is a non-empty string and `itemName` is a string or `None`, raising `InvalidData` for
+  malformed provider rows instead of leaking raw `TypeError`/`AttributeError`. ([#62](https://github.com/hungson175/vnfin/issues/62))
+- **IMF year-range validation** — `IMFDataMapperSource` now rejects out-of-range numeric years with
+  `InvalidData` instead of leaking raw `ValueError`. ([#61](https://github.com/hungson175/vnfin/issues/61))
+- **Coinbase hyphenated quote validation** — `CoinbaseCryptoSource.parse_symbol()` now validates the
+  quote leg of hyphenated products against the recognized quote-asset set; unknown quote legs raise
+  `InvalidData` before any request. ([#60](https://github.com/hungson175/vnfin/issues/60))
+- **Crypto zero-price rejection** — `BinanceCryptoSource` and `CoinbaseCryptoSource` now reject
+  zero-price OHLC candles as `InvalidData`; volume may still be zero. ([#59](https://github.com/hungson175/vnfin/issues/59))
+- **GoldApi symbol validation** — `GoldApiSource` now validates `symbol` as a non-empty string in the
+  constructor, raising `VnfinError` for `None`, non-string, empty, or whitespace-only values.
+  ([#52](https://github.com/hungson175/vnfin/issues/52))
+- **FRED application-error envelope detection** — `FREDMacroSource` now detects FRED error envelopes
+  (`error_code` / `error_message`) and raises `InvalidData` instead of parsing them as data or
+  treating them as empty. ([#51](https://github.com/hungson175/vnfin/issues/51))
 
 ## [0.2.0] — 2026-06-18
 

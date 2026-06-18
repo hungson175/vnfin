@@ -454,6 +454,31 @@ def test_goldapi_history_not_supported():
         s.get_history(date(2026, 6, 1), date(2026, 6, 17))
 
 
+# --- Issue #52: GoldApiSource symbol input validation -------------------------
+
+@pytest.mark.parametrize("bad_symbol", [None, 123, b"XAU", "", "   "])
+def test_goldapi_invalid_symbol_raises_vnfin_error(bad_symbol):
+    with pytest.raises(VnfinError):
+        GoldApiSource(http_get=_static_get(_goldapi_json()), symbol=bad_symbol)
+
+
+def test_goldapi_symbol_is_normalized_uppercase():
+    s = GoldApiSource(http_get=_static_get(_goldapi_json()), symbol="  xau  ")
+    assert s.symbol == "XAU"
+
+
+def test_goldapi_invalid_symbol_does_not_call_network():
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None):
+        called["n"] += 1
+        return _goldapi_json()
+
+    with pytest.raises(VnfinError):
+        GoldApiSource(http_get=_g, symbol="")
+    assert called["n"] == 0
+
+
 # --------------------------------------------------------------------------- #
 # currency-api (world XAU/USD DAILY HISTORY, invert usd.xau)                  #
 # --------------------------------------------------------------------------- #

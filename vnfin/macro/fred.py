@@ -112,6 +112,14 @@ class FREDMacroSource(HttpDataSource):
 
         data = self._request_json(url, params=params, headers=self._headers())
 
+        # Issue #51: FRED application-level error envelopes (error_code/error_message)
+        # must not be confused with no-data or parsed as successful observations.
+        if isinstance(data, dict) and ("error_code" in data or "error_message" in data):
+            raise InvalidData(
+                f"{self.NAME}: provider error "
+                f"code={data.get('error_code')!r} message={data.get('error_message')!r}"
+            )
+
         units, points = self._build_points(data, sid)
         if not points:
             raise EmptyData(f"{self.NAME}: no observations for {sid}")

@@ -301,11 +301,17 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             rd = row.get("reportDate")
             if not rd:
                 raise InvalidData(f"{self.name}: ratio row missing reportDate")
+            # Issue #62: ratioCode and itemName must be strings; non-string values
+            # leak raw TypeError/AttributeError and must be caught here.
             ratio_code = row.get("ratioCode")
-            if not ratio_code:
-                raise InvalidData(f"{self.name}: ratio row missing ratioCode")
+            if not isinstance(ratio_code, str) or not ratio_code.strip():
+                raise InvalidData(f"{self.name}: ratio row missing or malformed ratioCode")
+            ratio_code = ratio_code.strip()
+            raw_name = row.get("itemName")
+            if raw_name is not None and not isinstance(raw_name, str):
+                raise InvalidData(f"{self.name}: ratio row malformed itemName")
             value = self._num(row.get("value"))
-            name = (row.get("itemName") or ratio_code).strip()
+            name = (raw_name or ratio_code).strip()
             if rd not in buckets:
                 buckets[rd] = []
                 seen[rd] = set()

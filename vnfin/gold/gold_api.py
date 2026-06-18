@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData
+from ..exceptions import EmptyData, InvalidData, VnfinError
 from .base import GoldSource
 from .models import GoldQuote
 
@@ -31,6 +31,10 @@ class GoldApiSource(GoldSource):
 
     def __init__(self, http_get=None, timeout: float = 25.0, symbol: str = "XAU"):
         super().__init__(http_get=http_get, timeout=timeout)
+        # Issue #52: validate symbol before any provider call; reject non-string,
+        # empty, or whitespace-only values with a stable VnfinError.
+        if not isinstance(symbol, str) or not symbol.strip():
+            raise VnfinError(f"gold-api: symbol must be a non-empty string, got {symbol!r}")
         self.symbol = symbol.strip().upper()
 
     def get_quotes(self) -> tuple[GoldQuote, ...]:

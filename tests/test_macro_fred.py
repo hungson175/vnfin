@@ -238,6 +238,21 @@ def test_valid_date_bounds_accepted():
     assert captured["params"]["observation_end"] == "2024-12-31"
 
 
+# --- Issue #51: FRED application error envelopes must not parse as data ---------
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"error_code": 400, "error_message": "Bad Request"},
+        {"error_code": 400, "error_message": "Bad Request", "observations": []},
+        {"error_code": 400, "error_message": "Bad Request", "observations": [{"date": "2024-01-01", "value": "1"}]},
+    ],
+)
+def test_application_error_envelope_raises_invalid(payload):
+    with pytest.raises(InvalidData):
+        FREDMacroSource(api_key="KEY", http_get=_static(json.dumps(payload))).get_series("FAKE")
+
+
 # --- Issue #58: api_key must be a non-empty string after stripping ----------------
 
 @pytest.mark.parametrize("bad_key", ["   ", "\t\n", b"abc", 123, ["k"]])

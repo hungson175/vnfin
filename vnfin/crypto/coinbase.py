@@ -147,6 +147,12 @@ class CoinbaseCryptoSource(HttpDataSource):
             base, _, quote = sym.partition("-")
             if not base or not quote:
                 raise InvalidData(f"{self.name}: malformed product symbol {sym!r}")
+            # Issue #60: hyphenated products must still use a recognized quote asset,
+            # otherwise the currency/unit metadata is arbitrary caller input.
+            if quote not in _KNOWN_QUOTES:
+                raise InvalidData(
+                    f"{self.name}: unknown quote asset {quote!r} for product {sym!r}"
+                )
         else:
             base, quote = self._split_concatenated(sym)
         currency = "USD" if quote in _USD_STABLE_QUOTES else quote
@@ -298,8 +304,10 @@ class CoinbaseCryptoSource(HttpDataSource):
                 raise InvalidData(f"{self.name}: non-finite OHLCV at row {i}")
             if vol < 0:
                 raise InvalidData(f"{self.name}: negative volume at row {i}")
-            if any(x < 0 for x in (op, hp, lp, cp)):
-                raise InvalidData(f"{self.name}: negative price at row {i}")
+            # Issue #59: OHLC price fields must be strictly positive; zero-price candles
+            # are not valid market observations.
+            if any(x <= 0 for x in (op, hp, lp, cp)):
+                raise InvalidData(f"{self.name}: non-positive price at row {i}")
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
                 raise InvalidData(
                     f"{self.name}: OHLC invariant violated at {tm.isoformat()}"
