@@ -1,8 +1,9 @@
-"""Contract test for the AI-facing docs + skill (docs/ai-usage.md, llms.txt, skills/vnfin/).
+"""Contract tests for the published documentation.
 
-The AI documentation and the installable skill promise specific facade verbs, signatures, and
-invariants. If the code drifts from those promises, an AI following the docs breaks. This test
-pins the documented public surface OFFLINE (no network) so the docs/skill can't silently rot.
+The README is the human entry point; docs/index.md fans out into progressive-disclosure
+tutorial/how-to/reference pages; AI docs are a secondary lane. These tests also pin the
+documented facade verbs, signatures, and invariants OFFLINE (no network) so docs/skill examples
+cannot silently rot.
 
 It is deliberately about the *documented* contract (a superset overlaps the public-API snapshot
 in test_public_api_surface.py, but here the assertions mirror the exact examples the docs show).
@@ -10,12 +11,71 @@ in test_public_api_surface.py, but here the assertions mirror the exact examples
 from __future__ import annotations
 
 import inspect
+import pathlib
 
 import vnfin
 import vnfin.crypto as crypto
 import vnfin.fx as fx
 import vnfin.macro as macro
 from vnfin import Interval
+
+
+REPO = pathlib.Path(__file__).resolve().parents[1]
+
+
+def _read(path: str) -> str:
+    return (REPO / path).read_text(encoding="utf-8")
+
+
+def test_readme_is_human_first_progressive_entrypoint():
+    readme = _read("README.md")
+    assert "Start here" in readme
+    assert "docs/getting-started.md" in readme
+    assert "docs/index.md" in readme
+    assert "Common jobs" in readme
+
+    # AI material must be discoverable, but not presented before the human path.
+    assert readme.index("Start here") < readme.index("Using an AI agent?")
+    assert "docs/ai-usage.md" in readme
+
+
+def test_docs_index_has_progressive_disclosure_sections():
+    index = _read("docs/index.md")
+    for heading in (
+        "## Recommended path",
+        "## Tutorials",
+        "## How-to guides",
+        "## Reference",
+        "## For AI agents",
+        "## Maintainer-only context",
+    ):
+        assert heading in index
+
+    for path in (
+        "getting-started.md",
+        "tutorials/stock-prices.md",
+        "tutorials/fundamentals.md",
+        "tutorials/funds-and-indices.md",
+        "tutorials/macro-and-fx.md",
+        "tutorials/gold-and-crypto.md",
+        "how-to/pandas-dataframes.md",
+        "how-to/errors.md",
+        "how-to/cache-retry.md",
+        "how-to/byok-fred.md",
+        "how-to/live-tests.md",
+        "reference/index.md",
+    ):
+        assert path in index
+        assert (REPO / "docs" / path).exists(), path
+
+
+def test_llms_indexes_human_docs_before_ai_agent_material():
+    llms = _read("llms.txt")
+    assert "## Human documentation path" in llms
+    assert "## AI-agent material" in llms
+    assert llms.index("## Human documentation path") < llms.index("## AI-agent material")
+    assert "docs/tutorials/stock-prices.md" in llms
+    assert "docs/how-to/errors.md" in llms
 
 
 def test_rule2_client_and_source_per_domain_with_gold_exception():

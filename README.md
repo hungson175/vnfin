@@ -1,139 +1,148 @@
 # vnfin
 
-**Clean-room, open-source Python library for Vietnam financial-market data.**
+**Clean-room Python library for Vietnam financial-market data.**
 
-`vnfin` gives long-term investors, macro analysts, and developers a stable, typed, and
-**no-key-out-of-the-box** API for Vietnamese stocks, funds, indices, gold, FX, macro indicators,
-and major crypto — with multi-source **failover** so a single provider outage doesn't break you.
+`vnfin` is for investors, analysts, and developers who want one small Python package for
+Vietnam-related market data: stocks, fundamentals, mutual funds, indices, gold, FX, macro
+indicators, and major crypto. It is **no-key-first**, returns **typed objects with explicit
+units**, and uses source failover where a clean same-unit backup exists.
 
-- ✅ **No API key required** for the default path of every domain. Optional **bring-your-own-key (BYOK)** upgrades are read from env vars and are *never* bundled.
-- ✅ **Typed contracts** (frozen dataclasses) with explicit **units/currency** on every result — no guessing VND vs thousand-VND vs points.
-- ✅ **Failover redundancy** — *where a clean, no-auth, same-unit backup exists*, a domain chains primary + backup through one generic client with a **unit-homogeneity guard** (it cannot silently mix scales). Carve-outs: `funds` is single-source (Fmarket); `gold` uses separate VN/world adapters (world has its own failover client, VN ships two spot adapters with a parity test).
-- ✅ **Clean-room** — built only from providers' own endpoints and public protocols; runtime-fetch only, no bundled market data.
-- ✅ **750+ offline tests** (94% coverage), synthetic fixtures only; real cross-source checks live under `live_tests/`.
+```bash
+pip install git+https://github.com/hungson175/vnfin.git
+```
 
-> ⚠️ **Data use:** `vnfin` is an API *client*. Data fetched is for personal/internal research.
-> Redistributing raw provider data may require the provider's/exchange's license — see each
-> source's terms and `docs/units.md` / `docs/sources/`.
+> `vnfin` is an API client. Fetched data is for personal/internal research unless you have the
+> provider's redistribution license. Code is Apache-2.0; provider data remains provider data.
+
+## Start here
+
+If you are new, read in this order:
+
+1. **This README** — install, first examples, and which docs to read next.
+2. **[Getting started](docs/getting-started.md)** — the 10-minute walkthrough: install, first
+   stock price, first financial statement, DataFrame output, errors.
+3. **[Tutorials](docs/index.md#tutorials)** — task-based guides for stocks, fundamentals,
+   funds/indices, macro/FX, gold/crypto.
+4. **[How-to guides](docs/index.md#how-to-guides)** — caching/retry, pandas, BYOK FRED,
+   live tests, errors.
+5. **[Reference](docs/index.md#reference)** — public API, units, source provenance, stability.
+
+Need an overview of all docs? Go to **[docs/index.md](docs/index.md)**.
+
+Using an AI agent? See the separate **[AI usage guide](docs/ai-usage.md)**, **[llms.txt](llms.txt)**,
+or **[skills/vnfin](skills/vnfin/SKILL.md)**. Human docs are the primary path above.
 
 ## Install
 
-**One line, no clone** (install straight from GitHub):
+Install directly from GitHub:
 
 ```bash
-pip install git+https://github.com/hungson175/vnfin.git                      # core (httpx only)
-pip install "vnfin[pandas] @ git+https://github.com/hungson175/vnfin.git"     # + pandas (.to_dataframe())
+pip install git+https://github.com/hungson175/vnfin.git
 ```
 
-**From a clone** (for development / offline):
+Install with pandas support for `.to_dataframe()`:
 
 ```bash
-git clone https://github.com/hungson175/vnfin.git && cd vnfin
-pip install -e .            # core            (or:  pip install -e ".[pandas]")
+pip install "vnfin[pandas] @ git+https://github.com/hungson175/vnfin.git"
 ```
 
-Requires Python ≥ 3.10. **No API key needed** for the default path of any domain.
+Install from a clone for local development:
 
-> **Using vnfin from an AI agent?** Point it at [`docs/ai-usage.md`](docs/ai-usage.md) (a
-> comprehensive, copy-paste, progressive-disclosure reference) or install the
-> [`skills/vnfin/`](skills/vnfin/SKILL.md) skill. The repo root [`llms.txt`](llms.txt) indexes both.
+```bash
+git clone https://github.com/hungson175/vnfin.git
+cd vnfin
+pip install -e ".[pandas]"
+```
 
-## Quickstart
+Requires Python 3.10 or newer. The default path of every domain works without an API key.
+
+## 3-minute quickstart
 
 ```python
 from datetime import date
 import vnfin
 
-# --- Daily prices (technical) — 4-broker default chain, auto-failover, prices in VND ---
-client = vnfin.default_client()                       # SSI → VNDirect → VPS → Pinetree (KIS excluded: MIXED adj.)
-h = client.get_daily("FPT", date(2026, 1, 1), date(2026, 6, 17))
-print(h.source, len(h), h.value_unit)                 # e.g. "ssi 110 VND"
-df = h.to_dataframe()                                  # pandas, metadata in df.attrs
+# Daily stock prices: VND OHLCV bars, with broker failover.
+prices = vnfin.prices.history("FPT", date(2024, 1, 1), date(2024, 6, 30))
+print(prices.source, prices.value_unit, prices.bars[-1].close)
 
-# --- Fundamentals (long-term valuation) — VNDirect → CafeF failover ---
+# Annual financial statement: raw VND line items.
 reports = vnfin.fundamentals.get_financials("FPT", "income", "annual")
+latest = reports[0]
+print(latest.fiscal_date, latest.currency, len(latest.items))
 
-# --- Funds & indices ---
-funds = vnfin.funds.source().list_funds(asset_type="STOCK")
-vni = vnfin.indices.index_history("VNINDEX", date(2026, 1, 1), date(2026, 6, 17))  # points
+# FX: VND per 1 USD. Reuse one client when fetching multiple currencies.
+fx = vnfin.fx.client()
+print(fx.get_rate("USD").rate)
 
-# --- Macro (no key; covers Vietnam) — World Bank → IMF DataMapper → DBnomics failover ---
-cpi = vnfin.macro.client().get_indicator("VNM", vnfin.macro.MacroIndicator.CPI)
-# (vnfin.macro.source() is the World Bank primary alone, with raw indicator codes)
-
-# --- Gold & crypto ---
-gold = vnfin.gold.world().get_history(date(2026, 1, 1), date(2026, 6, 17))          # USD/oz
-btc = vnfin.crypto.client().get_klines("BTCUSDT", vnfin.Interval.D1,
-                                       date(2026, 1, 1), date(2026, 6, 17))          # USD
-
-# --- FX (no key; daily/current) — open.er-api → Vietcombank failover ---
-fx = vnfin.fx.client()                   # reuse ONE client to share the daily response cache
-usdvnd = fx.get_rate("USD")              # FXRate: rate = VND per 1 USD (e.g. ~26,000)
-eurvnd = fx.get_rate("EUR")              # cross-rate vs VND (same cached fetch)
+# Macro: no-key Vietnam CPI/GDP/etc. from public macro sources.
+cpi = vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.CPI)
+print(cpi.unit, cpi.latest())
 ```
 
-## Domains & sources
+## Common jobs
 
-Each **standard** domain exposes `client()` (the failover chain) and `source()` (the
-primary single adapter). **`gold` is the exception** — VN VND/lượng and world USD/oz are
-different unit families, so gold has no single `client()`; use `vn()` / `world()` /
-`source(provider)` and the world-only `default_world_gold_client()`.
+| I want to... | Start with |
+|--------------|------------|
+| Fetch daily stock prices and convert to pandas | [Tutorial: stock prices](docs/tutorials/stock-prices.md) |
+| Read financial statements and ratios | [Tutorial: fundamentals](docs/tutorials/fundamentals.md) |
+| List mutual funds, NAV, index levels, constituents | [Tutorial: funds and indices](docs/tutorials/funds-and-indices.md) |
+| Fetch USD/VND, EUR/VND, GDP, CPI, inflation | [Tutorial: macro and FX](docs/tutorials/macro-and-fx.md) |
+| Fetch domestic/world gold or BTC/ETH OHLCV | [Tutorial: gold and crypto](docs/tutorials/gold-and-crypto.md) |
+| Understand VND vs thousand-VND vs points | [Units reference](docs/units.md) |
+| Handle provider outages and exceptions | [How to handle errors](docs/how-to/errors.md) |
+| Use pandas DataFrames | [How to use DataFrames](docs/how-to/pandas-dataframes.md) |
+| Run real network checks | [How to run live tests](docs/how-to/live-tests.md) |
 
-| Domain | Default (no-key) chain | Unit | Optional BYOK |
-|--------|------------------------|------|---------------|
-| Prices | SSI → VNDirect → VPS → Pinetree (KIS excluded: MIXED adj.) | VND | — |
-| Indices | VPS → SSI → VNDirect | points | — |
-| Fundamentals | VNDirect `api-finfo` → CafeF | raw VND | — |
-| Funds | Fmarket (single-source) | VND/unit | — |
-| Gold (VN) | **BTMC and PNJ — two separate spot adapters** (no runtime failover; live cross-source parity test) | VND/lượng | — |
-| Gold (world) | currency-api (Stooq opt-in) — failover via `default_world_gold_client()` | USD/oz | — |
-| Crypto | Binance → Coinbase | USD | — |
-| FX | open.er-api → Vietcombank | VND per 1 unit (e.g. VND per 1 USD) | — |
-| Macro | World Bank → IMF DataMapper → DBnomics | per-indicator | FRED (opt-in) |
+## Domains at a glance
 
-### Bring-your-own-key (optional)
+Most domains expose two factories:
 
-The default path needs no key. The one optional keyed macro source is **FRED** — set your **own**
-free key in the environment (`vnfin` never ships or shares a key):
+- `vnfin.<domain>.client()` — recommended failover client.
+- `vnfin.<domain>.source()` — primary single-source adapter.
 
-```bash
-export FRED_API_KEY=...   # FRED official API (never scraped); opt-in, not in the default chain
-```
+`gold` is the deliberate exception because Vietnam domestic gold (`VND/lượng`) and world gold
+(`USD/oz`) are different unit families; use `vnfin.gold.vn()` or `vnfin.gold.world()`.
 
-Missing key ⇒ `FREDMacroSource` is simply skipped; the no-key World Bank → IMF → DBnomics chain
-still serves you. (Gold also accepts an optional `VNFIN_BTMC_WIDGET_KEY` to override a public token.)
+| Domain | Main entry | Default no-key sources | Canonical unit |
+|--------|------------|------------------------|----------------|
+| Stocks | `vnfin.prices.history()` / `vnfin.prices.client()` | SSI → VNDirect → VPS → Pinetree | VND |
+| Fundamentals | `vnfin.fundamentals.get_financials()` | VNDirect → CafeF | raw VND; ratios per line |
+| Funds | `vnfin.funds.source()` | Fmarket | VND/unit |
+| Indices | `vnfin.indices.index_history()` | VPS → SSI → VNDirect | points |
+| FX | `vnfin.fx.get_rate()` / `vnfin.fx.client()` | open.er-api → Vietcombank | VND per 1 base |
+| Macro | `vnfin.macro.get_indicator()` | World Bank → IMF → DBnomics | per indicator |
+| Gold | `vnfin.gold.vn()` / `vnfin.gold.world()` | BTMC/PNJ; CurrencyApi | VND/lượng; USD/oz |
+| Crypto | `vnfin.crypto.client().get_klines()` | Binance → Coinbase | USD |
 
-## Design
+For exact public APIs, see [docs/api.md](docs/api.md). For unit rules, see
+[docs/units.md](docs/units.md).
 
-Ports-and-adapters: a typed result per domain, one adapter per source, and a generic
-`FailoverClient` (sequential, ≤3 attempts, per-source diagnostics, unit-homogeneity guard).
-See `docs/api.md` (facade), `docs/units.md` (canonical units), `docs/design/` and `docs/sources/`.
+## Keys, failover, and data safety
 
-## Testing
+- **No key by default.** The optional keyed source is FRED for macro (`FRED_API_KEY`), and it is
+  excluded from the default chain. Gold also accepts `VNFIN_BTMC_WIDGET_KEY` to override a public
+  token.
+- **Failover is bounded.** Where backups exist, clients try a small same-unit chain and reject unit
+  mismatches instead of silently mixing scales.
+- **No bundled market data.** Tests use synthetic fixtures; live checks are opt-in.
+- **Clean-room policy.** The project does not use VNStock/vnstock-derived code, docs, schemas, or
+  endpoint maps. See [docs/vnstock-blacklist.md](docs/vnstock-blacklist.md).
+
+## Development and tests
 
 ```bash
 pip install -e ".[dev]"
-pytest                                            # offline, deterministic — 0 skipped / 0 xfail
-pytest --cov=vnfin --cov-fail-under=85            # CI release gate (currently ~94%)
-VNFIN_LIVE=1 pytest live_tests/                   # real cross-source/network checks — 0 skipped, opt-in
-python scripts/diagnostics_live.py                # manual probes for host-flaky upstreams (e.g. IMF)
+pytest
+pytest --cov=vnfin --cov-fail-under=85
+VNFIN_LIVE=1 pytest live_tests/
 ```
 
-**CI release gate.** `.github/workflows/ci.yml` runs on every push and pull request
-(Python 3.10/3.11/3.12): it `pip install -e .[dev]`, then runs the **offline** suite with
-`pytest --cov=vnfin --cov-fail-under=85` — the job fails if line coverage drops below
-**85%** (the repo currently sits ~94%, so the gate guards against regressions). CI never
-sets `VNFIN_LIVE`, so the live network suite is never collected there.
+Default tests are offline and deterministic. Live tests are real network checks and are kept out of
+the default suite.
 
-`live_tests/` are real network checks (never mocked) and are kept out of the default suite;
-running them without `VNFIN_LIVE=1` fails clearly rather than skipping, and with it they pass
-with **0 skipped** (no conditional `pytest.skip`). Probes for upstreams that block this
-server's datacenter IP (e.g. IMF DataMapper returns HTTP 403 here) live in
-`scripts/diagnostics_live.py` — a manually-invoked script that is *not* collected by pytest, so
-the live suite stays reliably green here while those checks remain available on a reachable host.
+## Project status
 
-## Clean-room & license
-
-Implemented clean-room from providers' own servers and public standards. Code is licensed
-**Apache-2.0** (see `LICENSE`). Fetched data remains subject to each provider's terms
-(e.g. World Bank CC BY 4.0 — attribute "Source: World Bank").
+`vnfin` is released as GitHub-installable beta software. The public API is guarded by a snapshot
+test and documented in [docs/stability.md](docs/stability.md). See [CHANGELOG.md](CHANGELOG.md) for
+release notes and [docs/roadmap.md](docs/roadmap.md) for planned work.

@@ -1,32 +1,40 @@
 # vnfin
 
-> Clean-room, no-key, open-source Python library for Vietnam financial-market data: equity prices,
-> fundamentals, mutual funds, indices, gold, FX, crypto, and macro indicators. Results are typed
-> with explicit units; most domains use multi-source failover where a clean same-unit backup exists
-> (funds is single-source; gold ships separate VN/world adapters). No API key is needed for the
-> default path of any domain.
+Clean-room, no-key-first Python library for Vietnam financial-market data: equity prices,
+fundamentals, mutual funds, indices, gold, FX, crypto, and macro indicators. Results are typed and
+carry explicit units. Most domains use same-unit failover where clean backups exist.
 
-Install: `pip install git+https://github.com/hungson175/vnfin.git` (add `[pandas]` for `.to_dataframe()`). Python ≥ 3.10.
+Install: `pip install git+https://github.com/hungson175/vnfin.git` (add `[pandas]` for
+`.to_dataframe()`). Python >= 3.10.
 
-Five rules that apply everywhere: (1) no key needed (only optional BYOK: `FRED_API_KEY`, `VNFIN_BTMC_WIDGET_KEY`); (2) `client()` = failover chain, `source()` = single primary — except `gold`, which has no `client()` (use `vn()`/`world()`); (3) units are explicit on the typed result, read them (equities VND, indices "points", gold VND/lượng or USD/oz, fundamentals raw VND, FX "VND per 1 base"); (4) `start`/`end` are required for history and validated before any network call; (5) `.to_dataframe()` needs the optional `pandas` extra.
+## Human documentation path
 
-## Docs
+- [README](README.md): primary human entry point — install, quickstart, common jobs.
+- [Docs index](docs/index.md): progressive-disclosure docs home.
+- [Getting started](docs/getting-started.md): 10-minute walkthrough.
+- Tutorials: [stock prices](docs/tutorials/stock-prices.md),
+  [fundamentals](docs/tutorials/fundamentals.md),
+  [funds and indices](docs/tutorials/funds-and-indices.md),
+  [macro and FX](docs/tutorials/macro-and-fx.md),
+  [gold and crypto](docs/tutorials/gold-and-crypto.md).
+- How-to: [pandas DataFrames](docs/how-to/pandas-dataframes.md),
+  [errors](docs/how-to/errors.md), [cache/retry](docs/how-to/cache-retry.md),
+  [FRED BYOK](docs/how-to/byok-fred.md), [live tests](docs/how-to/live-tests.md).
+- Reference: [public API](docs/api.md), [units](docs/units.md),
+  [stability](docs/stability.md), [sources](docs/sources/).
 
-- [AI usage guide](docs/ai-usage.md): comprehensive, copy-paste, progressive-disclosure reference for AI agents — start here. Covers all 8 domains with verified examples, units, and gotchas.
-- [README](README.md): human getting-started, domains & sources table, install.
-- [Public API & naming standard](docs/api.md): the `client()`/`source()` facade and per-domain entry points.
-- [Units & currencies](docs/units.md): canonical unit per domain — read when a number looks off.
-- [Stability & versioning policy](docs/stability.md): SemVer guarantees, the public-API snapshot test, and the opt-in upstream health harness.
+## AI-agent material
 
-## Agent skill
+- [AI usage guide](docs/ai-usage.md): comprehensive copy-paste reference for agents.
+- [vnfin skill](skills/vnfin/SKILL.md): Anthropic-style skill with per-domain reference.
 
-- [vnfin skill](skills/vnfin/SKILL.md): an Anthropic-style skill that teaches an AI to use this library; includes a per-domain reference.
+## Non-negotiable usage rules
 
-## Sources & provenance
-
-- [docs/sources/](docs/sources/): per-source endpoints, terms, rate limits, and clean-room provenance for every adapter.
-
-## Optional
-
-- [docs/design/](docs/design/): design notes (failover/redundancy, FX sources, macro no-key + BYOK).
-- [CHANGELOG](CHANGELOG.md): release notes.
+1. No key is needed for default paths. Optional BYOK: `FRED_API_KEY`; optional gold token override:
+   `VNFIN_BTMC_WIDGET_KEY`.
+2. `client()` means failover chain and `source()` means primary single source, except `gold` (use
+   `vn()` / `world()` because units differ).
+3. Always read units from result objects: equities VND, indices points, fundamentals raw VND or
+   per-line ratio units, FX VND per 1 base, gold VND/lượng or USD/oz.
+4. History calls require valid `start`/`end` dates unless a specific API says otherwise.
+5. `.to_dataframe()` requires the pandas extra.
