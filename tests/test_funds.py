@@ -219,6 +219,38 @@ def test_list_funds_rejects_invalid_filter_before_network():
     assert called["n"] == 0
 
 
+@pytest.mark.parametrize("bad", [True, ["STOCK"], {"code": "STOCK"}, 123])
+def test_list_funds_rejects_non_string_asset_type_before_network(bad):
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None, json_body=None):
+        called["n"] += 1
+        return _fund_list_payload()
+
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_g).list_funds(asset_type=bad)
+    assert called["n"] == 0
+
+
+@pytest.mark.parametrize("bad", [["TESTCO"], {"q": "TESTCO"}, 123])
+def test_list_funds_rejects_non_string_search_before_network(bad):
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None, json_body=None):
+        called["n"] += 1
+        return _fund_list_payload()
+
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_g).list_funds(search=bad)
+    assert called["n"] == 0
+
+
+def test_list_funds_whitespace_asset_type_treated_as_absent():
+    get = _capture_get(_fund_list_payload())
+    FmarketFundSource(http_get=get).list_funds(asset_type="   ")
+    assert get.calls[0]["json_body"]["fundAssetTypes"] == []
+
+
 def test_list_funds_empty_rows_raises_empty():
     with pytest.raises(EmptyData):
         _src(_fund_list_payload(rows=[])).list_funds()
@@ -610,6 +642,20 @@ def test_holdings_invalid_product_id_rejected():
             _src("{}").holdings(bad)
 
 
+@pytest.mark.parametrize("bad", [-1, 0, "x", 3.7, None, "003", True])
+def test_holdings_invalid_product_id_no_transport(bad):
+    # Reviewer B2: every invalid product_id must short-circuit before transport.
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None, json_body=None):
+        called["n"] += 1
+        return "{}"
+
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_g).holdings(bad)
+    assert called["n"] == 0, f"transport was called for {bad!r}"
+
+
 def test_nav_history_string_numeric_product_id_no_transport():
     # Blocker: numeric strings must NOT be silently coerced and must NOT reach transport.
     called = {"n": 0}
@@ -634,6 +680,20 @@ def test_nav_history_bool_float_product_id_no_transport():
         with pytest.raises(InvalidData):
             FmarketFundSource(http_get=_g).nav_history(bad)
         assert called["n"] == 0, f"transport was called for {bad!r}"
+
+
+@pytest.mark.parametrize("bad", [-1, 0, "x", 3.7, None, "003", True])
+def test_nav_history_invalid_product_id_no_transport(bad):
+    # Reviewer B2: every invalid product_id must short-circuit before transport.
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None, json_body=None):
+        called["n"] += 1
+        return "{}"
+
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_g).nav_history(bad)
+    assert called["n"] == 0, f"transport was called for {bad!r}"
 
 
 def test_holdings_string_numeric_product_id_no_transport():

@@ -53,6 +53,14 @@ All notable changes to `vnfin` are documented here. The format follows
   to equal `"ok"` for success. `"no_data"` / `"error"` still raise `EmptyData`, but missing or
   unknown status values now raise `InvalidData` so a failover chain does not silently treat a
   drifting provider response as valid price data. ([#39](https://github.com/hungson175/vnfin/issues/39))
+- **UDF envelope/array hardening** — `UDFSource` now validates that the extracted payload is a
+  `dict` and that the OHLCV arrays are sequences before indexing/length checks. Malformed
+  envelopes, missing `data` keys, and scalar/null arrays raise `InvalidData` instead of leaking
+  raw `AttributeError`/`TypeError`/`KeyError`. ([#55](https://github.com/hungson175/vnfin/issues/55))
+- **Fmarket filter hygiene** — `FmarketFundSource.list_funds()` treats whitespace-only
+  `asset_type`/`search` as absent so the provider body never contains blank filters, and the
+  invalid `product_id` tests now assert zero transport calls for every rejected value.
+  ([#56](https://github.com/hungson175/vnfin/issues/56))
 - **SSI envelope validation** — `SSIiBoardSource` now validates the outer response envelope
   (`code == "SUCCESS"` and `status == "ok"`) before unwrapping `data`. Provider-side failures
   raise `SourceUnavailable`; malformed or missing envelope fields raise `InvalidData`.

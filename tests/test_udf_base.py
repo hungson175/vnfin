@@ -211,6 +211,50 @@ def test_missing_array_raises_invalid(synth):
         src_with(payload).get_history("FPT", Interval.D1, *WIDE)
 
 
+# --- Reviewer blockers: malformed UDF shapes must raise InvalidData, never raw ---
+
+@pytest.mark.parametrize("bad_top", ["[]", '"x"', "123"])
+def test_non_object_top_level_raises_invalid(bad_top):
+    with pytest.raises(InvalidData):
+        src_with(bad_top).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_null_t_array_raises_invalid(synth):
+    payload = json.dumps(
+        {"s": "ok", "t": None, "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": [1000]}
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_scalar_t_array_raises_invalid(synth):
+    payload = json.dumps(
+        {"s": "ok", "t": 42, "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": [1000]}
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_scalar_volume_array_raises_invalid(synth):
+    payload = json.dumps(
+        {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": 1000}
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_envelope_missing_data_raises_invalid(synth):
+    # DummyEnvelope._extract does parsed["data"]; a missing 'data' key must be
+    # converted to InvalidData instead of leaking KeyError.
+    payload = json.dumps(
+        {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": [1000]}
+    )
+    with pytest.raises(InvalidData):
+        DummyEnvelope(http_get=lambda url, params, headers: payload).get_history(
+            "FPT", Interval.D1, *WIDE
+        )
+
+
 def test_naive_datetime_input_accepted(synth):
     from datetime import datetime
 

@@ -70,7 +70,18 @@ class UDFSource(HttpDataSource, PriceSource):
         params = self._build_params(psym, resolution, frm, to)
 
         parsed = self._request_json(url, params=params, headers=self._headers())
-        data = self._extract(parsed) or {}
+        try:
+            data = self._extract(parsed)
+        except (KeyError, TypeError, ValueError, AttributeError, IndexError) as exc:
+            # Envelope extraction is adapter-specific; structural shape errors must
+            # be converted to InvalidData so failover is never exposed to raw
+            # exceptions. Library-level source errors (e.g. SourceUnavailable from
+            # an outer-envelope check) are re-raised unchanged.
+            raise InvalidData(f"{self.name}: malformed UDF envelope") from exc
+        if not isinstance(data, dict):
+            raise InvalidData(
+                f"{self.name}: UDF data is not an object, got {type(data).__name__}"
+            )
 
         # Issue #21: when the provider echoes the requested symbol in the response,
         # validate it matches what we asked for before stamping identifiers onto the
@@ -113,24 +124,36 @@ class UDFSource(HttpDataSource, PriceSource):
         )
 
     def _build_bars(self, data) -> list[PriceBar]:
+        # Required OHLC arrays must be present and list/tuple-like. Scalars,
+        # strings, bytes, and None must raise InvalidData, never a raw TypeError.
+        required = ("t", "o", "h", "l", "c")
         try:
-            t = data["t"]
-            o, h, l, c = data["o"], data["h"], data["l"], data["c"]
-            # Issue #55: a present-but-empty volume array is structurally
-            # inconsistent with non-empty OHLC arrays and must raise InvalidData.
-            # A missing volume field is an intentional provider shortcut.
-            if "v" in data:
-                v = data["v"]
-                if v is None:
-                    v = [0] * len(t)
-            else:
-                v = [0] * len(t)
+            arrays = {k: data[k] for k in required}
         except (KeyError, TypeError) as exc:
             raise InvalidData(f"{self.name}: missing UDF arrays") from exc
+        for k, v in arrays.items():
+            if not isinstance(v, (list, tuple)):
+                raise InvalidData(f"{self.name}: UDF array {k!r} is not a sequence")
 
+        t = arrays["t"]
+        o, h, l, c = arrays["o"], arrays["h"], arrays["l"], arrays["c"]
         n = len(t)
-        if not (len(o) == len(h) == len(l) == len(c) == len(v) == n):
+        if not (len(o) == len(h) == len(l) == len(c) == n):
             raise InvalidData(f"{self.name}: misaligned UDF arrays")
+
+        # Issue #55: a present-but-empty volume array is structurally inconsistent
+        # with non-empty OHLC arrays and must raise InvalidData. A missing volume
+        # field or an explicit null is an intentional provider shortcut -> zeros.
+        if "v" in data:
+            v = data["v"]
+            if v is None:
+                v = [0] * n
+            elif not isinstance(v, (list, tuple)):
+                raise InvalidData(f"{self.name}: UDF array 'v' is not a sequence")
+            elif len(v) != n:
+                raise InvalidData(f"{self.name}: misaligned UDF arrays")
+        else:
+            v = [0] * n
 
         bars: list[PriceBar] = []
         for i in range(n):

@@ -82,6 +82,10 @@ class FmarketFundSource(HttpDataSource):
             raise InvalidData("fmarket: asset_type must be a string")
         if not isinstance(search, str):
             raise InvalidData("fmarket: search must be a string")
+        # Treat whitespace-only asset_type/search as absent so the provider body
+        # never contains a blank filter.
+        asset = asset_type.strip() if asset_type else ""
+        query = search.strip() if search else ""
         body = {
             "types": ["NEW_FUND", "TRADING_FUND"],
             "sortField": "navTo6Months",
@@ -89,8 +93,8 @@ class FmarketFundSource(HttpDataSource):
             "page": 1,
             "pageSize": page_size,
             "isIpo": False,
-            "fundAssetTypes": [asset_type.strip()] if asset_type else [],
-            "searchField": search.strip() if search else "",
+            "fundAssetTypes": [asset] if asset else [],
+            "searchField": query,
         }
         parsed = self._post(_BASE_URL + _FILTER_PATH, body, who="filter")
         data = parsed.get("data") or {}
