@@ -221,6 +221,72 @@ def test_canonical_percent_indicator_negative_value_allowed():
     assert res.points[0][1] == pytest.approx(-2.5)
 
 
+# --- Issue #27: unemployment is a bounded percent rate ---------------------------
+
+
+def test_canonical_unemployment_out_of_range_raises_invalid():
+    from vnfin.macro import MacroIndicator
+
+    text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, 150.0, name="Unemployment, total (% of total labor force)",
+              code="SL.UEM.TOTL.ZS", unit="")],
+    ])
+    with pytest.raises(InvalidData):
+        WorldBankMacroSource(http_get=lambda u, p, h: text).get_canonical_indicator(
+            COUNTRY, MacroIndicator.UNEMPLOYMENT
+        )
+
+
+def test_canonical_unemployment_negative_raises_invalid():
+    from vnfin.macro import MacroIndicator
+
+    text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, -1.0, name="Unemployment, total (% of total labor force)",
+              code="SL.UEM.TOTL.ZS", unit="")],
+    ])
+    with pytest.raises(InvalidData):
+        WorldBankMacroSource(http_get=lambda u, p, h: text).get_canonical_indicator(
+            COUNTRY, MacroIndicator.UNEMPLOYMENT
+        )
+
+
+@pytest.mark.parametrize("value", [0.0, 100.0])
+def test_canonical_unemployment_boundary_values_accepted(value):
+    from vnfin.macro import MacroIndicator
+
+    text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, value, name="Unemployment, total (% of total labor force)",
+              code="SL.UEM.TOTL.ZS", unit="")],
+    ])
+    res = WorldBankMacroSource(http_get=lambda u, p, h: text).get_canonical_indicator(
+        COUNTRY, MacroIndicator.UNEMPLOYMENT
+    )
+    assert res.points[0][1] == pytest.approx(value)
+
+
+# --- Issue #20: World Bank CPI index coverage ------------------------------------
+
+
+def test_canonical_cpi_from_world_bank():
+    from vnfin.macro import MacroIndicator
+
+    text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, 126.5, name="Consumer price index (2010 = 100)",
+              code="FP.CPI.TOTL", unit="")],
+    ])
+    res = WorldBankMacroSource(http_get=lambda u, p, h: text).get_canonical_indicator(
+        COUNTRY, MacroIndicator.CPI
+    )
+    assert res.indicator_code == "FP.CPI.TOTL"
+    assert res.unit == "index"
+    assert res.currency is None
+    assert res.points[0][1] == pytest.approx(126.5)
+
+
 # ---------------------------------------------------------------------------
 # Units / metadata
 # ---------------------------------------------------------------------------

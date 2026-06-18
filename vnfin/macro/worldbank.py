@@ -51,8 +51,9 @@ _WB_MAP: dict[MacroIndicator, tuple[str, str]] = {
     MacroIndicator.GDP_GROWTH: ("NY.GDP.MKTP.KD.ZG", "%"),
     MacroIndicator.INFLATION: ("FP.CPI.TOTL.ZG", "%"),
     MacroIndicator.UNEMPLOYMENT: ("SL.UEM.TOTL.ZS", "%"),
-    # World Bank has no CPI *index* (only inflation %); CPI index is served by
-    # DBnomics. WB therefore does not map MacroIndicator.CPI.
+    # Issue #20: World Bank serves the broad cross-country CPI index level
+    # (2010=100) through FP.CPI.TOTL, so include it as a canonical CPI source.
+    MacroIndicator.CPI: ("FP.CPI.TOTL", "index"),
 }
 
 

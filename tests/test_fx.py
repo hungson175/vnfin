@@ -361,6 +361,18 @@ def test_default_client_malformed_input_raises_without_network():
     assert getter.state["n"] == 0
 
 
+# --- Issue #9: malformed FX base must raise InvalidData, not AllSourcesFailed ----
+
+
+@pytest.mark.parametrize("bad_base", ["US", "USDD", "", "   ", None, 123])
+def test_fx_client_rejects_malformed_base_before_failover(bad_base):
+    getter = _counting(_OPEN_ER)
+    c = client(http_get=getter)
+    with pytest.raises(InvalidData):
+        c.get_rate(bad_base)
+    assert getter.state["n"] == 0
+
+
 # --------------------------------------------------------------------------- #
 # Batch 8 — FX spot validation (#28 #14)
 # --------------------------------------------------------------------------- #

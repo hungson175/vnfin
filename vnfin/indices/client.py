@@ -14,8 +14,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional, Union
 
-from ..client import FailoverPriceClient
-from ..exceptions import VnfinError
+from ..client import FailoverPriceClient, _validate_symbol
+from ..exceptions import InvalidData, VnfinError
 from ..models import Interval, PriceHistory
 from .models import IndexConstituents
 from .sources import (
@@ -99,6 +99,8 @@ class IndexClient:
         or passing ``start > end``, raises a stable :class:`~vnfin.exceptions.VnfinError`
         BEFORE any source/failover call — never a raw ``TypeError``/``ValueError``.
         """
+        # Issue #9: reject empty/malformed symbols before the failover engine runs.
+        _validate_symbol(symbol)
         _validate_date_range(start, end)
         return self._client.get_history(symbol, interval, start, end)
 

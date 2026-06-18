@@ -348,3 +348,17 @@ def test_price_client_accepts_generator_without_exhausting_it(synth):
     h = client.get_daily("FAKECO", *WIDE)
     assert h.source == "a"
     assert len(client.sources) == 1
+
+
+# --- Issue #9: empty/malformed symbols must be rejected before failover -----------
+
+
+@pytest.mark.parametrize("bad_symbol", ["", "   ", "\t", None, 123])
+def test_get_history_rejects_empty_symbol_before_source_call(synth, bad_symbol):
+    from vnfin.exceptions import InvalidData
+
+    s = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s])
+    with pytest.raises(InvalidData):
+        client.get_history(bad_symbol, Interval.D1, *WIDE)
+    assert s.calls == 0

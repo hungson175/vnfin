@@ -473,3 +473,22 @@ def test_reversed_date_range_raises_invalid():
         src_with(_payload()).get_klines(
             "BTCUSDT", Interval.D1, date(2026, 6, 30), date(2026, 6, 1)
         )
+
+
+# --- Issue #9: empty/malformed symbols must be rejected before failover -----------
+
+
+@pytest.mark.parametrize("bad_symbol", ["", "   ", "\t", None, 123])
+def test_crypto_client_rejects_empty_symbol_before_source_call(bad_symbol):
+    from vnfin.crypto.client import default_crypto_client
+
+    calls = {"n": 0}
+
+    def no_http(url, params, headers):
+        calls["n"] += 1
+        return _payload()
+
+    client = default_crypto_client(http_get=no_http)
+    with pytest.raises(InvalidData):
+        client.get_klines(bad_symbol, Interval.D1, *WIDE)
+    assert calls["n"] == 0

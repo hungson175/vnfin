@@ -29,7 +29,7 @@ from .binance import BinanceCryptoSource
 from .coinbase import CoinbaseCryptoSource
 from .models import CryptoHistory
 
-from ..exceptions import AllSourcesFailed, UnsupportedInterval
+from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from ..failover import FailoverClient
 from ..models import Interval
 
@@ -45,6 +45,12 @@ def default_crypto_sources(http_get=None, timeout: float = 25.0):
 def _crypto_unit(source):
     """Declared crypto unit/currency of a source (``"USD"`` for the default chain)."""
     return getattr(source, "unit", None)
+
+
+def _validate_symbol(symbol) -> None:
+    """Issue #9: reject empty/malformed symbols before the failover engine runs."""
+    if not isinstance(symbol, str) or not symbol.strip():
+        raise InvalidData(f"crypto symbol must be a non-empty string, got {symbol!r}")
 
 
 class FailoverCryptoClient:
@@ -99,6 +105,8 @@ class FailoverCryptoClient:
     def get_klines(
         self, symbol, interval: Interval = Interval.D1, start=None, end=None
     ) -> CryptoHistory:
+        # Issue #9: reject empty/malformed symbols before the failover engine runs.
+        _validate_symbol(symbol)
         return self._engine.run(symbol, interval, start, end)
 
     @staticmethod

@@ -346,6 +346,23 @@ def test_index_history_valid_range_still_works_after_validation():
     assert len(h) == 3
 
 
+# --- Issue #9: empty/malformed symbols must be rejected before failover -----------
+
+
+@pytest.mark.parametrize("bad_symbol", ["", "   ", "\t", None, 123])
+def test_index_history_rejects_empty_symbol_before_source_call(bad_symbol):
+    calls = {"n": 0}
+
+    def no_http(url, params, headers):
+        calls["n"] += 1
+        return _bare_udf()
+
+    c = IndexClient(http_get=no_http)
+    with pytest.raises(VnfinError):
+        c.index_history(bad_symbol, date(2024, 6, 1), date(2024, 6, 30))
+    assert calls["n"] == 0
+
+
 # ========================== (b) CONSTITUENTS =================================
 
 

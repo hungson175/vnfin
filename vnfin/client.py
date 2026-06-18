@@ -57,6 +57,12 @@ def _require_date_range(start, end) -> None:
         )
 
 
+def _validate_symbol(symbol) -> None:
+    """Validate a price/index/crypto-style symbol before any source call (Issue #9)."""
+    if not isinstance(symbol, str) or not symbol.strip():
+        raise InvalidData(f"symbol must be a non-empty string, got {symbol!r}")
+
+
 def _adjustment_policy_guard(sources):
     """Issue #7: reject a price failover chain that mixes adjustment policies.
 
@@ -131,6 +137,8 @@ class FailoverPriceClient:
         return self._engine.max_attempts
 
     def get_history(self, symbol, interval: Interval = Interval.D1, start=None, end=None) -> PriceHistory:
+        # Issue #9: reject empty/malformed symbols before the failover engine runs.
+        _validate_symbol(symbol)
         _require_date_range(start, end)
         # Issue #23: validate the interval is an Interval enum before the failover
         # engine's capability probe / no_capable_factory touches it. This prevents

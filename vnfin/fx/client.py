@@ -8,11 +8,15 @@ raises so failover moves on) — the two-layer guard described in ``docs/design/
 """
 from __future__ import annotations
 
+import re
+
 from ..exceptions import InvalidData
 from ..failover import FailoverClient
 from .models import FXRate
 from .open_er_api import OpenErApiFXSource
 from .vietcombank import VietcombankFXSource
+
+_ISO4217 = re.compile(r"[A-Za-z]{3}")
 
 
 def default_fx_sources(http_get=None, timeout: float = 25.0):
@@ -40,9 +44,16 @@ def _validate(result, req_base: str, req_quote: str) -> str | None:
     return None
 
 
+def _validate_ccy(code, name="base") -> str:
+    """Issue #9: validate FX currency codes before entering failover."""
+    if not isinstance(code, str) or not _ISO4217.fullmatch(code.strip()):
+        raise InvalidData(f"fx: invalid ISO-4217 {name} currency code {code!r}")
+    return code.strip().upper()
+
+
 def _operation(src, base, quote="VND"):
-    req_base = base.strip().upper() if isinstance(base, str) else base
-    req_quote = quote.strip().upper() if isinstance(quote, str) else quote
+    req_base = _validate_ccy(base, "base")
+    req_quote = _validate_ccy(quote, "quote")
     result = src.get_rate(base, quote)
     reason = _validate(result, req_base, req_quote)
     if reason:
@@ -67,6 +78,10 @@ class FailoverFXClient:
         return self._engine.sources
 
     def get_rate(self, base: str, quote: str = "VND") -> FXRate:
+        # Issue #9: validate inputs before failover so malformed requests raise
+        # InvalidData, not AllSourcesFailed.
+        _validate_ccy(base, "base")
+        _validate_ccy(quote, "quote")
         return self._engine.run(base, quote)
 
 
