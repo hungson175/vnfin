@@ -126,8 +126,13 @@ class CurrencyApiGoldSource(GoldSource):
             fetched_at_utc=now,
         )
 
-    @staticmethod
-    def _range(start: date, end: date):
+    def _range(self, start: date, end: date):
+        # Issue #42: reject malformed/non-date bounds before any network call.
+        if not isinstance(start, (date, datetime)):
+            raise InvalidData(f"{self.name}: start must be a date or datetime, got {type(start).__name__}")
+        if not isinstance(end, (date, datetime)):
+            raise InvalidData(f"{self.name}: end must be a date or datetime, got {type(end).__name__}")
+
         def as_date(x):
             return x.date() if isinstance(x, datetime) else x
 

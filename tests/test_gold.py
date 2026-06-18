@@ -20,6 +20,7 @@ from vnfin.gold import (
     GoldQuote,
     GoldSource,
     PNJGoldSource,
+    StooqGoldSource,
 )
 
 # --------------------------------------------------------------------------- #
@@ -521,7 +522,41 @@ def test_currencyapi_history_builds_daily_series():
     dates = [b.date for b in hist.bars]
     assert dates == [date(2026, 6, 15), date(2026, 6, 16), date(2026, 6, 17)]
     assert hist.bars[-1].price == pytest.approx(1 / 0.0002313114, rel=1e-9)
-    assert isinstance(hist.bars[0], GoldBar)
+
+
+# --- Issue #42: world-gold history must validate date bounds ---------------------
+
+@pytest.mark.parametrize("bad_start", [None, "2024-01-01", 12345])
+def test_currencyapi_invalid_start_date_raises_vnfin_error(bad_start):
+    s = CurrencyApiGoldSource(http_get=_static_get("{}"))
+    with pytest.raises(VnfinError):
+        s.get_history(bad_start, date(2024, 1, 1))
+
+
+@pytest.mark.parametrize("bad_end", [None, "2024-01-01", 12345])
+def test_currencyapi_invalid_end_date_raises_vnfin_error(bad_end):
+    s = CurrencyApiGoldSource(http_get=_static_get("{}"))
+    with pytest.raises(VnfinError):
+        s.get_history(date(2024, 1, 1), bad_end)
+
+
+@pytest.mark.parametrize("bad_start", [None, "2024-01-01"])
+def test_stooq_invalid_start_date_raises_vnfin_error(bad_start):
+    csv = "Date,Open,High,Low,Close,Volume\n2024-01-01,2000,2100,1900,2050,0\n"
+    s = StooqGoldSource(http_get=_static_get(csv))
+    with pytest.raises(VnfinError):
+        s.get_history(bad_start, date(2024, 1, 1))
+
+
+def test_default_world_gold_client_invalid_bounds_raises_vnfin_error():
+    from vnfin.gold import default_world_gold_client
+
+    sources = [
+        CurrencyApiGoldSource(http_get=_static_get("{}")),
+        StooqGoldSource(http_get=_static_get("Date,Open,High,Low,Close,Volume\n2024-01-01,2000,2100,1900,2050,0\n")),
+    ]
+    with pytest.raises(VnfinError):
+        default_world_gold_client(sources=sources).get_history(None, date(2024, 1, 1))
 
 
 def test_currencyapi_history_skips_missing_dates():

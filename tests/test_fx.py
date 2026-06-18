@@ -138,6 +138,55 @@ def test_vietcombank_as_of_is_utc_from_vn_local():
     assert r.as_of_utc == dt.datetime(2026, 6, 18, 8, 53, 15, tzinfo=dt.timezone.utc)
 
 
+# --- Issue #47: Vietcombank must skip the VND/VND self-rate ----------------------
+
+def test_vietcombank_skips_vnd_self_rate():
+    xml = """
+    <ExrateList>
+      <DateTime>01/02/2024 03:04:05 PM</DateTime>
+      <Exrate CurrencyCode="VND" Transfer="1" Buy="1" Sell="1"/>
+      <Exrate CurrencyCode="USD" Transfer="25000" Buy="24900" Sell="25100"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    rates = src.get_rates()
+    bases = {r.base for r in rates}
+    assert "VND" not in bases
+    assert "USD" in bases
+
+
+def test_vietcombank_get_rate_vnd_raises_empty():
+    xml = """
+    <ExrateList>
+      <DateTime>01/02/2024 03:04:05 PM</DateTime>
+      <Exrate CurrencyCode="VND" Transfer="1" Buy="1" Sell="1"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    with pytest.raises(EmptyData):
+        src.get_rate("VND")
+
+
+# --- Issue #43: OpenErApi timestamp overflow must not leak OverflowError ----------
+
+def test_open_er_api_huge_timestamp_falls_back_to_now():
+    payload = '{"result":"success","base_code":"USD","time_last_update_unix":1e30,"rates":{"USD":1,"VND":25000}}'
+    r = OpenErApiFXSource(http_get=_http(payload)).get_rate("USD")
+    assert r.as_of_utc.tzinfo is not None
+
+
+def test_open_er_api_timestamp_overflow_does_not_crash_get_rates():
+    payload = '{"result":"success","base_code":"USD","time_last_update_unix":999999999999999999999999,"rates":{"USD":1,"VND":25000,"EUR":0.9}}'
+    rates = OpenErApiFXSource(http_get=_http(payload)).get_rates()
+    assert any(r.base == "USD" for r in rates)
+
+
+def test_open_er_api_negative_timestamp_falls_back_to_now():
+    payload = '{"result":"success","base_code":"USD","time_last_update_unix":-1,"rates":{"USD":1,"VND":25000}}'
+    r = OpenErApiFXSource(http_get=_http(payload)).get_rate("USD")
+    assert r.as_of_utc.tzinfo is not None
+
+
 def test_vietcombank_malformed_xml_is_invalid():
     src = VietcombankFXSource(http_get=_http("<not-xml<<<"))
     with pytest.raises(InvalidData):

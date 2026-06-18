@@ -66,5 +66,10 @@ class OpenErApiFXSource(FXSource):
     def _as_of(payload: dict) -> datetime:
         ts = payload.get("time_last_update_unix")
         if isinstance(ts, (int, float)) and ts > 0:
-            return datetime.fromtimestamp(int(ts), tz=timezone.utc)
+            try:
+                return datetime.fromtimestamp(int(ts), tz=timezone.utc)
+            except (ValueError, OverflowError, OSError):
+                # Issue #43: an out-of-range timestamp must not crash the source;
+                # fall back to a tz-aware "now" so the rate remains usable.
+                pass
         return datetime.now(timezone.utc)

@@ -395,6 +395,21 @@ def test_whitespace_country_raises_invalid():
         _src(wb_success()).get_indicator("   ", INDICATOR, 2021, 2023)
 
 
+@pytest.mark.parametrize("bad_country", [123, True, False, b"vnm", ["VNM"], "VN/M", "US", "USAA"])
+def test_country_must_be_string_iso3_before_network(bad_country):
+    # Reviewer B1: non-string/malformed country must raise InvalidData before network.
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return wb_success()
+
+    src = WorldBankMacroSource(http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_indicator(bad_country, INDICATOR, 2021, 2023)
+    assert called["n"] == 0
+
+
 def test_empty_indicator_raises_invalid():
     with pytest.raises(InvalidData):
         _src(wb_success()).get_indicator(COUNTRY, "", 2021, 2023)
@@ -449,6 +464,95 @@ def test_bytes_indicator_code_rejected_before_network():
 def test_indicator_code_is_normalized_string():
     res = _src(wb_success()).get_indicator(COUNTRY, "  fk.test.ind.zg  ", 2021, 2023)
     assert res.indicator_code == "FK.TEST.IND.ZG"
+
+
+# --- Issue #63: out-of-range observation years must raise InvalidData -------------
+
+@pytest.mark.parametrize("bad_year", ["0", "10000", "-1"])
+def test_out_of_range_observation_year_raises_invalid(bad_year):
+    rows_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, bad_year, 1.23)],
+    ])
+    with pytest.raises(InvalidData):
+        _src(rows_text).get_indicator(COUNTRY, INDICATOR, int(bad_year), int(bad_year))
+
+
+def test_boundary_year_9999_accepted():
+    rows_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 9999, 1.23)],
+    ])
+    res = _src(rows_text).get_indicator(COUNTRY, INDICATOR, 9999, 9999)
+    assert res.points[0][0].year == 9999
+
+
+# --- Issue #46: year bounds must be integers, not floats/bools --------------------
+
+@pytest.mark.parametrize("bad_start", [2023.9, True, False, "not-a-year"])
+def test_invalid_start_year_raises_invalid(bad_start):
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator(COUNTRY, INDICATOR, bad_start, 2024)
+
+
+@pytest.mark.parametrize("bad_end", [2024.1, True, False, "not-a-year"])
+def test_invalid_end_year_raises_invalid(bad_end):
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2023, bad_end)
+
+
+def test_year_bounds_validated_before_network():
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return wb_success()
+
+    src = WorldBankMacroSource(http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_indicator(COUNTRY, INDICATOR, 2023.5, 2024)
+    assert called["n"] == 0
+
+
+def test_string_year_bounds_accepted_if_numeric():
+    captured = {"params": None}
+
+    def _g(url, params, headers):
+        captured["params"] = params
+        return wb_success()
+
+    WorldBankMacroSource(http_get=_g).get_indicator(COUNTRY, INDICATOR, "2021", "2023")
+    assert captured["params"]["date"] == "2021:2023"
+
+
+# --- Reviewer B2: request year bounds must be within datetime.date range ----------
+
+@pytest.mark.parametrize("bad_year", [0, -1, 10000])
+def test_out_of_range_request_year_raises_invalid_before_network(bad_year):
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return wb_success()
+
+    src = WorldBankMacroSource(http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_indicator(COUNTRY, INDICATOR, bad_year, bad_year)
+    assert called["n"] == 0
+
+
+@pytest.mark.parametrize("bad_year", [0, -1, 10000])
+def test_out_of_range_request_end_year_raises_invalid_before_network(bad_year):
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return wb_success()
+
+    src = WorldBankMacroSource(http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_indicator(COUNTRY, INDICATOR, 2020, bad_year)
+    assert called["n"] == 0
 
 
 # ---------------------------------------------------------------------------

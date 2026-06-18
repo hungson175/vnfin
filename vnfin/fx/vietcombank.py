@@ -40,6 +40,10 @@ class VietcombankFXSource(FXSource):
         out: list[FXRate] = []
         for node in root.iter("Exrate"):
             code = (node.get("CurrencyCode") or "").strip().upper()
+            # Issue #47: skip the provider's VND/VND self-rate (and any row whose
+            # base is the quote currency).
+            if code == self.QUOTE:
+                continue
             transfer = self._num(node.get("Transfer"))
             if not code or transfer is None or transfer <= 0:
                 continue  # no usable transfer (VND-per-unit) rate

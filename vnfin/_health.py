@@ -283,10 +283,13 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
         end = dt.date.today()
         return end - dt.timedelta(days=days), end
 
-    # Each probe targets the PRIMARY single source (source()/vn()), not the failover
-    # client, so a probe diagnoses whether THAT specific source is healthy (and its
-    # label is honest — a failover client could be served by a backup and mislabel it).
-    # Cross-source failover behaviour is validated by the live cross-source tests.
+    # Most probes target the PRIMARY single source (source()/vn()) so they diagnose
+    # whether THAT specific source is healthy. The macro probe is the exception: it
+    # intentionally exercises the canonical failover path because the bug under test
+    # was that the health probe used the wrong raw World Bank indicator code for CPI.
+    # run_probe reports the ACTUAL serving source in the result row, so the label stays
+    # honest even when failover is used. Cross-source failover behaviour is validated
+    # by the live cross-source tests.
     def _fetch_prices() -> Any:
         start, end = _recent(30)
         return vnfin.prices.source(http_get=http_get, timeout=timeout).get_history(
@@ -300,9 +303,18 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
         )
 
     def _fetch_macro() -> Any:
-        return vnfin.macro.source(http_get=http_get, timeout=timeout).get_indicator(
-            "VNM", vnfin.macro.MacroIndicator.CPI
+        # Issue #36: use the canonical macro failover path (which maps
+        # MacroIndicator.CPI to provider codes), not the bare World Bank source
+        # that would treat "CPI" as a raw WDI indicator code.
+        return vnfin.macro.get_indicator(
+            "VNM", vnfin.macro.MacroIndicator.CPI,
+            http_get=http_get, timeout=timeout,
         )
+
+    # NOTE: the macro probe intentionally exercises the multi-source failover path,
+    # so the actual serving source may be DBnomics (CPI is not mapped by World Bank
+    # in this version). The probe_id uses "canonical" rather than "worldbank" to
+    # avoid mislabelling it as a single-source probe.
 
     def _fetch_fundamentals() -> Any:
         # NB: the SOURCE.get_financials requires ENUMS (only the module-level
@@ -336,7 +348,7 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
             value_desc="BTCUSDT daily close in USD band",
         ),
         Probe(
-            domain="macro", source="worldbank", probe_id="macro/worldbank/VNM-CPI",
+            domain="macro", source="macro", probe_id="macro/canonical/VNM-CPI",
             fetch=_fetch_macro, value_check=_nonempty,
             value_desc="Vietnam CPI series non-empty",
         ),

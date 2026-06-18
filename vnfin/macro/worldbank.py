@@ -80,6 +80,20 @@ class WorldBankMacroSource(HttpDataSource):
     def normalize_country(country_iso3: str) -> str:
         return country_iso3.strip().upper()
 
+    @staticmethod
+    def _validate_country_iso3(value) -> str:
+        # Issue #32: validate before any string operation so non-string caller
+        # input raises InvalidData, not a raw AttributeError/TypeError.
+        name = WorldBankMacroSource.NAME
+        if not isinstance(value, str):
+            raise InvalidData(
+                f"{name}: country must be a 3-letter ISO3 code, got {type(value).__name__}"
+            )
+        c = value.strip().upper()
+        if not (len(c) == 3 and c.isalpha()):
+            raise InvalidData(f"{name}: country must be a 3-letter ISO3 code, got {value!r}")
+        return c
+
     # --- canonical-indicator interface (used by the macro failover chain) -- #
     def supports(self, indicator) -> bool:
         """True if World Bank maps the canonical ``indicator`` (no network call)."""
@@ -137,7 +151,7 @@ class WorldBankMacroSource(HttpDataSource):
         Raises a ``vnfin.exceptions.SourceError`` subclass on any failure so it
         composes safely with failover/orchestration like the price sources.
         """
-        country = self.normalize_country(country_iso3 or "")
+        country = self._validate_country_iso3(country_iso3)
         # Issue #57: indicator_code must be a non-empty string. Reject bytes and
         # other non-string types before any string operation to avoid leaking raw
         # AttributeError/TypeError. Normalize to uppercase WDI convention.
@@ -146,23 +160,16 @@ class WorldBankMacroSource(HttpDataSource):
         code = indicator_code.strip().upper()
         if not code:
             raise InvalidData(f"{self.NAME}: empty indicator code")
-        # Reject empty country client-side so we never build a malformed URL.
-        if not country:
-            raise InvalidData(f"{self.NAME}: empty country code")
         url = f"{self.BASE_URL}/country/{country}/indicator/{code}"
         params = {"format": "json", "per_page": self._per_page}
         if start_year is not None or end_year is not None:
-            lo = start_year if start_year is not None else end_year
-            hi = end_year if end_year is not None else start_year
-            try:
-                lo_i, hi_i = int(lo), int(hi)
-            except (TypeError, ValueError) as exc:
-                raise InvalidData(f"{self.NAME}: non-integer year range") from exc
-            if lo_i > hi_i:
+            lo = self._coerce_year(start_year, "start_year") if start_year is not None else self._coerce_year(end_year, "end_year")
+            hi = self._coerce_year(end_year, "end_year") if end_year is not None else self._coerce_year(start_year, "start_year")
+            if lo > hi:
                 raise InvalidData(
-                    f"{self.NAME}: start_year {lo_i} is after end_year {hi_i}"
+                    f"{self.NAME}: start_year {lo} is after end_year {hi}"
                 )
-            params["date"] = f"{lo_i}:{hi_i}"
+            params["date"] = f"{lo}:{hi}"
 
         text = self._request_text(url, params=params, headers=self._headers())
 
@@ -268,11 +275,40 @@ class WorldBankMacroSource(HttpDataSource):
                 raise InvalidData(f"{self.NAME}: malformed observation for {code}") from exc
             if not math.isfinite(value):
                 raise InvalidData(f"{self.NAME}: non-finite value for {code} at {year}")
+            try:
+                d = date(year, 1, 1)
+            except ValueError as exc:
+                # Issue #63: out-of-range years must raise InvalidData, not leak
+                # raw ValueError from the date constructor.
+                raise InvalidData(f"{self.NAME}: invalid year {year} for {code}") from exc
 
-            points.append((date(year, 1, 1), value))
+            points.append((d, value))
 
         points.sort(key=lambda p: p[0])
         return country_name, indicator_name, unit, points
+
+    @staticmethod
+    def _coerce_year(value, label: str) -> int:
+        """Validate a year bound: int or numeric string only; no bool/float truncation.
+
+        Rejects years that cannot be represented as ``datetime.date`` (i.e. outside
+        ``1..9999``) so impossible bounds never reach the provider.
+        """
+        name = WorldBankMacroSource.NAME
+        if isinstance(value, bool):
+            raise InvalidData(f"{name}: {label} must be an integer year, got bool")
+        if isinstance(value, int):
+            year = value
+        elif isinstance(value, str):
+            s = value.strip()
+            if not s.isdigit():
+                raise InvalidData(f"{name}: {label} must be an integer year, got {value!r}")
+            year = int(s)
+        else:
+            raise InvalidData(f"{name}: {label} must be an integer year, got {type(value).__name__}")
+        if not 1 <= year <= 9999:
+            raise InvalidData(f"{name}: {label} {year} is out of supported range 1..9999")
+        return year
 
     def _headers(self) -> dict:
         return {"User-Agent": DEFAULT_UA, "Accept": "application/json"}

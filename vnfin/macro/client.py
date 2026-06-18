@@ -129,18 +129,28 @@ class MacroClient:
     def max_attempts(self) -> int:
         return self._max_attempts
 
+    @staticmethod
+    def _validate_country_iso3(value) -> str:
+        # Issue #32: country must be a syntactically valid 3-letter ISO3 code.
+        if not isinstance(value, str):
+            raise InvalidData(
+                f"macro: country must be a 3-letter ISO3 code, got {type(value).__name__}"
+            )
+        c = value.strip().upper()
+        if not (len(c) == 3 and c.isalpha()):
+            raise InvalidData(f"macro: country must be a 3-letter ISO3 code, got {value!r}")
+        return c
+
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one canonical indicator for one country over the failover chain.
 
         Builds a per-indicator engine so the unit-homogeneity guard uses each
-        source's unit *for this indicator*. Validates inputs up front; an unknown
-        indicator raises ``ValueError`` and an empty country raises ``InvalidData``
-        from the first attempted source.
+        source's unit *for this indicator*. Validates inputs up front; unknown
+        indicators and malformed countries both raise ``InvalidData`` before any
+        source is contacted.
         """
+        country = self._validate_country_iso3(country_iso3)
         ind = normalize_indicator(indicator, _invalid_to_valueerror=False)
-        if not (country_iso3 or "").strip():
-            # Fail fast on bad caller input (failover-safe) before any source call.
-            raise InvalidData("macro: empty country code")
 
         # B6/B7: filter to sources whose declared unit == the canonical unit for
         # this indicator BEFORE building the engine. The surviving chain is
@@ -150,7 +160,7 @@ class MacroClient:
         if not sources:
             # No source can serve this indicator in the canonical unit; this is a
             # capability outcome, not a network failure -> AllSourcesFailed (no attempts).
-            raise AllSourcesFailed(f"{country_iso3}/{ind.value}", None, ())
+            raise AllSourcesFailed(f"{country}/{ind.value}", None, ())
 
         engine = FailoverClient(
             sources,
@@ -167,7 +177,7 @@ class MacroClient:
             ),
             finalize=self._finalize_for(ind),
         )
-        return engine.run(country_iso3, ind)
+        return engine.run(country, ind)
 
     @staticmethod
     def _reject_reason(series) -> str | None:

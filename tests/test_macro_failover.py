@@ -324,3 +324,32 @@ def test_unknown_indicator_raises_invalid_data():
     a = FakeMacroSource("a", PCT)
     with pytest.raises(InvalidData):
         get_indicator("ZZZ", "not_a_real_indicator", sources=[a])
+
+
+# --- Issue #32: country input must be a valid ISO3 code -------------------------
+
+@pytest.mark.parametrize("bad", ["US", "USAA", "12A", "U$D", 123, ["USA"], "", "   "])
+def test_get_indicator_rejects_invalid_country(bad):
+    a = FakeMacroSource("a", PCT)
+    with pytest.raises(InvalidData):
+        get_indicator(bad, MacroIndicator.GDP_GROWTH, sources=[a])
+
+
+def test_get_indicator_normalizes_valid_country_to_uppercase():
+    a = FakeMacroSource("a", PCT)
+    res = get_indicator("vnm", MacroIndicator.GDP_GROWTH, sources=[a])
+    assert res.country == "VNM"
+
+
+def test_country_validation_runs_before_network():
+    a = FakeMacroSource("a", PCT)
+    calls = {"n": 0}
+
+    class CountingSource(FakeMacroSource):
+        def get_indicator(self, country_iso3, indicator):
+            calls["n"] += 1
+            return super().get_indicator(country_iso3, indicator)
+
+    with pytest.raises(InvalidData):
+        get_indicator("US", MacroIndicator.GDP_GROWTH, sources=[CountingSource("a", PCT)])
+    assert calls["n"] == 0

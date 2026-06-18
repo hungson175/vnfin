@@ -195,7 +195,7 @@ def test_default_probes_constructed_without_network():
         "fundamentals/vndirect/FPT",
         "gold/btmc/spot",
         "crypto/binance/BTCUSDT",
-        "macro/worldbank/VNM-CPI",
+        "macro/canonical/VNM-CPI",
     }
     # each probe is well-formed
     for p in probes:
@@ -232,6 +232,40 @@ def test_default_fundamentals_probe_uses_enum_args_not_strings():
         pass  # args accepted; only the dummy data failed — exactly what we want
     except (AttributeError, TypeError) as exc:
         pytest.fail(f"fundamentals probe passed wrong arg types to the source: {exc!r}")
+
+
+# --- Issue #36: macro health probe must use the canonical World Bank CPI code -----
+
+def test_default_macro_probe_uses_canonical_cpi_path():
+    # Issue #36: the macro probe must go through the canonical macro failover path
+    # (which maps MacroIndicator.CPI to provider series codes), not call the raw
+    # WorldBankMacroSource.get_indicator() with the enum value "cpi" as a WDI code.
+    import json as _json
+
+    calls = []
+
+    def _g(url, params=None, headers=None, json_body=None):
+        calls.append(url)
+        # Return a non-empty synthetic DBnomics CPI series so the probe fetch does
+        # not fail on no-data before we can inspect the URL. World Bank is skipped
+        # because it does not map CPI in this version.
+        return _json.dumps({
+            "series": {"docs": [{
+                "series_code": "M.VN.PCPI_IX",
+                "period_start_day": ["2024-01-01"],
+                "period": ["2024"],
+                "value": [123.0],
+            }]}
+        })
+
+    probes = default_probes(http_get=_g)
+    mp = next(p for p in probes if p.domain == "macro")
+    try:
+        mp.fetch()
+    except Exception:
+        pass  # we only care that the wrong indicator path was NOT requested
+    assert not any("/indicator/cpi" in url for url in calls), calls
+    assert any("PCPI_IX" in url for url in calls), calls
 
 
 def test_fx_probe_is_opt_in_not_in_default():
