@@ -135,6 +135,29 @@ def test_valid_boundary_year_9999_accepted():
     assert res.points[0][0].year == 9999
 
 
+# --- Issue #61 follow-up: country input validation before network -------------
+
+@pytest.mark.parametrize("bad_country", [123, True, b"vnm", "VN/M", "V N", "VN", "USAA"])
+def test_invalid_country_raises_invalid_before_network(bad_country):
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return imf_success()
+
+    with pytest.raises(InvalidData):
+        IMFDataMapperSource(http_get=_g).get_indicator(bad_country, MacroIndicator.GDP_GROWTH)
+    assert called["n"] == 0
+
+
+# --- Issue #61 follow-up: bad indicator values must raise InvalidData ---------
+
+@pytest.mark.parametrize("bad_indicator", ["bad", 123, None])
+def test_invalid_indicator_raises_invalid(bad_indicator):
+    with pytest.raises(InvalidData):
+        _src(imf_success()).get_indicator(COUNTRY, bad_indicator)
+
+
 # --- empties ---------------------------------------------------------------
 
 def test_country_absent_raises_empty():

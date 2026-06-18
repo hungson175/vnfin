@@ -384,6 +384,21 @@ def test_empty_symbol_raises_invalid():
         src_with(_payload()).get_klines("   ", Interval.D1, *WIDE)
 
 
+# --- Issue #60 follow-up: base asset must be a clean token before network -------
+
+@pytest.mark.parametrize("symbol", ["BTC/USDT", "BT CUSDT", "BTC USDT"])
+def test_malformed_base_asset_raises_invalid_before_network(symbol):
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return _payload()
+
+    with pytest.raises(InvalidData):
+        BinanceCryptoSource(http_get=_g).get_klines(symbol, Interval.D1, *WIDE)
+    assert called["n"] == 0
+
+
 def test_dataframe_attrs_carry_quote_volume_metadata():
     df = src_with(_payload()).get_klines("BTCUSDT", Interval.D1, *WIDE).to_dataframe()
     assert df.attrs["base_asset"] == "BTC"

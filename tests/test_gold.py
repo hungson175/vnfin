@@ -480,6 +480,26 @@ def test_goldapi_invalid_symbol_does_not_call_network():
     assert called["n"] == 0
 
 
+# --- Issue #52 follow-up: only XAU/XAG are supported world spot symbols ------
+
+@pytest.mark.parametrize("bad_symbol", ["BTC", "USD", "XAU/USD", "SILVER"])
+def test_goldapi_unsupported_symbol_raises_before_network(bad_symbol):
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None):
+        called["n"] += 1
+        return _goldapi_json()
+
+    with pytest.raises(VnfinError):
+        GoldApiSource(http_get=_g, symbol=bad_symbol)
+    assert called["n"] == 0
+
+
+def test_goldapi_xag_supported():
+    s = GoldApiSource(http_get=_static_get(_goldapi_json()), symbol="  xag  ")
+    assert s.symbol == "XAG"
+
+
 # --------------------------------------------------------------------------- #
 # currency-api (world XAU/USD DAILY HISTORY, invert usd.xau)                  #
 # --------------------------------------------------------------------------- #

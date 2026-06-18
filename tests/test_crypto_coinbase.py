@@ -244,6 +244,21 @@ def test_hyphenated_quote_validation_runs_before_network():
     assert called["n"] == 0
 
 
+# --- Issue #60 follow-up: base asset must also be a clean uppercase token -------
+
+@pytest.mark.parametrize("symbol", ["BTC/USD-USD", "BT C-USD", "BTC-USDT-USD"])
+def test_malformed_base_asset_raises_invalid_before_network(symbol):
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return _payload()
+
+    with pytest.raises(InvalidData):
+        CoinbaseCryptoSource(http_get=_g).get_klines(symbol, Interval.D1, *WIDE)
+    assert called["n"] == 0
+
+
 # --- Issue #59: all-zero candles are malformed ----------------------------------
 
 def test_all_zero_candle_raises_invalid():

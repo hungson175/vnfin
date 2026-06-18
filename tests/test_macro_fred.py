@@ -253,6 +253,19 @@ def test_application_error_envelope_raises_invalid(payload):
         FREDMacroSource(api_key="KEY", http_get=_static(json.dumps(payload))).get_series("FAKE")
 
 
+def test_application_error_message_redacts_api_key():
+    # Issue #51 follow-up: provider-controlled error text must never echo the BYOK key.
+    key = "SECRET_FRED_KEY_123"
+    payload = json.dumps(
+        {"error_code": 400, "error_message": f"Bad api_key={key}"}
+    )
+    with pytest.raises(InvalidData) as exc_info:
+        FREDMacroSource(api_key=key, http_get=_static(payload)).get_series("FAKE")
+    message = str(exc_info.value)
+    assert key not in message
+    assert "***" in message or "api_key=" not in message
+
+
 # --- Issue #58: api_key must be a non-empty string after stripping ----------------
 
 @pytest.mark.parametrize("bad_key", ["   ", "\t\n", b"abc", 123, ["k"]])

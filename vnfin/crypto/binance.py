@@ -32,6 +32,7 @@ as ``EmptyData``.
 from __future__ import annotations
 
 import math
+import re
 from datetime import date, datetime, time, timezone
 
 from ..exceptions import (
@@ -51,6 +52,9 @@ _LOW = 3
 _CLOSE = 4
 _VOLUME = 5
 _MIN_FIELDS = 6  # we read indices 0..5; rows always have 12 but require at least 6
+
+# Conservative asset-token pattern: uppercase ASCII alphanumerics only.
+_ASSET_RE = re.compile(r"^[A-Z0-9]{1,20}$")
 
 # USD-stablecoin quote assets reported to callers as ``currency="USD"`` (~1:1).
 _USD_STABLE_QUOTES = ("USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDP", "DAI", "USD")
@@ -122,6 +126,14 @@ class BinanceCryptoSource(HttpDataSource):
             raise InvalidData(f"{self.name}: empty/invalid symbol {symbol!r}")
         return symbol.strip().upper()
 
+    @staticmethod
+    def _validate_asset_token(token: str, label: str, symbol: str):
+        """Reject asset tokens containing spaces, slashes, or non-alphanumeric chars."""
+        if not _ASSET_RE.match(token):
+            raise InvalidData(
+                f"binance: malformed {label} asset {token!r} in symbol {symbol!r}"
+            )
+
     def parse_symbol(self, symbol: str):
         """Split a Binance concatenated pair into ``(base, quote, currency)``.
 
@@ -135,6 +147,7 @@ class BinanceCryptoSource(HttpDataSource):
         for q in _KNOWN_QUOTES:
             if psym.endswith(q) and len(psym) > len(q):
                 base = psym[: -len(q)]
+                self._validate_asset_token(base, "base", psym)
                 currency = "USD" if q in _USD_STABLE_QUOTES else q
                 return base, q, currency
         raise InvalidData(

@@ -42,6 +42,7 @@ This adapter follows the same conventions as ``vnfin.crypto.binance``: injectabl
 from __future__ import annotations
 
 import math
+import re
 from datetime import date, datetime, time, timezone
 
 from ..exceptions import EmptyData, InvalidData, UnsupportedInterval
@@ -57,6 +58,9 @@ _OPEN = 3
 _CLOSE = 4
 _VOLUME = 5
 _MIN_FIELDS = 6
+
+# Conservative asset-token pattern: uppercase ASCII alphanumerics only.
+_ASSET_RE = re.compile(r"^[A-Z0-9]{1,20}$")
 
 # USD-stablecoin quote assets reported to callers as ``currency="USD"`` (~1:1).
 _USD_STABLE_QUOTES = ("USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDP", "DAI", "USD")
@@ -133,6 +137,14 @@ class CoinbaseCryptoSource(HttpDataSource):
             raise InvalidData(f"{self.name}: empty/invalid symbol {symbol!r}")
         return symbol.strip().upper()
 
+    @staticmethod
+    def _validate_asset_token(token: str, label: str, symbol: str):
+        """Reject asset tokens containing spaces, slashes, or non-alphanumeric chars."""
+        if not _ASSET_RE.match(token):
+            raise InvalidData(
+                f"coinbase: malformed {label} asset {token!r} in symbol {symbol!r}"
+            )
+
     def parse_symbol(self, symbol: str):
         """Resolve any input symbol to ``(base, quote, currency, product)``.
 
@@ -147,6 +159,7 @@ class CoinbaseCryptoSource(HttpDataSource):
             base, _, quote = sym.partition("-")
             if not base or not quote:
                 raise InvalidData(f"{self.name}: malformed product symbol {sym!r}")
+            self._validate_asset_token(base, "base", sym)
             # Issue #60: hyphenated products must still use a recognized quote asset,
             # otherwise the currency/unit metadata is arbitrary caller input.
             if quote not in _KNOWN_QUOTES:
@@ -155,6 +168,7 @@ class CoinbaseCryptoSource(HttpDataSource):
                 )
         else:
             base, quote = self._split_concatenated(sym)
+        self._validate_asset_token(base, "base", sym)
         currency = "USD" if quote in _USD_STABLE_QUOTES else quote
         # Quotes Coinbase does not trade natively (e.g. USDT) redirect to the BASE-USD
         # fiat product; USDC/USD/non-USD quotes keep their own native Coinbase product.

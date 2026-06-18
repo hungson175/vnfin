@@ -57,6 +57,21 @@ All notable changes to `vnfin` are documented here. The format follows
   `dict` and that the OHLCV arrays are sequences before indexing/length checks. Malformed
   envelopes, missing `data` keys, and scalar/null arrays raise `InvalidData` instead of leaking
   raw `AttributeError`/`TypeError`/`KeyError`. ([#55](https://github.com/hungson175/vnfin/issues/55))
+- **VNDirect ratio row shape safety** — ratio rows that are not JSON objects (list, `None`,
+  string, number) now raise `InvalidData` instead of leaking raw `AttributeError`.
+  ([#62](https://github.com/hungson175/vnfin/issues/62))
+- **Crypto base-asset validation** — `BinanceCryptoSource` and `CoinbaseCryptoSource` now
+  validate the base token before any network call, rejecting symbols with spaces, slashes, or
+  other non-alphanumeric characters. ([#60](https://github.com/hungson175/vnfin/issues/60))
+- **FRED BYOK key redaction** — provider error envelopes from FRED now redact the configured
+  `api_key` from `error_message` before raising `InvalidData`, preventing the BYOK secret from
+  leaking in exception text. ([#51](https://github.com/hungson175/vnfin/issues/51))
+- **IMF input validation** — `IMFDataMapperSource` now validates `country_iso3` as a 3-letter
+  alphabetic string and converts unsupported indicator values to `InvalidData` before any
+  network call. ([#61](https://github.com/hungson175/vnfin/issues/61))
+- **GoldAPI symbol whitelist** — `GoldApiSource` now restricts symbols to the supported world
+  spot tickers `XAU` and `XAG`, rejecting unsupported or malformed symbols before the provider
+  is contacted. ([#52](https://github.com/hungson175/vnfin/issues/52))
 - **Fmarket filter hygiene** — `FmarketFundSource.list_funds()` treats whitespace-only
   `asset_type`/`search` as absent so the provider body never contains blank filters, and the
   invalid `product_id` tests now assert zero transport calls for every rejected value.

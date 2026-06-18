@@ -298,6 +298,10 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         buckets: dict[str, list[LineItem]] = {}
         seen: dict[str, set] = {}
         for row in rows:
+            if not isinstance(row, dict):
+                raise InvalidData(
+                    f"{self.name}: ratio row is not an object, got {type(row).__name__}"
+                )
             rd = row.get("reportDate")
             if not rd:
                 raise InvalidData(f"{self.name}: ratio row missing reportDate")

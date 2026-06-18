@@ -66,6 +66,12 @@ class FREDMacroSource(HttpDataSource):
         key = raw.strip()
         return key if key else None
 
+    def _redact_key(self, text):
+        """Remove the configured API key from provider-controlled text."""
+        if self._api_key and isinstance(text, str):
+            return text.replace(self._api_key, "***")
+        return text
+
     @property
     def name(self) -> str:
         return self.NAME
@@ -114,10 +120,12 @@ class FREDMacroSource(HttpDataSource):
 
         # Issue #51: FRED application-level error envelopes (error_code/error_message)
         # must not be confused with no-data or parsed as successful observations.
+        # The provider-controlled error message may echo the BYOK key, so redact it.
         if isinstance(data, dict) and ("error_code" in data or "error_message" in data):
+            safe_message = self._redact_key(data.get("error_message"))
             raise InvalidData(
                 f"{self.NAME}: provider error "
-                f"code={data.get('error_code')!r} message={data.get('error_message')!r}"
+                f"code={data.get('error_code')!r} message={safe_message!r}"
             )
 
         units, points = self._build_points(data, sid)

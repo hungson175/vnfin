@@ -18,6 +18,9 @@ from .models import GoldQuote
 
 _USD_PER_OZ = "USD/oz"
 
+# Supported world spot symbols for api.gold-api.com (XAU/USD and XAG/USD).
+_GOLD_API_SYMBOLS = frozenset({"XAU", "XAG"})
+
 
 class GoldApiSource(GoldSource):
     """Live world gold (or silver) spot in USD/oz. ``symbol`` selects XAU or XAG."""
@@ -35,7 +38,12 @@ class GoldApiSource(GoldSource):
         # empty, or whitespace-only values with a stable VnfinError.
         if not isinstance(symbol, str) or not symbol.strip():
             raise VnfinError(f"gold-api: symbol must be a non-empty string, got {symbol!r}")
-        self.symbol = symbol.strip().upper()
+        normalized = symbol.strip().upper()
+        if normalized not in _GOLD_API_SYMBOLS:
+            raise VnfinError(
+                f"gold-api: unsupported symbol {symbol!r}; supported: {sorted(_GOLD_API_SYMBOLS)}"
+            )
+        self.symbol = normalized
 
     def get_quotes(self) -> tuple[GoldQuote, ...]:
         return (self.get_quote(),)

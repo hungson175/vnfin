@@ -71,6 +71,19 @@ class IMFDataMapperSource(HttpDataSource):
         return self.NAME
 
     @staticmethod
+    def _validate_country_iso3(value) -> str:
+        """Validate ``country_iso3`` before any string operation or network call."""
+        name = IMFDataMapperSource.NAME
+        if not isinstance(value, str):
+            raise InvalidData(
+                f"{name}: country must be a 3-letter ISO3 code, got {type(value).__name__}"
+            )
+        c = value.strip().upper()
+        if not (len(c) == 3 and c.isalpha()):
+            raise InvalidData(f"{name}: country must be a 3-letter ISO3 code, got {value!r}")
+        return c
+
+    @staticmethod
     def normalize_country(country_iso3: str) -> str:
         return country_iso3.strip().upper()
 
@@ -91,10 +104,12 @@ class IMFDataMapperSource(HttpDataSource):
 
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one IMF WEO indicator series for one country (annual)."""
-        ind = normalize_indicator(indicator)
-        country = self.normalize_country(country_iso3 or "")
-        if not country:
-            raise InvalidData(f"{self.NAME}: empty country code")
+        # Validate caller input before any network call or string operation.
+        country = self._validate_country_iso3(country_iso3 or "")
+        try:
+            ind = normalize_indicator(indicator)
+        except ValueError as exc:
+            raise InvalidData(f"{self.NAME}: unsupported indicator {indicator!r}") from exc
         try:
             code, unit = _IMF_MAP[ind]
         except KeyError as exc:

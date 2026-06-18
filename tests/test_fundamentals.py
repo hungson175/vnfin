@@ -488,6 +488,17 @@ def test_vndirect_malformed_ratio_row_raises_invalid():
             src.get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
 
 
+@pytest.mark.parametrize("bad_row", [[], None, "x", 123])
+def test_vndirect_non_dict_ratio_row_raises_invalid(bad_row):
+    # Issue #62 follow-up: the ratio loop must reject non-object rows before calling
+    # .get(), otherwise list/None/str/int rows leak AttributeError.
+    src = VNDirectFundamentalSource(
+        http_get=lambda *a, row=bad_row: json.dumps({"data": [row]})
+    )
+    with pytest.raises(InvalidData):
+        src.get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+
+
 def test_get_financials_function_auto_detects_without_is_bank():
     """The public get_financials() auto-detects a bank with no is_bank arg."""
     reports = get_financials(
