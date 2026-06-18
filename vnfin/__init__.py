@@ -59,7 +59,7 @@ __all__ = [
     "macro",
     "exceptions",
 ]
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 
 def default_client(max_attempts: int = 3, http_get=None, timeout: float = 25.0) -> FailoverPriceClient:
