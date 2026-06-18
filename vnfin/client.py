@@ -65,6 +65,14 @@ def _adjustment_policy_guard(sources):
     sources are unknown the chain is allowed. A mixed declared-policy chain raises
     ``InvalidData`` at construction time.
     """
+
+    def _normalize_policy(pol):
+        if isinstance(pol, AdjustmentPolicy):
+            return pol.value
+        if isinstance(pol, str) and pol.strip():
+            return pol.strip().lower()
+        return AdjustmentPolicy.UNKNOWN.value
+
     policies = set()
     for src in sources:
         pol = (
@@ -72,12 +80,12 @@ def _adjustment_policy_guard(sources):
             or getattr(src, "adjustment_policy", None)
             or AdjustmentPolicy.UNKNOWN
         )
-        if pol is not AdjustmentPolicy.UNKNOWN:
-            policies.add(pol)
+        pol_value = _normalize_policy(pol)
+        if pol_value != AdjustmentPolicy.UNKNOWN.value:
+            policies.add(pol_value)
     if len(policies) > 1:
         raise InvalidData(
-            f"price failover chain mixes adjustment policies: "
-            f"{sorted(p.value for p in policies)}"
+            f"price failover chain mixes adjustment policies: {sorted(policies)}"
         )
 
 
@@ -93,6 +101,7 @@ class FailoverPriceClient:
     """
 
     def __init__(self, sources, max_attempts: int = 3):
+        sources = list(sources)  # materialize once; guard + engine both need the list
         # Issue #7: homogenous adjustment policies before the generic engine runs.
         _adjustment_policy_guard(sources)
         self._engine = FailoverClient(

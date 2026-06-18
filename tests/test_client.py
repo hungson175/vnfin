@@ -337,3 +337,14 @@ def test_price_client_allows_homogeneous_adjustment_policies(synth):
     client = FailoverPriceClient([a, b])
     h = client.get_daily("FAKECO", *WIDE)
     assert h.source == "a"
+
+
+def test_price_client_accepts_generator_without_exhausting_it(synth):
+    from vnfin.models import AdjustmentPolicy
+
+    a = FakeSource("a", synth.make_history("a", 2))
+    a.adjustment_policy = AdjustmentPolicy.PROVIDER_ADJUSTED
+    client = FailoverPriceClient(iter([a]))
+    h = client.get_daily("FAKECO", *WIDE)
+    assert h.source == "a"
+    assert len(client.sources) == 1
