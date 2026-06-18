@@ -349,8 +349,9 @@ _WEEKDAYS = [
 ]
 
 # Backup stooq CSV that fully covers the 10-weekday window (obviously-fake numbers).
+# High must cover the rising close so OHLC invariants hold across all rows.
 _STOOQ_FULL_WINDOW_CSV = "Date,Open,High,Low,Close,Volume\n" + "".join(
-    f"{d.isoformat()},4000.0,4050.0,3990.0,{4000.0 + i*10},0\n"
+    f"{d.isoformat()},4000.0,4100.0,3990.0,{4000.0 + i*10},0\n"
     for i, d in enumerate(_WEEKDAYS)
 )
 

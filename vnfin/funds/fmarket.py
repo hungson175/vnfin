@@ -77,6 +77,11 @@ class FmarketFundSource(HttpDataSource):
             raise InvalidData("fmarket: page_size must be an integer")
         if not (1 <= page_size <= 1000):
             raise InvalidData("fmarket: page_size must be between 1 and 1000")
+        # Issue #56: caller-supplied filters must be strings (or absent).
+        if asset_type is not None and not isinstance(asset_type, str):
+            raise InvalidData("fmarket: asset_type must be a string")
+        if not isinstance(search, str):
+            raise InvalidData("fmarket: search must be a string")
         body = {
             "types": ["NEW_FUND", "TRADING_FUND"],
             "sortField": "navTo6Months",
@@ -84,8 +89,8 @@ class FmarketFundSource(HttpDataSource):
             "page": 1,
             "pageSize": page_size,
             "isIpo": False,
-            "fundAssetTypes": [asset_type] if asset_type else [],
-            "searchField": search or "",
+            "fundAssetTypes": [asset_type.strip()] if asset_type else [],
+            "searchField": search.strip() if search else "",
         }
         parsed = self._post(_BASE_URL + _FILTER_PATH, body, who="filter")
         data = parsed.get("data") or {}

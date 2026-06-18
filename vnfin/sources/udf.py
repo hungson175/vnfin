@@ -102,7 +102,15 @@ class UDFSource(HttpDataSource, PriceSource):
         try:
             t = data["t"]
             o, h, l, c = data["o"], data["h"], data["l"], data["c"]
-            v = data.get("v") or [0] * len(t)
+            # Issue #55: a present-but-empty volume array is structurally
+            # inconsistent with non-empty OHLC arrays and must raise InvalidData.
+            # A missing volume field is an intentional provider shortcut.
+            if "v" in data:
+                v = data["v"]
+                if v is None:
+                    v = [0] * len(t)
+            else:
+                v = [0] * len(t)
         except (KeyError, TypeError) as exc:
             raise InvalidData(f"{self.name}: missing UDF arrays") from exc
 

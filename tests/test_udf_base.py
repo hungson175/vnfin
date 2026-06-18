@@ -107,6 +107,40 @@ def test_misaligned_arrays_raise_invalid():
         src_with(payload).get_history("FPT", Interval.D1, *WIDE)
 
 
+# --- Issue #55: empty volume array is malformed, not a clean zero-volume bar -----
+
+def test_empty_volume_array_raises_invalid(synth):
+    payload = json.dumps(
+        {
+            "s": "ok",
+            "t": [synth.ts("2024-01-02")],
+            "o": [72.0],
+            "h": [73.0],
+            "l": [71.0],
+            "c": [72.0],
+            "v": [],
+        }
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_missing_volume_array_defaults_to_zero(synth):
+    # A missing 'v' field is an intentional provider shortcut (no volume data).
+    payload = json.dumps(
+        {
+            "s": "ok",
+            "t": [synth.ts("2024-01-02")],
+            "o": [72.0],
+            "h": [73.0],
+            "l": [71.0],
+            "c": [72.0],
+        }
+    )
+    h = src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+    assert h.bars[0].volume == 0
+
+
 def test_ohlc_invariant_violation_raises_invalid(synth):
     # low (99) > high (72.5) -> invalid
     bad = [("2024-01-02", 72.0, 72.5, 99.0, 72.3, 1000)]

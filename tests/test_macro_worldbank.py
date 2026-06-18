@@ -425,6 +425,32 @@ def test_validation_runs_before_network():
     assert called["n"] == 0
 
 
+# --- Issue #57: indicator_code must be a non-empty string -------------------------
+
+@pytest.mark.parametrize("bad_code", [123, ["NY.GDP"], {"code": "NY.GDP"}, b"NY.GDP", "", "   "])
+def test_indicator_code_must_be_non_empty_string(bad_code):
+    with pytest.raises(InvalidData):
+        _src(wb_success()).get_indicator(COUNTRY, bad_code, 2021, 2023)
+
+
+def test_bytes_indicator_code_rejected_before_network():
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return wb_success()
+
+    src = WorldBankMacroSource(http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_indicator(COUNTRY, b"NY.GDP", 2021, 2023)
+    assert called["n"] == 0
+
+
+def test_indicator_code_is_normalized_string():
+    res = _src(wb_success()).get_indicator(COUNTRY, "  fk.test.ind.zg  ", 2021, 2023)
+    assert res.indicator_code == "FK.TEST.IND.ZG"
+
+
 # ---------------------------------------------------------------------------
 # IndicatorSeries model conveniences
 # ---------------------------------------------------------------------------

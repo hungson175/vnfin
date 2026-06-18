@@ -54,7 +54,17 @@ class FREDMacroSource(HttpDataSource):
 
     def __init__(self, api_key: Optional[str] = None, http_get=None, timeout: float = 25.0):
         super().__init__(http_get=http_get, timeout=timeout)
-        self._api_key = api_key or os.environ.get("FRED_API_KEY")
+        self._api_key = self._normalize_key(api_key) or self._normalize_key(
+            os.environ.get("FRED_API_KEY")
+        )
+
+    @staticmethod
+    def _normalize_key(raw) -> str | None:
+        """Return a stripped non-empty string key, or None for missing/bad keys."""
+        if not isinstance(raw, str):
+            return None
+        key = raw.strip()
+        return key if key else None
 
     @property
     def name(self) -> str:

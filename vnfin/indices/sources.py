@@ -146,9 +146,12 @@ class IndexConstituentsSource(HttpDataSource):
         if not isinstance(parsed, dict):
             raise InvalidData(f"{self.name}: unexpected response shape")
 
+        # Issue #54: require the provider success envelope. Missing, null, or
+        # non-success codes are treated as malformed data (InvalidData), never as
+        # an implicit success.
         code = parsed.get("code")
-        if code not in (None, "SUCCESS"):
-            raise EmptyData(f"{self.name}: code={code}")
+        if code != "SUCCESS":
+            raise InvalidData(f"{self.name}: code={code}")
 
         data = parsed.get("data")
         if not data:

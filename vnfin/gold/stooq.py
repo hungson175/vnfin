@@ -77,20 +77,33 @@ class StooqGoldSource(GoldSource):
         if not rows:
             raise EmptyData(f"{self.name}: empty CSV body")
         header = [h.strip().lower() for h in rows[0]]
+        required = ("date", "open", "high", "low", "close")
         try:
             di = header.index("date")
+            oi = header.index("open")
+            hi = header.index("high")
+            li = header.index("low")
             ci = header.index("close")
         except ValueError as exc:
             raise InvalidData(
-                f"{self.name}: missing Date/Close column in header {rows[0]!r}"
+                f"{self.name}: missing one of {required} columns in header {rows[0]!r}"
             ) from exc
         bars: list[GoldBar] = []
         for row in rows[1:]:
-            if len(row) <= max(di, ci):
+            if len(row) <= max(di, oi, hi, li, ci):
                 raise InvalidData(f"{self.name}: short CSV row {row!r}")
             d = self._parse_date(row[di].strip())
-            price = self._parse_price(row[ci].strip())
-            bars.append(GoldBar(date=d, price=price))
+            # Issue #53: validate the full OHLC row so a malformed high/low range
+            # does not silently produce an untrustworthy close price.
+            op = self._parse_price(row[oi].strip(), "Open")
+            hp = self._parse_price(row[hi].strip(), "High")
+            lp = self._parse_price(row[li].strip(), "Low")
+            cp = self._parse_price(row[ci].strip(), "Close")
+            if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
+                raise InvalidData(
+                    f"{self.name}: OHLC invariant violated on {d.isoformat()}"
+                )
+            bars.append(GoldBar(date=d, price=cp))
         return bars
 
     def _parse_date(self, raw: str) -> date:
@@ -99,15 +112,15 @@ class StooqGoldSource(GoldSource):
         except (ValueError, TypeError) as exc:
             raise InvalidData(f"{self.name}: bad date {raw!r}") from exc
 
-    def _parse_price(self, raw: str) -> float:
+    def _parse_price(self, raw: str, label: str = "Close") -> float:
         if raw == "" or raw.upper() == "N/A":
-            raise InvalidData(f"{self.name}: missing Close value")
+            raise InvalidData(f"{self.name}: missing {label} value")
         try:
             price = float(raw)
         except (TypeError, ValueError) as exc:
-            raise InvalidData(f"{self.name}: malformed Close {raw!r}") from exc
+            raise InvalidData(f"{self.name}: malformed {label} {raw!r}") from exc
         if not math.isfinite(price) or price <= 0:
-            raise InvalidData(f"{self.name}: non-positive Close {raw!r}")
+            raise InvalidData(f"{self.name}: non-positive {label} {raw!r}")
         return price
 
     def get_quotes(self) -> tuple[GoldQuote, ...]:

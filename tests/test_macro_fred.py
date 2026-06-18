@@ -236,3 +236,39 @@ def test_valid_date_bounds_accepted():
     )
     assert captured["params"]["observation_start"] == "2020-01-01"
     assert captured["params"]["observation_end"] == "2024-12-31"
+
+
+# --- Issue #58: api_key must be a non-empty string after stripping ----------------
+
+@pytest.mark.parametrize("bad_key", ["   ", "\t\n", b"abc", 123, ["k"]])
+def test_non_string_or_whitespace_api_key_treated_as_missing(monkeypatch, bad_key):
+    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    src = FREDMacroSource(api_key=bad_key)
+    assert src.has_key is False
+    with pytest.raises(SourceUnavailable):
+        src.get_series("GDPC1")
+
+
+def test_whitespace_api_key_does_not_call_network(monkeypatch):
+    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    called = {"n": 0}
+
+    def _g(url, params, headers):
+        called["n"] += 1
+        return fred_success()
+
+    src = FREDMacroSource(api_key="   ", http_get=_g)
+    with pytest.raises(SourceUnavailable):
+        src.get_series("GDPC1")
+    assert called["n"] == 0
+
+
+def test_stripped_api_key_is_used():
+    captured = {"params": None}
+
+    def _g(url, params, headers):
+        captured["params"] = params
+        return fred_success()
+
+    FREDMacroSource(api_key="  secret123  ", http_get=_g).get_series("GDPC1")
+    assert captured["params"]["api_key"] == "secret123"

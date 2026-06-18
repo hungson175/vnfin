@@ -193,6 +193,32 @@ def test_list_funds_search_field_passed_as_body():
     assert body["searchField"] == "TESTCO"
 
 
+# --- Issue #56: list_funds filter values must be strings -------------------------
+
+@pytest.mark.parametrize("bad", [True, ["STOCK"], {"code": "STOCK"}, 123])
+def test_list_funds_rejects_non_string_asset_type(bad):
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_capture_get(_fund_list_payload())).list_funds(asset_type=bad)
+
+
+@pytest.mark.parametrize("bad", [["TESTCO"], {"q": "TESTCO"}, 123])
+def test_list_funds_rejects_non_string_search(bad):
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_capture_get(_fund_list_payload())).list_funds(search=bad)
+
+
+def test_list_funds_rejects_invalid_filter_before_network():
+    called = {"n": 0}
+
+    def _g(url, params=None, headers=None, json_body=None):
+        called["n"] += 1
+        return _fund_list_payload()
+
+    with pytest.raises(InvalidData):
+        FmarketFundSource(http_get=_g).list_funds(asset_type=True)
+    assert called["n"] == 0
+
+
 def test_list_funds_empty_rows_raises_empty():
     with pytest.raises(EmptyData):
         _src(_fund_list_payload(rows=[])).list_funds()

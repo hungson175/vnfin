@@ -375,9 +375,29 @@ def test_constituents_empty_data_raises_empty():
         s.get_constituents("VN30")
 
 
-def test_constituents_error_code_raises_empty():
+def test_constituents_error_code_raises_invalid():
     payload = json.dumps({"code": "ERROR", "message": "bad group", "data": None})
-    with pytest.raises(EmptyData):
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(http_get=_get(payload)).get_constituents("NOPE")
+
+
+# --- Issue #54: constituents success envelope must require code == "SUCCESS" -----
+
+def test_constituents_missing_code_raises_invalid():
+    payload = json.dumps({"message": "ok", "data": [("TESTCO", "hose")]})
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
+
+
+def test_constituents_null_code_raises_invalid():
+    payload = json.dumps({"code": None, "message": "ok", "data": [("TESTCO", "hose")]})
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
+
+
+def test_constituents_non_success_code_raises_invalid():
+    payload = json.dumps({"code": "UNAUTHORIZED", "message": "bad group", "data": None})
+    with pytest.raises(InvalidData):
         IndexConstituentsSource(http_get=_get(payload)).get_constituents("NOPE")
 
 

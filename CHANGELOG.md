@@ -77,6 +77,24 @@ All notable changes to `vnfin` are documented here. The format follows
 - **Fundamental statement `Period.UNKNOWN` guard** — Both CafeF and VNDirect adapters reject
   `Period.UNKNOWN` for income/balance/cashflow statements (it is only meaningful for ratios).
   ([#10](https://github.com/hungson175/vnfin/issues/10))
+- **FRED API-key hygiene** — `FREDMacroSource` now treats whitespace-only or non-string
+  `api_key` values as missing, keeping the source cleanly skippable and preventing bytes or
+  whitespace from being sent to the provider. ([#58](https://github.com/hungson175/vnfin/issues/58))
+- **World Bank indicator-code validation** — `WorldBankMacroSource.get_indicator()` now rejects
+  non-string `indicator_code` values (including `bytes`) with `InvalidData` before any URL is built.
+  ([#57](https://github.com/hungson175/vnfin/issues/57))
+- **Fmarket filter validation** — `FmarketFundSource.list_funds()` now rejects non-string
+  `asset_type` and `search` filter values with `InvalidData` before building the provider request.
+  ([#56](https://github.com/hungson175/vnfin/issues/56))
+- **UDF empty-volume strictness** — `UDFSource` now treats a present-but-empty `v` array as a
+  malformed response (`InvalidData`) while still allowing a missing `v` field to default to zero
+  volume. ([#55](https://github.com/hungson175/vnfin/issues/55))
+- **Index constituents envelope requirement** — `IndexConstituentsSource` now requires
+  `code == "SUCCESS"`; missing, null, or non-success codes raise `InvalidData` instead of being
+  parsed as a valid basket. ([#54](https://github.com/hungson175/vnfin/issues/54))
+- **Stooq OHLC validation** — `StooqGoldSource` now validates the full OHLC row (numeric, positive,
+  self-consistent high/low/open/close) and rejects malformed rows as `InvalidData`.
+  ([#53](https://github.com/hungson175/vnfin/issues/53))
 
 ## [0.2.0] — 2026-06-18
 

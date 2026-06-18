@@ -138,14 +138,17 @@ class WorldBankMacroSource(HttpDataSource):
         composes safely with failover/orchestration like the price sources.
         """
         country = self.normalize_country(country_iso3 or "")
-        code = (indicator_code or "").strip()
-        # Reject empty identifiers client-side so we never build a malformed URL
-        # (and never leak a raw error); these surface as InvalidData like any other
-        # bad-input failure so callers can fail over safely.
-        if not country:
-            raise InvalidData(f"{self.NAME}: empty country code")
+        # Issue #57: indicator_code must be a non-empty string. Reject bytes and
+        # other non-string types before any string operation to avoid leaking raw
+        # AttributeError/TypeError. Normalize to uppercase WDI convention.
+        if not isinstance(indicator_code, str):
+            raise InvalidData(f"{self.NAME}: indicator_code must be a non-empty string")
+        code = indicator_code.strip().upper()
         if not code:
             raise InvalidData(f"{self.NAME}: empty indicator code")
+        # Reject empty country client-side so we never build a malformed URL.
+        if not country:
+            raise InvalidData(f"{self.NAME}: empty country code")
         url = f"{self.BASE_URL}/country/{country}/indicator/{code}"
         params = {"format": "json", "per_page": self._per_page}
         if start_year is not None or end_year is not None:
