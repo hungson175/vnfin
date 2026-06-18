@@ -21,6 +21,34 @@ if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
 
+def _coerce_statement(statement) -> "StatementType":
+    """Coerce a ``StatementType`` or its string value to the enum."""
+    if isinstance(statement, StatementType):
+        return statement
+    from ..exceptions import VnfinError
+
+    try:
+        return StatementType(str(statement).strip().lower())
+    except ValueError as exc:
+        valid = ", ".join(s.value for s in StatementType)
+        raise VnfinError(
+            f"unknown statement {statement!r}; expected one of: {valid}"
+        ) from exc
+
+
+def _coerce_period(period) -> "Period":
+    """Coerce a ``Period`` or its string value to the enum."""
+    if isinstance(period, Period):
+        return period
+    from ..exceptions import VnfinError
+
+    try:
+        return Period(str(period).strip().upper())
+    except ValueError as exc:
+        valid = ", ".join(p.value for p in Period)
+        raise VnfinError(f"unknown period {period!r}; expected one of: {valid}") from exc
+
+
 class StatementType(str, Enum):
     """Which financial statement a report represents."""
 

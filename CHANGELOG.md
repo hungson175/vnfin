@@ -39,6 +39,11 @@ All notable changes to `vnfin` are documented here. The format follows
   reject empty, whitespace-only, or non-string product selectors with `VnfinError` before scanning
   the feed, instead of silently returning the first product or leaking `AttributeError`.
   ([#17](https://github.com/hungson175/vnfin/issues/17))
+- **Fundamentals string-input parity** — `vnfin.fundamentals.client().get_financials()` and
+  `vnfin.fundamentals.source().get_financials()` now accept string `statement` and `period` values
+  (e.g. `"income"`, `"annual"`) just like the top-level `get_financials()` convenience function,
+  and raise `VnfinError` for unknown strings instead of leaking `AttributeError`/`KeyError`.
+  Coercion helpers are shared across all entry points. ([#25](https://github.com/hungson175/vnfin/issues/25))
 
 ## [0.2.0] — 2026-06-18
 

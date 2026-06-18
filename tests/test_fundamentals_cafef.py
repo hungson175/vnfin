@@ -198,6 +198,32 @@ def test_implements_same_interface_and_unit():
     assert src.name == "cafef"
 
 
+# --------------------------------------------------------------------------- #
+# Regression — issue #25: source.get_financials must accept string statement and
+# period values (matches top-level get_financials behavior).
+# --------------------------------------------------------------------------- #
+def test_cafef_source_accepts_string_statement_and_period():
+    reports = _src(corp_income_two_years()).get_financials(
+        "TESTCO", "income", "annual"
+    )
+    assert reports[0].statement_type is StatementType.INCOME
+    assert reports[0].period is Period.ANNUAL
+
+
+def test_cafef_source_rejects_bad_statement_string():
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_years()).get_financials(
+            "TESTCO", "not-a-statement", "annual"
+        )
+
+
+def test_cafef_source_rejects_bad_period_string():
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_years()).get_financials(
+            "TESTCO", "income", "not-a-period"
+        )
+
+
 def test_returns_same_typed_model():
     reports = _src(corp_income_two_years()).get_financials(
         "testco", StatementType.INCOME, Period.ANNUAL

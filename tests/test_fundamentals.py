@@ -140,6 +140,32 @@ def test_period_enum_values():
 
 
 # --------------------------------------------------------------------------- #
+# Regression — issue #25: source.get_financials must accept string statement and
+# period values (matches top-level get_financials behavior).
+# --------------------------------------------------------------------------- #
+def test_source_get_financials_accepts_string_statement_and_period():
+    reports = _src(corp_income_two_periods()).get_financials(
+        "TESTCO", "income", "annual"
+    )
+    assert reports[0].statement_type is StatementType.INCOME
+    assert reports[0].period is Period.ANNUAL
+
+
+def test_source_get_financials_rejects_bad_statement_string():
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_periods()).get_financials(
+            "TESTCO", "not-a-statement", "annual"
+        )
+
+
+def test_source_get_financials_rejects_bad_period_string():
+    with pytest.raises(VnfinError):
+        _src(corp_income_two_periods()).get_financials(
+            "TESTCO", "income", "not-a-period"
+        )
+
+
+# --------------------------------------------------------------------------- #
 # Normal parse: long/tall rows pivot per fiscalDate -> one report per period
 # --------------------------------------------------------------------------- #
 def test_income_parses_into_reports_per_period():

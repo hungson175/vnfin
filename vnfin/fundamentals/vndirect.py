@@ -29,7 +29,14 @@ from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
 from .base import AUTO, FundamentalSource, is_known_bank
 from .itemcodes import item_name
-from .models import FinancialReport, LineItem, Period, StatementType
+from .models import (
+    FinancialReport,
+    LineItem,
+    Period,
+    StatementType,
+    _coerce_period,
+    _coerce_statement,
+)
 
 # Corporate (single-digit) modelType per statement; bank adds the 10x prefix.
 _CORP_MODEL = {
@@ -89,8 +96,8 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
     def get_financials(
         self,
         symbol: str,
-        statement: StatementType,
-        period: Period,
+        statement: StatementType | str,
+        period: Period | str,
         *,
         is_bank: bool | None = AUTO,
         limit: int = 8,
@@ -104,18 +111,23 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         provider's ``modelType``-filtered response — if that template returns no
         rows it transparently re-probes the other template. Callers therefore no
         longer need to know whether a ticker is a bank.
+
+        ``statement`` and ``period`` accept either the enum or its string value,
+        matching the top-level :func:`get_financials` convenience API.
         """
         psym = self._validate_symbol(symbol)
         self._validate_limit(limit)
-        if statement is StatementType.RATIOS:
+        st = _coerce_statement(statement)
+        pd = _coerce_period(period)
+        if st is StatementType.RATIOS:
             # Ratios have no modelType template; ``is_bank`` is only metadata, so
             # resolve the AUTO sentinel via the cheap heuristic (no probing).
             resolved = is_known_bank(psym) if is_bank is AUTO else bool(is_bank)
-            return self._get_ratios(psym, period, is_bank=resolved, limit=limit)
+            return self._get_ratios(psym, pd, is_bank=resolved, limit=limit)
         if is_bank is AUTO:
-            return self._get_statements_auto(psym, statement, period, limit=limit)
+            return self._get_statements_auto(psym, st, pd, limit=limit)
         return self._get_statements(
-            psym, statement, period, is_bank=bool(is_bank), limit=limit
+            psym, st, pd, is_bank=bool(is_bank), limit=limit
         )
 
     def _get_statements_auto(self, psym, statement, period, *, limit):

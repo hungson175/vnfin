@@ -17,7 +17,7 @@ from ..exceptions import AllSourcesFailed
 from ..failover import FailoverClient
 from .base import AUTO, FundamentalSource
 from .cafef import CafeFFundamentalSource
-from .models import FinancialReport, Period, StatementType
+from .models import FinancialReport, Period, StatementType, _coerce_period, _coerce_statement
 from .vndirect import VNDirectFundamentalSource
 
 # Default fundamentals failover chain: primary first, backup second.
@@ -76,8 +76,8 @@ class FailoverFundamentalClient:
     def get_financials(
         self,
         symbol: str,
-        statement: StatementType,
-        period: Period,
+        statement: StatementType | str,
+        period: Period | str,
         *,
         is_bank: bool | None = AUTO,
         limit: int = 8,
@@ -87,8 +87,13 @@ class FailoverFundamentalClient:
         The bank/corporate flag (explicit ``True``/``False`` or the AUTO sentinel
         asking each source to detect it) is forwarded unchanged to every source
         in the chain, so callers need not know whether a ticker is a bank.
+
+        ``statement`` and ``period`` accept either the enum or its string value,
+        matching the top-level :func:`get_financials` convenience API.
         """
-        return self._engine.run(symbol, statement, period, is_bank, limit)
+        st = _coerce_statement(statement)
+        pd = _coerce_period(period)
+        return self._engine.run(symbol, st, pd, is_bank, limit)
 
     @staticmethod
     def _reject_reason(reports) -> str | None:

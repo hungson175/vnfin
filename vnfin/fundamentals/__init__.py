@@ -24,7 +24,14 @@ from .client import (
     default_fundamental_client,
     default_fundamental_sources,
 )
-from .models import FinancialReport, LineItem, Period, StatementType
+from .models import (
+    FinancialReport,
+    LineItem,
+    Period,
+    StatementType,
+    _coerce_period,
+    _coerce_statement,
+)
 from .vndirect import VNDirectFundamentalSource
 
 __all__ = [
@@ -70,26 +77,6 @@ def client(
     return default_fundamental_client(
         http_get=http_get, timeout=timeout, max_attempts=max_attempts
     )
-
-
-def _coerce_statement(statement) -> StatementType:
-    if isinstance(statement, StatementType):
-        return statement
-    try:
-        return StatementType(str(statement).strip().lower())
-    except ValueError as exc:
-        valid = ", ".join(s.value for s in StatementType)
-        raise VnfinError(f"unknown statement {statement!r}; expected one of: {valid}") from exc
-
-
-def _coerce_period(period) -> Period:
-    if isinstance(period, Period):
-        return period
-    try:
-        return Period(str(period).strip().upper())
-    except ValueError as exc:
-        valid = ", ".join(p.value for p in Period)
-        raise VnfinError(f"unknown period {period!r}; expected one of: {valid}") from exc
 
 
 def get_financials(

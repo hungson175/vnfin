@@ -20,6 +20,7 @@ from vnfin.exceptions import (
     EmptyData,
     SourceUnavailable,
     UnitMismatchError,
+    VnfinError,
 )
 from vnfin.fundamentals import (
     CafeFFundamentalSource,
@@ -224,3 +225,29 @@ def test_get_financials_validates_bad_statement_before_sources():
     only = FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))
     with pytest.raises(VnfinError):
         get_financials("TESTCO", "nonsense", Period.ANNUAL, source=only)
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #25: FailoverFundamentalClient must accept string statement
+# and period values, not leak AttributeError/KeyError.
+# --------------------------------------------------------------------------- #
+def test_client_get_financials_accepts_string_statement_and_period():
+    primary = FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", "income", "annual")
+    assert reports[0].source == "vndirect"
+    assert primary.calls == 1
+
+
+def test_client_get_financials_rejects_bad_statement_string():
+    primary = FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))
+    client = FailoverFundamentalClient([primary])
+    with pytest.raises(VnfinError):
+        client.get_financials("TESTCO", "bogus", "annual")
+
+
+def test_client_get_financials_rejects_bad_period_string():
+    primary = FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))
+    client = FailoverFundamentalClient([primary])
+    with pytest.raises(VnfinError):
+        client.get_financials("TESTCO", "income", "quaterly")

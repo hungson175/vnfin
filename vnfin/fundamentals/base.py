@@ -89,13 +89,17 @@ class FundamentalSource(ABC):
     def get_financials(
         self,
         symbol: str,
-        statement: StatementType,
-        period: Period,
+        statement: StatementType | str,
+        period: Period | str,
         *,
         is_bank: bool | None = AUTO,
         limit: int = 8,
     ) -> tuple[FinancialReport, ...]:
         """Fetch one ``FinancialReport`` per available fiscal period, newest first.
+
+        ``statement`` accepts a ``StatementType`` or its string value (e.g.
+        ``"income"``, ``"balance"``); ``period`` accepts a ``Period`` or its
+        string value (``"ANNUAL"``/``"annual"``, ``"QUARTER"``/``"quarter"``).
 
         ``is_bank`` accepts ``True``/``False`` (explicit override) or the
         :data:`AUTO` sentinel (``None``, the default) asking the adapter to

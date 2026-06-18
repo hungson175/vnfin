@@ -40,7 +40,14 @@ from datetime import date, datetime, timezone
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
 from .base import AUTO, FundamentalSource, is_known_bank
-from .models import FinancialReport, LineItem, Period, StatementType
+from .models import (
+    FinancialReport,
+    LineItem,
+    Period,
+    StatementType,
+    _coerce_period,
+    _coerce_statement,
+)
 
 # FinanceReport.ashx ``Type`` per statement (income / balance only). CafeF's
 # summary handlers do not serve cash flow.
@@ -100,8 +107,8 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     def get_financials(
         self,
         symbol: str,
-        statement: StatementType,
-        period: Period,
+        statement: StatementType | str,
+        period: Period | str,
         *,
         is_bank: bool | None = AUTO,
         limit: int = 8,
@@ -112,13 +119,18 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         modelType template), so ``is_bank`` here is purely metadata. The
         :data:`AUTO` sentinel (default) is resolved via the known-bank heuristic;
         an explicit ``True``/``False`` overrides it (original behavior preserved).
+
+        ``statement`` and ``period`` accept either the enum or its string value,
+        matching the top-level :func:`get_financials` convenience API.
         """
         psym = self._validate_symbol(symbol)
         self._validate_limit(limit)
+        st = _coerce_statement(statement)
+        pd = _coerce_period(period)
         resolved = is_known_bank(psym) if is_bank is AUTO else bool(is_bank)
-        if statement is StatementType.RATIOS:
-            return self._get_ratios(psym, period, is_bank=resolved, limit=limit)
-        return self._get_statements(psym, statement, period, is_bank=resolved, limit=limit)
+        if st is StatementType.RATIOS:
+            return self._get_ratios(psym, pd, is_bank=resolved, limit=limit)
+        return self._get_statements(psym, st, pd, is_bank=resolved, limit=limit)
 
     # ------------------------------------------------------------------ #
     def _fetch_json(self, url, params):
