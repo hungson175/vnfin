@@ -100,6 +100,15 @@ class CurrencyApiGoldSource(GoldSource):
                 # Missing date (404) / transient transport miss for this day -> skip it.
                 d += timedelta(days=1)
                 continue
+            # Data-integrity check: the date-pinned document must know its own
+            # date. If it claims a different date, something is wrong with the
+            # CDN/publisher and stamping the requested date would silently poison
+            # a returns series.
+            doc_date = self._doc_date(doc)
+            if doc_date is not None and doc_date != d:
+                raise InvalidData(
+                    f"{self.name}: document date {doc_date} does not match requested {d}"
+                )
             price = self._usd_per_oz(doc)
             bars.append(GoldBar(date=d, price=price))
             d += timedelta(days=1)

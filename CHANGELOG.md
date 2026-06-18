@@ -44,6 +44,11 @@ All notable changes to `vnfin` are documented here. The format follows
   (e.g. `"income"`, `"annual"`) just like the top-level `get_financials()` convenience function,
   and raise `VnfinError` for unknown strings instead of leaking `AttributeError`/`KeyError`.
   Coercion helpers are shared across all entry points. ([#25](https://github.com/hungson175/vnfin/issues/25))
+- **Currency-api gold history date identity** — `CurrencyApiGoldSource.get_history()` now validates
+  the date-pinned document's own `date` field against the requested date. A mismatch raises
+  `InvalidData` instead of silently stamping the requested date onto the wrong day's price. If the
+  document omits `date`, the requested loop date is still used as a documented fallback.
+  ([#35](https://github.com/hungson175/vnfin/issues/35))
 
 ## [0.2.0] — 2026-06-18
 

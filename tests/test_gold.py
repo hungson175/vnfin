@@ -518,6 +518,28 @@ def test_currencyapi_history_all_missing_raises_empty():
         s.get_history(date(2026, 6, 15), date(2026, 6, 17))
 
 
+# --------------------------------------------------------------------------- #
+# Regression — issue #35: date-pinned history documents must match the requested
+# date; otherwise the wrong date is stamped onto the price.
+# --------------------------------------------------------------------------- #
+def test_currencyapi_history_rejects_mismatched_document_date():
+    # Document says 2024-01-03 but we requested 2024-01-01 -> data integrity error.
+    payload = json.dumps({"date": "2024-01-03", "usd": {"xau": 0.0005}})
+    s = CurrencyApiGoldSource(http_get=lambda *a: payload)
+    with pytest.raises(InvalidData):
+        s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+
+
+def test_currencyapi_history_uses_requested_date_when_doc_date_missing():
+    # Document omits date -> fall back to the requested loop date.
+    payload = json.dumps({"usd": {"xau": 0.0005}})
+    s = CurrencyApiGoldSource(http_get=lambda *a: payload)
+    hist = s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+    assert len(hist) == 1
+    assert hist.bars[0].date == date(2024, 1, 1)
+    assert hist.bars[0].price == pytest.approx(2000.0)
+
+
 def test_currencyapi_missing_xau_key_raises_invalid():
     s = CurrencyApiGoldSource(http_get=_static_get(json.dumps({"date": "2026-06-17", "usd": {"eur": 0.86}})))
     with pytest.raises(InvalidData):
