@@ -60,14 +60,30 @@ _WORLD_PROVIDERS = {"currency_api": CurrencyApiGoldSource, "gold_api": GoldApiSo
 def default_world_gold_sources(*, http_get=None, timeout: float = 25.0) -> list[GoldSource]:
     """Default world-gold (XAU/USD) **daily-history** failover chain.
 
-    Order: :class:`CurrencyApiGoldSource` (primary) then :class:`StooqGoldSource`
-    (backup). Both emit **USD/oz** and provide daily history, so they form a valid
-    same-unit chain for :class:`FailoverGoldClient`. ``GoldApiSource`` is spot-only
-    and is intentionally not in the history chain.
+    The default chain contains only reliable, no-key sources that serve real data
+    from server infrastructure: currently just :class:`CurrencyApiGoldSource`
+    (CDN-hosted, no key, daily EOD history). ``GoldApiSource`` is spot-only and so
+    is intentionally not in the history chain.
+
+    :class:`StooqGoldSource` is **deliberately excluded from the default chain**:
+    from server/datacenter IPs Stooq commonly answers with a JavaScript anti-bot
+    proof-of-work challenge page instead of CSV (it surfaces as
+    :class:`~vnfin.exceptions.SourceUnavailable`), so it is not reliable enough to
+    be a default backup. It remains available as an **explicit opt-in** source — add
+    it yourself, e.g.::
+
+        from vnfin.gold import (
+            default_world_gold_sources, StooqGoldSource, default_world_gold_client,
+        )
+
+        sources = default_world_gold_sources() + [StooqGoldSource()]
+        client = default_world_gold_client(sources=sources)
+
+    Both emit **USD/oz**, so adding Stooq still satisfies the unit-homogeneity guard.
+    See ``docs/sources/gold-adapters.md`` for Stooq's anti-bot caveat.
     """
     return [
         CurrencyApiGoldSource(http_get=http_get, timeout=timeout),
-        StooqGoldSource(http_get=http_get, timeout=timeout),
     ]
 
 
@@ -77,8 +93,10 @@ def default_world_gold_client(
     """Build the world-gold daily-history failover client (USD/oz).
 
     Pass ``sources`` to supply a custom chain (e.g. with injected ``http_get`` stubs
-    for testing); otherwise the default ``[CurrencyApiGoldSource, StooqGoldSource]``
-    chain is used. The unit-homogeneity guard enforces a single ``USD/oz`` chain.
+    for testing, or to opt Stooq back in as a backup — see
+    :func:`default_world_gold_sources`); otherwise the default
+    ``[CurrencyApiGoldSource]`` chain is used. The unit-homogeneity guard enforces a
+    single ``USD/oz`` chain.
     """
     if sources is None:
         sources = default_world_gold_sources(http_get=http_get, timeout=timeout)
