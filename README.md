@@ -89,20 +89,19 @@ different unit families, so gold has no single `client()`; use `vn()` / `world()
 | Gold (world) | currency-api (Stooq opt-in) — failover via `default_world_gold_client()` | USD/oz | — |
 | Crypto | Binance → Coinbase | USD | — |
 | FX | open.er-api → Vietcombank | VND per 1 unit (e.g. VND per 1 USD) | — |
-| Macro | World Bank → IMF DataMapper → DBnomics | per-indicator | FRED / BEA / BLS-v2 |
+| Macro | World Bank → IMF DataMapper → DBnomics | per-indicator | FRED (opt-in) |
 
 ### Bring-your-own-key (optional)
 
-The default path needs no key. To enable keyed macro sources, set your **own** free key in the
-environment — `vnfin` never ships or shares a key:
+The default path needs no key. The one optional keyed macro source is **FRED** — set your **own**
+free key in the environment (`vnfin` never ships or shares a key):
 
 ```bash
-export FRED_API_KEY=...   # FRED official API (never scraped)
-export BEA_API_KEY=...    # US GDP (NIPA)
-export BLS_API_KEY=...    # BLS v2 (higher limits)
+export FRED_API_KEY=...   # FRED official API (never scraped); opt-in, not in the default chain
 ```
 
-Missing key ⇒ that source is simply skipped; the no-key chain still serves you.
+Missing key ⇒ `FREDMacroSource` is simply skipped; the no-key World Bank → IMF → DBnomics chain
+still serves you. (Gold also accepts an optional `VNFIN_BTMC_WIDGET_KEY` to override a public token.)
 
 ## Design
 

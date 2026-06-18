@@ -16,7 +16,7 @@ Two responsibilities, both import-safe (no side effects on import):
   new enum member, appended-defaulted field).
 
 CLI: ``python scripts/dump_api_surface.py [OUTPUT.json]`` writes the current surface to
-the snapshot file (default: ``tests/snapshots/public_api_v0_1_0.json``).
+the per-release baseline snapshot (default: ``tests/snapshots/public_api_v0_2_0.json``).
 """
 from __future__ import annotations
 

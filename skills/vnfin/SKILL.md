@@ -14,9 +14,10 @@ description: >-
 # vnfin — Vietnam financial-market data
 
 `vnfin` is a clean-room, **no-API-key**, open-source Python library for Vietnam financial data.
-Each domain fetches over a multi-source **failover** chain and returns a **typed** result with
-**explicit units**. Use it whenever a task needs VN stocks, fundamentals, funds, indices, gold,
-FX, crypto, or macro indicators.
+Most domains fetch over a multi-source **failover** chain (where a clean same-unit backup exists;
+`funds` is single-source and `gold` ships separate VN/world adapters) and every result is a
+**typed** object with **explicit units**. Use it whenever a task needs VN stocks, fundamentals,
+funds, indices, gold, FX, crypto, or macro indicators.
 
 ## Install
 

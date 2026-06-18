@@ -13,9 +13,10 @@ All notable changes to `vnfin` are documented here. The format follows
 - **API stability gate** — `tests/test_public_api_surface.py` introspects the public surface
   (per-module `__all__`, factory/method signatures, frozen-dataclass fields, enum members/values,
   public-class constructors, and canonical unit/currency defaults) and diffs it against a committed
-  baseline (`tests/snapshots/public_api_v0_1_0.json`) with a **compatibility-aware** comparator
-  (`scripts/dump_api_surface.py`). Accidental breaking changes fail the suite; additive changes are
-  reported. SemVer + deprecation policy documented in [`docs/stability.md`](docs/stability.md).
+  per-release baseline snapshot (`tests/snapshots/public_api_v0_2_0.json`; v0.1.0 retained for
+  audit) with a **compatibility-aware** comparator (`scripts/dump_api_surface.py`). Accidental
+  breaking changes fail the suite; additive changes are reported. SemVer + deprecation policy
+  documented in [`docs/stability.md`](docs/stability.md).
 - **Upstream health monitoring** (opt-in, private `vnfin/_health.py` + `scripts/healthcheck.py`) —
   typed `SourceHealth` per probe (reachability, schema conformance, value sanity, latency),
   schema-drift detection via required-paths/types, a 5-domain critical probe set, and sanitised

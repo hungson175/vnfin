@@ -22,8 +22,8 @@ The generic :class:`vnfin.failover.FailoverClient` is built only AFTER step 1, a
 its unit-homogeneity guard remains as a structural backstop (it can only ever see
 already-homogeneous sources).
 
-Default no-key chain (order): World Bank -> IMF DataMapper -> DBnomics. FRED/BEA/
-BLS-v2 are optional BYOK and are deliberately excluded from this default chain.
+Default no-key chain (order): World Bank -> IMF DataMapper -> DBnomics. FRED is the
+only optional BYOK source and is deliberately excluded from this default chain.
 
 Capability skip: a source that does not map the requested indicator is skipped
 without a network call (it does not count against ``max_attempts``), exactly like
@@ -210,8 +210,8 @@ def default_macro_client(
 ) -> MacroClient:
     """Primary macro entry: a :class:`MacroClient` over the default no-key chain.
 
-    Order: World Bank -> IMF DataMapper -> DBnomics. FRED/BEA/BLS-v2 are optional
-    BYOK and excluded from this default chain.
+    Order: World Bank -> IMF DataMapper -> DBnomics. FRED is the only optional BYOK
+    source and is excluded from this default chain.
     """
     return MacroClient(sources=sources, max_attempts=max_attempts, http_get=http_get, timeout=timeout)
 

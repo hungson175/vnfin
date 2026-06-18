@@ -1,9 +1,10 @@
 # vnfin
 
 > Clean-room, no-key, open-source Python library for Vietnam financial-market data: equity prices,
-> fundamentals, mutual funds, indices, gold, FX, crypto, and macro indicators. Every domain has
-> multi-source failover and typed results with explicit units. No API key is needed for the default
-> path of any domain.
+> fundamentals, mutual funds, indices, gold, FX, crypto, and macro indicators. Results are typed
+> with explicit units; most domains use multi-source failover where a clean same-unit backup exists
+> (funds is single-source; gold ships separate VN/world adapters). No API key is needed for the
+> default path of any domain.
 
 Install: `pip install git+https://github.com/hungson175/vnfin.git` (add `[pandas]` for `.to_dataframe()`). Python ≥ 3.10.
 
