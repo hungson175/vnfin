@@ -276,20 +276,19 @@ class HttpDataSource:
                     self._sleep(self._backoff_delay(attempt))
                     attempt += 1
                     continue
-                # B4: redact any BYOK secret (api_key/key/token/access_token in the
-                # request URL or params, or an Authorization header) that the raw
-                # exception string may embed, BEFORE it reaches the caller/logs.
-                #
-                # ``from None`` is deliberate: the redacted message is safe, but the
-                # raw transport exception (e.g. ``httpx.HTTPStatusError``) keeps the
-                # full request URL — query string and ``api_key=...`` included — in
-                # its own ``str``. Chaining it via ``from exc`` would re-expose that
-                # secret through ``SourceUnavailable.__cause__`` and any formatted
-                # traceback. We instead drop the secret-bearing cause entirely and
-                # surface only the redacted message.
-                raise SourceUnavailable(
-                    redact_secrets(f"{self._source_name} transport error: {exc}")
-                ) from None
+                # B4: the raw transport exception (e.g. ``httpx.HTTPStatusError``)
+                # keeps the full request URL — query string and ``api_key=...``
+                # included — in its own ``str``. Capture a REDACTED message here, then
+                # raise OUTSIDE this except suite (below). Raising outside means no
+                # exception is being handled, so the ``SourceUnavailable`` carries the
+                # secret in neither ``__cause__`` NOR ``__context__`` — ``from None``
+                # alone only suppresses display, it does not clear ``__context__``.
+                redacted_error = redact_secrets(
+                    f"{self._source_name} transport error: {exc}"
+                )
+            # Reached only on the non-retry failure path; the except suite has exited,
+            # so this SourceUnavailable has a clean __context__/__cause__.
+            raise SourceUnavailable(redacted_error)
 
     def _backoff_delay(self, attempt: int) -> float:
         """Jittered exponential backoff for retry ``attempt`` (0-based).

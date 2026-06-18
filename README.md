@@ -8,7 +8,7 @@ and major crypto — with multi-source **failover** so a single provider outage 
 
 - ✅ **No API key required** for the default path of every domain. Optional **bring-your-own-key (BYOK)** upgrades are read from env vars and are *never* bundled.
 - ✅ **Typed contracts** (frozen dataclasses) with explicit **units/currency** on every result — no guessing VND vs thousand-VND vs points.
-- ✅ **Failover redundancy** — each domain chains a primary + backup source through one generic client with a **unit-homogeneity guard** (it cannot silently mix scales).
+- ✅ **Failover redundancy** — *where a clean, no-auth, same-unit backup exists*, a domain chains primary + backup through one generic client with a **unit-homogeneity guard** (it cannot silently mix scales). Carve-outs: `funds` is single-source (Fmarket); `gold` uses separate VN/world adapters (world has its own failover client, VN ships two spot adapters with a parity test).
 - ✅ **Clean-room** — built only from providers' own endpoints and public protocols; runtime-fetch only, no bundled market data.
 - ✅ **750+ offline tests** (94% coverage), synthetic fixtures only; real cross-source checks live under `live_tests/`.
 
@@ -31,8 +31,8 @@ Requires Python ≥ 3.10.
 from datetime import date
 import vnfin
 
-# --- Daily prices (technical) — 5 broker sources, auto-failover, prices in VND ---
-client = vnfin.default_client()                       # SSI → VNDirect → VPS → Pinetree
+# --- Daily prices (technical) — 4-broker default chain, auto-failover, prices in VND ---
+client = vnfin.default_client()                       # SSI → VNDirect → VPS → Pinetree (KIS excluded: MIXED adj.)
 h = client.get_daily("FPT", date(2026, 1, 1), date(2026, 6, 17))
 print(h.source, len(h), h.value_unit)                 # e.g. "ssi 110 VND"
 df = h.to_dataframe()                                  # pandas, metadata in df.attrs
@@ -44,8 +44,9 @@ reports = vnfin.fundamentals.get_financials("FPT", "income", "annual")
 funds = vnfin.funds.source().list_funds(asset_type="STOCK")
 vni = vnfin.indices.index_history("VNINDEX", date(2026, 1, 1), date(2026, 6, 17))  # points
 
-# --- Macro (no key; covers Vietnam) — World Bank → IMF DataMapper → DBnomics ---
-cpi = vnfin.macro.source().get_indicator("VNM", "FP.CPI.TOTL", 2015, 2024)
+# --- Macro (no key; covers Vietnam) — World Bank → IMF DataMapper → DBnomics failover ---
+cpi = vnfin.macro.client().get_indicator("VNM", vnfin.macro.MacroIndicator.CPI)
+# (vnfin.macro.source() is the World Bank primary alone, with raw indicator codes)
 
 # --- Gold & crypto ---
 gold = vnfin.gold.world().get_history(date(2026, 1, 1), date(2026, 6, 17))          # USD/oz

@@ -74,7 +74,7 @@ funds = src.list_funds()
 
 # indices — index value (points) + members.
 ic   = vnfin.indices.client()                # IndexClient
-hist = vnfin.indices.index_history("FAKEINDEX")   # PriceHistory in points
+hist = vnfin.indices.index_history("FAKEINDEX", date(2024, 1, 1), date(2024, 6, 30))  # PriceHistory in points (start/end required)
 
 # gold — VN domestic (VND/lượng) and world XAU (USD/oz). Provider is explicit.
 vn    = vnfin.gold.vn("btmc")                # BTMCGoldSource (default), or "pnj"

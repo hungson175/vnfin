@@ -355,6 +355,10 @@ def test_transport_error_does_not_leak_api_key_via_cause_or_traceback():
     #     whose string is itself free of the key.
     assert raised.__cause__ is None or FAKE_API_KEY not in str(raised.__cause__)
 
+    # (b2) ``__context__`` must also be clean: ``from None`` only suppresses display,
+    #      so the fix raises OUTSIDE the except suite to clear the implicit context.
+    assert raised.__context__ is None or FAKE_API_KEY not in str(raised.__context__)
+
     # (c) A fully-formatted traceback (the realistic log/CI failure path) is clean.
     formatted = "".join(
         traceback.format_exception(type(raised), raised, raised.__traceback__)
