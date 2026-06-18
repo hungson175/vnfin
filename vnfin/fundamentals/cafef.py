@@ -13,9 +13,11 @@ docs/research/2026-06-18-vn-fundamental-data-sources.md):
                "Value":[{"Code":"DTTBHCCDV","Name":"...","Value":70207688945}, ...]},
               ...]},"Message":null,"Success":true}
     One object per fiscal period (newest first); ``Quater`` 0 = annual, 1..4 =
-    quarter. Money values are RAW VND (unscaled), the SAME unit as VNDirect — so
-    this source declares ``unit = "VND"`` and can back VNDirect in one failover
-    chain. CafeF's summary handlers do NOT serve cash flow (Type=3 returns an
+    quarter. CafeF reports statement money in **thousand VND**, so the adapter
+    multiplies each monetary line by ``_VND_SCALE`` (1000) to **emit raw VND** —
+    the SAME scale/currency as the VNDirect primary, so this source declares
+    ``unit = "VND"`` and can back VNDirect in one failover chain without a silent
+    scale mismatch. CafeF's summary handlers do NOT serve cash flow (Type=3 returns an
     empty ``Value``), so a CASHFLOW request raises ``EmptyData`` (failover-safe).
 
   RATIOS (EPS / BV / PE / ROA / ROE ...):
@@ -53,9 +55,12 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     """Backup fundamental reports from CafeF AJAX handlers (statements + ratios)."""
 
     NAME = "cafef"
-    #: Statement money lines are RAW VND (unscaled) — same scale/currency as the
-    #: VNDirect primary, so the failover unit-homogeneity guard accepts the chain.
+    #: We EMIT raw VND so the failover unit-homogeneity guard matches the VNDirect
+    #: primary. CafeF's own statement money is reported in THOUSAND VND, so each
+    #: monetary line is multiplied by ``_VND_SCALE`` on ingest (ratios are unscaled).
     unit = "VND"
+    #: CafeF statement money is thousand-VND; scale to raw VND to honor the contract.
+    _VND_SCALE = 1000
     BASE_URL = "https://cafef.vn/du-lieu/Ajax/PageNew"
     FINANCE_REPORT_PATH = "/FinanceReport.ashx"
     RATIOS_PATH = "/GetDataChiSoTaiChinh.ashx"
@@ -259,6 +264,11 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
                 raise InvalidData(f"{self.name}: line item missing Code")
             name = (it.get("Name") or str(code)).strip()
             value = self._num(it.get("Value"))
+            if value_unit == "VND":
+                # CafeF reports statement money in THOUSAND VND; normalize to raw VND
+                # (the canonical contract + the VNDirect primary's scale). Ratios
+                # (value_unit="ratio") are dimensionless and must NOT be scaled.
+                value *= self._VND_SCALE
             items.append(
                 LineItem(
                     item_code=str(code).strip(),

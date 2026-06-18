@@ -17,7 +17,8 @@ Real CafeF shapes (synthesized below):
         ...]},"Message":null,"Success":true}
     One object per fiscal period (newest first); each holds Value[] of
     {Code,Name,Value} line items. Quater=0 => annual, 1..4 => that quarter.
-    Money values are RAW VND (unscaled), consistent with VNDirect.
+    CafeF money is THOUSAND-VND; the adapter scales x1000 to emit raw VND
+    (consistent with VNDirect). Fixtures below use thousand-VND inputs.
   GetDataChiSoTaiChinh.ashx -> same outer shape, ratio Codes (EPS/BV/PE/ROA...).
   Bad/empty symbol -> {"Data":null,"Message":"...","Success":false}.
 """
@@ -72,9 +73,10 @@ def corp_income_two_years():
             2025,
             0,
             [
-                ("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 12_000_000_000_000),
-                ("GV", "Giá vốn hàng bán", 7_000_000_000_000),
-                ("LNGBHCCDV", "Lợi nhuận gộp", 5_000_000_000_000),
+                # CafeF reports thousand-VND; adapter scales x1000 -> raw VND (12e12).
+                ("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 12_000_000_000),
+                ("GV", "Giá vốn hàng bán", 7_000_000_000),
+                ("LNGBHCCDV", "Lợi nhuận gộp", 5_000_000_000),
             ],
         ),
         _period(
@@ -82,9 +84,9 @@ def corp_income_two_years():
             2024,
             0,
             [
-                ("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 10_000_000_000_000),
-                ("GV", "Giá vốn hàng bán", 6_000_000_000_000),
-                ("LNGBHCCDV", "Lợi nhuận gộp", 4_000_000_000_000),
+                ("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 10_000_000_000),
+                ("GV", "Giá vốn hàng bán", 6_000_000_000),
+                ("LNGBHCCDV", "Lợi nhuận gộp", 4_000_000_000),
             ],
         ),
     ]
@@ -98,14 +100,14 @@ def corp_income_two_quarters():
             "Q1-2026",
             2026,
             1,
-            [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 3_000_000_000_000)],
+            [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 3_000_000_000)],
             report_type="H",
         ),
         _period(
             "Q4-2025",
             2025,
             4,
-            [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 2_500_000_000_000)],
+            [("DTTBHCCDV", "Doanh thu bán hàng và CCDV", 2_500_000_000)],
             report_type="H",
         ),
     ]
@@ -119,8 +121,8 @@ def corp_balance_one_year():
             2025,
             0,
             [
-                ("TotalAsset", "Tổng tài sản", 88_000_000_000_000),
-                ("TotalShortTermDebt", "Nợ ngắn hạn", 40_000_000_000_000),
+                ("TotalAsset", "Tổng tài sản", 88_000_000_000),
+                ("TotalShortTermDebt", "Nợ ngắn hạn", 40_000_000_000),
             ],
         )
     ]
@@ -579,3 +581,25 @@ def test_all_rows_unparseable_fiscal_date_raises_emptydata():
     ]
     with pytest.raises(EmptyData):
         _src(_envelope(periods)).get_financials("TESTCO", StatementType.INCOME, Period.QUARTER)
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #3: CafeF reports thousand-VND; adapter must emit raw VND.
+# --------------------------------------------------------------------------- #
+def test_cafef_statement_money_scaled_thousand_vnd_to_raw_vnd():
+    # input is CafeF's thousand-VND; expected output is raw VND (x1000)
+    periods = [_period("2025", 2025, 0, [("REV", "Net revenue", 62_000_000)])]  # 62M thousand-VND
+    reports = _src(_envelope(periods)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    assert reports[0].get("REV") == pytest.approx(62_000_000_000.0)  # 62B raw VND
+    assert reports[0].currency == "VND"
+
+
+def test_cafef_ratios_are_not_scaled():
+    # ratios are dimensionless/per-share and must NOT be multiplied by 1000
+    reports = _src(ratios_two_years()).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.ANNUAL
+    )
+    assert reports[0].get("EPS") == pytest.approx(5_000.0)
+    assert reports[0].get("PE") == pytest.approx(18.0)
