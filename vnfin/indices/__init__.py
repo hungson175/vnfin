@@ -44,6 +44,7 @@ __all__ = [
     "SSIIndexSource",
     "VNDirectIndexSource",
     "client",
+    "source",
 ]
 
 
@@ -54,3 +55,15 @@ def client(http_get=None, timeout: float = 25.0, max_attempts: int = 3) -> Index
     history (in *points*) and ``.constituents(index)`` for membership.
     """
     return IndexClient(http_get=http_get, timeout=timeout, max_attempts=max_attempts)
+
+
+def source(http_get=None, timeout: float = 25.0) -> VPSIndexSource:
+    """Primary indices SOURCE: the single first adapter of the default chain (no failover).
+
+    Standard ``<domain>.source(...)`` factory — returns the PRIMARY index-value
+    source, currently :class:`VPSIndexSource` (first of
+    :func:`default_index_sources`; the only source that serves UPCOM and all sector
+    indices correctly). Index values stay in *points*. Prefer :func:`client` for the
+    failover chain plus constituents.
+    """
+    return VPSIndexSource(http_get=http_get, timeout=timeout)

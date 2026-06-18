@@ -5,13 +5,18 @@ Public surface:
 * Models — :class:`GoldQuote` (spot buy/sell), :class:`GoldBar` + :class:`GoldHistory`
   (a daily series, for the world-XAU history source).
 * Port — :class:`GoldSource` (the small interface every adapter implements).
-* VN domestic adapters (spot-only, VND/chỉ) — :class:`BTMCGoldSource`, :class:`PNJGoldSource`.
+* VN domestic adapters (spot-only, VND/lượng) — :class:`BTMCGoldSource`, :class:`PNJGoldSource`.
+  These are TWO SEPARATE spot adapters (no runtime failover client); a live cross-source
+  parity test checks they agree, but at runtime you pick one provider via :func:`vn` /
+  :func:`source`.
 * World adapters — :class:`GoldApiSource` (spot XAU/USD, no history) and
   :class:`CurrencyApiGoldSource` (daily XAU/USD EOD history + spot).
 
 Currency/unit is always stated explicitly on the result object: VN sources return
-``currency="VND"`` / ``unit="VND/chi"`` (price per *chỉ* = 1/10 lượng); world sources
-return ``currency="USD"`` / ``unit="USD/oz"`` (USD per troy ounce). Every result carries
+``currency="VND"`` / ``unit="VND/luong"`` (price per *lượng*; PNJ raw thousand VND/chỉ is
+converted to VND/lượng); world sources return ``currency="USD"`` / ``unit="USD/oz"``
+(USD per troy ounce). VN VND/lượng and world USD/oz are different unit families, so gold
+has no single cross-unit ``client()`` (see ``docs/units.md``). Every result carries
 its source name and ``fetched_at_utc``. All adapters wrap transport failures as
 :class:`vnfin.exceptions.SourceUnavailable` and malformed/garbage data as
 :class:`vnfin.exceptions.InvalidData`, so they are failover-safe.

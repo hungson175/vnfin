@@ -16,18 +16,22 @@ assert agreement (require `VNFIN_LIVE=1`).
 
 | Domain | `source()` (primary) | `client()` (failover chain) | Unit guard |
 |--------|----------------------|-----------------------------|-----------|
-| Prices | one broker | 5-broker failover ✅ | VND |
-| Indices | one source | multi-source failover ✅ | points |
+| Prices | SSI | 4-broker failover ✅ (SSI → VNDirect → VPS → Pinetree; KIS excluded, MIXED) | VND |
+| Indices | VPS | multi-source failover ✅ (VPS → SSI → VNDirect) | points |
 | **Fundamentals** | VNDirect | **VNDirect → CafeF** ✅ (income/balance/ratios; cashflow is VNDirect-only — CafeF summary handlers don't serve it) | raw VND |
 | **Crypto** | Binance | **Binance → Coinbase** ✅ (USD / USD-stablecoin only; result-level USD guard) | USD |
-| **Gold (world)** | currency-api | **currency-api** ✅; **Stooq opt-in only** (server-IP anti-bot challenge — not a reliable default) | USD/oz |
-| **Gold (VN)** | BTMC | **BTMC + PNJ** (2 dealers, cross-source parity) ✅ | VND/lượng |
+| **Gold (world)** | currency-api (`world()`) | `default_world_gold_client()` = **currency-api** ✅; **Stooq opt-in only** (server-IP anti-bot challenge — not a reliable default) | USD/oz |
+| **Gold (VN)** | BTMC / PNJ (`vn()`) | **n/a — NO runtime failover client.** BTMC and PNJ are **two separate spot adapters**; pick one explicitly. A live cross-source **parity test** checks they agree | VND/lượng |
 | **Macro** | World Bank | **World Bank → IMF DataMapper → DBnomics** (no-key) ✅ + **FRED BYOK** (excluded from no-key default chain) | per-indicator |
 | **Funds** | Fmarket | **single-source** (no clean no-auth backup exists — accepted single-source for v0.1; `client() == source()`) | VND/unit |
 
-`client()` returns the failover chain; `source()` returns just the primary adapter.
-They are **not** aliases except for the two accepted single-source cases (Funds, and
-world-gold history when Stooq is not opted in).
+For the **standard domains**, `client()` returns the failover chain and `source()`
+returns just the primary adapter; they are **not** aliases except for the accepted
+single-source `Funds` case. **`gold` is the exception**: it has no domain-standard
+`client()` because VN VND/lượng and world USD/oz are different unit families. VN
+domestic gold is **two separate spot adapters (BTMC + PNJ) with a live cross-source
+parity test — not a runtime failover client**; only **world** gold history has a
+failover client (`default_world_gold_client()`). See `docs/api.md` and `docs/units.md`.
 
 ## Wiring
 

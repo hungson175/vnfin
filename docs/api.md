@@ -19,7 +19,8 @@ vnfin.macro         # macroeconomic indicators
 
 ## Naming standard
 
-Every domain offers the standard **factory verbs** so the entry is predictable:
+**Standard domains** (`prices`, `fundamentals`, `funds`, `indices`, `crypto`, `macro`)
+offer the predictable **factory verbs**:
 
 | Verb | Meaning |
 |------|---------|
@@ -28,11 +29,26 @@ Every domain offers the standard **factory verbs** so the entry is predictable:
 | `history(...)` / `index_history(...)` / `get_financials(...)` | Domain-specific one-shot convenience functions (kept where they already existed). |
 
 > `client()` is **not** an alias of `source()`. `client()` returns the failover
-> chain; `source()` returns just the primary adapter. (The only domains whose
-> `client()` is currently still effectively single-source are `funds` (no clean
-> no-auth backup exists — accepted single-source for v0.1) and `gold` world
-> history when Stooq is not opted in; see [units.md](units.md) and
+> chain; `source()` returns just the primary adapter. (The only standard domain
+> whose `client()` is currently still effectively single-source is `funds` — no
+> clean no-auth backup exists, accepted single-source for v0.1, so
+> `client() == source()`; see [units.md](units.md) and
 > [design/redundancy-failover.md](design/redundancy-failover.md).)
+
+### `gold` is the deliberate exception
+
+`gold` does **not** follow the `client()` + `source()` standard, because VN domestic
+gold (**VND/lượng**) and world XAU (**USD/oz**) are different unit families — a single
+cross-unit `client()` would be nonsensical. Instead `gold` exposes:
+
+| Verb | Meaning |
+|------|---------|
+| `vn(provider="btmc")` | VN domestic spot source (**VND/lượng**): `"btmc"` (default) or `"pnj"`. |
+| `world(provider="currency_api")` | World XAU source (**USD/oz**): `"currency_api"` (default) or `"gold_api"`. |
+| `source(provider="btmc")` | Generic provider selector routing to both families (no default cross-unit chain). |
+| `default_world_gold_client(...)` | The **world-gold-only** daily-history failover client (USD/oz; opt-in Stooq backup). There is no VN domestic failover client. |
+
+See [Why gold takes an explicit provider](#why-gold-takes-an-explicit-provider).
 
 All factories accept the shared transport kwargs `http_get=None` (injectable for tests)
 and `timeout=25.0`; price/index clients also accept `max_attempts`.

@@ -8,8 +8,9 @@ Two shapes:
   trading day), used by the world XAU/USD history source.
 
 Currency and unit are stated explicitly on every object so downstream callers never
-have to guess: VN money is VND (``unit="VND/chi"``, per *chỉ*), world gold is USD
-(``unit="USD/oz"``, per troy ounce). ``time`` is timezone-aware where the source
+have to guess: VN domestic money is VND (``unit="VND/luong"``, per *lượng*; 1 lượng =
+10 chỉ = 37.5 g), world gold is USD (``unit="USD/oz"``, per troy ounce). ``time`` is
+timezone-aware where the source
 carries an intraday timestamp; ``GoldBar.date`` is a plain date (EOD has no meaningful
 intraday time).
 """

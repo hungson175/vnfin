@@ -57,11 +57,14 @@ def test_legacy_top_level_surface_preserved():
 
 def test_prices_entry():
     from vnfin.client import FailoverPriceClient
+    from vnfin.sources.ssi import SSIiBoardSource
 
     c = vnfin.prices.client(http_get=_fake_get)
     assert isinstance(c, FailoverPriceClient)
     # prices keeps the one-shot convenience verb as well
     assert callable(vnfin.prices.history)
+    # source() = the PRIMARY single broker source (first of the default chain: SSI)
+    assert isinstance(vnfin.prices.source(http_get=_fake_get), SSIiBoardSource)
     # facade client matches the long-standing top-level factory type
     assert isinstance(vnfin.default_client(http_get=_fake_get), FailoverPriceClient)
 
@@ -84,8 +87,11 @@ def test_funds_entry():
 
 def test_indices_entry():
     from vnfin.indices import IndexClient
+    from vnfin.indices.sources import VPSIndexSource
 
     assert isinstance(vnfin.indices.client(http_get=_fake_get), IndexClient)
+    # source() = the PRIMARY single index source (first of the default chain: VPS)
+    assert isinstance(vnfin.indices.source(http_get=_fake_get), VPSIndexSource)
     assert callable(vnfin.indices.index_history)
 
 
@@ -144,10 +150,10 @@ def test_gold_unknown_provider_raises(fn, bad):
 @pytest.mark.parametrize(
     "domain,verbs",
     [
-        ("prices", ("client", "history")),
+        ("prices", ("client", "source", "history")),
         ("fundamentals", ("client", "source")),
         ("funds", ("client", "source")),
-        ("indices", ("client",)),
+        ("indices", ("client", "source")),
         ("crypto", ("client", "source")),
         ("macro", ("client", "source")),
         ("gold", ("vn", "world", "source")),
@@ -158,3 +164,34 @@ def test_domain_exposes_standard_factory_verbs(domain, verbs):
     for verb in verbs:
         assert callable(getattr(ns, verb)), f"vnfin.{domain}.{verb}"
         assert verb in ns.__all__, f"{verb} not in vnfin.{domain}.__all__"
+
+
+# ---------------------------------------------------------------------------
+# Facade surface contract: standard domains have client()+source();
+# gold is the deliberate exception (vn/world/source, no client()).
+# ---------------------------------------------------------------------------
+
+STANDARD_DOMAINS = ["prices", "fundamentals", "funds", "indices", "crypto", "macro"]
+
+
+@pytest.mark.parametrize("domain", STANDARD_DOMAINS)
+def test_standard_domains_expose_client_and_source(domain):
+    """Every standard domain exposes BOTH the failover ``client()`` and primary ``source()``."""
+    ns = getattr(vnfin, domain)
+    assert callable(getattr(ns, "client", None)), f"vnfin.{domain}.client missing"
+    assert callable(getattr(ns, "source", None)), f"vnfin.{domain}.source missing"
+    assert "client" in ns.__all__ and "source" in ns.__all__
+
+
+def test_gold_is_the_facade_exception():
+    """GOLD intentionally does NOT expose a domain-standard ``client()``.
+
+    VN VND/lượng and world USD/oz are different unit families, so there is no single
+    cross-unit client. Gold uses ``vn()`` / ``world()`` / ``source(provider)`` plus the
+    world-only ``default_world_gold_client()``.
+    """
+    assert not hasattr(vnfin.gold, "client"), "gold must NOT expose a domain-standard client()"
+    assert "client" not in vnfin.gold.__all__
+    for verb in ("vn", "world", "source", "default_world_gold_client"):
+        assert callable(getattr(vnfin.gold, verb)), f"vnfin.gold.{verb} missing"
+        assert verb in vnfin.gold.__all__, f"{verb} not in vnfin.gold.__all__"

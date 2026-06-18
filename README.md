@@ -55,14 +55,19 @@ btc = vnfin.crypto.client().get_klines("BTCUSDT", vnfin.Interval.D1,
 
 ## Domains & sources
 
+Each **standard** domain exposes `client()` (the failover chain) and `source()` (the
+primary single adapter). **`gold` is the exception** — VN VND/lượng and world USD/oz are
+different unit families, so gold has no single `client()`; use `vn()` / `world()` /
+`source(provider)` and the world-only `default_world_gold_client()`.
+
 | Domain | Default (no-key) chain | Unit | Optional BYOK |
 |--------|------------------------|------|---------------|
 | Prices | SSI → VNDirect → VPS → Pinetree (KIS excluded: MIXED adj.) | VND | — |
-| Indices | broker index feeds | points | — |
+| Indices | VPS → SSI → VNDirect | points | — |
 | Fundamentals | VNDirect `api-finfo` → CafeF | raw VND | — |
-| Funds | Fmarket | VND/unit | — |
-| Gold (VN) | BTMC, PNJ | VND/lượng | — |
-| Gold (world) | currency-api (Stooq opt-in) | USD/oz | — |
+| Funds | Fmarket (single-source) | VND/unit | — |
+| Gold (VN) | **BTMC and PNJ — two separate spot adapters** (no runtime failover; live cross-source parity test) | VND/lượng | — |
+| Gold (world) | currency-api (Stooq opt-in) — failover via `default_world_gold_client()` | USD/oz | — |
 | Crypto | Binance → Coinbase | USD | — |
 | Macro | World Bank → IMF DataMapper → DBnomics | per-indicator | FRED / BEA / BLS-v2 |
 

@@ -8,6 +8,9 @@ every domain:
 * :func:`client` — build the primary domain entry (a :class:`FailoverPriceClient` over
   the default provider-adjusted broker chain). This is the standard ``<domain>.client()``
   factory used across the library.
+* :func:`source` — build the PRIMARY single price source (no failover): the first of
+  the default chain, currently :class:`~vnfin.sources.ssi.SSIiBoardSource`. This is the
+  standard ``<domain>.source()`` factory.
 * :func:`history` — one-shot convenience: fetch a :class:`PriceHistory` over the default
   chain without first holding a client.
 
@@ -42,6 +45,7 @@ from ..models import (
     PriceHistory,
     SourceAttempt,
 )
+from ..sources.ssi import SSIiBoardSource
 
 
 def client(max_attempts: int = 3, http_get=None, timeout: float = 25.0) -> FailoverPriceClient:
@@ -56,6 +60,18 @@ def client(max_attempts: int = 3, http_get=None, timeout: float = 25.0) -> Failo
     return FailoverPriceClient(
         default_sources(http_get=http_get, timeout=timeout), max_attempts=max_attempts
     )
+
+
+def source(http_get=None, timeout: float = 25.0) -> SSIiBoardSource:
+    """Primary prices SOURCE: the single first adapter of the default chain (no failover).
+
+    Standard ``<domain>.source(...)`` factory — returns the PRIMARY broker source,
+    currently :class:`~vnfin.sources.ssi.SSIiBoardSource` (first of
+    :func:`~vnfin.sources.registry.default_sources`). Use ``.get_history(...)`` on it,
+    or prefer :func:`client` / :func:`history` for the failover chain. Equity prices
+    are quoted in **VND**.
+    """
+    return SSIiBoardSource(http_get=http_get, timeout=timeout)
 
 
 def history(
@@ -87,6 +103,8 @@ __all__ = [
     "PriceHistory",
     "SourceAttempt",
     "FailoverPriceClient",
+    "SSIiBoardSource",
     "client",
+    "source",
     "history",
 ]
