@@ -111,6 +111,29 @@ All notable changes to `vnfin` are documented here. The format follows
 - **FRED application-error envelope detection** — `FREDMacroSource` now detects FRED error envelopes
   (`error_code` / `error_message`) and raises `InvalidData` instead of parsing them as data or
   treating them as empty. ([#51](https://github.com/hungson175/vnfin/issues/51))
+- **World Bank country validation** — `WorldBankMacroSource.get_indicator()` now validates
+  `country_iso3` as a string before any string operation and requires a 3-letter alphabetic ISO3
+  code, raising `InvalidData` before network for non-string/malformed values.
+  ([#32](https://github.com/hungson175/vnfin/issues/32))
+- **World Bank year-bound validation** — `WorldBankMacroSource` now rejects request years outside
+  the `datetime.date` supported range `1..9999` with `InvalidData` before contacting the provider,
+  complementing the existing out-of-range observation-year guard.
+  ([#46](https://github.com/hungson175/vnfin/issues/46),
+  [#63](https://github.com/hungson175/vnfin/issues/63))
+- **Macro client country validation** — `MacroClient.get_indicator()` validates the country as a
+  3-letter ISO3 code before building the failover engine. ([#32](https://github.com/hungson175/vnfin/issues/32))
+- **Vietcombank self-rate skip** — `VietcombankFXSource` now skips the provider's VND/VND self-rate.
+  ([#47](https://github.com/hungson175/vnfin/issues/47))
+- **OpenER timestamp overflow guard** — `OpenErApiFXSource` now catches out-of-range
+  `time_last_update_unix` timestamps and falls back to UTC now instead of leaking `OverflowError`.
+  ([#43](https://github.com/hungson175/vnfin/issues/43))
+- **World gold history date-bound validation** — `CurrencyApiGoldSource.get_history()` and
+  `StooqGoldSource.get_history()` now reject non-date `start`/`end` bounds with `InvalidData`
+  before any fetch. ([#42](https://github.com/hungson175/vnfin/issues/42))
+- **Health macro probe failover path** — the default macro health probe now routes through
+  `vnfin.macro.get_indicator()` so `MacroIndicator.CPI` maps to the correct provider series; the
+  probe label is updated to `macro/canonical/VNM-CPI` to reflect that it exercises failover.
+  ([#36](https://github.com/hungson175/vnfin/issues/36))
 
 ## [0.2.0] — 2026-06-18
 
