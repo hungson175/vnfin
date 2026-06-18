@@ -53,6 +53,7 @@ class _IndexUDFMixin:
     ADJUSTMENT_POLICY = AdjustmentPolicy.RAW  # index levels are not adjusted
     VALUE_UNIT = "points"  # an index level is points, not a money amount
     CURRENCY = "points"  # kept "points" for backward compatibility (not money)
+    unit = "points"  # failover unit guard: index sources are points, never VND
     ALIASES: dict = {}
 
     def normalize_symbol(self, symbol: str) -> str:

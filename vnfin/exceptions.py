@@ -36,6 +36,15 @@ class AdjustmentPolicyError(VnfinError):
     """The adjustment policy of the returned series is unknown or non-homogeneous."""
 
 
+class UnitMismatchError(VnfinError):
+    """A failover chain was configured with sources that emit different units.
+
+    Raised by the unit-homogeneity guard when two sources in one failover client
+    declare different unit/currency/scale values — failing over between them could
+    silently mix scales (e.g. VND vs index points, or x1000 vs x1 feeds).
+    """
+
+
 class AllSourcesFailed(VnfinError):
     """Every attempted source failed. Carries the per-source diagnostics."""
 

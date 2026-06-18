@@ -1,12 +1,27 @@
-"""Sequential multi-source failover client for price history."""
+"""Sequential multi-source failover client for price history.
+
+``FailoverPriceClient`` is a thin **specialization** of the domain-agnostic
+:class:`vnfin.failover.FailoverClient`: it wires the price-domain operation
+(``source.get_history``), capability (``source.supports(interval)``),
+acceptance (non-empty series), unit guard (``source.unit``), and result
+finalization (attach attempts + coverage warnings) into the generic engine.
+The public behavior is byte-for-byte what it was when this client owned its own
+loop; the engine is now shared so other domains can reuse it.
+"""
 from __future__ import annotations
 
 from dataclasses import replace
 
 from datetime import datetime
 
-from .exceptions import AllSourcesFailed, SourceError, UnsupportedInterval
-from .models import Interval, PriceHistory, SourceAttempt
+from .exceptions import AllSourcesFailed, UnsupportedInterval
+from .failover import FailoverClient
+from .models import Interval, PriceHistory
+
+
+def _price_unit(source):
+    """Declared price unit of a source (``"VND"`` / ``"points"`` / ``None``)."""
+    return getattr(source, "unit", None)
 
 
 class FailoverPriceClient:
@@ -15,39 +30,49 @@ class FailoverPriceClient:
     A result is returned only if it passes acceptance validation; otherwise the
     client records the failure reason and falls through to the next source. Sources
     that do not support the requested interval are skipped without a network call
-    and do not count against ``max_attempts``.
+    and do not count against ``max_attempts``. All configured sources must emit the
+    same unit/currency (see :class:`vnfin.failover.FailoverClient` unit guard).
     """
 
     def __init__(self, sources, max_attempts: int = 3):
-        self.sources = list(sources)
-        self.max_attempts = max_attempts
+        self._engine = FailoverClient(
+            sources,
+            operation=lambda src, symbol, interval, start, end: src.get_history(
+                symbol, interval, start, end
+            ),
+            capability=lambda src, symbol, interval, start, end: src.supports(interval),
+            reject=self._reject_reason,
+            unit_of=_price_unit,
+            max_attempts=max_attempts,
+            failure_factory=lambda attempts, symbol, interval, start, end: AllSourcesFailed(
+                symbol, interval, attempts
+            ),
+            no_capable_factory=lambda symbol, interval, start, end: UnsupportedInterval(
+                f"no configured source supports interval {interval.value}"
+            ),
+            finalize=self._finalize,
+        )
+
+    @property
+    def sources(self):
+        return self._engine.sources
+
+    @property
+    def max_attempts(self) -> int:
+        return self._engine.max_attempts
 
     def get_history(self, symbol, interval: Interval = Interval.D1, start=None, end=None) -> PriceHistory:
-        attempts: list[SourceAttempt] = []
-        capable = [s for s in self.sources if s.supports(interval)]
-        if not capable:
-            raise UnsupportedInterval(
-                f"no configured source supports interval {interval.value}"
-            )
-        for src in capable:
-            if len(attempts) >= self.max_attempts:
-                break
-            try:
-                hist = src.get_history(symbol, interval, start, end)
-            except SourceError as exc:
-                attempts.append(SourceAttempt(src.name, False, f"{type(exc).__name__}: {exc}"))
-                continue
-            reason = self._reject_reason(hist)
-            if reason:
-                attempts.append(SourceAttempt(src.name, False, reason))
-                continue
-            attempts.append(SourceAttempt(src.name, True, "ok"))
-            warnings = tuple(hist.warnings) + self._coverage_warnings(hist, start, end)
-            return replace(hist, attempts=tuple(attempts), warnings=warnings)
-        raise AllSourcesFailed(symbol, interval, tuple(attempts))
+        return self._engine.run(symbol, interval, start, end)
 
     def get_daily(self, symbol, start, end) -> PriceHistory:
         return self.get_history(symbol, Interval.D1, start, end)
+
+    @staticmethod
+    def _finalize(hist, attempts, symbol, interval, start, end) -> PriceHistory:
+        warnings = tuple(hist.warnings) + FailoverPriceClient._coverage_warnings(
+            hist, start, end
+        )
+        return replace(hist, attempts=attempts, warnings=warnings)
 
     @staticmethod
     def _reject_reason(hist) -> str | None:

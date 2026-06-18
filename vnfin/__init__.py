@@ -1,6 +1,7 @@
 """vnfin — clean-room OSS Python library for Vietnam financial-market data."""
 from . import exceptions
 from .client import FailoverPriceClient
+from .failover import FailoverClient
 from .models import (
     AdjustmentPolicy,
     Interval,
@@ -15,6 +16,7 @@ __all__ = [
     "PriceBar",
     "PriceHistory",
     "SourceAttempt",
+    "FailoverClient",
     "FailoverPriceClient",
     "default_client",
     "exceptions",

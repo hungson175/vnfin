@@ -13,6 +13,9 @@ class PriceSource(ABC):
     """A swappable price source. Adapters are constructed once and reused."""
 
     name: str = "base"
+    #: Unit/currency this source emits, used by the failover unit-homogeneity guard.
+    #: ``None`` means undeclared (treated as compatible with any chain).
+    unit: str | None = None
 
     @abstractmethod
     def supports(self, interval: Interval) -> bool:

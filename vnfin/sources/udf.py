@@ -28,6 +28,7 @@ class UDFSource(HttpDataSource, PriceSource):
     PRICE_SCALE = 1.0  # multiply feed price to reach VND (e.g. 1000 if feed is in thousands)
     VOLUME_SCALE = 1.0
     EXCHANGE = None
+    unit = "VND"  # equity UDF prices are money in VND (failover unit guard)
 
     def __init__(self, http_get=None, timeout: float = 25.0):
         # http_get(url, params, headers) -> response text. Injectable for testing.

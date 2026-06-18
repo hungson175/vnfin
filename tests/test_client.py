@@ -114,3 +114,41 @@ def test_partial_start_coverage_warning_with_datetime_inputs(synth):
     client = FailoverPriceClient([s])
     h = client.get_history("FPT", Interval.D1, datetime(2023, 11, 1), datetime(2024, 1, 4))
     assert any("partial_start_coverage" in w for w in h.warnings)
+
+
+def _unit_source(name, unit, synth):
+    s = FakeSource(name, synth.make_history(name, 2))
+    s.unit = unit
+    return s
+
+
+def test_price_client_rejects_mixed_units(synth):
+    from vnfin.exceptions import UnitMismatchError
+
+    vnd = _unit_source("equity", "VND", synth)
+    pts = _unit_source("index", "points", synth)
+    with pytest.raises(UnitMismatchError):
+        FailoverPriceClient([vnd, pts])
+
+
+def test_price_client_allows_homogeneous_units(synth):
+    a = _unit_source("a", "VND", synth)
+    b = _unit_source("b", "VND", synth)
+    client = FailoverPriceClient([a, b])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "a"
+
+
+def test_default_index_chain_is_homogeneous_points():
+    # The shipped index chain must construct cleanly (all sources declare "points").
+    from vnfin.indices.client import default_index_sources
+
+    client = FailoverPriceClient(default_index_sources())
+    assert {s.unit for s in client.sources} == {"points"}
+
+
+def test_default_equity_chain_is_homogeneous_vnd():
+    from vnfin.sources.registry import default_sources
+
+    client = FailoverPriceClient(default_sources())
+    assert {s.unit for s in client.sources} == {"VND"}
