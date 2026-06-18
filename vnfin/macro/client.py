@@ -137,7 +137,7 @@ class MacroClient:
         indicator raises ``ValueError`` and an empty country raises ``InvalidData``
         from the first attempted source.
         """
-        ind = normalize_indicator(indicator)  # ValueError on unknown indicator
+        ind = normalize_indicator(indicator, _invalid_to_valueerror=False)
         if not (country_iso3 or "").strip():
             # Fail fast on bad caller input (failover-safe) before any source call.
             raise InvalidData("macro: empty country code")

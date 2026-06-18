@@ -194,3 +194,45 @@ def test_transport_error_wrapped_as_unavailable():
 def test_empty_series_id_raises_invalid():
     with pytest.raises(InvalidData):
         _src(fred_success()).get_series("")
+
+
+def test_non_string_series_id_raises_invalid():
+    # Issue #50: bytes/int/... must raise InvalidData, not leak AttributeError/EmptyData.
+    for bad in (b"GDPC1", 123, []):
+        with pytest.raises(InvalidData):
+            _src(fred_success()).get_series(bad)
+
+
+def test_date_bounds_validated_before_request():
+    # Issue #49: malformed/non-date start/end must raise InvalidData before provider call.
+    captured = {"n": 0}
+
+    def _g(url, params, headers):
+        captured["n"] += 1
+        return fred_success()
+
+    src = FREDMacroSource(api_key="k", http_get=_g)
+    for bad in ("not-a-date", True, "2024-13-01"):
+        with pytest.raises(InvalidData):
+            src.get_series("GDPC1", start=bad)
+        assert captured["n"] == 0, f"http_get called for bad start={bad!r}"
+
+    for bad in ("not-a-date", 2024, "2024-02-30"):
+        with pytest.raises(InvalidData):
+            src.get_series("GDPC1", end=bad)
+        assert captured["n"] == 0, f"http_get called for bad end={bad!r}"
+
+
+def test_valid_date_bounds_accepted():
+    captured = {"params": None}
+
+    def _g(url, params, headers):
+        captured["params"] = params
+        return fred_success()
+
+    from datetime import date
+    FREDMacroSource(api_key="k", http_get=_g).get_series(
+        "GDPC1", start=date(2020, 1, 1), end="2024-12-31"
+    )
+    assert captured["params"]["observation_start"] == "2020-01-01"
+    assert captured["params"]["observation_end"] == "2024-12-31"

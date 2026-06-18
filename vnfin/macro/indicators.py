@@ -33,6 +33,8 @@ from datetime import date
 from enum import Enum
 from typing import Optional
 
+from ..exceptions import InvalidData
+
 
 class MacroIndicator(str, Enum):
     """Logical, provider-independent macro indicators.
@@ -139,12 +141,17 @@ def validate_indicator_values(indicator, points: list[tuple[date, float]], sourc
             )
 
 
-def normalize_indicator(indicator) -> MacroIndicator:
+def normalize_indicator(indicator, *, _invalid_to_valueerror: bool = True) -> MacroIndicator:
     """Coerce ``MacroIndicator`` | name | value to a :class:`MacroIndicator`.
 
     Accepts the enum itself, its ``.value`` (``"gdp_growth"``), or its member name
     (``"GDP_GROWTH"``), case-insensitively. Raises ``ValueError`` on anything else
     so callers get a clear, catchable error rather than a malformed request.
+
+    Internal callers may set ``_invalid_to_valueerror=False`` to receive
+    ``InvalidData`` instead; this is used by the public macro client so unknown
+    indicators surface as a failover-safe ``SourceError`` rather than a raw
+    ``ValueError``.
     """
     if isinstance(indicator, MacroIndicator):
         return indicator
@@ -160,7 +167,10 @@ def normalize_indicator(indicator) -> MacroIndicator:
         except KeyError:
             pass
     valid = ", ".join(m.value for m in MacroIndicator)
-    raise ValueError(f"unknown macro indicator {indicator!r}; expected one of: {valid}")
+    msg = f"unknown macro indicator {indicator!r}; expected one of: {valid}"
+    if _invalid_to_valueerror:
+        raise ValueError(msg)
+    raise InvalidData(f"macro: {msg}")
 
 
 def canonical_unit(indicator) -> str:

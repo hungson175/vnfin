@@ -318,7 +318,9 @@ def test_empty_country_raises_invalid_before_network():
         get_indicator("", MacroIndicator.GDP_GROWTH, sources=[a])
 
 
-def test_unknown_indicator_raises_value_error():
+def test_unknown_indicator_raises_invalid_data():
+    # Issue #48: unknown indicators must surface as InvalidData (failover-safe),
+    # not a raw ValueError.
     a = FakeMacroSource("a", PCT)
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidData):
         get_indicator("ZZZ", "not_a_real_indicator", sources=[a])

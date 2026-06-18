@@ -114,6 +114,39 @@ def test_mixin_dataframe_empty_series_keeps_attrs():
     assert df.attrs["source"] == "empty"
 
 
+def test_duplicate_observation_keys_raise_invalid_data():
+    # Issue #24: time-series parsers must reject duplicate index keys.
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class _Pt:
+        when: date
+        v: float
+
+    @dataclass(frozen=True)
+    class _Series(TimeSeriesResult):
+        rows: tuple
+        source: str = "synthetic"
+        value_unit: str = "widgets"
+
+        _items_attr = "rows"
+        _index_column = "when"
+        _df_columns = ("when", "v")
+
+        def _row_record(self, p):
+            return {"when": p.when, "v": p.v}
+
+        def _df_attrs(self):
+            return {"source": self.source}
+
+    pts = (_Pt(date(2099, 1, 1), 1.0), _Pt(date(2099, 1, 1), 2.0))
+    s = _Series(rows=pts)
+    from vnfin.exceptions import InvalidData
+
+    with pytest.raises(InvalidData):
+        s.to_dataframe()
+
+
 # --------------------------------------------------------------------------- #
 # (b) Explicit unit model — equity                                            #
 # --------------------------------------------------------------------------- #

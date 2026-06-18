@@ -30,6 +30,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .exceptions import InvalidData
+
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
@@ -74,12 +76,20 @@ class TimeSeriesResult:
 
         Metadata from :meth:`_df_attrs` is attached to ``df.attrs`` so downstream
         code keeps provenance after a merge/concat.
+
+        Raises :class:`~vnfin.exceptions.InvalidData` if the index contains duplicate
+        keys, because duplicate observations are a provider contract violation that
+        should trigger failover rather than silently dropping or duplicating rows.
         """
         import pandas as pd
 
         rows = [self._row_record(item) for item in self._items]
         df = pd.DataFrame(rows, columns=list(self._df_columns))
         if not df.empty:
-            df = df.set_index(self._index_column)
+            index_col = self._index_column
+            if df[index_col].duplicated().any():
+                dups = df[index_col][df[index_col].duplicated()].unique().tolist()
+                raise InvalidData(f"duplicate observation keys in series: {dups}")
+            df = df.set_index(index_col)
         df.attrs.update(self._df_attrs())
         return df

@@ -57,6 +57,28 @@ def test_normalize_rejects_unknown():
         normalize_indicator("not_an_indicator")
 
 
+def test_unknown_indicator_raises_invalid_data_not_value_error():
+    # Issue #48: an unknown indicator must raise InvalidData (failover-safe),
+    # not leak a raw ValueError out of the macro client.
+    from vnfin.exceptions import InvalidData
+    from vnfin.macro import default_macro_client
+
+    c = default_macro_client(http_get=lambda *a: '{"observations":[]}')
+    with pytest.raises(InvalidData):
+        c.get_indicator("USA", "not_an_indicator")
+
+
+def test_unknown_indicator_bytes_raises_invalid_data():
+    # Issue #48: bytes or other non-string indicators must also raise InvalidData.
+    from vnfin.exceptions import InvalidData
+    from vnfin.macro import default_macro_client
+
+    c = default_macro_client(http_get=lambda *a: '{"observations":[]}')
+    for bad in (b"gdp", 123, None):
+        with pytest.raises(InvalidData):
+            c.get_indicator("USA", bad)
+
+
 # --- canonical currency (B7) ------------------------------------------------
 
 def test_gdp_currency_is_usd_others_none():

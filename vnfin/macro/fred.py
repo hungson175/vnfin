@@ -87,16 +87,18 @@ class FREDMacroSource(HttpDataSource):
                 f"{self.NAME}: no FRED_API_KEY configured (bring-your-own-key); "
                 "source skipped"
             )
-        sid = (series_id or "").strip()
+        if not isinstance(series_id, str) or not series_id:
+            raise InvalidData(f"{self.NAME}: series_id must be a non-empty string")
+        sid = series_id.strip()
         if not sid:
             raise InvalidData(f"{self.NAME}: empty series_id")
 
         url = f"{self.BASE_URL}/series/observations"
         params = {"series_id": sid, "api_key": self._api_key, "file_type": "json"}
         if start is not None:
-            params["observation_start"] = self._as_iso(start)
+            params["observation_start"] = self._as_iso(start, "start")
         if end is not None:
-            params["observation_end"] = self._as_iso(end)
+            params["observation_end"] = self._as_iso(end, "end")
 
         data = self._request_json(url, params=params, headers=self._headers())
 
@@ -146,10 +148,17 @@ class FREDMacroSource(HttpDataSource):
         return units, points
 
     @staticmethod
-    def _as_iso(d) -> str:
+    def _as_iso(d, label: str) -> str:
         if isinstance(d, (date, datetime)):
             return d.strftime("%Y-%m-%d")
-        return str(d)
+        if not isinstance(d, str):
+            raise InvalidData(f"fred: {label} date must be a date/datetime or YYYY-MM-DD string")
+        s = d.strip()
+        try:
+            parsed = datetime.strptime(s, "%Y-%m-%d").date()
+        except ValueError as exc:
+            raise InvalidData(f"fred: malformed {label} date {d!r}") from exc
+        return parsed.strftime("%Y-%m-%d")
 
     def _headers(self) -> dict:
         return {"User-Agent": DEFAULT_UA, "Accept": "application/json"}
