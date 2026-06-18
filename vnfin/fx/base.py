@@ -72,6 +72,15 @@ class FXSource(HttpDataSource):
     ) -> FXRate:
         if not isinstance(rate, (int, float)) or not math.isfinite(rate) or rate <= 0:
             raise InvalidData(f"{self.name}: non-positive/invalid rate {rate!r} for {base}")
+        # Issue #14: validate bid/ask metadata when present (positive/finite and bid <= ask).
+        for side, value in (("bid", bid), ("ask", ask)):
+            if value is not None:
+                if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+                    raise InvalidData(
+                        f"{self.name}: non-positive/invalid {side} {value!r} for {base}"
+                    )
+        if bid is not None and ask is not None and bid > ask:
+            raise InvalidData(f"{self.name}: bid {bid} > ask {ask} for {base}")
         return FXRate(
             base=base,
             quote=self.QUOTE,

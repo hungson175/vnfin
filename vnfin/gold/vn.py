@@ -188,6 +188,9 @@ class BTMCGoldSource(_VNGoldSource):
             # Buy-only partner/raw rows quote sell == 0; skip rather than emit a 0 price.
             if sell == 0 or buy == 0:
                 continue
+            # Issue #15: a negative spread (sell < buy) is corrupted data; skip the row.
+            if sell < buy:
+                continue
             # Normalize the TOTAL price for the stated weight back to per-lượng.
             luong = _weight_in_luong(name)
             buy /= luong
@@ -277,6 +280,9 @@ class PNJGoldSource(_VNGoldSource):
                 continue
             buy = self._price(raw_buy, self.name) * self.PRICE_SCALE
             sell = self._price(raw_sell, self.name) * self.PRICE_SCALE
+            # Issue #15: a negative spread (sell < buy) is corrupted data; skip the row.
+            if sell < buy:
+                continue
             quotes.append(
                 GoldQuote(
                     time=now,

@@ -465,3 +465,11 @@ def test_pagination_deduplicates_overlapping_pages():
     h = BinanceCryptoSource(http_get=paging_http).get_klines("BTCUSDT", Interval.D1, start, end)
     times = [b.time for b in h.bars]
     assert len(times) == len(set(times)) == 1500
+
+
+def test_reversed_date_range_raises_invalid():
+    # Issue #6: start > end is a caller error, not a silent swap to an empty result.
+    with pytest.raises(InvalidData):
+        src_with(_payload()).get_klines(
+            "BTCUSDT", Interval.D1, date(2026, 6, 30), date(2026, 6, 1)
+        )

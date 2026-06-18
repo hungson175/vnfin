@@ -50,11 +50,16 @@ class OpenErApiFXSource(FXSource):
         for code, per_usd in rates.items():
             if code == self.QUOTE:
                 continue  # skip VND/VND
+            # Issue #28: reject malformed provider currency codes before building a rate.
+            try:
+                code = self._normalize_ccy(code)
+            except InvalidData:
+                continue
             if not isinstance(per_usd, (int, float)) or per_usd <= 0:
                 continue  # unusable leg
             vnd_per_unit = vnd_per_usd / per_usd  # VND per 1 `code`
             try:
-                out.append(self._build_rate(code.upper(), vnd_per_unit, as_of))
+                out.append(self._build_rate(code, vnd_per_unit, as_of))
             except InvalidData:
                 continue
         if not out:

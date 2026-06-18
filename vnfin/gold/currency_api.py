@@ -137,8 +137,9 @@ class CurrencyApiGoldSource(GoldSource):
             return x.date() if isinstance(x, datetime) else x
 
         lo, hi = as_date(start), as_date(end)
+        # Issue #6: a reversed window is a caller error, not something to silently swap.
         if lo > hi:
-            lo, hi = hi, lo
+            raise InvalidData(f"{self.name}: start {lo} is after end {hi}")
         if (hi - lo).days > _MAX_DAYS:
             raise InvalidData(f"currency-api: range too wide (> {_MAX_DAYS} days)")
         return lo, hi

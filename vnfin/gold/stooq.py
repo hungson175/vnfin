@@ -173,6 +173,7 @@ class StooqGoldSource(GoldSource):
             return x.date() if isinstance(x, datetime) else x
 
         lo, hi = as_date(start), as_date(end)
+        # Issue #6: a reversed window is a caller error, not something to silently swap.
         if lo > hi:
-            lo, hi = hi, lo
+            raise InvalidData(f"{self.name}: start {lo} is after end {hi}")
         return lo, hi

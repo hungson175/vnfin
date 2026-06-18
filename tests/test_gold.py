@@ -633,3 +633,68 @@ def test_currencyapi_history_to_dataframe():
     assert df.attrs["currency"] == "USD"
     assert df.attrs["unit"] == "USD/oz"
     assert df.attrs["source"] == "currency-api"
+
+
+# --------------------------------------------------------------------------- #
+# Batch 8 — gold spot validation + reversed windows (#15 #12 #6)
+# --------------------------------------------------------------------------- #
+
+
+def test_btmc_skips_reversed_buy_sell_spread():
+    # TESTCO is normal; FAKE has sell < buy (negative spread). FAKE must not be emitted.
+    rows = [
+        ("VÀNG MIẾNG TESTCO (Vàng TESTCO)", "24k", "10000000", "20000000", "4322", "17/06/2026 15:38"),
+        ("VÀNG MIẾNG FAKE (Vàng FAKE)", "24k", "20000000", "10000000", "4322", "17/06/2026 15:38"),
+    ]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=rows)))
+    quotes = s.get_quotes()
+    assert len(quotes) == 1
+    assert "FAKE" not in quotes[0].product
+    assert "TESTCO" in quotes[0].product
+
+
+def test_pnj_skips_reversed_buy_sell_spread():
+    rows = [
+        ("TESTCO", "Vàng miếng TESTCO 999.9", 20000, 10000),
+        ("FAKE", "Vàng miếng FAKE 999.9", 10000, 20000),
+    ]
+    s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
+    quotes = s.get_quotes()
+    assert len(quotes) == 1
+    assert quotes[0].product == "TESTCO"
+
+
+def test_goldapi_zero_price_rejected():
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(price=0.0)))
+    with pytest.raises(InvalidData):
+        s.get_quote()
+
+
+def test_goldapi_non_usd_currency_rejected():
+    payload = json.dumps(
+        {
+            "currency": "EUR",
+            "currencySymbol": "€",
+            "exchangeRate": 1.0,
+            "name": "Gold",
+            "price": 4296.9,
+            "symbol": "XAU",
+            "updatedAt": "2026-06-17T18:10:08Z",
+        }
+    )
+    s = GoldApiSource(http_get=_static_get(payload))
+    with pytest.raises(InvalidData):
+        s.get_quote()
+
+
+def test_currencyapi_reversed_date_range_raises_invalid():
+    s = CurrencyApiGoldSource(http_get=_static_get("{}"))
+    with pytest.raises(InvalidData):
+        s.get_history(date(2026, 6, 17), date(2026, 6, 15))
+
+
+def test_stooq_reversed_date_range_raises_invalid():
+    csv = "Date,Open,High,Low,Close,Volume\n2026-06-15,4000.0,4050.0,3990.0,4010.0,0\n"
+    s = StooqGoldSource(http_get=_static_get(csv))
+    with pytest.raises(InvalidData):
+        s.get_history(date(2026, 6, 17), date(2026, 6, 15))

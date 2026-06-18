@@ -526,3 +526,11 @@ def test_pagination_deduplicates_overlapping_slabs():
 
 def test_unit_attr_is_usd():
     assert CoinbaseCryptoSource().unit == "USD"
+
+
+def test_reversed_date_range_raises_invalid():
+    # Issue #6: start > end is a caller error, not a silent swap to an empty result.
+    with pytest.raises(InvalidData):
+        src_with(_payload()).get_klines(
+            "BTC-USD", Interval.D1, date(2026, 6, 30), date(2026, 6, 1)
+        )

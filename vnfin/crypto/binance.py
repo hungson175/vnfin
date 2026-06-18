@@ -304,4 +304,7 @@ class BinanceCryptoSource(HttpDataSource):
 
         lo = norm(start, False, datetime(1970, 1, 1, tzinfo=timezone.utc))
         hi = norm(end, True, datetime.now(timezone.utc))
+        # Issue #6: a reversed window is a caller error, not something to silently swap.
+        if lo > hi:
+            raise InvalidData(f"binance: start {start} is after end {end}")
         return lo, hi

@@ -359,3 +359,53 @@ def test_default_client_malformed_input_raises_without_network():
     with pytest.raises((AllSourcesFailed, InvalidData)):
         c.get_rate("US")
     assert getter.state["n"] == 0
+
+
+# --------------------------------------------------------------------------- #
+# Batch 8 — FX spot validation (#28 #14)
+# --------------------------------------------------------------------------- #
+
+
+def test_open_er_api_skips_malformed_provider_currency_codes():
+    # Provider row keys can be malformed (too short/long, digits, symbols). They
+    # must be rejected by the ISO-4217 guard and NOT leak into the returned rates.
+    payload = (
+        '{"result":"success","base_code":"USD","rates":{'
+        '"USD":1,"EUR":0.9,"US":1.0,"USDD":1.0,"12A":1.0,"U$D":1.0,"VND":25000}}'
+    )
+    src = OpenErApiFXSource(http_get=_http(payload))
+    rates = src.get_rates()
+    bases = {r.base for r in rates}
+    assert {"USD", "EUR"} <= bases
+    assert bases.isdisjoint({"US", "USDD", "12A", "U$D"})
+    assert "VND" not in bases
+
+
+def test_vietcombank_skips_reversed_bid_ask_spread():
+    # USD has bid > ask (invalid metadata); EUR is normal. Only EUR survives.
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Buy="25,200.00" Transfer="25,000.00" Sell="24,900.00"/>
+      <Exrate CurrencyCode="EUR" Buy="27,500.00" Transfer="27,800.00" Sell="29,000.00"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    rates = src.get_rates()
+    bases = {r.base for r in rates}
+    assert "USD" not in bases
+    assert "EUR" in bases
+
+
+def test_vietcombank_skips_non_positive_bid_ask():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Buy="0.00" Transfer="25,000.00" Sell="25,200.00"/>
+      <Exrate CurrencyCode="EUR" Buy="27,500.00" Transfer="27,800.00" Sell="29,000.00"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    rates = src.get_rates()
+    assert "USD" not in {r.base for r in rates}
+    assert "EUR" in {r.base for r in rates}

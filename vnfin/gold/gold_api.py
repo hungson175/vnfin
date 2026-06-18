@@ -54,8 +54,13 @@ class GoldApiSource(GoldSource):
             price = float(parsed["price"])
         except (TypeError, ValueError) as exc:
             raise InvalidData(f"{self.name}: malformed price {parsed.get('price')!r}") from exc
-        if not math.isfinite(price) or price < 0:
-            raise InvalidData(f"{self.name}: non-finite/negative price {parsed.get('price')!r}")
+        # Issue #12: zero price is not a valid spot, and the unit is USD/oz so the
+        # reported currency must be USD (or missing, in which case we default to USD).
+        if not math.isfinite(price) or price <= 0:
+            raise InvalidData(f"{self.name}: non-positive/invalid price {parsed.get('price')!r}")
+        currency = parsed.get("currency")
+        if currency is not None and currency != "USD":
+            raise InvalidData(f"{self.name}: expected USD currency, got {currency!r}")
 
         tm = self._parse_iso(parsed.get("updatedAt"))
         symbol = parsed.get("symbol") or self.symbol
@@ -65,7 +70,7 @@ class GoldApiSource(GoldSource):
             buy=price,
             sell=price,
             unit=_USD_PER_OZ,
-            currency=parsed.get("currency") or "USD",
+            currency=currency or "USD",
             source=self.name,
             fetched_at_utc=datetime.now(timezone.utc),
         )
