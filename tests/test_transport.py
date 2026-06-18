@@ -10,7 +10,12 @@ import json
 import pytest
 
 from vnfin.exceptions import InvalidData, SourceUnavailable
-from vnfin.transport import DEFAULT_TIMEOUT, DEFAULT_UA, HttpDataSource
+from vnfin.transport import (
+    DEFAULT_TIMEOUT,
+    DEFAULT_UA,
+    HttpDataSource,
+    redact_secrets,
+)
 
 FAKE_URL = "https://fake.invalid/api/v1/thing"
 
@@ -216,3 +221,116 @@ def test_source_name_falls_back_to_NAME():
     with pytest.raises(SourceUnavailable) as ei:
         probe._request_text(FAKE_URL)
     assert "only_name" in str(ei.value)
+
+
+# --- B4: secret redaction in wrapped errors / cache keys ----------------- #
+
+# OBVIOUSLY-FAKE dummy BYOK key. Deliberately NOT a single high-entropy blob:
+# hyphen-separated all-caps words so the no-secrets scanner (and any human reader)
+# can see at a glance it is fabricated, never a real-looking credential.
+FAKE_API_KEY = "FAKE-DUMMY-KEY-NOT-REAL-0000"
+
+
+def test_redact_secrets_redacts_query_param_in_url():
+    leaky = (
+        "https://fake.invalid/series/observations"
+        f"?series_id=FAKESERIES&api_key={FAKE_API_KEY}&file_type=json"
+    )
+    out = redact_secrets(leaky)
+    assert FAKE_API_KEY not in out
+    assert "api_key=REDACTED" in out
+    # Non-secret params are left intact.
+    assert "series_id=FAKESERIES" in out
+    assert "file_type=json" in out
+
+
+def test_redact_secrets_handles_key_token_access_token():
+    leaky = f"url?key={FAKE_API_KEY}&token=FAKETOKEN111&access_token=FAKEACCESS222"
+    out = redact_secrets(leaky)
+    for secret in (FAKE_API_KEY, "FAKETOKEN111", "FAKEACCESS222"):
+        assert secret not in out
+    assert out.count("REDACTED") == 3
+
+
+def test_redact_secrets_redacts_params_dict_repr():
+    # Mirrors a wrapped error that embeds repr({"api_key": "..."}).
+    leaky = "transport error: {'series_id': 'FAKESERIES', 'api_key': '" + FAKE_API_KEY + "'}"
+    out = redact_secrets(leaky)
+    assert FAKE_API_KEY not in out
+    assert "FAKESERIES" in out  # non-secret survives
+
+
+def test_redact_secrets_redacts_authorization_header():
+    leaky = "headers={'Authorization': 'Bearer FAKEBEARERTOKEN333'}"
+    out = redact_secrets(leaky)
+    assert "FAKEBEARERTOKEN333" not in out
+    assert "Authorization" in out
+
+
+def _fred_style_http_status_error():
+    """Build a real ``httpx.HTTPStatusError`` whose message embeds the full FRED
+    request URL (query string + dummy api_key) exactly as ``raise_for_status``
+    would — the precise leak path described in review B4.
+    """
+    import httpx
+
+    url = (
+        "https://api.stlouisfed.org/fred/series/observations"
+        f"?series_id=FAKESERIES&api_key={FAKE_API_KEY}&file_type=json"
+    )
+    request = httpx.Request("GET", url)
+    response = httpx.Response(400, request=request, text="Bad Request: invalid api_key")
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        return exc
+    raise AssertionError("raise_for_status did not raise")  # pragma: no cover
+
+
+def test_fred_4xx_does_not_leak_api_key_in_source_unavailable():
+    """An HTTP 4xx from a FRED-style request carrying a dummy api_key must NOT leak
+    the key in the raised SourceUnavailable message (B4 regression)."""
+    err = _fred_style_http_status_error()
+    # Sanity: the raw error string really does contain the secret (the leak).
+    assert FAKE_API_KEY in str(err)
+
+    probe = _Probe(http_get=_raising(err))
+    with pytest.raises(SourceUnavailable) as ei:
+        probe._request_text(
+            "https://api.stlouisfed.org/fred/series/observations",
+            params={"series_id": "FAKESERIES", "api_key": FAKE_API_KEY, "file_type": "json"},
+        )
+    message = str(ei.value)
+    assert FAKE_API_KEY not in message
+    assert "REDACTED" in message
+
+
+def test_fred_5xx_does_not_leak_api_key_in_source_unavailable():
+    """Same redaction guarantee for a 5xx surfaced as HTTPStatusError."""
+    import httpx
+
+    url = (
+        "https://api.stlouisfed.org/fred/series/observations"
+        f"?series_id=FAKESERIES&api_key={FAKE_API_KEY}"
+    )
+    request = httpx.Request("GET", url)
+    response = httpx.Response(503, request=request, text="Service Unavailable")
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as err:
+        probe = _Probe(http_get=_raising(err))
+        with pytest.raises(SourceUnavailable) as ei:
+            probe._request_text(url)
+        assert FAKE_API_KEY not in str(ei.value)
+
+
+def test_cache_key_redacts_secret_params():
+    """The response cache key must not embed BYOK secrets (B4)."""
+    key = HttpDataSource._cache_key(
+        f"https://fake.invalid/obs?api_key={FAKE_API_KEY}",
+        {"series_id": "FAKESERIES", "api_key": FAKE_API_KEY},
+        None,
+    )
+    flat = repr(key)
+    assert FAKE_API_KEY not in flat
+    assert "FAKESERIES" in flat  # non-secret survives, key stays useful

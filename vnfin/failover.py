@@ -74,6 +74,15 @@ class FailoverClient:
             raise ValueError(
                 f"on_unit_mismatch must be 'raise' or 'skip', got {on_unit_mismatch!r}"
             )
+        # B13: ``max_attempts`` is the per-call call budget; a non-int, a bool, or a
+        # non-positive value would silently degrade failover (``0`` makes the chain
+        # try nothing and always raise ``AllSourcesFailed``). Reject it up front with
+        # a clear message instead of failing opaquely at run time. ``bool`` is a
+        # subclass of ``int`` so it must be excluded explicitly.
+        if isinstance(max_attempts, bool) or not isinstance(max_attempts, int) or max_attempts <= 0:
+            raise ValueError(
+                f"max_attempts must be a positive int, got {max_attempts!r}"
+            )
         self._operation = operation
         self._capability = capability
         self._reject = reject

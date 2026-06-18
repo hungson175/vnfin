@@ -187,3 +187,33 @@ def test_guard_three_way_mismatch_raises():
     c = FakeSrc("c", {"v": 3}, unit="USD")
     with pytest.raises(UnitMismatchError):
         FailoverClient([a, b, c], operation=_fetch)
+
+
+# --- B13: max_attempts validation ---------------------------------------- #
+
+
+@pytest.mark.parametrize("bad", [0, -1, "x", 2.0, None])
+def test_max_attempts_rejects_invalid_values(bad):
+    s1 = FakeSrc("s1", {"v": 1})
+    with pytest.raises(ValueError):
+        FailoverClient([s1], operation=_fetch, max_attempts=bad)
+
+
+def test_max_attempts_rejects_bool_true():
+    # bool is an int subclass; True must NOT be accepted as max_attempts=1.
+    s1 = FakeSrc("s1", {"v": 1})
+    with pytest.raises(ValueError):
+        FailoverClient([s1], operation=_fetch, max_attempts=True)
+
+
+def test_max_attempts_rejects_bool_false():
+    s1 = FakeSrc("s1", {"v": 1})
+    with pytest.raises(ValueError):
+        FailoverClient([s1], operation=_fetch, max_attempts=False)
+
+
+def test_max_attempts_accepts_positive_int():
+    s1 = FakeSrc("s1", {"v": 1})
+    fc = FailoverClient([s1], operation=_fetch, max_attempts=1)
+    assert fc.max_attempts == 1
+    assert fc.run("ZZZ") == {"v": 1}

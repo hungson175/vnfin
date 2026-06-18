@@ -27,9 +27,55 @@ from __future__ import annotations
 
 import json as _json
 import random as _random
+import re as _re
 import time as _time
 
 from .exceptions import InvalidData, SourceUnavailable
+
+#: Query-param names whose VALUES are secrets and must never surface in an error
+#: message, a cache/debug string, or a log line. Matching is case-insensitive.
+#: ``key`` is intentionally last so the longer, more specific names win when a
+#: param name contains another (e.g. ``api_key`` is matched as a whole word).
+SENSITIVE_PARAMS = ("api_key", "access_token", "token", "key")
+
+#: Placeholder substituted for any redacted secret value.
+_REDACTED = "REDACTED"
+
+# Matches ``<name>=<value>`` for a sensitive param inside a URL query string or a
+# (JSON/repr) dict, e.g. ``api_key=...``, ``"api_key": "..."``, ``'key': '...'``.
+# ``<sep>`` tolerates an optional closing quote after the name (JSON/repr style),
+# the ``=``/``:`` delimiter, whitespace, and an optional opening quote on the value.
+# ``<value>`` runs until the next delimiter (``&``, ``?``, whitespace, quote, comma,
+# brace/paren) so neither real URLs nor dict reprs leak the secret.
+_QS_SECRET_RE = _re.compile(
+    r"(?i)(?P<name>\b(?:" + "|".join(SENSITIVE_PARAMS) + r")\b)"
+    r"(?P<sep>['\"]?\s*[=:]\s*['\"]?)"
+    r"(?P<val>[^&?\s'\"},)]+)"
+)
+
+# Matches an ``Authorization`` header value (``Authorization: <scheme> <creds>``
+# or ``'Authorization': '<...>'``) in any wrapped string.
+_AUTH_HEADER_RE = _re.compile(
+    r"(?i)(?P<name>Authorization)(?P<sep>['\"]?\s*[=:]\s*['\"]?)(?P<val>[^'\"},)\r\n]+)"
+)
+
+
+def redact_secrets(text):
+    """Return ``text`` with any sensitive query-param value or ``Authorization``
+    header value replaced by ``REDACTED``.
+
+    Covers the leak paths flagged in review B4: a wrapped transport error whose
+    message embeds the request URL (``httpx.raise_for_status`` includes the full
+    URL, query string and all) or a ``repr`` of the params/headers dict. Applied
+    before any secret can surface in a :class:`SourceUnavailable` message, a cache
+    key, or a debug string.
+    """
+    if text is None:
+        return text
+    s = text if isinstance(text, str) else str(text)
+    s = _AUTH_HEADER_RE.sub(lambda m: m.group("name") + m.group("sep") + _REDACTED, s)
+    s = _QS_SECRET_RE.sub(lambda m: m.group("name") + m.group("sep") + _REDACTED, s)
+    return s
 
 #: Browser User-Agent sent by the default client. Several VN/finance feeds reject the
 #: stock httpx UA, so every source presents a common desktop-Chrome UA.
@@ -158,17 +204,21 @@ class HttpDataSource:
         """Stable, hashable key for the response cache.
 
         ``params``/``json_body`` are dict-like, so they are normalized to a sorted,
-        JSON-serialized form to be hashable and order-independent.
+        JSON-serialized form to be hashable and order-independent. Sensitive values
+        (api_key/key/token/access_token) are redacted from every component (B4) so a
+        secret can never surface if the cache is dumped/logged for debugging; the key
+        stays stable because the redaction is deterministic.
         """
         def _norm(obj):
             if obj is None:
                 return None
             try:
-                return _json.dumps(obj, sort_keys=True, default=str)
+                serialized = _json.dumps(obj, sort_keys=True, default=str)
             except TypeError:
-                return repr(obj)
+                serialized = repr(obj)
+            return redact_secrets(serialized)
 
-        return (url, _norm(params), _norm(json_body))
+        return (redact_secrets(url), _norm(params), _norm(json_body))
 
     # --- transport helpers ----------------------------------------------- #
     def _request_text(self, url, params=None, headers=None, json_body=None) -> str:
@@ -226,8 +276,11 @@ class HttpDataSource:
                     self._sleep(self._backoff_delay(attempt))
                     attempt += 1
                     continue
+                # B4: redact any BYOK secret (api_key/key/token/access_token in the
+                # request URL or params, or an Authorization header) that the raw
+                # exception string may embed, BEFORE it reaches the caller/logs.
                 raise SourceUnavailable(
-                    f"{self._source_name} transport error: {exc}"
+                    redact_secrets(f"{self._source_name} transport error: {exc}")
                 ) from exc
 
     def _backoff_delay(self, attempt: int) -> float:
