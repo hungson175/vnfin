@@ -255,3 +255,25 @@ def test_validation_runs_before_network():
     with pytest.raises(InvalidData):
         IMFDataMapperSource(http_get=_g).get_indicator("  ", MacroIndicator.GDP_GROWTH)
     assert called["n"] == 0
+
+
+# --- level-indicator positivity guard (issue #16) --------------------------
+def test_gdp_negative_value_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(imf_success(code="NGDPD", obs={"2023": -100.0})).get_indicator(
+            COUNTRY, MacroIndicator.GDP
+        )
+
+
+def test_gdp_zero_value_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(imf_success(code="NGDPD", obs={"2023": 0.0})).get_indicator(
+            COUNTRY, MacroIndicator.GDP
+        )
+
+
+def test_percent_indicator_negative_value_allowed():
+    res = _src(imf_success(obs={"2023": -2.0})).get_indicator(
+        COUNTRY, MacroIndicator.GDP_GROWTH
+    )
+    assert res.points[0][1] == pytest.approx(-2.0)

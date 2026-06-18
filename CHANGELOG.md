@@ -31,6 +31,14 @@ All notable changes to `vnfin` are documented here. The format follows
   `LineItem.value_unit == "ratio"`. The CafeF adapter now scales EPS/BV by **1000** and labels them
   `"vnd_per_share"`, while dimensionless metrics (PE, ROE, ROA, ROS, DAR, GOS) remain `"ratio"`.
   ([#5](https://github.com/hungson175/vnfin/issues/5))
+- **Macro level-indicator positivity guard** — canonical level indicators (`GDP`, `CPI`) now reject
+  non-positive values as provider drift / parse errors. Percent/rate indicators (`GDP_GROWTH`,
+  `INFLATION`, `UNEMPLOYMENT`) continue to allow negative values. Guard applies to World Bank,
+  DBnomics, and IMF DataMapper sources. ([#16](https://github.com/hungson175/vnfin/issues/16))
+- **VN gold selector validation** — `BTMCGoldSource.get_quote()` and `PNJGoldSource.get_quote()` now
+  reject empty, whitespace-only, or non-string product selectors with `VnfinError` before scanning
+  the feed, instead of silently returning the first product or leaking `AttributeError`.
+  ([#17](https://github.com/hungson175/vnfin/issues/17))
 
 ## [0.2.0] — 2026-06-18
 

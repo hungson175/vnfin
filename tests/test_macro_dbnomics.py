@@ -202,3 +202,31 @@ def test_unknown_country_iso3_raises_invalid():
     # A fake ISO3 with no ISO2 mapping must fail cleanly (InvalidData), not crash.
     with pytest.raises(InvalidData):
         _src(dbn_success()).get_indicator("QQQ", MacroIndicator.GDP)
+
+
+# --- level-indicator positivity guard (issue #16) --------------------------
+def test_gdp_negative_value_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(dbn_success(periods=["2023-01-01"], values=[-100.0])).get_indicator(
+            COUNTRY, MacroIndicator.GDP
+        )
+
+
+def test_cpi_negative_value_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(
+            dbn_success(
+                series_code="M.ZZ.PCPI_IX", periods=["2023-01-01"], values=[-10.0]
+            )
+        ).get_indicator(COUNTRY, MacroIndicator.CPI)
+
+
+def test_cpi_zero_value_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(
+            dbn_success(
+                series_code="M.ZZ.PCPI_IX", periods=["2023-01-01"], values=[0.0]
+            )
+        ).get_indicator(COUNTRY, MacroIndicator.CPI)
+
+

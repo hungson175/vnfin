@@ -177,6 +177,50 @@ def test_canonical_gdp_carries_usd_currency_percent_carries_none():
     assert pct.unit == "%"
 
 
+def test_canonical_gdp_negative_value_raises_invalid():
+    # Level indicators (GDP) must be strictly positive.
+    from vnfin.macro import MacroIndicator
+
+    gdp_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, -1.0, name="Fake GDP (current US$)",
+              code="NY.GDP.MKTP.CD", unit="current US$")],
+    ])
+    with pytest.raises(InvalidData):
+        WorldBankMacroSource(http_get=lambda u, p, h: gdp_text).get_canonical_indicator(
+            COUNTRY, MacroIndicator.GDP
+        )
+
+
+def test_canonical_gdp_zero_value_raises_invalid():
+    from vnfin.macro import MacroIndicator
+
+    gdp_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, 0.0, name="Fake GDP (current US$)",
+              code="NY.GDP.MKTP.CD", unit="current US$")],
+    ])
+    with pytest.raises(InvalidData):
+        WorldBankMacroSource(http_get=lambda u, p, h: gdp_text).get_canonical_indicator(
+            COUNTRY, MacroIndicator.GDP
+        )
+
+
+def test_canonical_percent_indicator_negative_value_allowed():
+    # Percent/rate indicators can legitimately be negative (e.g. deflation).
+    from vnfin.macro import MacroIndicator
+
+    pct_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, -2.5, name="Fake growth (%)",
+              code="NY.GDP.MKTP.KD.ZG", unit="")],
+    ])
+    res = WorldBankMacroSource(http_get=lambda u, p, h: pct_text).get_canonical_indicator(
+        COUNTRY, MacroIndicator.GDP_GROWTH
+    )
+    assert res.points[0][1] == pytest.approx(-2.5)
+
+
 # ---------------------------------------------------------------------------
 # Units / metadata
 # ---------------------------------------------------------------------------

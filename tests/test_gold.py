@@ -236,6 +236,13 @@ def test_btmc_no_match_raises_empty():
         s.get_quote("DOES_NOT_EXIST")
 
 
+@pytest.mark.parametrize("bad_product", ["", "   ", "\t", None])
+def test_btmc_empty_product_selector_raises_vnfin_error(bad_product):
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
+    with pytest.raises(VnfinError):
+        s.get_quote(bad_product)
+
+
 def test_btmc_empty_datalist_raises_empty():
     s = BTMCGoldSource(http_get=_static_get(json.dumps({"DataList": {"Data": []}})))
     with pytest.raises(EmptyData):
@@ -345,6 +352,13 @@ def test_pnj_empty_data_raises_empty():
     s = PNJGoldSource(http_get=_static_get(json.dumps({"data": []})))
     with pytest.raises(EmptyData):
         s.get_quotes()
+
+
+@pytest.mark.parametrize("bad_product", ["", "   ", "\t", None])
+def test_pnj_empty_product_selector_raises_vnfin_error(bad_product):
+    s = PNJGoldSource(http_get=_static_get(_pnj_json()))
+    with pytest.raises(VnfinError):
+        s.get_quote(bad_product)
 
 
 def test_pnj_malformed_price_raises_invalid():

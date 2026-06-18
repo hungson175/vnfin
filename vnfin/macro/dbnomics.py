@@ -38,7 +38,7 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
-from .indicators import Frequency, MacroIndicator, normalize_indicator
+from .indicators import Frequency, MacroIndicator, normalize_indicator, validate_indicator_values
 from .models import IndicatorSeries
 
 # Canonical indicator -> (IFS frequency code, IFS concept code, unit DBnomics
@@ -123,6 +123,9 @@ class DBnomicsSource(HttpDataSource):
         points = self._build_points(doc, series_id)
         if not points:
             raise EmptyData(f"{self.NAME}: no observations for {series_id}")
+        # Level indicators (GDP, CPI) must be strictly positive; percent/rate
+        # indicators may be negative.
+        validate_indicator_values(ind, points, self.NAME)
 
         return IndicatorSeries(
             country=country,

@@ -45,7 +45,7 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
-from .indicators import Frequency, MacroIndicator, normalize_indicator
+from .indicators import Frequency, MacroIndicator, normalize_indicator, validate_indicator_values
 from .models import IndicatorSeries
 
 # Canonical indicator -> (IMF WEO code, unit IMF emits).
@@ -107,6 +107,9 @@ class IMFDataMapperSource(HttpDataSource):
         points = self._build_points(obs, code)
         if not points:
             raise EmptyData(f"{self.NAME}: no observations for {country}/{code}")
+        # Level indicators (GDP, CPI) must be strictly positive; percent/rate
+        # indicators may be negative.
+        validate_indicator_values(ind, points, self.NAME)
 
         # IMF WEO mixes actuals with forecasts. Conservatively mark the current
         # calendar year and beyond as projections so latest() never returns a

@@ -37,6 +37,7 @@ from .indicators import (
     MacroIndicator,
     canonical_currency,
     normalize_indicator,
+    validate_indicator_values,
 )
 from .models import IndicatorSeries
 
@@ -109,6 +110,9 @@ class WorldBankMacroSource(HttpDataSource):
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
         series = self.get_indicator(country_iso3, code)
+        # Level indicators (GDP, CPI) must be strictly positive; percent/rate
+        # indicators may be negative.
+        validate_indicator_values(ind, series.points, self.NAME)
         # Pin the per-indicator unit (WB ZG/ZS series frequently report an empty
         # unit) and the indicator-specific currency (None for percent series).
         from dataclasses import replace

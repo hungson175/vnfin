@@ -29,6 +29,7 @@ DBnomics), never from any third-party library.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from enum import Enum
 from typing import Optional
 
@@ -107,6 +108,35 @@ CANONICAL_CURRENCY: dict[MacroIndicator, Optional[str]] = {
     MacroIndicator.INFLATION: None,
     MacroIndicator.UNEMPLOYMENT: None,
 }
+
+
+#: Indicators whose values are economic *levels* and therefore must be strictly
+#: positive (e.g. nominal GDP, CPI index). Percent/rate indicators may be negative.
+_LEVEL_INDICATORS: frozenset[MacroIndicator] = frozenset({MacroIndicator.GDP, MacroIndicator.CPI})
+
+
+def is_level_indicator(indicator) -> bool:
+    """Return True if ``indicator`` is a level indicator that must be > 0."""
+    return normalize_indicator(indicator) in _LEVEL_INDICATORS
+
+
+def validate_indicator_values(indicator, points: list[tuple[date, float]], source_name: str) -> None:
+    """Raise ``InvalidData`` if any point violates indicator-specific value rules.
+
+    Level indicators (GDP, CPI) must be strictly positive. Percent/rate
+    indicators (growth, inflation, unemployment) may be negative or zero.
+    """
+    from ..exceptions import InvalidData
+
+    ind = normalize_indicator(indicator)
+    if not is_level_indicator(ind):
+        return
+    for d, v in points:
+        if v <= 0:
+            raise InvalidData(
+                f"{source_name}: {ind.value} is a level indicator and must be positive, "
+                f"got {v} at {d}"
+            )
 
 
 def normalize_indicator(indicator) -> MacroIndicator:

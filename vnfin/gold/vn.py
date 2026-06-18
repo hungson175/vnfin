@@ -30,7 +30,7 @@ import re
 import unicodedata
 from datetime import datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData
+from ..exceptions import EmptyData, InvalidData, VnfinError
 from .base import VN_TZ, GoldSource
 from .models import GoldQuote
 
@@ -119,7 +119,13 @@ class _VNGoldSource(GoldSource):
         return val
 
     def get_quote(self, product: str) -> GoldQuote:
-        """Return the first quote whose product name contains ``product`` (case-insensitive)."""
+        """Return the first quote whose product name contains ``product`` (case-insensitive).
+
+        Raises ``VnfinError`` if ``product`` is empty, whitespace-only, or not a
+        string — this is bad caller input, not a missing provider row.
+        """
+        if not isinstance(product, str) or not product.strip():
+            raise VnfinError("product must be a non-empty string")
         needle = product.strip().lower()
         for q in self.get_quotes():
             if needle in q.product.lower():
