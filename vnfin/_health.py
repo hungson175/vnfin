@@ -311,10 +311,10 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
             http_get=http_get, timeout=timeout,
         )
 
-    # NOTE: the macro probe intentionally exercises the multi-source failover path,
-    # so the actual serving source may be DBnomics (CPI is not mapped by World Bank
-    # in this version). The probe_id uses "canonical" rather than "worldbank" to
-    # avoid mislabelling it as a single-source probe.
+    # NOTE: the macro probe intentionally exercises the multi-source failover path.
+    # World Bank now maps CPI (FP.CPI.TOTL), but if it is unhealthy the chain can
+    # still fall back to IMF/DBnomics. The probe_id uses "canonical" rather than
+    # "worldbank" to avoid mislabelling it as a single-source probe.
 
     def _fetch_fundamentals() -> Any:
         # NB: the SOURCE.get_financials requires ENUMS (only the module-level
