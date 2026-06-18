@@ -24,6 +24,7 @@ from . import (
     exceptions,
     fundamentals,
     funds,
+    fx,
     gold,
     indices,
     macro,
@@ -57,6 +58,7 @@ __all__ = [
     "gold",
     "crypto",
     "macro",
+    "fx",
     "exceptions",
 ]
 __version__ = "0.1.0"

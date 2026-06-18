@@ -17,11 +17,16 @@ All notable changes to `vnfin` are documented here. The format follows
   typed `SourceHealth` per probe (reachability, schema conformance, value sanity, latency),
   schema-drift detection via required-paths/types, a 5-domain critical probe set, and sanitised
   `STATUS.md`/JSON renderers. Live-only; never runs in CI; never auto-pushed.
+- **FX domain** (`vnfin.fx`) — daily/current foreign-exchange reference rates vs VND, no-key
+  failover **open.er-api → Vietcombank XML**, canonical unit *VND per 1 unit of base* (USD/VND,
+  plus cross-rates EUR/CNY/JPY/…), typed `FXRate`, two-layer unit guard, optional `bid`/`ask`.
+  Spot/current only (history deferred to BYOK). Opt-in live USD/VND cross-source parity test;
+  opt-in (rate-limit-aware) FX health probe. See [`docs/design/fx-sources.md`](docs/design/fx-sources.md),
+  [`docs/sources/fx-open-er-api.md`](docs/sources/fx-open-er-api.md),
+  [`docs/sources/fx-vietcombank.md`](docs/sources/fx-vietcombank.md).
 - Explicit `__all__` for `vnfin.exceptions`; `vnfin.sources` now covered by the stability snapshot.
 
 ### Notes
-- FX domain (daily/current USD/VND + cross-rates, no-key failover) is designed
-  ([`docs/design/fx-sources.md`](docs/design/fx-sources.md)) and tracked for this release.
 - Corporate-actions/dividends are **designed only** ([`docs/design/corporate-actions.md`](docs/design/corporate-actions.md));
   implementation deferred to 0.3.1 after the security master.
 - No public push / tag / PyPI publish performed — held for maintainer approval.

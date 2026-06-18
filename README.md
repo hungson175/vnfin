@@ -3,7 +3,7 @@
 **Clean-room, open-source Python library for Vietnam financial-market data.**
 
 `vnfin` gives long-term investors, macro analysts, and developers a stable, typed, and
-**no-key-out-of-the-box** API for Vietnamese stocks, funds, indices, gold, macro indicators,
+**no-key-out-of-the-box** API for Vietnamese stocks, funds, indices, gold, FX, macro indicators,
 and major crypto — with multi-source **failover** so a single provider outage doesn't break you.
 
 - ✅ **No API key required** for the default path of every domain. Optional **bring-your-own-key (BYOK)** upgrades are read from env vars and are *never* bundled.
@@ -52,6 +52,10 @@ cpi = vnfin.macro.client().get_indicator("VNM", vnfin.macro.MacroIndicator.CPI)
 gold = vnfin.gold.world().get_history(date(2026, 1, 1), date(2026, 6, 17))          # USD/oz
 btc = vnfin.crypto.client().get_klines("BTCUSDT", vnfin.Interval.D1,
                                        date(2026, 1, 1), date(2026, 6, 17))          # USD
+
+# --- FX (no key; daily/current) — open.er-api → Vietcombank failover ---
+usdvnd = vnfin.fx.get_rate("USD")        # FXRate: rate = VND per 1 USD (e.g. ~26,000)
+eurvnd = vnfin.fx.get_rate("EUR")        # cross-rate vs VND
 ```
 
 ## Domains & sources
@@ -70,6 +74,7 @@ different unit families, so gold has no single `client()`; use `vn()` / `world()
 | Gold (VN) | **BTMC and PNJ — two separate spot adapters** (no runtime failover; live cross-source parity test) | VND/lượng | — |
 | Gold (world) | currency-api (Stooq opt-in) — failover via `default_world_gold_client()` | USD/oz | — |
 | Crypto | Binance → Coinbase | USD | — |
+| FX | open.er-api → Vietcombank | VND per 1 unit (e.g. VND per 1 USD) | — |
 | Macro | World Bank → IMF DataMapper → DBnomics | per-indicator | FRED / BEA / BLS-v2 |
 
 ### Bring-your-own-key (optional)

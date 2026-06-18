@@ -30,6 +30,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from vnfin._health import (  # noqa: E402
     HealthStatus,
     default_probes,
+    fx_probes,
     render_status_md,
     run_all,
     to_status_json,
@@ -41,6 +42,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--status-md", type=pathlib.Path, help="write STATUS markdown to this path")
     p.add_argument("--json", type=pathlib.Path, help="write sanitised JSON snapshot to this path")
     p.add_argument("--domain", action="append", default=[], help="only probe these domains")
+    p.add_argument("--fx", action="store_true", help="also probe FX (rate-limited; opt-in only)")
     p.add_argument("--timeout", type=float, default=25.0)
     p.add_argument("--exit-zero", action="store_true", help="always exit 0 (monitoring mode)")
     return p.parse_args(argv)
@@ -49,6 +51,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     args = _parse_args(argv)
     probes = default_probes(timeout=args.timeout)
+    if args.fx:
+        probes = probes + fx_probes(timeout=args.timeout)
     if args.domain:
         wanted = set(args.domain)
         probes = [p for p in probes if p.domain in wanted]

@@ -327,3 +327,26 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
             value_desc="Vietnam CPI series non-empty",
         ),
     ]
+
+
+def fx_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe]:
+    """OPT-IN FX probe set, kept OUT of :func:`default_probes`.
+
+    The FX providers rate-limit aggressively (open.er-api 429s if hit more than once/day;
+    Vietcombank asks for ≤1 request / 5 min), so FX must not be part of a routine scheduled
+    sweep. Use this only from a cached / infrequent monitor path (e.g. the healthcheck CLI's
+    ``--fx`` flag).
+    """
+    import vnfin
+
+    def _fetch_fx() -> Any:
+        return vnfin.fx.source(http_get=http_get, timeout=timeout).get_rate("USD")
+
+    return [
+        Probe(
+            domain="fx", source="open_er_api", probe_id="fx/open_er_api/USD-VND",
+            fetch=_fetch_fx,
+            value_check=lambda r: 15_000 < r.rate < 40_000,  # plausible USD/VND band
+            value_desc="USD/VND in plausible band",
+        ),
+    ]

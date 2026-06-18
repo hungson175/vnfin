@@ -5,16 +5,34 @@ independent → researched/built in parallel via workflows (and worktrees when a
 are written concurrently). Each step follows the rhythm: **research → design → discuss
 with reviewer → TDD implement → document → commit.**
 
+### v0.1.0 — shipped (2026-06-18)
+
 | Step | Domain | Why | Status |
 |------|--------|-----|--------|
-| 1 | **Daily prices** (OHLCV) | technical analysis base | ✅ done (5 broker adapters, failover client) |
-| 2 | **Fundamental reports** (income stmt / balance sheet / cash flow / ratios) | core of long-term valuation | 🔬 research in progress |
-| 3 | **Funds & indices** (fund list, NAV history, holdings; index values + constituents/weights) | **most important for long-term investing** | ⏳ research queued |
-| 4 | **Gold** (VN domestic SJC/PNJ/DOJI + world XAU) | macro hedge / allocation | ⏳ research queued |
-| ★ | **Architecture review** (reviewer) | generalize the source/port abstraction now that we span prices + fundamentals + funds + indices + gold | ⏳ after Step 4 |
-| 5 | **Macro indicators** (VN, US, China, Japan, Germany, … : GDP, CPI, rates, FX, M2, trade) | macroeconomic context | ⏳ research queued |
-| 6 | **Major crypto** (BTC, ETH, top coins — USD + VND where available) | cross-asset allocation | ⏳ research queued |
-| 7+ | TBD | — | — |
+| 1 | **Daily prices** (OHLCV) | technical analysis base | ✅ done (broker adapters, failover client) |
+| 2 | **Fundamental reports** (income / balance / cashflow / ratios) | core of long-term valuation | ✅ done (VNDirect → CafeF) |
+| 3 | **Funds & indices** (NAV, holdings; index values + constituents) | **most important for long-term investing** | ✅ done |
+| 4 | **Gold** (VN domestic + world XAU) | macro hedge / allocation | ✅ done |
+| 5 | **Macro indicators** (cross-country: GDP, CPI, rates, FX, M2, trade) | macroeconomic context | ✅ done (World Bank → IMF → DBnomics, no-key) |
+| 6 | **Major crypto** (BTC, ETH, … — USD) | cross-asset allocation | ✅ done (Binance → Coinbase) |
+
+### v0.2.0 — in progress (2026-06-18)
+
+| Item | Why | Status |
+|------|-----|--------|
+| **API stability gate** (public-surface snapshot + SemVer/deprecation policy) | protect the just-published API from accidental breaking changes | ✅ done |
+| **Upstream health monitoring** (opt-in `vnfin/_health.py` + `scripts/healthcheck.py`) | early-warning on upstream schema/unit drift or outage | ✅ done |
+| **FX** (daily/current VND rates, no-key) | convert world gold/crypto → VND; daily FX for analysis | ✅ implemented (open.er-api → Vietcombank) |
+| **Corporate actions / dividends** | total return for long-term investors | 📝 design only (deferred to v0.3.1 — after security master) |
+
+### v0.3.0+ — planned
+
+| Item | Why |
+|------|-----|
+| **Security master / company profile / shares outstanding** | per-share metrics, market cap, total-return audits (must precede dividends) |
+| **Dividends / corporate actions** | implement against VNDirect finfo `/v4/events` (designed) |
+| **VN interest rates / bond yields**, **ETF iNAV/holdings**, **intraday prices** | depth for macro + passive investing |
+| Historical FX (BYOK) | paid ExchangeRate-API / ECB for non-VND |
 
 ## Principles
 

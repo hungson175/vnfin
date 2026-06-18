@@ -17,6 +17,7 @@ from vnfin._health import (
     SourceHealth,
     check_schema,
     default_probes,
+    fx_probes,
     render_status_md,
     run_all,
     run_probe,
@@ -197,3 +198,11 @@ def test_default_probes_constructed_without_network():
     # each probe is well-formed
     for p in probes:
         assert p.domain and p.source and p.probe_id and callable(p.fetch)
+
+
+def test_fx_probe_is_opt_in_not_in_default():
+    # FX providers are rate-limited -> FX must NOT be in the routine scheduled set
+    assert all(p.domain != "fx" for p in default_probes())
+    fxp = fx_probes()
+    assert len(fxp) == 1 and fxp[0].domain == "fx"
+    assert fxp[0].probe_id == "fx/open_er_api/USD-VND"

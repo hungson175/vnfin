@@ -14,6 +14,7 @@ vnfin.funds         # mutual-fund NAV (VND / fund unit)
 vnfin.indices       # index value (points) + constituents
 vnfin.gold          # gold spot / history (VN domestic + world XAU)
 vnfin.crypto        # crypto OHLCV (USD)
+vnfin.fx            # FX reference rates (daily/current, VND per 1 unit)
 vnfin.macro         # macroeconomic indicators
 ```
 
@@ -86,6 +87,11 @@ wc    = vnfin.gold.default_world_gold_client()  # FailoverGoldClient (USD/oz)
 # crypto — OHLCV (USD). Failover Binance -> Coinbase.
 c   = vnfin.crypto.client()                  # FailoverCryptoClient (Binance -> Coinbase)
 src = vnfin.crypto.source()                  # BinanceCryptoSource (primary only)
+
+# fx — daily/current FX reference rates (VND per 1 unit of base). Failover open.er-api -> Vietcombank.
+c   = vnfin.fx.client()                       # FailoverFXClient (open.er-api -> Vietcombank)
+src = vnfin.fx.source()                       # OpenErApiFXSource (primary only)
+r   = vnfin.fx.get_rate("USD")                # one-shot FXRate; rate = VND per 1 USD (spot/current only)
 
 # macro — cross-country indicators. No-key failover World Bank -> IMF -> DBnomics.
 c   = vnfin.macro.client()                   # MacroClient (World Bank -> IMF DataMapper -> DBnomics, no-key)

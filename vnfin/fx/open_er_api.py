@@ -1,0 +1,64 @@
+"""ExchangeRate-API open endpoint adapter (clean-room, no-key).
+
+Built only against the provider's documented open endpoint
+``GET https://open.er-api.com/v6/latest/USD`` and its live-verified JSON shape — see
+``docs/sources/fx-open-er-api.md`` for provenance, terms (redistribution prohibited; attribution
+requested), and rate limits.
+
+Convention: with ``base_code = USD``, ``rates[X]`` is *X per 1 USD*. The canonical vnfin unit is
+**VND per 1 base**, so ``X/VND = rates["VND"] / rates[X]`` (USD/VND is just ``rates["VND"]``).
+One fetch (base=USD) yields every pair versus VND. Spot/current only — no history.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from ..exceptions import EmptyData, InvalidData
+from ..transport import DEFAULT_UA
+from .base import FXSource
+from .models import FXRate
+
+
+class OpenErApiFXSource(FXSource):
+    NAME = "open_er_api"
+    BASE_URL = "https://open.er-api.com"
+    LATEST_PATH = "/v6/latest/USD"  # USD base; cross-rates derived vs VND
+
+    def get_rates(self, quote: str = "VND") -> tuple[FXRate, ...]:
+        self._check_quote(quote)
+        url = self.BASE_URL + self.LATEST_PATH
+        payload = self._request_json(url, headers={"User-Agent": DEFAULT_UA})
+        if not isinstance(payload, dict):
+            raise InvalidData(f"{self.name}: unexpected payload type {type(payload).__name__}")
+        if payload.get("result") != "success":
+            raise EmptyData(f"{self.name}: provider result {payload.get('result')!r}")
+        rates = payload.get("rates")
+        if not isinstance(rates, dict):
+            raise InvalidData(f"{self.name}: missing rates object")
+        vnd_per_usd = rates.get(self.QUOTE)
+        if not isinstance(vnd_per_usd, (int, float)) or vnd_per_usd <= 0:
+            raise InvalidData(f"{self.name}: missing/invalid {self.QUOTE} anchor")
+        as_of = self._as_of(payload)
+
+        out: list[FXRate] = []
+        for code, per_usd in rates.items():
+            if code == self.QUOTE:
+                continue  # skip VND/VND
+            if not isinstance(per_usd, (int, float)) or per_usd <= 0:
+                continue  # unusable leg
+            vnd_per_unit = vnd_per_usd / per_usd  # VND per 1 `code`
+            try:
+                out.append(self._build_rate(code.upper(), vnd_per_unit, as_of))
+            except InvalidData:
+                continue
+        if not out:
+            raise EmptyData(f"{self.name}: no usable rates")
+        out.sort(key=lambda r: r.base)
+        return tuple(out)
+
+    @staticmethod
+    def _as_of(payload: dict) -> datetime:
+        ts = payload.get("time_last_update_unix")
+        if isinstance(ts, (int, float)) and ts > 0:
+            return datetime.fromtimestamp(int(ts), tz=timezone.utc)
+        return datetime.now(timezone.utc)
