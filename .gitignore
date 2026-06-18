@@ -14,3 +14,9 @@ __pycache__/
 tests/cassettes_private/
 build/
 dist/
+
+# Private maintainer tooling (operator-only; not part of the published library)
+.claude/
+bin/gh-maintainer
+bin/poll-and-nudge.sh
+state/
