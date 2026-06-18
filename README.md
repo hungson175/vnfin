@@ -10,7 +10,7 @@ and major crypto — with multi-source **failover** so a single provider outage 
 - ✅ **Typed contracts** (frozen dataclasses) with explicit **units/currency** on every result — no guessing VND vs thousand-VND vs points.
 - ✅ **Failover redundancy** — each domain chains a primary + backup source through one generic client with a **unit-homogeneity guard** (it cannot silently mix scales).
 - ✅ **Clean-room** — built only from providers' own endpoints and public protocols; runtime-fetch only, no bundled market data.
-- ✅ **618+ offline tests**, synthetic fixtures only; real cross-source checks live under `live_tests/`.
+- ✅ **750+ offline tests** (94% coverage), synthetic fixtures only; real cross-source checks live under `live_tests/`.
 
 > ⚠️ **Data use:** `vnfin` is an API *client*. Data fetched is for personal/internal research.
 > Redistributing raw provider data may require the provider's/exchange's license — see each
