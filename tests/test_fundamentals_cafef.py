@@ -312,6 +312,18 @@ def test_ratios_hit_chisotaichinh_endpoint():
 
 
 # --------------------------------------------------------------------------- #
+# Regression — issue #4: CafeF ratio endpoint rejects quarterly EndDate anchors
+# like "2-2026"; it expects a plain year. Request must coerce to annual anchor.
+# --------------------------------------------------------------------------- #
+def test_ratios_quarter_request_uses_year_end_date_anchor():
+    src, captured = _capturing_src(ratios_two_years())
+    src.get_financials("TESTCO", StatementType.RATIOS, Period.QUARTER)
+    end_date = captured["params"]["EndDate"]
+    # must be a plain 4-digit year, not "Q-YYYY"
+    assert isinstance(end_date, str) and end_date.isdigit() and len(end_date) == 4
+
+
+# --------------------------------------------------------------------------- #
 # Ratios path: period-agnostic, NOT monetary VND
 # --------------------------------------------------------------------------- #
 def test_ratios_parse_per_period():
@@ -321,7 +333,10 @@ def test_ratios_parse_per_period():
     assert len(reports) == 2
     newest = reports[0]
     assert newest.statement_type is StatementType.RATIOS
-    assert newest.get("EPS") == pytest.approx(5_000.0)
+    # EPS/BV are per-share monetary values scaled to raw VND/share
+    assert newest.get("EPS") == pytest.approx(5_000_000.0)
+    assert newest.get("BV") == pytest.approx(20_000_000.0)
+    # dimensionless ratios are unscaled
     assert newest.get("PE") == pytest.approx(18.0)
 
 
@@ -345,7 +360,34 @@ def test_ratio_line_items_have_ratio_value_unit():
         "TESTCO", StatementType.RATIOS, Period.ANNUAL
     )
     for li in reports[0].items:
-        assert li.value_unit == "ratio"
+        if li.item_code in {"EPS", "BV"}:
+            assert li.value_unit == "vnd_per_share"
+        else:
+            assert li.value_unit == "ratio"
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #5: EPS/BV are per-share monetary values, not dimensionless
+# ratios. CafeF reports them in thousand VND/share; emit raw VND/share.
+# --------------------------------------------------------------------------- #
+def test_eps_and_bv_emitted_as_vnd_per_share_and_scaled_to_raw_vnd():
+    reports = _src(ratios_two_years()).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.ANNUAL
+    )
+    newest = reports[0]
+    eps = next(li for li in newest.items if li.item_code == "EPS")
+    bv = next(li for li in newest.items if li.item_code == "BV")
+    pe = next(li for li in newest.items if li.item_code == "PE")
+
+    # per-share monetary values scaled x1000 (thousand-VND -> raw VND/share)
+    assert eps.value == pytest.approx(5_000_000.0)
+    assert eps.value_unit == "vnd_per_share"
+    assert bv.value == pytest.approx(20_000_000.0)
+    assert bv.value_unit == "vnd_per_share"
+
+    # dimensionless ratios stay unscaled and labelled "ratio"
+    assert pe.value == pytest.approx(18.0)
+    assert pe.value_unit == "ratio"
 
 
 # --------------------------------------------------------------------------- #
@@ -598,10 +640,12 @@ def test_cafef_statement_money_scaled_thousand_vnd_to_raw_vnd():
     assert reports[0].currency == "VND"
 
 
-def test_cafef_ratios_are_not_scaled():
-    # ratios are dimensionless/per-share and must NOT be multiplied by 1000
+def test_cafef_ratios_dimensionless_unscaled_per_share_monetary_scaled():
+    # dimensionless ratios must NOT be multiplied by 1000; per-share monetary
+    # values (EPS/BV) are scaled from thousand-VND/share to raw VND/share.
     reports = _src(ratios_two_years()).get_financials(
         "TESTCO", StatementType.RATIOS, Period.ANNUAL
     )
-    assert reports[0].get("EPS") == pytest.approx(5_000.0)
+    assert reports[0].get("EPS") == pytest.approx(5_000_000.0)
+    assert reports[0].get("BV") == pytest.approx(20_000_000.0)
     assert reports[0].get("PE") == pytest.approx(18.0)

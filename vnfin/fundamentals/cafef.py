@@ -23,8 +23,10 @@ docs/research/2026-06-18-vn-fundamental-data-sources.md):
   RATIOS (EPS / BV / PE / ROA / ROE ...):
     https://cafef.vn/du-lieu/Ajax/PageNew/GetDataChiSoTaiChinh.ashx
       ?Symbol={T}&TotalRow={N}&EndDate={anchor}&ReportType={NAM|QUY}&Sort=DESC
-    Same outer shape; ratio ``Code``s; values are dimensionless / per-share VND,
-    NOT monetary VND (currency=None, value_unit="ratio").
+    Same outer shape; ratio ``Code``s. Dimensionless ratios (PE, ROE, ROA, ROS,
+    DAR, GOS) have ``value_unit="ratio"``. Per-share monetary values (EPS, BV)
+    are reported by CafeF in thousand VND/share and are scaled to raw VND/share
+    with ``value_unit="vnd_per_share"`` (currency=None for all ratios).
 
 Clean-room: endpoint shapes were learned only from CafeF's own server + the
 research doc. No vnstock or derivative material was consulted.
@@ -61,6 +63,10 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     unit = "VND"
     #: CafeF statement money is thousand-VND; scale to raw VND to honor the contract.
     _VND_SCALE = 1000
+    #: CafeF ratio codes that are per-share monetary values (thousand VND/share),
+    #: NOT dimensionless ratios. These are scaled to raw VND/share and labelled
+    #: ``vnd_per_share``.
+    _PER_SHARE_CODES = frozenset({"EPS", "BV"})
     BASE_URL = "https://cafef.vn/du-lieu/Ajax/PageNew"
     FINANCE_REPORT_PATH = "/FinanceReport.ashx"
     RATIOS_PATH = "/GetDataChiSoTaiChinh.ashx"
@@ -202,10 +208,14 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
 
     # --- ratios (period-agnostic, NOT monetary VND) ------------------------- #
     def _get_ratios(self, psym, period, *, is_bank, limit):
+        # CafeF's ratio endpoint rejects quarterly EndDate anchors like "2-2026"
+        # ("Time sai dinh dang"); it expects a plain year. Ratios are
+        # period-agnostic in the typed contract (Period.UNKNOWN), so always use
+        # the annual/year anchor while still honoring the caller's ReportType.
         params = {
             "Symbol": psym,
             "TotalRow": self._total_row(limit),
-            "EndDate": self._end_date_anchor(period),
+            "EndDate": self._end_date_anchor(Period.ANNUAL),
             "ReportType": self._report_type(period),
             "Sort": "DESC",
         }
@@ -216,7 +226,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         reports = []
         skipped = 0
         for pobj in periods:
-            items = self._line_items(pobj, value_unit="ratio")
+            items = self._ratio_line_items(pobj)
             try:
                 fiscal_date = self._fiscal_date(pobj, period)
             except InvalidData:
@@ -275,6 +285,45 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
                     name=name,
                     value=value,
                     value_unit=value_unit,
+                )
+            )
+        return tuple(items)
+
+    def _ratio_line_items(self, period_obj) -> tuple[LineItem, ...]:
+        """Parse ratio line items, distinguishing per-share monetary values.
+
+        EPS and BV are money-per-share (CafeF reports them in thousand VND per
+        share), so they are scaled to raw VND/share and labelled
+        ``vnd_per_share``. All other ratio codes are dimensionless and labelled
+        ``ratio``.
+        """
+        if not isinstance(period_obj, dict):
+            raise InvalidData(f"{self.name}: period entry is not an object")
+        raw_items = period_obj.get("Value")
+        if not isinstance(raw_items, list):
+            raise InvalidData(f"{self.name}: period 'Value' is not a list")
+        items: list[LineItem] = []
+        for it in raw_items:
+            if not isinstance(it, dict):
+                raise InvalidData(f"{self.name}: line item is not an object")
+            code = it.get("Code")
+            if code is None or str(code).strip() == "":
+                raise InvalidData(f"{self.name}: line item missing Code")
+            name = (it.get("Name") or str(code)).strip()
+            value = self._num(it.get("Value"))
+            code_str = str(code).strip()
+            if code_str in self._PER_SHARE_CODES:
+                # Per-share monetary value: thousand VND/share -> raw VND/share.
+                value *= self._VND_SCALE
+                unit = "vnd_per_share"
+            else:
+                unit = "ratio"
+            items.append(
+                LineItem(
+                    item_code=code_str,
+                    name=name,
+                    value=value,
+                    value_unit=unit,
                 )
             )
         return tuple(items)

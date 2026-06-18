@@ -21,6 +21,16 @@ All notable changes to `vnfin` are documented here. The format follows
   (thousand-VND) with matching labels but a 1000× scale mismatch. The CafeF adapter now multiplies
   monetary statement lines by **1000** to emit raw VND (ratios unscaled), matching the VNDirect
   primary. Verified via cross-source magnitude. ([#3](https://github.com/hungson175/vnfin/issues/3))
+- **CafeF ratios — quarterly EndDate anchor** — `CafeFFundamentalSource.get_financials(...,
+  StatementType.RATIOS, Period.QUARTER)` previously sent a quarterly `EndDate` like `"2-2026"`, which
+  CafeF's ratio endpoint rejects (`Time sai dinh dang`). The adapter now always sends a plain year
+  anchor for ratios (the typed contract treats ratios as period-agnostic `Period.UNKNOWN`).
+  ([#4](https://github.com/hungson175/vnfin/issues/4))
+- **Fundamental ratio unit labels** — EPS and BV are per-share monetary values, not dimensionless
+  ratios. CafeF reports them in **thousand-VND per share**; they were previously emitted with
+  `LineItem.value_unit == "ratio"`. The CafeF adapter now scales EPS/BV by **1000** and labels them
+  `"vnd_per_share"`, while dimensionless metrics (PE, ROE, ROA, ROS, DAR, GOS) remain `"ratio"`.
+  ([#5](https://github.com/hungson175/vnfin/issues/5))
 
 ## [0.2.0] — 2026-06-18
 

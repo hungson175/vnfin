@@ -47,8 +47,9 @@ class LineItem:
     name, the numeric value, and the unit that value is denominated in.
 
     ``value_unit`` is explicit per-line so callers never guess: statement money
-    lines are ``"VND"`` (raw, unscaled); ratio lines are ``"ratio"``
-    (dimensionless / per-share — NOT a monetary VND amount)."""
+    lines are ``"VND"`` (raw, unscaled); per-share monetary ratio lines (EPS,
+    BV) are ``"vnd_per_share"``; all other ratio lines are ``"ratio"``
+    (dimensionless)."""
 
     item_code: str
     name: str
