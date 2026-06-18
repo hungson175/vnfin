@@ -411,7 +411,7 @@ def compare_surfaces(old: dict, new: dict) -> list[dict[str, str]]:
 # CLI
 # --------------------------------------------------------------------------- #
 def main(argv: list[str]) -> int:
-    default_out = pathlib.Path(__file__).resolve().parents[1] / "tests" / "snapshots" / "public_api_v0_1_0.json"
+    default_out = pathlib.Path(__file__).resolve().parents[1] / "tests" / "snapshots" / "public_api_v0_2_0.json"
     out_path = pathlib.Path(argv[1]) if len(argv) > 1 else default_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     surface = build_surface()

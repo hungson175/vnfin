@@ -26,7 +26,7 @@ import pytest
 
 _REPO = pathlib.Path(__file__).resolve().parents[1]
 _SCRIPT = _REPO / "scripts" / "dump_api_surface.py"
-_BASELINE = _REPO / "tests" / "snapshots" / "public_api_v0_1_0.json"
+_BASELINE = _REPO / "tests" / "snapshots" / "public_api_v0_2_0.json"
 
 
 def _load_module():

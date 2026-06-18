@@ -54,8 +54,9 @@ btc = vnfin.crypto.client().get_klines("BTCUSDT", vnfin.Interval.D1,
                                        date(2026, 1, 1), date(2026, 6, 17))          # USD
 
 # --- FX (no key; daily/current) — open.er-api → Vietcombank failover ---
-usdvnd = vnfin.fx.get_rate("USD")        # FXRate: rate = VND per 1 USD (e.g. ~26,000)
-eurvnd = vnfin.fx.get_rate("EUR")        # cross-rate vs VND
+fx = vnfin.fx.client()                   # reuse ONE client to share the daily response cache
+usdvnd = fx.get_rate("USD")              # FXRate: rate = VND per 1 USD (e.g. ~26,000)
+eurvnd = fx.get_rate("EUR")              # cross-rate vs VND (same cached fetch)
 ```
 
 ## Domains & sources

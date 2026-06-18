@@ -45,9 +45,11 @@ enforces source-unit homogeneity at *construction*, and validates results via `r
 1. **Source-level convention guard** — every FX source declares the same unit family via
    `unit_of(source)` (e.g. `"VND-per-foreign-unit"`); the failover client refuses to chain
    sources of different families at construction.
-2. **Result/request guard** — `reject(result)` validates the returned `base`/`quote`,
-   `unit == f"VND per 1 {base}"`, and `rate > 0`; a source that silently inverted the quote
-   (USD-per-VND) fails this and the client falls over / fails loudly.
+2. **Result/request guard** — a **request-aware** check (implemented in `_operation`, which has
+   the requested base/quote in scope — `reject(result)` alone only sees the result) validates the
+   returned `base`/`quote` *match the request*, `unit == f"VND per 1 {requested_base}"`, and
+   `rate > 0`; a source returning the wrong currency or a silently inverted quote (USD-per-VND)
+   fails this and the client falls over / fails loudly.
 
 ## Public model
 

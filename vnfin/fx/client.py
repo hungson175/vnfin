@@ -2,8 +2,9 @@
 
 Wraps the generic :class:`vnfin.failover.FailoverClient`. Both sources declare the same unit
 family (``"VND-per-foreign-unit"``), so the construction-time unit-homogeneity guard accepts the
-chain; an inverted/mismatched result is caught by ``reject`` (the two-layer guard described in
-``docs/design/fx-sources.md``).
+chain. A wrong-base / inverted / non-positive result is caught by the **request-aware** guard in
+``_operation`` (it validates the returned base/quote/unit/rate against the *requested* base and
+raises so failover moves on) — the two-layer guard described in ``docs/design/fx-sources.md``.
 """
 from __future__ import annotations
 

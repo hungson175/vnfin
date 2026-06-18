@@ -4,7 +4,10 @@ All notable changes to `vnfin` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/) — see [`docs/stability.md`](docs/stability.md).
 
-## [Unreleased] — 0.2.0 (release-ready, not yet released)
+## [0.2.0] — 2026-06-18
+
+> Version bumped and release-ready. **Tag/push/PyPI publish are pending maintainer approval**
+> (not yet performed).
 
 ### Added
 - **API stability gate** — `tests/test_public_api_surface.py` introspects the public surface
@@ -43,5 +46,5 @@ All notable changes to `vnfin` are documented here. The format follows
 - 750+ offline tests (94% coverage, synthetic fixtures only) + opt-in live cross-source checks;
   CI coverage gate (≥85%). Apache-2.0.
 
-[Unreleased]: https://github.com/hungson175/vnfin/compare/v0.1.0...HEAD
+[0.2.0]: https://github.com/hungson175/vnfin/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hungson175/vnfin/releases/tag/v0.1.0

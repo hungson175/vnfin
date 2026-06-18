@@ -291,3 +291,22 @@ def test_malformed_iso_rejected_before_network(bad_code):
     with pytest.raises(InvalidData):
         src.get_rate(bad_code)
     assert getter.state["n"] == 0  # rejected before any network call
+
+
+def test_malformed_quote_rejected_before_network():
+    getter = _counting(_OPEN_ER)
+    src = OpenErApiFXSource(http_get=getter)
+    with pytest.raises(InvalidData):
+        src.get_rate("USD", quote="VNDD")  # malformed quote
+    assert getter.state["n"] == 0
+
+
+def test_default_client_malformed_input_raises_without_network():
+    from vnfin.exceptions import AllSourcesFailed
+
+    getter = _counting(_OPEN_ER)
+    c = client(http_get=getter)
+    # malformed inputs are rejected by every source before any fetch -> all sources fail
+    with pytest.raises((AllSourcesFailed, InvalidData)):
+        c.get_rate("US")
+    assert getter.state["n"] == 0

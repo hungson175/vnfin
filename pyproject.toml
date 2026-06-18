@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vnfin"
-version = "0.1.0"
-description = "Clean-room OSS Python library for Vietnam financial-market data (prices, fundamentals, funds, indices, gold, macro, crypto) — no-key-first with multi-source failover"
+version = "0.2.0"
+description = "Clean-room OSS Python library for Vietnam financial-market data (prices, fundamentals, funds, indices, gold, FX, macro, crypto) — no-key-first with multi-source failover"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
