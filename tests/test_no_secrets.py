@@ -47,11 +47,29 @@ BEARER_REAL_RE = re.compile(
 # Long high-entropy blobs. A real signing token / AES passphrase / widget key is a
 # single UNBROKEN run of >= 16 alphanumeric characters with no separators. Limiting
 # the charset to [A-Za-z0-9] (no "/", "-", "=", ".", "_", "+", space) means URLs and
-# ordinary prose are split into short pieces and never reach the threshold; the now-
-# fragmented public-widget default in vnfin/gold/vn.py (joined with "+") is likewise
-# not a single run.
+# ordinary prose are split into short pieces and never reach the threshold.
 _SECRET_BLOB_MIN = 16
 SECRET_BLOB_RE = re.compile(r"[A-Za-z0-9]{%d,}" % _SECRET_BLOB_MIN)
+
+# Explicit, documented secret-scanner ALLOWLIST (gitleaks-style). Each entry is an
+# exact literal that the scanner would otherwise flag but that the project has
+# decided is safe to commit, WITH a rationale. The scanner still fails on every
+# OTHER secret/key/JWT — nothing here is a blanket bypass.
+#
+#   * BTMC public web-widget token: BTMC ships this exact fixed value client-side in
+#     the public price-ticker widget on its own website. It carries no login/account
+#     and is not a user secret. Accepted for OSS distribution by explicit project
+#     decision (Boss-delegated). It is the overridable default for the BTMC gold
+#     adapter (constructor ``widget_key=`` / env ``VNFIN_BTMC_WIDGET_KEY``). The
+#     value is sourced at runtime from vnfin.gold.BTMC_PUBLIC_WIDGET_KEY so this test
+#     never has to embed the literal itself.
+def _allowlisted_blobs() -> frozenset[str]:
+    from vnfin.gold import BTMC_PUBLIC_WIDGET_KEY  # imported, not embedded as a literal
+
+    return frozenset({BTMC_PUBLIC_WIDGET_KEY})
+
+
+_ALLOWLISTED_BLOBS = _allowlisted_blobs()
 
 # Allowlisted long runs that are demonstrably NOT secrets.
 #   * 40-char lowercase-hex = git commit SHA referenced in narrative docs.
@@ -69,6 +87,8 @@ def _blob_is_allowed(blob: str) -> bool:
     (e.g. FRED ``MKTGDPVNA646NWDB`` has no lowercase), pure numbers, and trivially
     low-variety runs.
     """
+    if blob in _ALLOWLISTED_BLOBS:  # explicit, documented project-decision allowlist
+        return True
     if _GIT_SHA_RE.match(blob) or _SHA256_RE.match(blob):
         return True
     if blob.isdigit():  # long number (epoch, count), not a credential
@@ -172,10 +192,11 @@ def test_no_real_bearer_tokens_in_tracked_files() -> None:
 def test_no_long_secret_blobs_in_tracked_files() -> None:
     """Catch committed signing tokens / AES passphrases / widget keys generically.
 
-    Any contiguous >=26-char base64url/hex run that is not an allowlisted benign
-    shape (git SHA, sha256, pure number, structural) is flagged. This is what
-    catches the previously-committed Wichart signing token, AES passphrase, and the
-    BTMC/DOJI widget keys WITHOUT this file having to store any of those literals.
+    Any contiguous run (>= _SECRET_BLOB_MIN chars) of mixed lowercase+digit that is
+    not an allowlisted benign shape (git SHA, sha256, pure number, structural) OR an
+    explicit project-decision allowlist entry (``_ALLOWLISTED_BLOBS``) is flagged.
+    This is what catches the previously-committed Wichart signing token and AES
+    passphrase WITHOUT this file having to store any of those literals.
     """
     offenders: list[str] = []
     for path in _scannable_text_files():
@@ -192,9 +213,10 @@ def test_no_long_secret_blobs_in_tracked_files() -> None:
                 offenders.append(f"{rel}:{lineno}")
                 break
     assert not offenders, (
-        "Long secret-like blob(s) found in tracked files. Remove the credential "
-        "and source it from env/constructor, or fragment a documented PUBLIC token "
-        "so it is not a single contiguous run:\n" + "\n".join(offenders)
+        "Long secret-like blob(s) found in tracked files. Remove the credential and "
+        "source it from env/constructor, or — only for a genuinely public, "
+        "project-approved token — add a documented entry to _ALLOWLISTED_BLOBS:\n"
+        + "\n".join(offenders)
     )
 
 
@@ -212,25 +234,60 @@ def test_scanner_covers_source_and_itself() -> None:
     assert len(source_files) >= 5, source_files
 
 
-def test_btmc_widget_key_is_not_a_committed_secret_literal() -> None:
-    """The BTMC public widget key must NOT appear in source as a single unbroken
-    run (it is the documented public default, fragmented in vnfin/gold/vn.py and
-    sourced via constructor/env). The runtime value still resolves correctly."""
+def test_btmc_widget_key_is_a_plain_literal_and_allowlisted() -> None:
+    """The BTMC public widget key is committed as a single PLAIN literal (no
+    fragment/concatenation trickery) and is the only blob the scanner allowlists by
+    explicit project decision. The runtime value resolves correctly."""
     from vnfin.gold import BTMC_PUBLIC_WIDGET_KEY
     from vnfin.gold.vn import BTMCGoldSource
 
     # The constant resolves to a usable token at runtime ...
     assert isinstance(BTMC_PUBLIC_WIDGET_KEY, str) and len(BTMC_PUBLIC_WIDGET_KEY) >= 26
-    # ... and the adapter uses it (and honours an override) without a hardcoded attr.
+    # ... and the adapter uses it without a hardcoded class attr.
     assert not hasattr(BTMCGoldSource, "WIDGET_KEY")
+
+    # It is committed as ONE contiguous literal in source (honest, not fragmented).
+    vn_text = (REPO_ROOT / "vnfin" / "gold" / "vn.py").read_text("utf-8")
+    assert BTMC_PUBLIC_WIDGET_KEY in vn_text, (
+        "the public widget token must be a single plain literal in vnfin/gold/vn.py"
+    )
+
+    # The scanner allowlist contains EXACTLY this one public token.
+    assert _ALLOWLISTED_BLOBS == frozenset({BTMC_PUBLIC_WIDGET_KEY})
+    # The allowlisted value is itself blob-allowed; an arbitrary other secret is NOT.
+    # (Build the fake from fragments so this test file itself stays scanner-clean.)
+    assert _blob_is_allowed(BTMC_PUBLIC_WIDGET_KEY)
+    fake_other = "ab12cd34ef56" + "gh78ij90kl12mn"
+    assert not _blob_is_allowed(fake_other)
+
+
+def test_btmc_widget_key_resolves_from_constant_constructor_and_env(monkeypatch) -> None:
+    """Resolution order: explicit ``widget_key=`` > ``VNFIN_BTMC_WIDGET_KEY`` env >
+    the plain default constant ``BTMC_PUBLIC_WIDGET_KEY``."""
+    from vnfin.gold import BTMC_PUBLIC_WIDGET_KEY
+    from vnfin.gold.vn import BTMCGoldSource
+
+    # 1) No override anywhere -> falls back to the plain constant.
+    monkeypatch.delenv("VNFIN_BTMC_WIDGET_KEY", raising=False)
     default_src = BTMCGoldSource(http_get=lambda *a, **k: "{}")
     assert default_src.widget_key == BTMC_PUBLIC_WIDGET_KEY
-    override_src = BTMCGoldSource(http_get=lambda *a, **k: "{}", widget_key="custom-xyz")
-    assert override_src.widget_key == "custom-xyz"
 
-    # The exact full key must not be a single contiguous run anywhere in source:
-    # vn.py builds it from "+"-joined fragments, so the source line is broken up.
-    vn_text = (REPO_ROOT / "vnfin" / "gold" / "vn.py").read_text("utf-8")
-    assert BTMC_PUBLIC_WIDGET_KEY not in vn_text, (
-        "the assembled key must not appear as one literal in source"
-    )
+    # 2) Env var override wins over the constant.
+    monkeypatch.setenv("VNFIN_BTMC_WIDGET_KEY", "env-widget-key-001")
+    env_src = BTMCGoldSource(http_get=lambda *a, **k: "{}")
+    assert env_src.widget_key == "env-widget-key-001"
+
+    # 3) Explicit constructor arg wins over both env and constant.
+    ctor_src = BTMCGoldSource(http_get=lambda *a, **k: "{}", widget_key="ctor-widget-key-002")
+    assert ctor_src.widget_key == "ctor-widget-key-002"
+
+
+def test_scanner_still_flags_a_non_allowlisted_secret() -> None:
+    """An arbitrary secret-shaped blob that is NOT the allowlisted public token must
+    still be rejected by the blob heuristic (the allowlist is not a blanket bypass)."""
+    # Build from fragments so this assertion source stays scanner-clean while the
+    # runtime value is a single >=16-char mixed lower+digit run.
+    fake_secret = "zz9yy8xx7ww6" + "vv5uu4tt3kk2"  # mixed lower+digit, not allowlisted
+    assert len(fake_secret) >= _SECRET_BLOB_MIN
+    assert fake_secret not in _ALLOWLISTED_BLOBS
+    assert not _blob_is_allowed(fake_secret)

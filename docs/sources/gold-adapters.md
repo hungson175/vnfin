@@ -20,12 +20,28 @@ cited, or copied.
 - `GoldBar(date, price)` + `GoldHistory(product, unit, currency, source, bars, ...)`
   — daily EOD series; `.to_dataframe()` indexed by date.
 
-## VN domestic (spot-only, VND per *chỉ*)
+## VN domestic (spot-only, canonical **VND per lượng**)
 
-| Adapter | Host | Auth | Units | History |
+Both dealers are normalized to one canonical unit, **VND/lượng** (1 lượng = 10 chỉ = 37.5 g).
+
+| Adapter | Host | Auth | Raw units → canonical | History |
 |---|---|---|---|---|
-| `BTMCGoldSource` | `api.btmc.vn` | fixed public widget key (query `key=`) | VND/chỉ, full-digit strings | spot only (feed has same-day intraday snapshots, no multi-day EOD) |
-| `PNJGoldSource` | `edge-api.pnj.io` | none | **thousand** VND/chỉ → ×1000 | spot only (no timestamp in body) |
+| `BTMCGoldSource` | `api.btmc.vn` | public web-widget key (query `key=`) | per-stated-weight VND → VND/lượng | spot only (feed has same-day intraday snapshots, no multi-day EOD) |
+| `PNJGoldSource` | `edge-api.pnj.io` | none | **thousand** VND/chỉ → ×1000 (→VND/chỉ) → ×10 (chỉ→lượng) = VND/lượng | spot only (no timestamp in body) |
+
+### Public widget token policy (BTMC)
+
+BTMC's price API requires a `key=` query parameter. BTMC ships this exact fixed value
+**client-side in the public price-ticker widget on its own website**, so it is a
+genuinely public web-widget token: it carries no login/account and is not a user
+secret. By **explicit project decision** (Boss-delegated approval) this one public
+token is accepted for OSS distribution and is committed as the plain default
+`vnfin.gold.BTMC_PUBLIC_WIDGET_KEY`. Callers may override it via the constructor
+(`BTMCGoldSource(widget_key=...)`) or the `VNFIN_BTMC_WIDGET_KEY` environment variable
+(e.g. if BTMC rotates it). The offline secret-scanner (`tests/test_no_secrets.py`)
+keeps scanning the whole tree for real secrets/keys/JWTs and carries a single
+documented allowlist entry for exactly this public token — it still fails on any other
+credential material.
 
 Edge cases handled: BTMC `DD/MM/YYYY HH:MM` timestamp → Asia/Ho_Chi_Minh tz; indexed
 keys (`@n_N`, `@pb_N`, `@ps_N`, `@d_N`). PNJ `RAW_*` "raw gold purchase" rows have a
