@@ -519,3 +519,63 @@ def test_explicit_is_bank_false_overrides_heuristic_for_known_bank():
         "VCB", StatementType.INCOME, Period.ANNUAL, is_bank=False
     )
     assert reports[0].is_bank is False
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #1: CafeF annual rows use Quater=5 (older ReportType=NAM)
+# and must NOT abort the whole annual response (synthetic fixtures, FAKE values).
+# --------------------------------------------------------------------------- #
+from datetime import date  # noqa: E402
+
+
+def _annual_income_quater_0_and_5():
+    """Annual income where recent years carry Quater=0 and older years Quater=5."""
+    periods = [
+        _period("2025", 2025, 0, [("REV", "Revenue", 100_000)]),
+        _period("2024", 2024, 0, [("REV", "Revenue", 90_000)]),
+        _period("2023", 2023, 5, [("REV", "Revenue", 80_000)]),  # older annual row
+        _period("2022", 2022, 5, [("REV", "Revenue", 70_000)]),
+    ]
+    return _envelope(periods)
+
+
+def test_fiscal_date_annual_treats_quater_5_as_year_end():
+    src = CafeFFundamentalSource()
+    assert src._fiscal_date({"Year": 2023, "Quater": 5}, Period.ANNUAL) == date(2023, 12, 31)
+    assert src._fiscal_date({"Year": 2023, "Quater": 0}, Period.ANNUAL) == date(2023, 12, 31)
+
+
+def test_annual_income_with_quater_5_rows_returns_all_reports():
+    reports = _src(_annual_income_quater_0_and_5()).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    # before the fix, the Quater=5 rows raised InvalidData and aborted everything
+    assert len(reports) == 4
+    assert [r.fiscal_date.year for r in reports] == [2025, 2024, 2023, 2022]
+    assert all(r.fiscal_date.month == 12 and r.fiscal_date.day == 31 for r in reports)
+    assert all(not r.warnings for r in reports)  # no rows skipped here
+
+
+def test_quarterly_skips_odd_quater_marker_row_not_aborting():
+    # a QUARTER pull with one anomalous marker row among valid quarterly rows
+    periods = [
+        _period("Q2 2025", 2025, 2, [("REV", "Revenue", 50_000)]),
+        _period("Q1 2025", 2025, 1, [("REV", "Revenue", 40_000)]),
+        _period("odd", 2024, 9, [("REV", "Revenue", 30_000)]),  # out-of-range quarter marker
+    ]
+    reports = _src(_envelope(periods)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.QUARTER
+    )
+    assert len(reports) == 2  # odd row skipped, valid quarters preserved
+    assert all(r.fiscal_date.year == 2025 for r in reports)
+    # the skip is surfaced (never a silent drop)
+    assert all(any("skipped" in w for w in r.warnings) for r in reports)
+
+
+def test_all_rows_unparseable_fiscal_date_raises_emptydata():
+    periods = [
+        _period("odd1", 2025, 9, [("REV", "Revenue", 1)]),
+        _period("odd2", 2024, 7, [("REV", "Revenue", 2)]),
+    ]
+    with pytest.raises(EmptyData):
+        _src(_envelope(periods)).get_financials("TESTCO", StatementType.INCOME, Period.QUARTER)

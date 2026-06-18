@@ -29,6 +29,7 @@ research doc. No vnstock or derivative material was consulted.
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 from datetime import date, datetime, timezone
 
@@ -160,14 +161,25 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
 
         fetched = datetime.now(timezone.utc)
         reports = []
+        skipped = 0
         for pobj in periods:
+            # Line-item data stays STRICT: a malformed/NaN/missing-Code row means a
+            # broken response -> raise so the failover chain moves on.
             items = self._line_items(pobj, value_unit="VND")
+            # Period-marker resilience: an odd ``Quater`` on a single row must NOT
+            # invalidate otherwise-valid reports (the annual fix already covers the
+            # common Quater=5 case; this guards rarer anomalies in quarterly pulls).
+            try:
+                fiscal_date = self._fiscal_date(pobj, period)
+            except InvalidData:
+                skipped += 1
+                continue
             reports.append(
                 FinancialReport(
                     symbol=psym,
                     statement_type=statement,
                     period=period,
-                    fiscal_date=self._fiscal_date(pobj, period),
+                    fiscal_date=fiscal_date,
                     items=items,
                     source=self.name,
                     currency="VND",
@@ -177,6 +189,9 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
                     fetched_at_utc=fetched,
                 )
             )
+        if not reports:
+            raise EmptyData(f"{self.name}: no parseable periods (skipped {skipped})")
+        reports = self._with_skip_warning(reports, skipped)
         reports.sort(key=lambda r: r.fiscal_date, reverse=True)
         return tuple(reports[:limit])
 
@@ -194,8 +209,14 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
 
         fetched = datetime.now(timezone.utc)
         reports = []
+        skipped = 0
         for pobj in periods:
             items = self._line_items(pobj, value_unit="ratio")
+            try:
+                fiscal_date = self._fiscal_date(pobj, period)
+            except InvalidData:
+                skipped += 1
+                continue
             reports.append(
                 FinancialReport(
                     symbol=psym,
@@ -205,7 +226,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
                     # mislabel dimensionless ratios as the requested cadence
                     # (mirrors the VNDirect ratios contract).
                     period=Period.UNKNOWN,
-                    fiscal_date=self._fiscal_date(pobj, period),
+                    fiscal_date=fiscal_date,
                     items=items,
                     source=self.name,
                     # ratios are dimensionless / per-share, not monetary VND
@@ -216,6 +237,9 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
                     fetched_at_utc=fetched,
                 )
             )
+        if not reports:
+            raise EmptyData(f"{self.name}: no parseable periods (skipped {skipped})")
+        reports = self._with_skip_warning(reports, skipped)
         reports.sort(key=lambda r: r.fiscal_date, reverse=True)
         return tuple(reports[:limit])
 
@@ -248,9 +272,12 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     def _fiscal_date(self, period_obj, period: Period) -> date:
         """Synthesize a fiscal-date CafeF does not expose directly.
 
-        Annual periods (``Quater`` 0) -> Dec 31 of ``Year``. Quarterly periods
-        (``Quater`` 1..4) -> the Vietnamese fiscal quarter-end. CafeF gives us a
-        numeric ``Year`` and ``Quater``; we parse them defensively.
+        An **annual** report's fiscal date is the fiscal year-end (Dec 31 of
+        ``Year``) regardless of how CafeF marks the row: recent annual rows use
+        ``Quater`` 0, but older ``ReportType=NAM`` rows use ``Quater`` 5 (and
+        other markers are possible). Quarterly periods (``Quater`` 1..4) map to
+        the Vietnamese fiscal quarter-end. CafeF gives us a numeric ``Year`` and
+        ``Quater``; we parse them defensively.
         """
         year = self._int(period_obj.get("Year"), field="Year")
         quater = period_obj.get("Quater")
@@ -258,12 +285,24 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             q = int(quater)
         except (TypeError, ValueError) as exc:
             raise InvalidData(f"{self.name}: bad Quater {quater!r}") from exc
-        if q == 0:
+        # Annual context: the fiscal date is the year-end no matter the Quater
+        # marker (0, 5, ...). This is the fix for CafeF's older annual rows that
+        # carry Quater=5 and previously aborted the whole annual response.
+        if period is Period.ANNUAL or q == 0:
             return date(year, 12, 31)
         if q in _QUARTER_END:
             month, day = _QUARTER_END[q]
             return date(year, month, day)
         raise InvalidData(f"{self.name}: out-of-range Quater {q!r}")
+
+    @staticmethod
+    def _with_skip_warning(reports: list, skipped: int) -> list:
+        """Surface skipped (period-marker-anomalous) rows on every returned report,
+        so a partial response is never a *silent* drop."""
+        if not skipped:
+            return reports
+        note = f"skipped {skipped} period row(s) with an unparseable fiscal-date marker"
+        return [dataclasses.replace(r, warnings=tuple(r.warnings) + (note,)) for r in reports]
 
     # ------------------------------------------------------------------ #
     @staticmethod

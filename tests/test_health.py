@@ -10,6 +10,8 @@ from __future__ import annotations
 import datetime as dt
 import json
 
+import pytest
+
 from vnfin._health import (
     HealthStatus,
     Probe,
@@ -198,6 +200,38 @@ def test_default_probes_constructed_without_network():
     # each probe is well-formed
     for p in probes:
         assert p.domain and p.source and p.probe_id and callable(p.fetch)
+
+
+def test_run_probe_reports_actual_result_source_not_static_label():
+    # issue #1: a probe may run a failover client and be served by a backup; the
+    # health row must report the ACTUAL serving source, not the declared primary.
+    class _Result:
+        source = "vps"
+
+    h = run_probe(_probe(lambda: _Result()), now=_NOW)  # probe declares source="ssi"
+    assert h.source == "vps"
+
+
+def test_run_probe_falls_back_to_declared_source_when_result_has_none():
+    h = run_probe(_probe(lambda: {"rates": {"VND": 26000.0}}), now=_NOW)  # dict has no .source
+    assert h.source == "ssi"
+
+
+def test_default_fundamentals_probe_uses_enum_args_not_strings():
+    # regression for the reviewer's PR#2 blocker: the fundamentals probe calls the
+    # SOURCE (not the string-coercing module fn), which requires enum statement/period.
+    # Executing the fetch must NOT raise an arg-type error (AttributeError/TypeError);
+    # a dummy response failing as a SourceError is fine — it means the args were accepted.
+    from vnfin.exceptions import SourceError
+
+    probes = default_probes(http_get=lambda url, params=None, headers=None, json_body=None: '{"data": []}')
+    fp = next(p for p in probes if p.domain == "fundamentals")
+    try:
+        fp.fetch()
+    except SourceError:
+        pass  # args accepted; only the dummy data failed — exactly what we want
+    except (AttributeError, TypeError) as exc:
+        pytest.fail(f"fundamentals probe passed wrong arg types to the source: {exc!r}")
 
 
 def test_fx_probe_is_opt_in_not_in_default():

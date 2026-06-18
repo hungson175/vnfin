@@ -4,6 +4,19 @@ All notable changes to `vnfin` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to
 [Semantic Versioning](https://semver.org/) — see [`docs/stability.md`](docs/stability.md).
 
+## [Unreleased]
+
+### Fixed
+- **CafeF fundamentals (`Quater=5`)** — annual reports whose older rows carry CafeF's
+  `ReportType=NAM` marker `Quater=5` no longer abort the entire response: an annual report's
+  fiscal date is the year-end regardless of the `Quater` marker, and a single period-marker
+  anomaly is skipped (surfaced via a `warnings` note) rather than failing the whole request.
+  Line-item validation stays strict (malformed data still raises). ([#1](https://github.com/hungson175/vnfin/issues/1))
+- **Health harness label honesty** — `run_probe` now reports the *actual* serving `source` from
+  the typed result, and each default probe targets its **primary single source** directly, so a
+  `prices` probe can no longer report `ssi` healthy when a backup actually served the bar.
+  ([#1](https://github.com/hungson175/vnfin/issues/1))
+
 ## [0.2.0] — 2026-06-18
 
 > Version bumped and release-ready. **Tag/push/PyPI publish are pending maintainer approval**
