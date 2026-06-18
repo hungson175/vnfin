@@ -21,15 +21,17 @@ the version is `0.x`** (we do not use the "anything goes before 1.0" escape hatc
 
 Tier-0 surface, snapshotted and enforced (see *Enforcement* below):
 
-- `vnfin.__all__` and each public domain package's `__all__` (`prices`, `fundamentals`,
-  `funds`, `indices`, `gold`, `crypto`, `macro`, `exceptions`), and the **kind** of each export
-  (module / class / function / dataclass / enum).
-- **Factory & convenience signatures** — `client()`, `source()`, `history()`,
-  `index_history()`, `get_financials()`, `get_indicator()`, `default_client()`, etc.: parameter
-  names, kinds, and which parameters are required vs optional.
+- `vnfin.__all__` and each public package's `__all__` (`prices`, `fundamentals`, `funds`,
+  `indices`, `gold`, `crypto`, `macro`, `exceptions`, **`sources`**), and the **kind** of each
+  export (module / class / function / dataclass / enum).
+- **Factory, convenience & method signatures** — `client()`, `source()`, `history()`,
+  `index_history()`, `get_financials()`, `get_indicator()`, `default_client()`, public class
+  methods, and **public-class constructors (`__init__`)**: parameter names, **order**, **kind**
+  (positional/keyword-only/var), required-vs-optional, **default values**, and the **return
+  annotation**.
 - **Public frozen-dataclass fields** (result types like `PriceHistory`, `PriceBar`, `CryptoBar`,
-  `GoldQuote`, `FinancialReport`, `IndicatorSeries`, …): field **name, order, type, and
-  default-presence**.
+  `GoldQuote`, `FinancialReport`, `IndicatorSeries`, …): field **name, order, type, default
+  presence, and default value** (any captured scalar/enum/`None` default).
 - **Public enum members and values** (`Interval`, `AdjustmentPolicy`, `StatementType`, `Period`,
   `MacroIndicator`, `Frequency`).
 - Public, user-facing methods of client/source classes.
@@ -53,14 +55,20 @@ These are the rules the comparator enforces (`scripts/dump_api_surface.py::compa
 - removing an enum member, or changing an enum member's value;
 - removing, renaming, or **reordering** a dataclass field; changing a field's type; removing a
   field's default (making it required);
-- changing a unit/currency default value on a result field;
-- adding a **required** parameter to a public callable; removing a parameter; making an existing
-  optional parameter required.
+- changing **any** captured default value of a defaulted dataclass field — including a captured
+  scalar/enum default becoming `None` or an uncaptured factory (a unit/currency default change is
+  flagged distinctly because it also changes the value's meaning);
+- adding a **required** parameter to a public callable; removing a parameter; **reordering** or
+  **changing the kind** of an existing parameter; making an existing optional parameter required;
+  **changing a parameter's default value**;
+- **changing or removing** a public callable's **return annotation**;
+- a public class **gaining a required constructor parameter**, or losing its captured constructor.
 
 **Additive (allowed in a minor bump):**
 
 - a new module, export, member, enum member, or public method;
-- a new **optional** parameter (with a default, or `*args`/`**kwargs`);
+- a new **optional** parameter (with a default, or `*args`/`**kwargs`) **appended** at the end;
+- *adding* a return annotation where there was none;
 - a new dataclass field that is **appended** after existing fields **and** has a default.
 
 ## Deprecation policy

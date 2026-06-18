@@ -179,12 +179,21 @@ def test_to_status_json_is_serialisable_and_sanitised():
 # --------------------------------------------------------------------------- #
 def test_default_probes_constructed_without_network():
     probes = default_probes()
-    assert len(probes) >= 4
-    ids = {p.probe_id for p in probes}
-    # a critical, multi-domain set
-    assert any(p.domain == "prices" for p in probes)
-    assert any(p.domain == "crypto" for p in probes)
-    assert any(p.domain == "macro" for p in probes)
+    # exact critical set: one source per key domain
+    assert {p.domain for p in probes} == {
+        "prices",
+        "fundamentals",
+        "gold",
+        "crypto",
+        "macro",
+    }
+    assert {p.probe_id for p in probes} == {
+        "prices/ssi/FPT",
+        "fundamentals/vndirect/FPT",
+        "gold/btmc/spot",
+        "crypto/binance/BTCUSDT",
+        "macro/worldbank/VNM-CPI",
+    }
     # each probe is well-formed
     for p in probes:
         assert p.domain and p.source and p.probe_id and callable(p.fetch)

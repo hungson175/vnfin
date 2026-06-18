@@ -403,6 +403,60 @@ def test_exceptions_has_explicit_all_no_annotations_noise():
     assert "annotations" not in exc_all
 
 
+def test_return_annotation_removal_is_breaking():
+    # B1: a public callable dropping its return annotation is a contract change
+    old = _base()
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["make"]["returns"] = None
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_added_return_annotation_is_not_breaking():
+    old = _base()
+    old["modules"]["vnfin"]["members"]["make"]["returns"] = None
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["make"]["returns"] = "Bar"
+    assert "breaking" not in _severities(compare_surfaces(old, new))
+
+
+def test_class_gaining_required_constructor_is_breaking():
+    # B2: a public class that had no captured constructor gains a required-arg __init__
+    old = _base()  # Engine has no constructor key
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["Engine"]["constructor"] = {
+        "params": [
+            {"name": "self", "kind": "POSITIONAL_OR_KEYWORD", "has_default": False, "default_repr": None},
+            {"name": "key", "kind": "POSITIONAL_OR_KEYWORD", "has_default": False, "default_repr": None},
+        ],
+        "returns": "None",
+    }
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_class_gaining_optional_only_constructor_is_not_breaking():
+    old = _base()
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["Engine"]["constructor"] = {
+        "params": [
+            {"name": "self", "kind": "POSITIONAL_OR_KEYWORD", "has_default": False, "default_repr": None},
+            {"name": "opt", "kind": "KEYWORD_ONLY", "has_default": True, "default_repr": "None"},
+        ],
+        "returns": "None",
+    }
+    assert "breaking" not in _severities(compare_surfaces(old, new))
+
+
+def test_dataclass_default_captured_to_uncaptured_is_breaking():
+    # B3: a field whose captured scalar default becomes uncaptured (None/factory) while
+    # still having a default hides a real semantic change
+    old = _base()
+    new = copy.deepcopy(old)
+    f = new["modules"]["vnfin"]["members"]["Bar"]["fields"][1]  # value_unit, has_default True
+    assert f["has_default"] and f["default_repr"] == "'VND'"
+    f["default_repr"] = None  # now uncaptured but still defaulted
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
 def test_version_lockstep_pyproject_matches_dunder():
     import re
 

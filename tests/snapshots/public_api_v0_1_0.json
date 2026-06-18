@@ -329,19 +329,19 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "exchange",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "provider_symbol",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
@@ -765,13 +765,13 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "provider_symbol",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
@@ -783,25 +783,25 @@
               "type": "tuple[str, ...]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "base_asset",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "quote_asset",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "price_unit",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "volume_unit",
               "type": "Optional[str]"
@@ -1301,19 +1301,19 @@
               "type": "bool"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "model_type",
               "type": "Optional[int]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "provider_symbol",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
@@ -1410,7 +1410,7 @@
               "type": "float"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "value_unit",
               "type": "Optional[str]"
@@ -1937,19 +1937,19 @@
               "type": "float"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "industry",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "price_raw",
               "type": "Optional[float]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "price_unit",
               "type": "Optional[str]"
@@ -1979,7 +1979,7 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
@@ -2027,13 +2027,13 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "code",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
@@ -2563,13 +2563,13 @@
               "type": "tuple[GoldBar, ...]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "value_unit",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
@@ -2635,19 +2635,19 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "karat",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "region",
               "type": "Optional[str]"
@@ -3309,19 +3309,19 @@
               "type": "tuple[IndexMember, ...]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "provider_group",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "as_of",
               "type": "Optional[datetime]"
@@ -3452,25 +3452,25 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "exchange",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "company_name",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "isin",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "weight",
               "type": "Optional[float]"
@@ -4317,13 +4317,13 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "value_unit",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "currency",
               "type": "Optional[str]"
@@ -4335,19 +4335,19 @@
               "type": "Frequency"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "projection_from_year",
               "type": "Optional[int]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "country_name",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"
@@ -4468,7 +4468,7 @@
               "type": "bool"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "currency",
               "type": "Optional[str]"
@@ -5020,19 +5020,19 @@
               "type": "str"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "exchange",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "provider_symbol",
               "type": "Optional[str]"
             },
             {
-              "default_repr": null,
+              "default_repr": "None",
               "has_default": true,
               "name": "fetched_at_utc",
               "type": "Optional[datetime]"

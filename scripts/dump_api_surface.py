@@ -118,11 +118,12 @@ def _describe_dataclass(cls: type) -> dict[str, Any]:
             f.default is not dataclasses.MISSING
             or f.default_factory is not dataclasses.MISSING  # type: ignore[misc]
         )
+        # Capture the default repr for scalar/enum/None defaults (incl. an explicit
+        # ``None``); ``None`` here means "no comparable default captured" (no default, or a
+        # non-scalar default like a factory/sentinel) — see _default_repr.
         default_repr = None
-        if f.default is not dataclasses.MISSING and isinstance(
-            f.default, (str, int, float, bool, enum.Enum)
-        ):
-            default_repr = repr(_jsonable(f.default))
+        if f.default is not dataclasses.MISSING:
+            default_repr = _default_repr(f.default)
         fields.append(
             {
                 "name": f.name,
@@ -260,8 +261,9 @@ def _compare_fields(old: dict, new: dict, path: str, out: list) -> None:
         if f.get("has_default") and not nf_f.get("has_default"):
             out.append(_diff("breaking", "field", f"{path}.{name}", "lost its default (now required)"))
         od, nd = f.get("default_repr"), nf_f.get("default_repr")
-        if od is not None and nd is not None and od != nd:
-            # any change to a captured scalar default forces a conscious decision; a
+        if f.get("has_default") and nf_f.get("has_default") and od != nd:
+            # Any change to a defaulted field's captured default forces a conscious decision
+            # (incl. captured->uncaptured, e.g. a scalar default becoming None/a factory). A
             # unit/currency default change additionally changes the meaning of the value.
             kind = "unit_default" if name in _UNIT_FIELD_NAMES else "field_default"
             out.append(_diff("breaking", kind, f"{path}.{name}", f"default {od} -> {nd}"))
@@ -313,7 +315,9 @@ def _compare_callable(old: dict, new: dict, path: str, out: list) -> None:
         else:
             out.append(_diff("breaking", "param", f"{path}({name})", "new required or inserted parameter"))
     o_ret, n_ret = old.get("returns"), new.get("returns")
-    if o_ret is not None and n_ret is not None and o_ret != n_ret:
+    # changing OR removing a declared return type is breaking; only *adding* one (old None)
+    # is non-breaking.
+    if o_ret is not None and o_ret != n_ret:
         out.append(_diff("breaking", "return", path, f"return type {o_ret} -> {n_ret}"))
 
 
@@ -354,6 +358,21 @@ def _compare_member(old: dict, new: dict, path: str, out: list) -> None:
             out.append(_diff("breaking", "constructor", path, "constructor signature removed"))
         elif oc is not None and nc is not None:
             _compare_callable(oc, nc, f"{path}.__init__", out)
+        elif oc is None and nc is not None:
+            # a class that had no captured constructor gains one: breaking only if the new
+            # constructor introduces a REQUIRED parameter (beyond self) — that changes how
+            # existing call sites can instantiate it.
+            required = [
+                p
+                for p in nc.get("params", [])
+                if p.get("name") != "self"
+                and not p.get("has_default")
+                and p.get("kind") not in ("VAR_POSITIONAL", "VAR_KEYWORD")
+            ]
+            if required:
+                out.append(
+                    _diff("breaking", "constructor", path, "gained a required constructor parameter")
+                )
         _compare_methods(old, new, path, out)
 
 

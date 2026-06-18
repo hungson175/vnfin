@@ -152,7 +152,11 @@ def run_probe(probe: Probe, *, now: dt.datetime | None = None) -> SourceHealth:
 
     schema_ok: bool | None = None
     if probe.schema is not None:
-        schema_ok, problems = check_schema(data, probe.schema)
+        try:
+            schema_ok, problems = check_schema(data, probe.schema)
+        except Exception as exc:  # a malformed spec must degrade, never raise
+            schema_ok = False
+            problems = [f"schema check error: {type(exc).__name__}"]
         if problems:
             metadata["schema_problems"] = redact_secrets("; ".join(problems))
 
@@ -273,7 +277,9 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
 
     def _fetch_prices() -> Any:
         start, end = _recent(30)
-        return vnfin.prices.history("FPT", start=start, end=end)
+        return vnfin.prices.client(http_get=http_get, timeout=timeout).get_history(
+            "FPT", start=start, end=end
+        )
 
     def _fetch_crypto() -> Any:
         start, end = _recent(10)
@@ -287,7 +293,9 @@ def default_probes(*, http_get: Any = None, timeout: float = 25.0) -> list[Probe
         )
 
     def _fetch_fundamentals() -> Any:
-        return vnfin.fundamentals.get_financials("FPT", "income", "annual")
+        return vnfin.fundamentals.get_financials(
+            "FPT", "income", "annual", http_get=http_get, timeout=timeout
+        )
 
     def _fetch_gold() -> Any:
         return vnfin.gold.vn("btmc", http_get=http_get, timeout=timeout).get_quotes()
