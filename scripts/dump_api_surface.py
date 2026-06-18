@@ -41,6 +41,7 @@ DOMAIN_MODULES = [
     "vnfin.gold",
     "vnfin.crypto",
     "vnfin.macro",
+    "vnfin.sources",
 ]
 
 # Field names whose *default value* is part of the result's semantic contract.
@@ -80,6 +81,18 @@ def _jsonable(value: Any) -> Any:
     return str(value)
 
 
+def _default_repr(value: Any) -> str | None:
+    """A stable repr for a JSON-safe scalar/enum/None default; ``None`` otherwise.
+
+    ``None`` here means "no comparable default captured" (either no default at all, or a
+    non-scalar default like a factory/sentinel/object we deliberately don't pin)."""
+    if value is inspect.Parameter.empty or value is dataclasses.MISSING:
+        return None
+    if value is None or isinstance(value, (str, int, float, bool, enum.Enum)):
+        return repr(_jsonable(value))
+    return None
+
+
 def _describe_signature(obj: Any) -> dict[str, Any] | None:
     try:
         sig = inspect.signature(obj)
@@ -92,6 +105,7 @@ def _describe_signature(obj: Any) -> dict[str, Any] | None:
                 "name": p.name,
                 "kind": p.kind.name,
                 "has_default": p.default is not inspect.Parameter.empty,
+                "default_repr": _default_repr(p.default),
             }
         )
     return {"params": params, "returns": _normalize_annotation(sig.return_annotation)}
@@ -147,7 +161,17 @@ def _describe_class(cls: type) -> dict[str, Any]:
         sig = _describe_signature(attr)
         if sig is not None:
             methods[name] = sig
-    return {"kind": "class", "methods": methods}
+    result: dict[str, Any] = {"kind": "class", "methods": methods}
+    # public classes are user-instantiable: capture a user-defined __init__ (a generated
+    # dataclass __init__ never reaches here — dataclasses are described as "dataclass").
+    init = inspect.getattr_static(cls, "__init__", None)
+    if isinstance(init, (staticmethod, classmethod)):
+        init = init.__func__
+    if inspect.isfunction(init):
+        ctor = _describe_signature(init)
+        if ctor is not None:
+            result["constructor"] = ctor
+    return result
 
 
 def _describe_member(obj: Any) -> dict[str, Any]:
@@ -167,9 +191,9 @@ def _describe_member(obj: Any) -> dict[str, Any]:
 
 def _public_names(module: Any) -> list[str]:
     declared = getattr(module, "__all__", None)
-    if declared is not None:
-        return list(declared)
-    return [n for n in dir(module) if not n.startswith("_")]
+    names = list(declared) if declared is not None else [n for n in dir(module) if not n.startswith("_")]
+    # `annotations` from `from __future__ import annotations` is not real public API
+    return [n for n in names if n != "annotations"]
 
 
 def build_surface() -> dict[str, Any]:
@@ -235,15 +259,12 @@ def _compare_fields(old: dict, new: dict, path: str, out: list) -> None:
             )
         if f.get("has_default") and not nf_f.get("has_default"):
             out.append(_diff("breaking", "field", f"{path}.{name}", "lost its default (now required)"))
-        if name in _UNIT_FIELD_NAMES and f.get("default_repr") != nf_f.get("default_repr"):
-            out.append(
-                _diff(
-                    "breaking",
-                    "unit_default",
-                    f"{path}.{name}",
-                    f"unit/currency default {f.get('default_repr')} -> {nf_f.get('default_repr')}",
-                )
-            )
+        od, nd = f.get("default_repr"), nf_f.get("default_repr")
+        if od is not None and nd is not None and od != nd:
+            # any change to a captured scalar default forces a conscious decision; a
+            # unit/currency default change additionally changes the meaning of the value.
+            kind = "unit_default" if name in _UNIT_FIELD_NAMES else "field_default"
+            out.append(_diff("breaking", kind, f"{path}.{name}", f"default {od} -> {nd}"))
     n_old = len(of)
     for name, (idx, f) in new_by_name.items():
         if name in old_by_name:
@@ -257,27 +278,43 @@ def _compare_fields(old: dict, new: dict, path: str, out: list) -> None:
             )
 
 
-def _compare_params(old: dict, new: dict, path: str, out: list) -> None:
+def _compare_callable(old: dict, new: dict, path: str, out: list) -> None:
+    """Compare a function/method/constructor signature: params (presence, order, kind,
+    required-ness, default value) AND return annotation."""
     op = old.get("params", []) or []
     np_ = new.get("params", []) or []
-    old_by_name = {p["name"]: p for p in op}
-    new_by_name = {p["name"]: p for p in np_}
-    for name, p in old_by_name.items():
+    old_by_name = {p["name"]: (i, p) for i, p in enumerate(op)}
+    new_by_name = {p["name"]: (i, p) for i, p in enumerate(np_)}
+    for name, (i, p) in old_by_name.items():
         if name not in new_by_name:
             out.append(_diff("breaking", "param", f"{path}({name})", "parameter removed"))
             continue
-        np_p = new_by_name[name]
+        j, np_p = new_by_name[name]
+        if i != j:
+            out.append(_diff("breaking", "param", f"{path}({name})", f"reordered {i} -> {j}"))
+        if p.get("kind") != np_p.get("kind"):
+            out.append(
+                _diff("breaking", "param", f"{path}({name})", f"kind {p.get('kind')} -> {np_p.get('kind')}")
+            )
         if not p.get("has_default") and np_p.get("has_default"):
             out.append(_diff("additive", "param", f"{path}({name})", "now optional"))
         if p.get("has_default") and not np_p.get("has_default"):
             out.append(_diff("breaking", "param", f"{path}({name})", "now required"))
-    for name, p in new_by_name.items():
+        od, nd = p.get("default_repr"), np_p.get("default_repr")
+        if od is not None and nd is not None and od != nd:
+            out.append(_diff("breaking", "param", f"{path}({name})", f"default {od} -> {nd}"))
+    for name, (j, p) in new_by_name.items():
         if name in old_by_name:
             continue
-        if p.get("has_default") or p.get("kind") in ("VAR_POSITIONAL", "VAR_KEYWORD"):
+        appended = j >= len(op)
+        optional = p.get("has_default") or p.get("kind") in ("VAR_POSITIONAL", "VAR_KEYWORD")
+        if appended and optional:
             out.append(_diff("additive", "param", f"{path}({name})", "new optional parameter"))
         else:
-            out.append(_diff("breaking", "param", f"{path}({name})", "new required parameter"))
+            out.append(_diff("breaking", "param", f"{path}({name})", "new required or inserted parameter"))
+    o_ret, n_ret = old.get("returns"), new.get("returns")
+    if o_ret is not None and n_ret is not None and o_ret != n_ret:
+        out.append(_diff("breaking", "return", path, f"return type {o_ret} -> {n_ret}"))
 
 
 def _compare_methods(old: dict, new: dict, path: str, out: list) -> None:
@@ -290,7 +327,7 @@ def _compare_methods(old: dict, new: dict, path: str, out: list) -> None:
             if ("property" in sig) != ("property" in nm[name]):
                 out.append(_diff("breaking", "method", f"{path}.{name}", "property/method kind changed"))
             continue
-        _compare_params(sig, nm[name], f"{path}.{name}", out)
+        _compare_callable(sig, nm[name], f"{path}.{name}", out)
     for name in nm:
         if name not in om:
             out.append(_diff("additive", "method", f"{path}.{name}", "method added"))
@@ -310,8 +347,13 @@ def _compare_member(old: dict, new: dict, path: str, out: list) -> None:
             out.append(_diff("breaking", "dataclass", path, "no longer frozen"))
         _compare_fields(old, new, path, out)
     elif kind == "function":
-        _compare_params(old, new, path, out)
+        _compare_callable(old, new, path, out)
     elif kind == "class":
+        oc, nc = old.get("constructor"), new.get("constructor")
+        if oc is not None and nc is None:
+            out.append(_diff("breaking", "constructor", path, "constructor signature removed"))
+        elif oc is not None and nc is not None:
+            _compare_callable(oc, nc, f"{path}.__init__", out)
         _compare_methods(old, new, path, out)
 
 

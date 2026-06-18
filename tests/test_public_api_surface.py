@@ -288,3 +288,129 @@ def test_live_surface_introduces_no_breaking_changes():
 
 def test_build_surface_is_deterministic():
     assert build_surface() == build_surface()
+
+
+# ---------------------------------------------------------------------------
+# P1 hardening (reviewer gate 1): return types, param order/kind/default,
+# constructors, sources coverage, exceptions __all__, version lockstep
+# ---------------------------------------------------------------------------
+def test_changed_return_type_function_is_breaking():
+    old = _base()
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["make"]["returns"] = "PriceHistory"
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_changed_return_type_method_is_breaking():
+    old = _base()
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["Engine"]["methods"]["run"]["returns"] = "float"
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_param_reorder_is_breaking():
+    old = _base()
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["make"]["params"].reverse()
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_param_kind_change_is_breaking():
+    old = _base()
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["make"]["params"][0]["kind"] = "KEYWORD_ONLY"
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_param_default_value_change_is_breaking():
+    old = _base()
+    old["modules"]["vnfin"]["members"]["make"]["params"][1]["default_repr"] = "3"
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["make"]["params"][1]["default_repr"] = "1"
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_inserted_optional_param_is_breaking():
+    old = _base()
+    new = copy.deepcopy(old)
+    # inserting before existing params shifts positions -> breaking even if optional
+    new["modules"]["vnfin"]["members"]["make"]["params"].insert(
+        0, {"name": "z", "kind": "POSITIONAL_OR_KEYWORD", "has_default": True, "default_repr": "0"}
+    )
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_non_unit_field_default_change_is_breaking():
+    old = _base()
+    # the non-unit field is the first one ('t'); give it a scalar default then change it
+    old["modules"]["vnfin"]["members"]["Bar"]["fields"][0]["has_default"] = True
+    old["modules"]["vnfin"]["members"]["Bar"]["fields"][0]["default_repr"] = "0"
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["Bar"]["fields"][0]["default_repr"] = "1"
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def _class_with_ctor(params):
+    s = _base()
+    s["modules"]["vnfin"]["members"]["Engine"]["constructor"] = {
+        "params": params,
+        "returns": "None",
+    }
+    return s
+
+
+def test_constructor_new_required_param_is_breaking():
+    old = _class_with_ctor(
+        [{"name": "self", "kind": "POSITIONAL_OR_KEYWORD", "has_default": False, "default_repr": None}]
+    )
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["Engine"]["constructor"]["params"].append(
+        {"name": "required_arg", "kind": "POSITIONAL_OR_KEYWORD", "has_default": False, "default_repr": None}
+    )
+    assert "breaking" in _severities(compare_surfaces(old, new))
+
+
+def test_constructor_new_optional_param_is_additive():
+    old = _class_with_ctor(
+        [{"name": "self", "kind": "POSITIONAL_OR_KEYWORD", "has_default": False, "default_repr": None}]
+    )
+    new = copy.deepcopy(old)
+    new["modules"]["vnfin"]["members"]["Engine"]["constructor"]["params"].append(
+        {"name": "opt", "kind": "KEYWORD_ONLY", "has_default": True, "default_repr": "None"}
+    )
+    diffs = compare_surfaces(old, new)
+    assert "breaking" not in _severities(diffs)
+
+
+def test_sources_module_is_in_surface():
+    live = build_surface()
+    assert "vnfin.sources" in live["modules"]
+    assert "SSIiBoardSource" in live["modules"]["vnfin.sources"]["all"]
+
+
+def test_public_classes_capture_constructor():
+    live = build_surface()
+    # BTMCGoldSource takes a widget_key; its constructor must be in the surface
+    btmc = live["modules"]["vnfin.gold"]["members"]["BTMCGoldSource"]
+    assert "constructor" in btmc
+    assert any(p["name"] != "self" for p in btmc["constructor"]["params"])
+
+
+def test_exceptions_has_explicit_all_no_annotations_noise():
+    live = build_surface()
+    exc_all = live["modules"]["vnfin.exceptions"]["all"]
+    assert "VnfinError" in exc_all and "AllSourcesFailed" in exc_all
+    assert "annotations" not in exc_all
+
+
+def test_version_lockstep_pyproject_matches_dunder():
+    import re
+
+    import vnfin
+
+    text = (_REPO / "pyproject.toml").read_text()
+    m = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+    assert m, "could not find version in pyproject.toml"
+    assert m.group(1) == vnfin.__version__, (
+        f"pyproject version {m.group(1)} != vnfin.__version__ {vnfin.__version__}"
+    )

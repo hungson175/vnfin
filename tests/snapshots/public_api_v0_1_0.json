@@ -30,21 +30,95 @@
           }
         },
         "FailoverClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "KEYWORD_ONLY",
+                "name": "operation"
+              },
+              {
+                "default_repr": null,
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "capability"
+              },
+              {
+                "default_repr": null,
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "reject"
+              },
+              {
+                "default_repr": null,
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "unit_of"
+              },
+              {
+                "default_repr": "'raise'",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "on_unit_mismatch"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "max_attempts"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "failure_factory"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "no_capable_factory"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "finalize"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "run": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "VAR_POSITIONAL",
                   "name": "args"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "VAR_KEYWORD",
                   "name": "kwargs"
@@ -58,26 +132,53 @@
           }
         },
         "FailoverPriceClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_attempts"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_daily": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -88,26 +189,31 @@
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": "'1d'",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -287,16 +393,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "max_attempts"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -342,31 +451,59 @@
       ],
       "members": {
         "BinanceCryptoSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_klines": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": "'1d'",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -380,11 +517,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -395,11 +534,13 @@
             "parse_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -410,11 +551,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
@@ -425,31 +568,59 @@
           }
         },
         "CoinbaseCryptoSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_klines": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": "'1d'",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -463,11 +634,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -478,11 +651,13 @@
             "parse_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -493,11 +668,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
@@ -634,31 +811,59 @@
           "kind": "dataclass"
         },
         "FailoverCryptoClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_attempts"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_klines": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": "'1d'",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -681,11 +886,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -697,21 +904,25 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "sources"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "max_attempts"
@@ -723,11 +934,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -739,11 +952,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -755,16 +970,15 @@
     },
     "vnfin.exceptions": {
       "all": [
-        "AdjustmentPolicyError",
-        "AllSourcesFailed",
-        "EmptyData",
-        "InvalidData",
+        "VnfinError",
         "SourceError",
         "SourceUnavailable",
-        "UnitMismatchError",
+        "EmptyData",
+        "InvalidData",
         "UnsupportedInterval",
-        "VnfinError",
-        "annotations"
+        "AdjustmentPolicyError",
+        "UnitMismatchError",
+        "AllSourcesFailed"
       ],
       "members": {
         "AdjustmentPolicyError": {
@@ -772,6 +986,35 @@
           "methods": {}
         },
         "AllSourcesFailed": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "symbol"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "interval"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "attempts"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {}
         },
@@ -802,10 +1045,6 @@
         "VnfinError": {
           "kind": "class",
           "methods": {}
-        },
-        "annotations": {
-          "kind": "value",
-          "type": "_Feature"
         }
       }
     },
@@ -834,36 +1073,65 @@
           "type": "NoneType"
         },
         "CafeFFundamentalSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_financials": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "statement"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "period"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "is_bank"
                 },
                 {
+                  "default_repr": "8",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "limit"
@@ -874,6 +1142,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -887,11 +1156,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -902,36 +1173,65 @@
           }
         },
         "FailoverFundamentalClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_attempts"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_financials": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "statement"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "period"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "is_bank"
                 },
                 {
+                  "default_repr": "8",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "limit"
@@ -1034,31 +1334,37 @@
             "get_financials": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "statement"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "period"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "is_bank"
                 },
                 {
+                  "default_repr": "8",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "limit"
@@ -1069,6 +1375,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1130,36 +1437,65 @@
           }
         },
         "VNDirectFundamentalSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_financials": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "statement"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "period"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "is_bank"
                 },
                 {
+                  "default_repr": "8",
                   "has_default": true,
                   "kind": "KEYWORD_ONLY",
                   "name": "limit"
@@ -1170,6 +1506,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1180,11 +1517,13 @@
             "model_type_for": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "statement"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "KEYWORD_ONLY",
                   "name": "is_bank"
@@ -1198,11 +1537,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -1216,16 +1557,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "max_attempts"
@@ -1237,16 +1581,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "max_attempts"
@@ -1258,11 +1605,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -1274,51 +1623,61 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "symbol"
             },
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "statement"
             },
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "period"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "is_bank"
             },
             {
+              "default_repr": "8",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "limit"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "source"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "sources"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "max_attempts"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -1330,6 +1689,7 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "symbol"
@@ -1341,11 +1701,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -1368,16 +1730,83 @@
       ],
       "members": {
         "FmarketFundSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_retries"
+              },
+              {
+                "default_repr": "0.5",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_base"
+              },
+              {
+                "default_repr": "8.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_max"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "cache_ttl"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sleep"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "rand"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "clock"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "holdings": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "product_id"
@@ -1388,21 +1817,25 @@
             "list_funds": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "asset_type"
                 },
                 {
+                  "default_repr": "''",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "search"
                 },
                 {
+                  "default_repr": "100",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "page_size"
@@ -1413,21 +1846,25 @@
             "nav_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "product_id"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "from_date"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "to_date"
@@ -1633,11 +2070,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -1649,11 +2088,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -1684,21 +2125,53 @@
       ],
       "members": {
         "BTMCGoldSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "VAR_POSITIONAL",
+                "name": "args"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "widget_key"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "VAR_KEYWORD",
+                "name": "kwargs"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -1709,11 +2182,13 @@
             "get_quote": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "product"
@@ -1724,6 +2199,7 @@
             "get_quotes": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1734,6 +2210,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1748,21 +2225,89 @@
           "type": "str"
         },
         "CurrencyApiGoldSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_retries"
+              },
+              {
+                "default_repr": "0.5",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_base"
+              },
+              {
+                "default_repr": "8.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_max"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "cache_ttl"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sleep"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "rand"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "clock"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -1773,6 +2318,7 @@
             "get_quote": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1783,6 +2329,7 @@
             "get_quotes": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1793,6 +2340,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1803,21 +2351,59 @@
           }
         },
         "FailoverGoldClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_attempts"
+              },
+              {
+                "default_repr": "0.5",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "min_coverage"
+              },
+              {
+                "default_repr": "0.9",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "warn_coverage"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -1837,21 +2423,53 @@
           }
         },
         "GoldApiSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "'XAU'",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "symbol"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -1862,6 +2480,7 @@
             "get_quote": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1872,6 +2491,7 @@
             "get_quotes": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -1882,6 +2502,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2036,21 +2657,89 @@
           "kind": "dataclass"
         },
         "GoldSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_retries"
+              },
+              {
+                "default_repr": "0.5",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_base"
+              },
+              {
+                "default_repr": "8.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_max"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "cache_ttl"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sleep"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "rand"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "clock"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -2061,16 +2750,19 @@
             "get_quote": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "VAR_POSITIONAL",
                   "name": "args"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "VAR_KEYWORD",
                   "name": "kwargs"
@@ -2081,6 +2773,7 @@
             "get_quotes": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2091,6 +2784,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2101,21 +2795,89 @@
           }
         },
         "PNJGoldSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_retries"
+              },
+              {
+                "default_repr": "0.5",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_base"
+              },
+              {
+                "default_repr": "8.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_max"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "cache_ttl"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sleep"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "rand"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "clock"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -2126,11 +2888,13 @@
             "get_quote": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "product"
@@ -2141,6 +2905,7 @@
             "get_quotes": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2151,6 +2916,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2161,21 +2927,89 @@
           }
         },
         "StooqGoldSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_retries"
+              },
+              {
+                "default_repr": "0.5",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_base"
+              },
+              {
+                "default_repr": "8.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_max"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "cache_ttl"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sleep"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "rand"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "clock"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -2186,6 +3020,7 @@
             "get_quote": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2196,6 +3031,7 @@
             "get_quotes": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2206,6 +3042,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2219,21 +3056,25 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "sources"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "max_attempts"
@@ -2245,11 +3086,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -2261,16 +3104,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "'btmc'",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "provider"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -2282,16 +3128,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "'btmc'",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "provider"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -2303,16 +3152,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "'currency_api'",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "provider"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -2339,16 +3191,59 @@
       ],
       "members": {
         "IndexClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "constituents_source"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_attempts"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "constituents": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "index"
@@ -2359,26 +3254,31 @@
             "index_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
                 },
                 {
+                  "default_repr": "'1d'",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
@@ -2437,16 +3337,83 @@
           "kind": "dataclass"
         },
         "IndexConstituentsSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_retries"
+              },
+              {
+                "default_repr": "0.5",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_base"
+              },
+              {
+                "default_repr": "8.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "backoff_max"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "cache_ttl"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sleep"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "rand"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "clock"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_constituents": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "index"
@@ -2460,11 +3427,13 @@
             "normalize_group": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "group"
@@ -2511,31 +3480,59 @@
           "kind": "dataclass"
         },
         "SSIIndexSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -2546,6 +3543,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2559,11 +3557,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -2574,11 +3574,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
@@ -2589,31 +3591,59 @@
           }
         },
         "VNDirectIndexSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -2624,6 +3654,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2637,11 +3668,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -2652,11 +3685,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
@@ -2667,31 +3702,59 @@
           }
         },
         "VPSIndexSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -2702,6 +3765,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -2715,11 +3779,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -2730,11 +3796,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
@@ -2748,16 +3816,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "max_attempts"
@@ -2769,11 +3840,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -2785,16 +3858,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "index"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -2806,36 +3882,43 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "symbol"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "start"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "end"
             },
             {
+              "default_repr": "'1d'",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "interval"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "max_attempts"
@@ -2847,11 +3930,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -2884,16 +3969,41 @@
       ],
       "members": {
         "DBnomicsSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "frequency_for": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -2904,16 +4014,19 @@
             "get_indicator": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -2927,6 +4040,7 @@
             "normalize_country": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
@@ -2937,11 +4051,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -2952,11 +4068,13 @@
             "unit_for": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -2967,26 +4085,59 @@
           }
         },
         "FREDMacroSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "api_key"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_series": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "series_id"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -3003,11 +4154,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3027,21 +4180,47 @@
           }
         },
         "IMFDataMapperSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_indicator": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3055,6 +4234,7 @@
             "normalize_country": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
@@ -3065,11 +4245,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3080,11 +4262,13 @@
             "unit_for": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3179,21 +4363,59 @@
           "kind": "dataclass"
         },
         "MacroClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_attempts"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_indicator": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3256,21 +4478,53 @@
           "kind": "dataclass"
         },
         "WorldBankMacroSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              },
+              {
+                "default_repr": "20000",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "per_page"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_canonical_indicator": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3281,26 +4535,31 @@
             "get_indicator": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator_code"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start_year"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end_year"
@@ -3314,6 +4573,7 @@
             "normalize_country": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "country_iso3"
@@ -3324,11 +4584,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3339,11 +4601,13 @@
             "unit_for": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "indicator"
@@ -3357,6 +4621,7 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "indicator"
@@ -3368,6 +4633,7 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "indicator"
@@ -3379,11 +4645,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -3395,21 +4663,25 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "sources"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "max_attempts"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -3421,11 +4693,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -3437,11 +4711,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "sources"
             },
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "indicator"
@@ -3453,31 +4729,37 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "country_iso3"
             },
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "indicator"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "sources"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "max_attempts"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -3489,6 +4771,7 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "indicator"
@@ -3500,11 +4783,13 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -3538,26 +4823,53 @@
           }
         },
         "FailoverPriceClient": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "sources"
+              },
+              {
+                "default_repr": "3",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "max_attempts"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_daily": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -3568,26 +4880,31 @@
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": "'1d'",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": "None",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -3737,31 +5054,59 @@
           "kind": "dataclass"
         },
         "SSIiBoardSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
           "kind": "class",
           "methods": {
             "get_history": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "start"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "end"
@@ -3772,6 +5117,7 @@
             "health": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
@@ -3785,11 +5131,13 @@
             "normalize_symbol": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "symbol"
@@ -3800,11 +5148,13 @@
             "supports": {
               "params": [
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
                 },
                 {
+                  "default_repr": null,
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "interval"
@@ -3842,16 +5192,19 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "max_attempts"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
@@ -3863,36 +5216,43 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": null,
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "symbol"
             },
             {
+              "default_repr": "'1d'",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "interval"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "start"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "end"
             },
             {
+              "default_repr": "3",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "max_attempts"
             },
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "KEYWORD_ONLY",
               "name": "timeout"
@@ -3904,17 +5264,819 @@
           "kind": "function",
           "params": [
             {
+              "default_repr": "None",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "http_get"
             },
             {
+              "default_repr": "25.0",
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "timeout"
             }
           ],
           "returns": "SSIiBoardSource"
+        }
+      }
+    },
+    "vnfin.sources": {
+      "all": [
+        "PriceSource",
+        "UDFSource",
+        "VN_TZ",
+        "SSIiBoardSource",
+        "VNDirectSource",
+        "VPSSource",
+        "PinetreeSource",
+        "KISVietnamSource",
+        "ALL_SOURCE_CLASSES",
+        "DEFAULT_CHAIN_CLASSES",
+        "all_sources",
+        "default_sources"
+      ],
+      "members": {
+        "ALL_SOURCE_CLASSES": {
+          "kind": "value",
+          "type": "tuple"
+        },
+        "DEFAULT_CHAIN_CLASSES": {
+          "kind": "value",
+          "type": "tuple"
+        },
+        "KISVietnamSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "PinetreeSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "PriceSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "supports": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "SSIiBoardSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "UDFSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "VNDirectSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "VN_TZ": {
+          "kind": "value",
+          "type": "ZoneInfo"
+        },
+        "VPSSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "all_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "default_repr": "25.0",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": null
+        },
+        "default_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "default_repr": "25.0",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": null
         }
       }
     }
