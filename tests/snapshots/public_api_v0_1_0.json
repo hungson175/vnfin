@@ -1,0 +1,3923 @@
+{
+  "modules": {
+    "vnfin": {
+      "all": [
+        "AdjustmentPolicy",
+        "Interval",
+        "PriceBar",
+        "PriceHistory",
+        "SourceAttempt",
+        "FailoverClient",
+        "FailoverPriceClient",
+        "default_client",
+        "prices",
+        "fundamentals",
+        "funds",
+        "indices",
+        "gold",
+        "crypto",
+        "macro",
+        "exceptions"
+      ],
+      "members": {
+        "AdjustmentPolicy": {
+          "kind": "enum",
+          "members": {
+            "MIXED": "mixed",
+            "PROVIDER_ADJUSTED": "provider_adjusted",
+            "RAW": "raw",
+            "UNKNOWN": "unknown"
+          }
+        },
+        "FailoverClient": {
+          "kind": "class",
+          "methods": {
+            "run": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "VAR_POSITIONAL",
+                  "name": "args"
+                },
+                {
+                  "has_default": false,
+                  "kind": "VAR_KEYWORD",
+                  "name": "kwargs"
+                }
+              ],
+              "returns": "Any"
+            },
+            "unit": {
+              "property": true
+            }
+          }
+        },
+        "FailoverPriceClient": {
+          "kind": "class",
+          "methods": {
+            "get_daily": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "max_attempts": {
+              "property": true
+            },
+            "sources": {
+              "property": true
+            }
+          }
+        },
+        "Interval": {
+          "kind": "enum",
+          "members": {
+            "D1": "1d",
+            "H1": "1h",
+            "M1": "1m",
+            "M15": "15m",
+            "M30": "30m",
+            "M5": "5m",
+            "MN1": "1M",
+            "W1": "1w"
+          }
+        },
+        "PriceBar": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "time",
+              "type": "datetime"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "open",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "high",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "low",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "close",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "volume",
+              "type": "int"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "PriceHistory": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "symbol",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "interval",
+              "type": "Interval"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "adjustment_policy",
+              "type": "AdjustmentPolicy"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "bars",
+              "type": "tuple[PriceBar, ...]"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "value_unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "exchange",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "provider_symbol",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "attempts",
+              "type": "tuple[SourceAttempt, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "SourceAttempt": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "name",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "ok",
+              "type": "bool"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "reason",
+              "type": "str"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "crypto": {
+          "kind": "module"
+        },
+        "default_client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "max_attempts"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "client.FailoverPriceClient"
+        },
+        "exceptions": {
+          "kind": "module"
+        },
+        "fundamentals": {
+          "kind": "module"
+        },
+        "funds": {
+          "kind": "module"
+        },
+        "gold": {
+          "kind": "module"
+        },
+        "indices": {
+          "kind": "module"
+        },
+        "macro": {
+          "kind": "module"
+        },
+        "prices": {
+          "kind": "module"
+        }
+      },
+      "version": "0.1.0"
+    },
+    "vnfin.crypto": {
+      "all": [
+        "BinanceCryptoSource",
+        "CoinbaseCryptoSource",
+        "CryptoBar",
+        "CryptoHistory",
+        "FailoverCryptoClient",
+        "default_crypto_sources",
+        "default_crypto_client",
+        "client",
+        "source"
+      ],
+      "members": {
+        "BinanceCryptoSource": {
+          "kind": "class",
+          "methods": {
+            "get_klines": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "CryptoHistory"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "parse_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": null
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "CoinbaseCryptoSource": {
+          "kind": "class",
+          "methods": {
+            "get_klines": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "CryptoHistory"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "parse_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": null
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "CryptoBar": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "time",
+              "type": "datetime"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "open",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "high",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "low",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "close",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "volume",
+              "type": "float"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "CryptoHistory": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "symbol",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "interval",
+              "type": "Interval"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "bars",
+              "type": "tuple[CryptoBar, ...]"
+            },
+            {
+              "default_repr": "'USD'",
+              "has_default": true,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": "'USD'",
+              "has_default": true,
+              "name": "value_unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "provider_symbol",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "base_asset",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "quote_asset",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "price_unit",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "volume_unit",
+              "type": "Optional[str]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "FailoverCryptoClient": {
+          "kind": "class",
+          "methods": {
+            "get_klines": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "CryptoHistory"
+            },
+            "max_attempts": {
+              "property": true
+            },
+            "sources": {
+              "property": true
+            },
+            "unit": {
+              "property": true
+            }
+          }
+        },
+        "client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "FailoverCryptoClient"
+        },
+        "default_crypto_client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "sources"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "max_attempts"
+            }
+          ],
+          "returns": "FailoverCryptoClient"
+        },
+        "default_crypto_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": null
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "BinanceCryptoSource"
+        }
+      }
+    },
+    "vnfin.exceptions": {
+      "all": [
+        "AdjustmentPolicyError",
+        "AllSourcesFailed",
+        "EmptyData",
+        "InvalidData",
+        "SourceError",
+        "SourceUnavailable",
+        "UnitMismatchError",
+        "UnsupportedInterval",
+        "VnfinError",
+        "annotations"
+      ],
+      "members": {
+        "AdjustmentPolicyError": {
+          "kind": "class",
+          "methods": {}
+        },
+        "AllSourcesFailed": {
+          "kind": "class",
+          "methods": {}
+        },
+        "EmptyData": {
+          "kind": "class",
+          "methods": {}
+        },
+        "InvalidData": {
+          "kind": "class",
+          "methods": {}
+        },
+        "SourceError": {
+          "kind": "class",
+          "methods": {}
+        },
+        "SourceUnavailable": {
+          "kind": "class",
+          "methods": {}
+        },
+        "UnitMismatchError": {
+          "kind": "class",
+          "methods": {}
+        },
+        "UnsupportedInterval": {
+          "kind": "class",
+          "methods": {}
+        },
+        "VnfinError": {
+          "kind": "class",
+          "methods": {}
+        },
+        "annotations": {
+          "kind": "value",
+          "type": "_Feature"
+        }
+      }
+    },
+    "vnfin.fundamentals": {
+      "all": [
+        "FinancialReport",
+        "LineItem",
+        "Period",
+        "StatementType",
+        "FundamentalSource",
+        "VNDirectFundamentalSource",
+        "CafeFFundamentalSource",
+        "FailoverFundamentalClient",
+        "default_fundamental_sources",
+        "default_fundamental_client",
+        "get_financials",
+        "client",
+        "source",
+        "AUTO",
+        "KNOWN_BANK_SYMBOLS",
+        "is_known_bank"
+      ],
+      "members": {
+        "AUTO": {
+          "kind": "value",
+          "type": "NoneType"
+        },
+        "CafeFFundamentalSource": {
+          "kind": "class",
+          "methods": {
+            "get_financials": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "statement"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "period"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "is_bank"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "limit"
+                }
+              ],
+              "returns": "tuple[FinancialReport, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            }
+          }
+        },
+        "FailoverFundamentalClient": {
+          "kind": "class",
+          "methods": {
+            "get_financials": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "statement"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "period"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "is_bank"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "limit"
+                }
+              ],
+              "returns": "tuple[FinancialReport, ...]"
+            },
+            "max_attempts": {
+              "property": true
+            },
+            "sources": {
+              "property": true
+            },
+            "unit": {
+              "property": true
+            }
+          }
+        },
+        "FinancialReport": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "symbol",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "statement_type",
+              "type": "StatementType"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "period",
+              "type": "Period"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "fiscal_date",
+              "type": "date"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "items",
+              "type": "tuple[LineItem, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "currency",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": "False",
+              "has_default": true,
+              "name": "is_bank",
+              "type": "bool"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "model_type",
+              "type": "Optional[int]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "provider_symbol",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "FundamentalSource": {
+          "kind": "class",
+          "methods": {
+            "get_financials": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "statement"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "period"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "is_bank"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "limit"
+                }
+              ],
+              "returns": "tuple[FinancialReport, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "KNOWN_BANK_SYMBOLS": {
+          "kind": "value",
+          "type": "frozenset"
+        },
+        "LineItem": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "item_code",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "name",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "value",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "value_unit",
+              "type": "Optional[str]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "Period": {
+          "kind": "enum",
+          "members": {
+            "ANNUAL": "ANNUAL",
+            "QUARTER": "QUARTER",
+            "UNKNOWN": "UNKNOWN"
+          }
+        },
+        "StatementType": {
+          "kind": "enum",
+          "members": {
+            "BALANCE": "balance",
+            "CASHFLOW": "cashflow",
+            "INCOME": "income",
+            "RATIOS": "ratios"
+          }
+        },
+        "VNDirectFundamentalSource": {
+          "kind": "class",
+          "methods": {
+            "get_financials": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "statement"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "period"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "is_bank"
+                },
+                {
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "limit"
+                }
+              ],
+              "returns": "tuple[FinancialReport, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "model_type_for": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "statement"
+                },
+                {
+                  "has_default": false,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "is_bank"
+                }
+              ],
+              "returns": "int"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            }
+          }
+        },
+        "client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "max_attempts"
+            }
+          ],
+          "returns": "FailoverFundamentalClient"
+        },
+        "default_fundamental_client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "max_attempts"
+            }
+          ],
+          "returns": "FailoverFundamentalClient"
+        },
+        "default_fundamental_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": null
+        },
+        "get_financials": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "symbol"
+            },
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "statement"
+            },
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "period"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "is_bank"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "limit"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "source"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "sources"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "max_attempts"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "tuple[FinancialReport, ...]"
+        },
+        "is_known_bank": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "symbol"
+            }
+          ],
+          "returns": "bool"
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "VNDirectFundamentalSource"
+        }
+      }
+    },
+    "vnfin.funds": {
+      "all": [
+        "Fund",
+        "FundList",
+        "NavPoint",
+        "NavHistory",
+        "FundHolding",
+        "FmarketFundSource",
+        "client",
+        "source"
+      ],
+      "members": {
+        "FmarketFundSource": {
+          "kind": "class",
+          "methods": {
+            "holdings": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "product_id"
+                }
+              ],
+              "returns": "tuple[FundHolding, ...]"
+            },
+            "list_funds": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "asset_type"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "search"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "page_size"
+                }
+              ],
+              "returns": "FundList"
+            },
+            "nav_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "product_id"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "from_date"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "to_date"
+                }
+              ],
+              "returns": "NavHistory"
+            }
+          }
+        },
+        "Fund": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "code",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "name",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "id",
+              "type": "int"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "nav",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "manager",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "asset_type",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "currency",
+              "type": "str"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "FundHolding": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "stock_code",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "weight_pct",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "industry",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "price_raw",
+              "type": "Optional[float]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "price_unit",
+              "type": "Optional[str]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "FundList": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "funds",
+              "type": "tuple[Fund, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "NavHistory": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "product_id",
+              "type": "int"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "points",
+              "type": "tuple[NavPoint, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND/unit'",
+              "has_default": true,
+              "name": "value_unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "code",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "NavPoint": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "date",
+              "type": "date"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "nav",
+              "type": "float"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "FmarketFundSource"
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "FmarketFundSource"
+        }
+      }
+    },
+    "vnfin.gold": {
+      "all": [
+        "GoldQuote",
+        "GoldBar",
+        "GoldHistory",
+        "GoldSource",
+        "BTMCGoldSource",
+        "PNJGoldSource",
+        "BTMC_PUBLIC_WIDGET_KEY",
+        "GoldApiSource",
+        "CurrencyApiGoldSource",
+        "StooqGoldSource",
+        "FailoverGoldClient",
+        "default_world_gold_sources",
+        "default_world_gold_client",
+        "vn",
+        "world",
+        "source"
+      ],
+      "members": {
+        "BTMCGoldSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "GoldHistory"
+            },
+            "get_quote": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "product"
+                }
+              ],
+              "returns": "GoldQuote"
+            },
+            "get_quotes": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "tuple[GoldQuote, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "BTMC_PUBLIC_WIDGET_KEY": {
+          "kind": "value",
+          "type": "str"
+        },
+        "CurrencyApiGoldSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "GoldHistory"
+            },
+            "get_quote": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "GoldQuote"
+            },
+            "get_quotes": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "tuple[GoldQuote, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "FailoverGoldClient": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "GoldHistory"
+            },
+            "max_attempts": {
+              "property": true
+            },
+            "sources": {
+              "property": true
+            },
+            "unit": {
+              "property": true
+            }
+          }
+        },
+        "GoldApiSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "GoldHistory"
+            },
+            "get_quote": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "GoldQuote"
+            },
+            "get_quotes": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "tuple[GoldQuote, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "GoldBar": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "date",
+              "type": "date_type"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "price",
+              "type": "float"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "GoldHistory": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "product",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "bars",
+              "type": "tuple[GoldBar, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "value_unit",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "attempts",
+              "type": "tuple[SourceAttempt, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "GoldQuote": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "time",
+              "type": "datetime"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "product",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "buy",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "sell",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "karat",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "region",
+              "type": "Optional[str]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "GoldSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "GoldHistory"
+            },
+            "get_quote": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "VAR_POSITIONAL",
+                  "name": "args"
+                },
+                {
+                  "has_default": false,
+                  "kind": "VAR_KEYWORD",
+                  "name": "kwargs"
+                }
+              ],
+              "returns": "GoldQuote"
+            },
+            "get_quotes": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "tuple[GoldQuote, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "PNJGoldSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "GoldHistory"
+            },
+            "get_quote": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "product"
+                }
+              ],
+              "returns": "GoldQuote"
+            },
+            "get_quotes": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "tuple[GoldQuote, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "StooqGoldSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "GoldHistory"
+            },
+            "get_quote": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "GoldQuote"
+            },
+            "get_quotes": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "tuple[GoldQuote, ...]"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "default_world_gold_client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "sources"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "max_attempts"
+            }
+          ],
+          "returns": "FailoverGoldClient"
+        },
+        "default_world_gold_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "list[GoldSource]"
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "provider"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "GoldSource"
+        },
+        "vn": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "provider"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "GoldSource"
+        },
+        "world": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "provider"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "GoldSource"
+        }
+      }
+    },
+    "vnfin.indices": {
+      "all": [
+        "IndexClient",
+        "index_history",
+        "index_constituents",
+        "default_index_sources",
+        "IndexConstituents",
+        "IndexMember",
+        "IndexConstituentsSource",
+        "VPSIndexSource",
+        "SSIIndexSource",
+        "VNDirectIndexSource",
+        "client",
+        "source"
+      ],
+      "members": {
+        "IndexClient": {
+          "kind": "class",
+          "methods": {
+            "constituents": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "index"
+                }
+              ],
+              "returns": "IndexConstituents"
+            },
+            "index_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "PriceHistory"
+            }
+          }
+        },
+        "IndexConstituents": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "index",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "members",
+              "type": "tuple[IndexMember, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "provider_group",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "as_of",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "IndexConstituentsSource": {
+          "kind": "class",
+          "methods": {
+            "get_constituents": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "index"
+                }
+              ],
+              "returns": "IndexConstituents"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_group": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "group"
+                }
+              ],
+              "returns": "str"
+            }
+          }
+        },
+        "IndexMember": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "symbol",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "exchange",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "company_name",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "isin",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "weight",
+              "type": "Optional[float]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "SSIIndexSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": null
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "VNDirectIndexSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": null
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "VPSIndexSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": null
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "max_attempts"
+            }
+          ],
+          "returns": "IndexClient"
+        },
+        "default_index_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": null
+        },
+        "index_constituents": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "index"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "IndexConstituents"
+        },
+        "index_history": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "symbol"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "start"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "end"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "interval"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "max_attempts"
+            }
+          ],
+          "returns": "PriceHistory"
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "VPSIndexSource"
+        }
+      }
+    },
+    "vnfin.macro": {
+      "all": [
+        "IndicatorSeries",
+        "MacroIndicator",
+        "MacroIndicatorSpec",
+        "Frequency",
+        "canonical_unit",
+        "canonical_currency",
+        "eligible_sources",
+        "normalize_indicator",
+        "WorldBankMacroSource",
+        "IMFDataMapperSource",
+        "DBnomicsSource",
+        "FREDMacroSource",
+        "MacroClient",
+        "default_macro_sources",
+        "default_macro_client",
+        "get_indicator",
+        "client",
+        "source"
+      ],
+      "members": {
+        "DBnomicsSource": {
+          "kind": "class",
+          "methods": {
+            "frequency_for": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "Frequency"
+            },
+            "get_indicator": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "IndicatorSeries"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_country": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "bool"
+            },
+            "unit_for": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "str"
+            }
+          }
+        },
+        "FREDMacroSource": {
+          "kind": "class",
+          "methods": {
+            "get_series": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "series_id"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "IndicatorSeries"
+            },
+            "has_key": {
+              "property": true
+            },
+            "name": {
+              "property": true
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "Frequency": {
+          "kind": "enum",
+          "members": {
+            "ANNUAL": "annual",
+            "DAILY": "daily",
+            "MONTHLY": "monthly",
+            "QUARTERLY": "quarterly"
+          }
+        },
+        "IMFDataMapperSource": {
+          "kind": "class",
+          "methods": {
+            "get_indicator": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "IndicatorSeries"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_country": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "bool"
+            },
+            "unit_for": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "str"
+            }
+          }
+        },
+        "IndicatorSeries": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "country",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "indicator_code",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "indicator_name",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "points",
+              "type": "tuple[tuple[date, float], ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": "''",
+              "has_default": true,
+              "name": "unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "value_unit",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "currency",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": "'annual'",
+              "has_default": true,
+              "name": "frequency",
+              "type": "Frequency"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "projection_from_year",
+              "type": "Optional[int]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "country_name",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "MacroClient": {
+          "kind": "class",
+          "methods": {
+            "get_indicator": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "IndicatorSeries"
+            },
+            "max_attempts": {
+              "property": true
+            },
+            "sources": {
+              "property": true
+            }
+          }
+        },
+        "MacroIndicator": {
+          "kind": "enum",
+          "members": {
+            "CPI": "cpi",
+            "GDP": "gdp",
+            "GDP_GROWTH": "gdp_growth",
+            "INFLATION": "inflation",
+            "UNEMPLOYMENT": "unemployment"
+          }
+        },
+        "MacroIndicatorSpec": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "provider_code",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "frequency",
+              "type": "Frequency"
+            },
+            {
+              "default_repr": "False",
+              "has_default": true,
+              "name": "carries_projections",
+              "type": "bool"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "currency",
+              "type": "Optional[str]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "WorldBankMacroSource": {
+          "kind": "class",
+          "methods": {
+            "get_canonical_indicator": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "IndicatorSeries"
+            },
+            "get_indicator": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator_code"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start_year"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end_year"
+                }
+              ],
+              "returns": "IndicatorSeries"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_country": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "bool"
+            },
+            "unit_for": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "str"
+            }
+          }
+        },
+        "canonical_currency": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "indicator"
+            }
+          ],
+          "returns": "Optional[str]"
+        },
+        "canonical_unit": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "indicator"
+            }
+          ],
+          "returns": "str"
+        },
+        "client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "MacroClient"
+        },
+        "default_macro_client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "sources"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "max_attempts"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "MacroClient"
+        },
+        "default_macro_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": null
+        },
+        "eligible_sources": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "sources"
+            },
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "indicator"
+            }
+          ],
+          "returns": "list"
+        },
+        "get_indicator": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "country_iso3"
+            },
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "indicator"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "sources"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "max_attempts"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "IndicatorSeries"
+        },
+        "normalize_indicator": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "indicator"
+            }
+          ],
+          "returns": "MacroIndicator"
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "WorldBankMacroSource"
+        }
+      }
+    },
+    "vnfin.prices": {
+      "all": [
+        "AdjustmentPolicy",
+        "Interval",
+        "PriceBar",
+        "PriceHistory",
+        "SourceAttempt",
+        "FailoverPriceClient",
+        "SSIiBoardSource",
+        "client",
+        "source",
+        "history"
+      ],
+      "members": {
+        "AdjustmentPolicy": {
+          "kind": "enum",
+          "members": {
+            "MIXED": "mixed",
+            "PROVIDER_ADJUSTED": "provider_adjusted",
+            "RAW": "raw",
+            "UNKNOWN": "unknown"
+          }
+        },
+        "FailoverPriceClient": {
+          "kind": "class",
+          "methods": {
+            "get_daily": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "max_attempts": {
+              "property": true
+            },
+            "sources": {
+              "property": true
+            }
+          }
+        },
+        "Interval": {
+          "kind": "enum",
+          "members": {
+            "D1": "1d",
+            "H1": "1h",
+            "M1": "1m",
+            "M15": "15m",
+            "M30": "30m",
+            "M5": "5m",
+            "MN1": "1M",
+            "W1": "1w"
+          }
+        },
+        "PriceBar": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "time",
+              "type": "datetime"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "open",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "high",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "low",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "close",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "volume",
+              "type": "int"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "PriceHistory": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "symbol",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "interval",
+              "type": "Interval"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "adjustment_policy",
+              "type": "AdjustmentPolicy"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "bars",
+              "type": "tuple[PriceBar, ...]"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "value_unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "exchange",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "provider_symbol",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "attempts",
+              "type": "tuple[SourceAttempt, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "SSIiBoardSource": {
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "health": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                }
+              ],
+              "returns": "bool"
+            },
+            "name": {
+              "property": true
+            },
+            "normalize_symbol": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                }
+              ],
+              "returns": "str"
+            },
+            "supports": {
+              "params": [
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "bool"
+            }
+          }
+        },
+        "SourceAttempt": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "name",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "ok",
+              "type": "bool"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "reason",
+              "type": "str"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "client": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "max_attempts"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "FailoverPriceClient"
+        },
+        "history": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "symbol"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "interval"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "start"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "end"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "max_attempts"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "PriceHistory"
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "http_get"
+            },
+            {
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "timeout"
+            }
+          ],
+          "returns": "SSIiBoardSource"
+        }
+      }
+    }
+  },
+  "version": "0.1.0"
+}
