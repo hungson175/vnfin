@@ -62,3 +62,20 @@ def test_failover_client_returns_usd_series():
     assert h.currency == "USD"
     assert len(h) > 0
     assert 1_000 < h.bars[-1].close < 10_000_000
+
+
+def test_failover_client_never_serves_btc_quoted_pair_as_usd():
+    """B9 live: a real non-USD pair (ETHBTC) must NOT be served as USD by the USD chain.
+
+    Binance trades ETHBTC (currency BTC, prices << 1); the USD chain's result-level unit
+    guard must reject it -> AllSourcesFailed, never a BTC series mislabeled USD.
+    """
+    from vnfin.crypto import default_crypto_client
+    from vnfin.exceptions import AllSourcesFailed
+    from vnfin.models import Interval
+
+    end = date.today()
+    start = end - timedelta(days=10)
+    client = default_crypto_client()
+    with pytest.raises(AllSourcesFailed):
+        client.get_klines("ETHBTC", Interval.D1, start, end)

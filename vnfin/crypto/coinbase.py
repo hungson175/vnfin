@@ -79,8 +79,14 @@ _INTERVAL_SEC = {
     Interval.H1: 60 * 60,
     Interval.D1: 24 * 60 * 60,
 }
-# Coinbase caps each call at ~300 candles; window each page to that many bars.
+# Coinbase caps each call at ~300 candles. An inclusive [lo, hi] window of
+# ``step * (PAGE_CANDLES - 1)`` holds EXACTLY PAGE_CANDLES candle slots, so the
+# provider never has to drop a boundary candle to honor its 300-row cap. (Using
+# ``step * PAGE_CANDLES`` spans 301 inclusive slots -> the provider truncates one
+# boundary candle per page, which the backward step then skips: B10 regression.)
 _PAGE_CANDLES = 300
+# Candle slots per page window (inclusive range): one fewer than the candle cap.
+_PAGE_SPAN_CANDLES = _PAGE_CANDLES - 1
 # Safety cap on pagination calls to bound deep-history backfills.
 _MAX_PAGES = 5000
 
@@ -180,11 +186,16 @@ class CoinbaseCryptoSource(HttpDataSource):
         lo_sec = int(lo.astimezone(timezone.utc).timestamp())
         hi_sec = int(hi.astimezone(timezone.utc).timestamp())
         step_sec = _INTERVAL_SEC[interval]
-        page_span = step_sec * _PAGE_CANDLES
+        # Inclusive [lo, hi] window holding EXACTLY PAGE_CANDLES candle slots (see
+        # _PAGE_SPAN_CANDLES) so the provider's 300-row cap never drops a boundary candle.
+        page_span = step_sec * _PAGE_SPAN_CANDLES
 
         # Paginate backward: Coinbase returns ~300 newest candles per call. Walk the
         # [start, end] window in <=300-candle slabs from the most recent backward until
         # the requested ``start`` is covered, so long ranges are not silently truncated.
+        # Consecutive slabs OVERLAP by one candle (the lower bound of one slab is the
+        # upper bound of the next) and ``seen_sec`` de-duplicates, so a candle that
+        # straddles a slab boundary can never be skipped.
         all_bars: list[CryptoBar] = []
         seen_sec: set[int] = set()
         warnings: list[str] = []
@@ -206,7 +217,9 @@ class CoinbaseCryptoSource(HttpDataSource):
                 # to the next (older) slab unless we've exhausted the range.
                 if all_bars or window_lo <= lo_sec:
                     break
-                window_hi = window_lo - step_sec
+                # Overlap by one candle (dedupe via seen_sec) so a boundary candle
+                # straddling two slabs is never skipped.
+                window_hi = window_lo
                 first_page = False
                 continue
             page_bars = self._build_bars(parsed)
@@ -216,10 +229,12 @@ class CoinbaseCryptoSource(HttpDataSource):
                     continue
                 seen_sec.add(sec)
                 all_bars.append(b)
-            # Step the window strictly past this slab's lower bound.
+            # Step to the next (older) slab. Overlap by one candle (the new upper
+            # bound equals this slab's lower bound) so a candle on the slab boundary
+            # is fetched by both slabs and de-duplicated by seen_sec, never skipped.
             if window_lo <= lo_sec:
                 break
-            window_hi = window_lo - step_sec
+            window_hi = window_lo
             first_page = False
 
         all_bars.sort(key=lambda b: b.time)

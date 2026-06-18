@@ -390,6 +390,95 @@ def test_datetime_inputs_accepted():
     assert len(h) == 3
 
 
+# --- B10: backward pagination must not drop boundary candles ----------------
+
+_DAY_SEC = 86_400
+
+
+def _provider_window(all_secs, start_sec, end_sec, cap=300):
+    """Simulate Coinbase: inclusive [start, end], NEWEST-FIRST, capped at ``cap`` rows.
+
+    The real provider caps each call at ~300 candles; when asked for an inclusive
+    window that contains more than 300 candle slots it returns only the 300 NEWEST,
+    silently dropping the oldest boundary candles. The B10 bug was that an off-by-one
+    page span requested 301 slots, so one boundary candle per page was dropped and the
+    backward step then skipped it. This faithful simulator reproduces that.
+    """
+    win = sorted((s for s in all_secs if start_sec <= s <= end_sec), reverse=True)
+    return win[:cap]
+
+
+def test_pagination_multi_page_covers_exact_bar_count_no_boundary_drop():
+    """A 750-daily-candle range (> 2 Coinbase pages) must return EXACTLY 750 bars.
+
+    Regression for B10: the old ``page_span = step * 300`` requested 301 inclusive
+    candle slots per page; the provider's 300-row cap dropped one boundary candle per
+    page and the backward step skipped it (observed 748 of 750). The fix windows each
+    page to exactly 300 candle slots and overlaps slabs (de-duplicated), so no boundary
+    candle is ever lost.
+    """
+    n = 750
+    base = _sec(date(2024, 1, 1))
+    all_secs = [base + i * _DAY_SEC for i in range(n)]
+    expected_secs = set(all_secs)
+
+    calls = {"n": 0}
+
+    def paging_http(url, params, headers):
+        calls["n"] += 1
+        # adapter sends ISO8601 start/end; convert back to epoch seconds
+        st = int(datetime.strptime(params["start"], "%Y-%m-%dT%H:%M:%S")
+                 .replace(tzinfo=UTC).timestamp())
+        et = int(datetime.strptime(params["end"], "%Y-%m-%dT%H:%M:%S")
+                 .replace(tzinfo=UTC).timestamp())
+        secs = _provider_window(all_secs, st, et, cap=300)
+        # build NEWEST-FIRST candle rows (Coinbase order: time,low,high,open,close,vol)
+        rows = [[s, 90.0, 110.0, 100.0, 105.0, 1.0] for s in secs]
+        return json.dumps(rows)
+
+    start = date(2024, 1, 1)
+    end = start + timedelta(days=n - 1)
+    h = CoinbaseCryptoSource(http_get=paging_http).get_klines(
+        "BTC-USD", Interval.D1, start, end
+    )
+
+    # exactly 750 bars, no boundary candle dropped, none duplicated
+    assert len(h) == n
+    got_secs = {int(b.time.timestamp()) for b in h.bars}
+    assert got_secs == expected_secs
+    # multiple paginated calls were actually made (range > one 300-candle page)
+    assert calls["n"] >= 3
+    # ascending, de-duplicated
+    times = [b.time for b in h.bars]
+    assert times == sorted(times)
+    assert len(set(times)) == n
+
+
+def test_pagination_deduplicates_overlapping_slabs():
+    """Overlapping backward slabs (boundary candle fetched by two pages) must not
+    double-count: B10 fix relies on overlap+dedupe, so the bar count stays exact."""
+    n = 605  # spans 3 pages with overlap
+    base = _sec(date(2024, 1, 1))
+    all_secs = [base + i * _DAY_SEC for i in range(n)]
+
+    def paging_http(url, params, headers):
+        st = int(datetime.strptime(params["start"], "%Y-%m-%dT%H:%M:%S")
+                 .replace(tzinfo=UTC).timestamp())
+        et = int(datetime.strptime(params["end"], "%Y-%m-%dT%H:%M:%S")
+                 .replace(tzinfo=UTC).timestamp())
+        secs = _provider_window(all_secs, st, et, cap=300)
+        rows = [[s, 90.0, 110.0, 100.0, 105.0, 1.0] for s in secs]
+        return json.dumps(rows)
+
+    start = date(2024, 1, 1)
+    end = start + timedelta(days=n - 1)
+    h = CoinbaseCryptoSource(http_get=paging_http).get_klines(
+        "BTC-USD", Interval.D1, start, end
+    )
+    times = [b.time for b in h.bars]
+    assert len(times) == len(set(times)) == n
+
+
 # --- unit attribute for the failover guard ----------------------------------
 
 

@@ -203,6 +203,69 @@ def test_unit_guard_accepts_homogeneous_usd_chain():
     assert len(client.sources) == 2
 
 
+# --- B9: result-level USD guard (non-USD pair must NOT be served as USD) -----
+
+
+def _binance_btc_quoted_payload():
+    """Synthetic ETHBTC-shaped page: prices in BTC (fabricated tiny round numbers)."""
+    rows = []
+    for d, o, h, l, c, v in [
+        (date(2026, 6, 15), "0.05000", "0.06000", "0.04000", "0.05500", "10.0"),
+        (date(2026, 6, 16), "0.05500", "0.07000", "0.05000", "0.06500", "20.0"),
+    ]:
+        ot = _ms(d)
+        rows.append([ot, o, h, l, c, v, ot + DAY_MS - 1, "0", 100, "0", "0", "0"])
+    return json.dumps(rows)
+
+
+def test_ethbtc_btc_quoted_result_is_rejected_in_usd_chain():
+    """A USD chain must NOT silently serve a BTC-quoted ETHBTC series as USD.
+
+    Binance returns ETHBTC with currency/value_unit "BTC". Coinbase has no native
+    ETH-BTC USD product and raises, so the only result available is BTC-denominated.
+    The result-level unit guard must reject it -> AllSourcesFailed, never a BTC series
+    mislabeled USD.
+    """
+    binance = BinanceCryptoSource(http_get=lambda u, p, h: _binance_btc_quoted_payload())
+    coinbase = CoinbaseCryptoSource(
+        http_get=lambda u, p, h: (_ for _ in ()).throw(ConnectionError("no eth-btc usd"))
+    )
+    client = default_crypto_client(sources=[binance, coinbase])
+    assert client.unit == "USD"
+    with pytest.raises(AllSourcesFailed):
+        client.get_klines("ETHBTC", Interval.D1, *WIDE)
+
+
+def test_ethbtc_never_returned_with_usd_value_unit():
+    """Even from the primary alone, a BTC-quoted ETHBTC result is not served by a
+    USD-declared chain. The guard checks the actual currency/value_unit, not the
+    static source.unit."""
+    binance = BinanceCryptoSource(http_get=lambda u, p, h: _binance_btc_quoted_payload())
+    coinbase = CoinbaseCryptoSource(
+        http_get=lambda u, p, h: (_ for _ in ()).throw(ConnectionError("x"))
+    )
+    client = default_crypto_client(sources=[binance, coinbase])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_klines("ETHBTC", Interval.D1, *WIDE)
+    # the recorded attempt explains the rejection was a unit mismatch, not transport
+    reasons = "; ".join(a.reason for a in ei.value.attempts)
+    assert "unit mismatch" in reasons
+    assert "BTC" in reasons
+
+
+def test_usd_pair_still_served_normally():
+    """The result guard must not block a legitimate USD result."""
+    binance = BinanceCryptoSource(http_get=lambda u, p, h: _binance_payload())
+    coinbase = CoinbaseCryptoSource(
+        http_get=lambda u, p, h: (_ for _ in ()).throw(AssertionError("backup hit"))
+    )
+    client = default_crypto_client(sources=[binance, coinbase])
+    h = client.get_klines("BTCUSDT", Interval.D1, *WIDE)
+    assert h.source == "binance"
+    assert h.currency == "USD"
+    assert h.value_unit == "USD"
+
+
 # --- symbol normalization carries across the chain --------------------------
 
 
