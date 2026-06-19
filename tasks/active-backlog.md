@@ -16,6 +16,11 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
+- **#130 follow-up** — `model_type` allow-list. Initial fix (046f1ba) shipped+closed, but reviewer
+  found it accepted any non-bool int; #130 REOPENED. Tightened to None or canonical
+  `{1,2,3,101,102,103}` (reject -1/0/4/99/104/999) — committed `65bb2c4` (NOT pushed), +13 TDD
+  cases, suite 1879 green. **Awaiting reviewer review → push → re-close #130.**
+
 - **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129 + #130** —
   design APPROVED (review-202606191336 #125r/#129; #127/#128 confirmed 13:38; #130 folded in).
   ALL IMPLEMENTED + committed (NOT pushed), full suite 1866 green, gates pass, no public-API change:
@@ -32,10 +37,14 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- **#131 / #132** — macro metadata boundary validation: `projection_from_year` and `frequency`.
-  Queued by reviewer poller 13:50 (last_seen 2026-06-19T06:50:49Z). Current batch is FROZEN
-  (in review) → handle as a **macro-metadata mini-batch immediately after** it lands. Scope via
-  `./bin/gh-maintainer issue view 131` / `132`.
+- **Returned-metadata mini-batch: #69 / #131 / #132 / #133** (after #130 follow-up lands):
+  - **#69** (REOPENED) — crypto quote-metadata residual.
+  - **#131** — macro `projection_from_year`: None or real non-bool int year; sane vs first obs.
+  - **#132** — macro `frequency`: must be a `Frequency` enum (reject str/bool/int/container/None);
+    point dates consistent with frequency.
+  - **#133** — price returned security metadata: `exchange` present⇒non-empty (accepted set),
+    `provider_symbol` present⇒non-empty str not contradicting requested symbol.
+  Scope each via `./bin/gh-maintainer issue view <n>`; combined design then TDD.
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
