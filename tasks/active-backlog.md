@@ -25,12 +25,12 @@ _Last synced: 2026-06-19 ~10:12 +07_
   - **#123** macro point-key type — committed `ec7586c` (NOT pushed). Awaiting review.
   - **#124** price/crypto/gold bar-key type — committed `45ed0a8` (NOT pushed). Awaiting review
     (requested together with #123).
-  - **#126** provenance mismatch — committed `21c225f` + B1 fix `d013817` (NOT pushed).
-    Engine-level optional `provenance_of` guard (appended last → additive API) +
-    `_provenance_mismatch`; wired ALL 6 domains incl. FX (fundamentals uses report-tuple
-    extractor). Reviewer BLOCK: FX was unwired + macro test gap — FIXED (FX provenance_of +
-    FX/macro regression tests). +12 TDD cases, suite 1729 green, CHANGELOG updated, additive API.
-    **Awaiting reviewer RE-review → push → close.**
+  - **#126** provenance mismatch — committed `21c225f` + B1 `d013817` + B2 `8a3c12d` (NOT
+    pushed). Engine-level optional `provenance_of` guard (additive API) wired ALL 6 domains incl.
+    FX. BLOCK history: B1 (FX unwired + macro test gap) FIXED; B2 (strict — reject single-result
+    `source=None`/list/non-str; only `str`-equals or non-empty `frozenset` composite accepted)
+    FIXED. +25 TDD cases, suite 1742 green, failover.py cov 93%, additive API.
+    **Awaiting reviewer RE-review (B2) → push 21c225f..8a3c12d → close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -38,8 +38,15 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- **#127** — labelled `bug`/queued by reviewer poller 12:50 (last_seen 2026-06-19T05:52:49Z).
-  Not yet scoped. Triage + TDD after the #123–#126 cluster lands. `./bin/gh-maintainer issue view 127`.
+**Batch after #126 lands** (reviewer rec: failover metadata/container-boundary batch):
+- **#127** — non-FX failover doesn't validate present-malformed `fetched_at_utc` (reject
+  string/naive/non-UTC; `None` stays allowed). Sibling of #126; FX already does this for
+  `as_of_utc`. Details fetched.
+- **#125 (REOPENED 13:20)** — residual malformed **row-object** AttributeError case (the
+  container type-check shipped, but a malformed *row/item object* inside a valid container still
+  leaks). Re-scope from the reopened issue body.
+- **#128** — newly queued by poller 13:20 (last_seen 2026-06-19T06:21:23Z). Not yet scoped.
+  `./bin/gh-maintainer issue view 128`.
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
