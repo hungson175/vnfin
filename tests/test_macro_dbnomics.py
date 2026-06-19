@@ -93,6 +93,14 @@ def test_cpi_unit_is_index():
     assert res.unit == "index"
 
 
+def test_dbnomics_series_code_mismatch_raises_invalid():
+    # Issue #21: a doc whose series_code names a different series (e.g. another country) must
+    # raise InvalidData, not be stamped with the requested indicator identity.
+    payload = dbn_success(series_code="M.US.PCPI_IX")  # request resolves to M.ZZ.PCPI_IX
+    with pytest.raises(InvalidData):
+        _src(payload).get_indicator(COUNTRY, MacroIndicator.CPI)
+
+
 def test_source_unit_for_indicator():
     s = _src(dbn_success())
     assert s.unit_for(MacroIndicator.CPI) == "index"

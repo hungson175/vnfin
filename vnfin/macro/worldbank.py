@@ -183,7 +183,7 @@ class WorldBankMacroSource(HttpDataSource):
         parsed = self._parse_envelope(text)
         meta, observations = parsed
 
-        country_name, indicator_name, unit, points = self._build_points(observations, code)
+        country_name, indicator_name, unit, points = self._build_points(observations, code, country)
         points = self._contained_points(points, window_lo, window_hi)
         if not points:
             raise EmptyData(
@@ -247,7 +247,7 @@ class WorldBankMacroSource(HttpDataSource):
             raise InvalidData(f"{self.NAME}: observations element is not a list")
         return first, observations
 
-    def _build_points(self, observations, code):
+    def _build_points(self, observations, code, country):
         """Turn the raw observation list into sorted (date, value) points.
 
         Null-valued observations (missing years) are skipped. A malformed scalar
@@ -262,6 +262,14 @@ class WorldBankMacroSource(HttpDataSource):
         for obs in observations or []:
             if not isinstance(obs, dict):
                 raise InvalidData(f"{self.NAME}: observation is not an object")
+
+            # Issue #21: the observation must belong to the requested country; a row whose
+            # countryiso3code names a different country must not be stamped as the request.
+            iso3 = obs.get("countryiso3code")
+            if isinstance(iso3, str) and iso3.strip() and iso3.strip().upper() != country:
+                raise InvalidData(
+                    f"{self.NAME}: observation country {iso3!r} != requested {country!r}"
+                )
 
             ind = self._metadata_container(obs, "indicator", code)
             if indicator_name is None and ind is not None:

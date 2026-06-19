@@ -566,6 +566,17 @@ def test_noncanonical_observation_year_raises_invalid(bad_year):
         _src(rows_text).get_indicator(COUNTRY, INDICATOR, 2024, 2024)
 
 
+def test_worldbank_observation_country_mismatch_raises_invalid():
+    # Issue #21: an observation whose countryiso3code does not match the requested country
+    # must raise InvalidData, not be silently stamped with the requested country.
+    rows_text = json.dumps([
+        _meta(1),
+        [_obs("US", "USA", 2024, 1.23)],  # countryiso3code USA, but request is ZZZ
+    ])
+    with pytest.raises(InvalidData):
+        _src(rows_text).get_indicator(COUNTRY, INDICATOR, 2024, 2024)
+
+
 # --- Issue #46: year bounds must be integers, not floats/bools --------------------
 
 @pytest.mark.parametrize("bad_start", [2023.9, True, False, "not-a-year"])

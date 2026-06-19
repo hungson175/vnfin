@@ -162,6 +162,13 @@ class DBnomicsSource(HttpDataSource):
         return doc
 
     def _build_points(self, doc, series_id, result_freq: Frequency):
+        # Issue #21: the returned doc must be the requested series; a series_code that names
+        # a different series must not be stamped with the requested indicator identity.
+        got_code = doc.get("series_code")
+        if isinstance(got_code, str) and got_code and got_code != series_id:
+            raise InvalidData(
+                f"{self.NAME}: returned series_code {got_code!r} != requested {series_id!r}"
+            )
         periods = doc.get("period_start_day")
         values = doc.get("value")
         if not isinstance(periods, list) or not isinstance(values, list):
