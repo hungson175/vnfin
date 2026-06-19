@@ -16,9 +16,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `9bedc2e`, full suite
-  1979 green, watermark 2026-06-19T07:58:56Z. Steady-state: record new poller/reviewer activity
-  here first, TDD + reviewer sign-off per fix.
+- **#106 (REOPENED 15:20)** — `OpenErApiFXSource._as_of` truncates a fractional
+  `time_last_update_unix` (e.g. `1700000000.9`) via `int(ts)` into a falsely-precise as_of_utc.
+  TDD: fractional/malformed numeric timestamp must NOT truncate — prefer the existing
+  now()-fallback (optional-metadata path) over InvalidData. Reviewer review → push → re-close.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
