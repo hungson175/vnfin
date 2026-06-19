@@ -42,6 +42,7 @@ from typing import Optional
 from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
 from ..transport import DEFAULT_UA, HttpDataSource
+from ..validation import validate_iso_date_string
 from .models import IndicatorSeries
 
 
@@ -178,7 +179,9 @@ class FREDMacroSource(HttpDataSource):
             if raw is None or (isinstance(raw, str) and raw.strip() == "."):
                 continue  # FRED uses "." for missing -> skip
             try:
-                d = date.fromisoformat(str(obs.get("date")).strip())
+                d = validate_iso_date_string(
+                    obs.get("date"), label=f"{self.NAME} observation date for {sid}"
+                )
                 value = parse_provider_float(raw, label=f"observation for {sid}", source=self.NAME)
             except (TypeError, ValueError) as exc:
                 raise InvalidData(f"{self.NAME}: malformed observation for {sid}") from exc

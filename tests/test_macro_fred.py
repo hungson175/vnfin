@@ -191,13 +191,16 @@ def test_garbage_date_raises_invalid():
     [
         "20240101",       # compact date
         "2024-W01-01",    # ISO week-date
+        "2024-1-1",       # non-zero-padded month/day (lenient on py3.11+)
+        "2024-01-1",      # non-zero-padded day (lenient on py3.11+)
+        "2024-1-01",      # non-zero-padded month (lenient on py3.11+)
         "",               # empty string
         None,             # non-string / non-date
         20240101,         # integer
         True,             # bool
         [],               # list
     ],
-    ids=["compact", "iso_week", "empty", "none", "int", "bool", "list"],
+    ids=["compact", "iso_week", "non_padded_both", "non_padded_day", "non_padded_month", "empty", "none", "int", "bool", "list"],
 )
 def test_malformed_observation_date_raises_invalid(bad_date):
     with pytest.raises(InvalidData):
