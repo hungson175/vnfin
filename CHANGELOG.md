@@ -7,6 +7,12 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **CurrencyApi document-date identity guard** — ``CurrencyApiGoldSource._doc_date`` now only
+  falls back to the requested loop date when the provider ``date`` is truly absent/``null``. A
+  *present* but malformed value — a falsey non-string (``False``/``0``/``[]``/``{}``) or a
+  blank/non-canonical string — is corrupted provider identity and raises ``InvalidData`` instead
+  of being silently relabeled with the requested date.
+  ([#35](https://github.com/hungson175/vnfin/issues/35))
 - **OpenER fractional timestamp guard** — ``OpenErApiFXSource`` no longer truncates a fractional
   ``time_last_update_unix`` (e.g. ``1700000000.9``) via ``int()`` into a falsely-precise
   ``as_of_utc``. Only an integer or an integral, finite float is used as the provider timestamp;

@@ -1138,6 +1138,25 @@ def test_currencyapi_history_rejects_malformed_doc_date(bad_date):
         s.get_history(date(2024, 1, 1), date(2024, 1, 1))
 
 
+@pytest.mark.parametrize("bad", [False, 0, "", [], {}], ids=["false", "zero", "blank", "list", "dict"])
+def test_currencyapi_history_rejects_present_falsey_doc_date(bad):
+    # Issue #35 (reopen): a PRESENT falsey/non-string `date` is corrupted provider
+    # identity and must raise, not be silently relabeled with the requested date.
+    s = CurrencyApiGoldSource(http_get=_static_get(_currency_usd_json(d=bad)))
+    with pytest.raises(InvalidData, match="malformed date"):
+        s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+
+
+def test_currencyapi_history_absent_doc_date_falls_back_to_requested():
+    # A truly absent/null `date` keeps the documented fallback to the loop date.
+    def _g(url, params=None, headers=None):
+        return json.dumps({"usd": {"eur": 0.86, "vnd": 26000.0, "xau": 0.000231}})
+
+    s = CurrencyApiGoldSource(http_get=_g)
+    hist = s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+    assert hist.bars[0].date == date(2024, 1, 1)
+
+
 # Regression — issue #35: currency-api history document date identity          #
 # --------------------------------------------------------------------------- #
 

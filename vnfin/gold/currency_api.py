@@ -145,7 +145,12 @@ class CurrencyApiGoldSource(GoldSource):
 
     def _doc_date(self, doc: dict):
         raw = doc.get("date")
-        if not raw:
+        # Issue #35 (reopen): only a truly absent/null date falls back to the
+        # requested loop date. A PRESENT but malformed value — a falsey non-string
+        # (``False``/``0``/``[]``/``{}``) or a blank/non-canonical string — is a
+        # corrupted provider identity field and must raise InvalidData, never be
+        # silently relabeled with the requested date.
+        if raw is None:
             return None
         try:
             return validate_iso_date_string(raw, label="date")
