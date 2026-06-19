@@ -16,21 +16,18 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#123–#126 failover returned-object guard cluster** — design APPROVE_WITH_NOTES
-  (review-202606191252-consolidated). Order: #125 → #123/#124 → #126 (engine-level provenance
-  guard + result-source extractor for fundamentals tuple; reject not restamp; gold datetime keys
-  rejected).
-  - **#125** container type-check — DONE: pushed `8226ab5`, closed. APPROVE (review-202606191256
-    + full-gate 202606191258).
-  - **#123** macro point-key type — committed `ec7586c` (NOT pushed). Awaiting review.
-  - **#124** price/crypto/gold bar-key type — committed `45ed0a8` (NOT pushed). Awaiting review
-    (requested together with #123).
-  - **#126** provenance mismatch — `21c225f`+B1 `d013817`+B2 `8a3c12d`+B3 `bbec58e` (NOT pushed).
-    Engine-level optional `provenance_of` guard (additive API) wired ALL 6 domains incl. FX.
-    BLOCK history: B1 (FX unwired+macro test gap) FIXED; B2 (strict scalar/frozenset-only) FIXED;
-    B3 (fundamentals frozenset(raw) raised TypeError on unhashable source → total
-    `_fundamental_provenance` helper) FIXED. ~+32 TDD cases, suite 1749 green, additive API.
-    B4 (string marker collision → tuple sentinel) FIXED `f6b96da`. **Awaiting RE-review (B4) → push 21c225f..f6b96da → close.**
+- **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129** — combined
+  design sent (/tmp/vnfin-125r-127-128-design-202606191331.md). Awaiting reviewer convergence.
+  Order (4 TDD commits, 1 combined review):
+  1. **#125-inner** — per-domain row/item object type checks before deref (PriceBar/CryptoBar/
+     GoldBar isinstance; macro point must be 2-elem tuple/list; fundamentals item isinstance
+     LineItem). Foundational.
+  2. **#127** — `fetched_at_utc` must be tz-aware UTC when present (None ok). Shared helper
+     `_validate_result_metadata` mirroring FX `as_of_utc`.
+  3. **#128** — `warnings` must be `tuple[str,...]` (None currently crashes finalize). Same helper.
+  4. **#129** — fundamentals `fiscal_date` must be plain date (reject datetime/str/None/int/list).
+  FX out of #127/#128 (FXRate has no such fields). Each red-first, all-domain regressions,
+  full suite + gates green before push.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -38,15 +35,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-**Batch after #126 lands** (reviewer rec: failover metadata/container-boundary batch):
-- **#127** — non-FX failover doesn't validate present-malformed `fetched_at_utc` (reject
-  string/naive/non-UTC; `None` stays allowed). Sibling of #126; FX already does this for
-  `as_of_utc`. Details fetched.
-- **#125 (REOPENED 13:20)** — residual malformed **row-object** AttributeError case (the
-  container type-check shipped, but a malformed *row/item object* inside a valid container still
-  leaks). Re-scope from the reopened issue body.
-- **#128** — newly queued by poller 13:20 (last_seen 2026-06-19T06:21:23Z). Not yet scoped.
-  `./bin/gh-maintainer issue view 128`.
+- _(none pending — #125-reopen/#127/#128/#129 scoped into the Now batch above)_
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
@@ -54,6 +43,13 @@ _All other backlog items verified-fixed and closed during the 2026-06-19 sweep (
 
 ## Done today (trim periodically)
 
+- **#123–#126 failover returned-object guard cluster — COMPLETE, all pushed + closed.**
+  - **#125** outer container type-check — `8226ab5`. APPROVE.
+  - **#123** macro point-key plain-date — `ec7586c`. APPROVE.
+  - **#124** price/crypto tz-aware + gold plain-date bar keys — `45ed0a8`. APPROVE.
+  - **#126** failover provenance guard (all 6 domains incl. FX; engine `provenance_of` +
+    total fundamentals extractor w/ tuple sentinel) — `21c225f..f6b96da`. APPROVE after
+    B1(FX)/B2(strict)/B3(unhashable)/B4(marker-collision) hardening. Suite 1750 green.
 - **#122** fundamentals failover malformed-LineItem guard — pushed `d7a2190..c2a6be0`, closed.
   Strict `_validate_line_item` (canonical item_code, str name, finite non-bool value, dup-code
   reject) + B1 padded-code fix. Reviewer APPROVE (review-202606191245). Suite 1663 green.
