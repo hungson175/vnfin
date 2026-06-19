@@ -265,6 +265,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         order: list[str] = []
         buckets: dict[str, list[LineItem]] = {}
         skipped_rows = 0
+        code_mismatches = 0  # Issue #21: rows dropped for a wrong provider `code`
         for row in rows:
             fd = row.get("fiscalDate")
             if not fd:
@@ -284,6 +285,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             row_code = str(row.get("code") or "").strip().upper()
             if row_code and row_code != psym:
                 skipped_rows += 1
+                code_mismatches += 1
                 continue
             code = self._item_code_str(row.get("itemCode"))
             value = self._num(row.get("numericValue"))
@@ -301,6 +303,16 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             if any(existing.item_code == code for existing in buckets[fd]):
                 raise InvalidData(f"{self.name}: duplicate itemCode {code} for {fd}")
             buckets[fd].append(li)
+
+        # Issue #21 (reopen): if EVERY row was dropped because its provider `code`
+        # contradicts the requested symbol, the response is a wrong-identity payload
+        # (provider/cache mixup), not legitimate no-data. Surface it as malformed
+        # response identity rather than an empty successful tuple.
+        if not buckets and code_mismatches > 0:
+            raise InvalidData(
+                f"{self.name}: all {code_mismatches} statement rows have a provider code "
+                f"!= requested {psym}; refusing to return wrong-identity data"
+            )
 
         fetched = datetime.now(timezone.utc)
         reports = [
@@ -334,6 +346,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         buckets: dict[str, list[LineItem]] = {}
         seen: dict[str, set] = {}
         skipped_rows = 0
+        code_mismatches = 0  # Issue #21: ratio rows dropped for a wrong provider `code`
         for row in rows:
             if not isinstance(row, dict):
                 raise InvalidData(
@@ -347,6 +360,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             row_code = str(row.get("code") or "").strip().upper()
             if row_code and row_code != psym:
                 skipped_rows += 1
+                code_mismatches += 1
                 continue
             # Issue #62: ratioCode and itemName must be strings; non-string values
             # leak raw TypeError/AttributeError and must be caught here.
@@ -379,6 +393,14 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
                     value=value,
                     value_unit=unit,
                 )
+            )
+
+        # Issue #21 (reopen): an all-wrong-`code` ratio response is wrong-identity
+        # data, not legitimate no-data.
+        if not buckets and code_mismatches > 0:
+            raise InvalidData(
+                f"{self.name}: all {code_mismatches} ratio rows have a provider code "
+                f"!= requested {psym}; refusing to return wrong-identity data"
             )
 
         fetched = datetime.now(timezone.utc)

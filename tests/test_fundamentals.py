@@ -80,11 +80,15 @@ def corp_income_two_periods():
     return _stmt_envelope(rows, total=400)
 
 
-def bank_income_one_period():
-    """Bank income statement (modelType 102) — single period, fabricated values."""
+def bank_income_one_period(code="ZZBANK"):
+    """Bank income statement (modelType 102) — single period, fabricated values.
+
+    ``code`` is the provider row identity; pass the requested ticker so #21's
+    response-identity guard accepts the rows.
+    """
     rows = [
-        _stmt_row("ZZBANK", 421601, 5_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
-        _stmt_row("ZZBANK", 22070, 8_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
+        _stmt_row(code, 421601, 5_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
+        _stmt_row(code, 22070, 8_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
     ]
     return _stmt_envelope(rows, total=100)
 
@@ -353,7 +357,7 @@ def test_auto_prefers_corporate_query_first_for_unknown_ticker():
 
 def test_auto_prefers_bank_query_first_for_known_bank_ticker():
     """A known-bank ticker is probed as the bank template first (modelType 10x)."""
-    src, captured = _capturing_src(bank_income_one_period())
+    src, captured = _capturing_src(bank_income_one_period(code="VCB"))
     src.get_financials("VCB", StatementType.INCOME, Period.ANNUAL)  # AUTO, VCB is a bank
     assert "modelType:102" in captured["params"]["q"]
 
@@ -892,14 +896,17 @@ def test_vndirect_statement_skips_row_with_mismatched_code():
     assert any("OTHER" in w or "code" in w for w in reports[0].warnings)
 
 
-def test_vndirect_statement_empty_after_code_skip_returns_empty_tuple():
+def test_vndirect_statement_all_code_mismatch_raises_invalid():
+    # Issue #21 (reopen): when EVERY statement row has a provider code that
+    # contradicts the requested symbol, that is a wrong-identity payload and must
+    # raise InvalidData, not return an empty (clean no-data) tuple.
     rows = [
         _stmt_row("OTHER", 11000, 1.0, "2025-12-31", "ANNUAL", 1),
     ]
-    reports = _src(_stmt_envelope(rows)).get_financials(
-        "TESTCO", StatementType.INCOME, Period.ANNUAL
-    )
-    assert reports == ()
+    with pytest.raises(InvalidData, match="provider code"):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )
 
 
 def test_vndirect_ratio_skips_row_with_mismatched_code():
@@ -915,14 +922,15 @@ def test_vndirect_ratio_skips_row_with_mismatched_code():
     assert reports[0].items[0].item_code == "PE"
 
 
-def test_vndirect_ratio_empty_after_code_skip_returns_empty_tuple():
+def test_vndirect_ratio_all_code_mismatch_raises_invalid():
+    # Issue #21 (reopen): all-wrong-code ratio response is wrong-identity data.
     rows = [
         _ratio_row("OTHER", "PE", 10.0, "2025-12-31", "PE"),
     ]
-    reports = _src(_stmt_envelope(rows)).get_financials(
-        "TESTCO", StatementType.RATIOS, Period.ANNUAL
-    )
-    assert reports == ()
+    with pytest.raises(InvalidData, match="provider code"):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.RATIOS, Period.ANNUAL
+        )
 
 
 # --------------------------------------------------------------------------- #
