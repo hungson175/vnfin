@@ -34,6 +34,10 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 - **#30** (parked, poller 18:25) — index constituent `stockSymbol` must be a canonical security
   identifier (reject internal space/slash/punctuation/newline), not just non-empty. Fix in
   **Phase 4 indices/security-identifier** migration.
+- **#142** (parked, poller 18:35) — see review-202606191841; fix in the relevant Phase 4 adapter
+  migration. Do not fix now.
+- **#32** (parked, poller 18:35) — see review-202606191841; fix in the relevant Phase 4 adapter
+  migration. Do not fix now.
 - **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — addressed by the Phase 2
   contract migration (`ec69a1e`); to be CLOSED in Phase 6 after Checkpoint C approves. WIP stash
   `git stash@{0}` superseded (reference only). Original handoff:
