@@ -29,6 +29,11 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Refactor done today (Phase 4 batches)
 
+- **Phase 4 batch 3 (security/index identifiers) — COMPLETE, pushed `4fb350f..e13da8f`; #30 + #75
+  CLOSED; #9 price+index subset commented (kept OPEN for crypto).** `canonical_security_symbol`
+  on price symbols, index_history/constituents selectors, and constituent stockSymbol; raw-caller
+  restamp removed; zero-HTTP malformed rejection. Suite 2504 green. Checkpoint E APPROVE_WITH_NOTES
+  (review-202606192249, notes applied).
 - **Phase 4 batch 2 (macro sources) — COMPLETE, pushed `bdb5a4b..ed4ca51`; #32 + #48 CLOSED;
   #21 macro subset commented (kept OPEN).** Shared `canonical_country_iso3` (#32) +
   `canonical_macro_indicator` (#48); DBnomics no-`A.None.*` identity fix. Suite 2429 green.
@@ -40,23 +45,14 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Paused bugs — after refactor
 
+- **#9** (crypto residual only) — price+index subsets fixed in batch 3 (e13da8f); crypto pair
+  symbols (BTC-USD, BTC/USD) need a separate `canonical_crypto_pair` grammar → **crypto/FX batch**.
 - **#93** (parked, poller 18:20) — OpenER required VND anchor non-finite values should fail closed
   as InvalidData, not EmptyData. Fix in **Phase 4 FX** adapter migration.
-- **#30** (parked, poller 18:25) — index constituent `stockSymbol` must be a canonical security
-  identifier (reject internal space/slash/punctuation/newline), not just non-empty. Fix in
-  **Phase 4 indices/security-identifier** migration.
-- **#142** (parked, poller 18:35) — see review-202606191841; fix in the relevant Phase 4 adapter
-  migration. Do not fix now.
-- **#32** (parked, poller 18:35) — see review-202606191841; fix in the relevant Phase 4 adapter
-  migration. Do not fix now.
-- **#143 / #48** (parked, poller 18:45) — see review-202606191849; fix in the relevant Phase 4
-  adapter migration. Do not fix now.
-- **#9** (parked, poller 19:05) — see review-202606191908; fix in **Phase 4 identifier
-  validation** migration. Do not fix now.
-- **#75** (parked, poller 19:10) — index wrapper canonicalization; fix in **Phase 4
-  indices/security-id** migration with #30/#9. Do not fix now.
-- **#144** (parked, poller 19:45) — Fmarket NAV window issue; fix in a **separate Phase 4 funds
-  NAV/window batch** (NOT the closed #33/#34 identifier batch). Do not fix now.
+- **#143** (parked, poller 18:45) — fix in **Phase 4 gold** adapter migration.
+- **#142** (parked, poller 18:35) — fundamentals residual; Phase 6 fundamentals close-loop.
+- **#144** (parked, poller 19:45) — Fmarket NAV window issue; **separate Phase 4 funds NAV/window
+  batch** (NOT the closed #33/#34 identifier batch). Do not fix now.
 - **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — addressed by the Phase 2
   contract migration (`ec69a1e`); to be CLOSED in Phase 6 after Checkpoint C approves. WIP stash
   `git stash@{0}` superseded (reference only). Original handoff:
