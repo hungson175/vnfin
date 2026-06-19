@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree as ET
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA
 from .base import FXSource
@@ -44,15 +45,13 @@ class VietcombankFXSource(FXSource):
             # base is the quote currency).
             if code == self.QUOTE:
                 continue
-            transfer = self._num(node.get("Transfer"))
+            transfer = self._num(node.get("Transfer"), required=True, label="Transfer")
             if not code or transfer is None or transfer <= 0:
                 continue  # no usable transfer (VND-per-unit) rate
+            bid = self._num(node.get("Buy"), label="Buy")
+            ask = self._num(node.get("Sell"), label="Sell")
             try:
-                out.append(
-                    self._build_rate(
-                        code, transfer, as_of, bid=self._num(node.get("Buy")), ask=self._num(node.get("Sell"))
-                    )
-                )
+                out.append(self._build_rate(code, transfer, as_of, bid=bid, ask=ask))
             except InvalidData:
                 continue
         if not out:
@@ -61,14 +60,20 @@ class VietcombankFXSource(FXSource):
         return tuple(out)
 
     @staticmethod
-    def _num(value):
-        """Parse a VCB rate string like ``"26,111.00"`` -> float; None if blank/garbage."""
+    def _num(value, *, required: bool = False, label: str = "rate"):
+        """Parse a VCB rate string like ``"26,111.00"`` -> float.
+
+        Returns ``None`` only when the field is absent or empty/whitespace.
+        A present but non-numeric, non-finite, or boolean value raises
+        :class:`InvalidData` so provider schema drift is not silently erased.
+        """
         if value is None:
             return None
-        try:
-            return float(str(value).replace(",", "").strip())
-        except (TypeError, ValueError):
+        text = str(value).strip()
+        if text == "":
             return None
+        normalized = text.replace(",", "")
+        return parse_provider_float(normalized, label=label, source="vietcombank")
 
     @staticmethod
     def _as_of(root) -> datetime:

@@ -463,6 +463,100 @@ def test_vietcombank_skips_non_positive_bid_ask():
     assert "EUR" in {r.base for r in rates}
 
 
+# --- Issue #14: malformed required/optional fields must raise InvalidData ----
+
+def test_vietcombank_malformed_buy_raises_invalid_data():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Buy="not-a-number" Transfer="25,000.00" Sell="25,200.00"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    with pytest.raises(InvalidData):
+        src.get_rate("USD")
+
+
+def test_vietcombank_malformed_sell_raises_invalid_data():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Buy="24,900.00" Transfer="25,000.00" Sell="not-a-number"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    with pytest.raises(InvalidData):
+        src.get_rate("USD")
+
+
+def test_vietcombank_malformed_transfer_raises_invalid_data():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Buy="24,900.00" Transfer="not-a-number" Sell="25,200.00"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    with pytest.raises(InvalidData):
+        src.get_rate("USD")
+
+
+def test_vietcombank_absent_optional_buy_sell_accepted():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Transfer="25,000.00"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    r = src.get_rate("USD")
+    assert r.rate == pytest.approx(25000.0)
+    assert r.bid is None
+    assert r.ask is None
+
+
+def test_vietcombank_empty_optional_buy_sell_accepted():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Buy="   " Transfer="25,000.00" Sell=""/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    r = src.get_rate("USD")
+    assert r.rate == pytest.approx(25000.0)
+    assert r.bid is None
+    assert r.ask is None
+
+
+def test_vietcombank_absent_transfer_skips_row():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Buy="24,900.00" Sell="25,200.00"/>
+      <Exrate CurrencyCode="EUR" Buy="27,500.00" Transfer="27,800.00" Sell="29,000.00"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    rates = src.get_rates()
+    assert "USD" not in {r.base for r in rates}
+    assert "EUR" in {r.base for r in rates}
+
+
+def test_vietcombank_empty_transfer_skips_row():
+    xml = """
+    <ExrateList>
+      <DateTime>6/18/2026 3:53:15 PM</DateTime>
+      <Exrate CurrencyCode="USD" Transfer="   " Buy="24,900.00" Sell="25,200.00"/>
+      <Exrate CurrencyCode="EUR" Buy="27,500.00" Transfer="27,800.00" Sell="29,000.00"/>
+    </ExrateList>
+    """
+    src = VietcombankFXSource(http_get=_http(xml), cache_ttl=None)
+    rates = src.get_rates()
+    assert "USD" not in {r.base for r in rates}
+    assert "EUR" in {r.base for r in rates}
+
+
 # --- Batch-1 failover result guards -----------------------------------------
 
 
