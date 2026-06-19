@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Fundamental report metadata guard** — the fundamentals failover result guard now validates
+  returned ``FinancialReport`` metadata regardless of caller AUTO: ``is_bank`` must be a real
+  ``bool`` (a truthy string like ``"False"`` is rejected), ``model_type`` must be ``None`` or a
+  canonical non-bool integer template id (booleans, floats, strings, and containers are rejected),
+  and ``provider_symbol``, when present, must be a non-empty string. A malformed report is
+  rejected and the chain fails over instead of returning plausible statements with broken
+  classification metadata. ([#130](https://github.com/hungson175/vnfin/issues/130))
 - **Failover warnings metadata guard** — the price, crypto, gold, macro, and fundamentals
   failover result guards now reject a malformed ``warnings`` field: it must be a ``tuple`` whose
   members are all strings (the public ``tuple[str, ...]`` contract). A ``None`` (which previously

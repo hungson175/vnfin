@@ -221,6 +221,30 @@ def _validate_fundamental_result(
                 f"period mismatch: report {report.fiscal_date} has period "
                 f"{report.period!r} != requested {period!r}"
             )
+        # Issue #130: returned report metadata must be well-typed regardless of
+        # caller AUTO — these fields drive bank/corporate template interpretation,
+        # statement joins, display labels, and audit metadata downstream.
+        #  - is_bank: a real bool (a truthy string like "False" would misclassify);
+        #  - model_type: absent (None) or a canonical non-bool int template id;
+        #  - provider_symbol: absent (None) or a non-empty string.
+        if not isinstance(report.is_bank, bool):
+            return (
+                f"malformed is_bank {report.is_bank!r} in report {report.fiscal_date}: "
+                "expected a bool"
+            )
+        mt = report.model_type
+        if mt is not None and (isinstance(mt, bool) or not isinstance(mt, int)):
+            return (
+                f"malformed model_type {mt!r} in report {report.fiscal_date}: "
+                "expected None or a non-bool integer"
+            )
+        ps = report.provider_symbol
+        if ps is not None and (not isinstance(ps, str) or not ps.strip()):
+            return (
+                f"malformed provider_symbol {ps!r} in report {report.fiscal_date}: "
+                "expected None or a non-empty string"
+            )
+
         # Only enforce is_bank identity when the caller supplied an explicit bool.
         if isinstance(is_bank, bool) and report.is_bank != is_bank:
             return (

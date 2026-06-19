@@ -725,3 +725,49 @@ def test_accepts_valid_fundamental_warnings():
     primary = FakeSource("vndirect", result=(_report_with_warnings(("a note",)),))
     client = FailoverFundamentalClient([primary])
     assert client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)[0].source == "vndirect"
+
+
+# --- Issue #130: returned report metadata (is_bank/model_type/provider_symbol) ---
+def _report_meta(*, is_bank=False, model_type=1, provider_symbol="TESTCO"):
+    return FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="VND",
+        is_bank=is_bank,
+        model_type=model_type,
+        provider_symbol=provider_symbol,
+    )
+
+
+@pytest.mark.parametrize("bad", ["False", "true", 1, 0, [], {}, None], ids=["str_false", "str_true", "int1", "int0", "list", "dict", "none"])
+def test_rejects_malformed_report_is_bank(bad):
+    _assert_fundamental_rejected(lambda: _report_meta(is_bank=bad), "malformed is_bank")
+
+
+@pytest.mark.parametrize("bad", [True, False, 1.9, "1", "01", "+1", [], {}, "x"], ids=["true", "false", "float", "s1", "s01", "splus1", "list", "dict", "sx"])
+def test_rejects_malformed_report_model_type(bad):
+    _assert_fundamental_rejected(lambda: _report_meta(model_type=bad), "malformed model_type")
+
+
+@pytest.mark.parametrize("bad", [[], {}, True, 123, "", "   "], ids=["list", "dict", "bool", "int", "blank", "whitespace"])
+def test_rejects_malformed_report_provider_symbol(bad):
+    _assert_fundamental_rejected(lambda: _report_meta(provider_symbol=bad), "malformed provider_symbol")
+
+
+def test_accepts_valid_report_metadata_incl_none_optionals():
+    primary = FakeSource("vndirect", result=(_report_meta(is_bank=True, model_type=None, provider_symbol=None),))
+    client = FailoverFundamentalClient([primary])
+    out = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=True)[0]
+    assert out.is_bank is True and out.model_type is None and out.provider_symbol is None
+
+
+def test_malformed_report_metadata_falls_over_to_backup():
+    primary = FakeSource("vndirect", result=(_report_meta(is_bank="False"),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
