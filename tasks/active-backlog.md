@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **DBnomics batch (#104 + #66)** — IMPLEMENTED + committed `e7a43c4` (NOT pushed): strict
-  canonical period_start_day grammar + duplicate-date guard. +9 TDD cases, suite 2026 green.
-  **Awaiting reviewer review → push → re-close.**
+- **Schema/FX batch (#87 + #28)** — IMPLEMENTED + committed (NOT pushed): #87 `454fe42` health
+  check_schema rejects JSON bool on numeric paths; #28 `90474d9` Vietcombank rejects duplicate
+  CurrencyCode. +9 TDD cases, suite 2032 green. **Awaiting reviewer review → push → re-close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -26,9 +26,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- **Schema/FX batch (#87 + #28)** (REOPENED 15:40) — next after DBnomics batch: #87 health
-  SchemaSpec must reject numeric booleans; #28 Vietcombank must reject duplicate CurrencyCode.
-  (#136 closed invalid, #137 out-of-scope by reviewer; #106/#21 no action.)
+- **#140 — "financial news" FEATURE request** (no bug label). NOT a bug fix → product/scope
+  decision for Boss/reviewer triage (reviewer closed similar #137 out-of-scope). Not implementing
+  autonomously; flagged to reviewer. (#136/#138/#139 closed invalid; #106/#21 no action.)
 
 ## Next
 
@@ -46,6 +46,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **DBnomics batch (#104 + #66) (reopen) — COMPLETE, pushed `2e6b884..2356fa4`, closed.**
+  `e7a43c4` — strict canonical period_start_day grammar (reject compact/ISO-week/padded/
+  non-str) + duplicate-date guard. APPROVE (review-202606191553). Suite 2026 green.
 - **Returned-provider-identity batch (reopen) — COMPLETE, pushed `9cb8aff..082526e`, closed.**
   - **#35** `42872ad` — CurrencyApi `_doc_date`: present falsey/non-string date → InvalidData
     (raw-is-None-only fallback). APPROVE.

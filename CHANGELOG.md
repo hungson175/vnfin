@@ -7,6 +7,15 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Health raw-schema boolean guard** — ``vnfin._health.check_schema`` now rejects a JSON boolean
+  for a numeric ``(int, float)`` schema path (``bool`` is an ``int`` subclass, so it previously
+  passed). A boolean is accepted only when ``bool`` is explicitly in the declared types, so
+  provider drift from ``26000.0`` to ``true`` is no longer marked schema-ok.
+  ([#87](https://github.com/hungson175/vnfin/issues/87))
+- **Vietcombank duplicate currency-code guard** — ``VietcombankFXSource.get_rates`` now raises
+  ``InvalidData`` on a duplicate canonical ``CurrencyCode`` within one feed (e.g. two ``USD`` rows
+  with conflicting rates) instead of returning ambiguous duplicate ``FXRate`` rows.
+  ([#28](https://github.com/hungson175/vnfin/issues/28))
 - **DBnomics period/duplicate parser hardening** — ``DBnomicsSource`` now requires each
   ``period_start_day`` to be a canonical ``YYYY-MM-DD`` *string* (no ``str()``/``strip()``
   coercion): compact (``20240101``), ISO week-date (``2024-W01-1``), whitespace-padded,
