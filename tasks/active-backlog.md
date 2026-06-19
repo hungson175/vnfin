@@ -29,6 +29,11 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Refactor done today (Phase 4 batches)
 
+- **Phase 4 batch 2 (macro sources) — COMPLETE, pushed `bdb5a4b..ed4ca51`; #32 + #48 CLOSED;
+  #21 macro subset commented (kept OPEN).** Shared `canonical_country_iso3` (#32) +
+  `canonical_macro_indicator` (#48); DBnomics no-`A.None.*` identity fix. Suite 2429 green.
+  Checkpoint E APPROVE_WITH_NOTES (review-202606192233). Phase-5 non-blocking notes: IMF falsey
+  message wording; public `validate_country_iso3` consistency with the new contract.
 - **Phase 4 batch 1 (Fmarket funds) — COMPLETE, pushed `49ac99a..1d9a5b6`; #33 + #34 CLOSED.**
   Canonical security/fund identifier contract (`canonical_security_symbol`/`canonical_fund_code`);
   present-null code fails closed; suite 2339 green. Checkpoint E PASS (review-202606191948).
