@@ -4,7 +4,9 @@ Operating discipline (Boss 2026-06-19): git history is the progress tracker (com
 every reviewer/poller task lands here FIRST, then is processed and removed/marked done with a
 commit/issue ref. See `/tmp/vnfin-operating-protocol-202606190959.md`.
 
-Goal (Boss 2026-06-19): work closely with vnfin-oss-reviewer to fix **ALL** GitHub issues/bugs.
+Goal (Boss 2026-06-19, updated ~18:01): **REFACTOR FIRST** — provider-boundary + typed-result
+contract refactor (`tasks/refactor-provider-contracts.md`), working with vnfin-oss-reviewer per
+phase. GitHub bug fixing is PAUSED (log only) until the contract foundation (Phase 1–2) lands.
 
 Flow per item: design → discuss+converge with reviewer → TDD red-first → green (full suite +
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →

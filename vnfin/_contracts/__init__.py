@@ -1,0 +1,43 @@
+"""Private provider-boundary + typed-result contract layer (#refactor).
+
+This package centralizes the malformed-provider-data policy that adapters and
+failover result validators previously implemented ad hoc. It is **private**
+(underscore) on purpose: no public API surface is added during the refactor, and
+the internals may iterate without SemVer burden. Public ``vnfin.validation``
+stays stable.
+
+Phase 1 (this commit) ships only the provider-boundary *primitives* — field
+access, key/enum canonicalization, object/list/duplicate guards — with tests and
+**no adapter behavior change**. Later phases build provider-contract classes and
+typed-result rule lists on top.
+
+See ``tasks/refactor-provider-contracts.md`` for the full plan.
+"""
+from __future__ import annotations
+
+from .errors import contract_error
+from .fields import (
+    MISSING,
+    has_present_key,
+    optional_present,
+    optional_present_non_empty_str,
+    require_non_empty_str,
+    require_present,
+)
+from .keys import canonical_enum_tag, canonical_provider_key
+from .rows import reject_duplicate, require_list, require_object
+
+__all__ = [
+    "contract_error",
+    "MISSING",
+    "has_present_key",
+    "require_present",
+    "optional_present",
+    "require_non_empty_str",
+    "optional_present_non_empty_str",
+    "canonical_provider_key",
+    "canonical_enum_tag",
+    "require_object",
+    "require_list",
+    "reject_duplicate",
+]

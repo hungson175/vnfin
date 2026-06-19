@@ -49,6 +49,10 @@ meaningful.
   field tests. This naturally subsumes the paused #44/#45/#21/#26 — but framed as migration;
   close those issues only after reviewer agrees migration is complete. → **Checkpoint C** (most
   important).
+  - Phase-2 note (poller 18:10): **#45** CafeF `ReportType`/period contract must cover the
+    **ratio path** too, not just statements.
+  - Phase-2 note (poller 18:10): **#21** a present-blank top-level `Symbol` must NOT mask a
+    contradictory `Data.Symbol` — validate the contradiction, don't short-circuit on the blank.
 - **Phase 3 — typed-result contract extraction.** Decompose `_validate_*_result()` in price/
   crypto/gold/macro/fundamentals into shared composable rules (`vnfin/_contracts/results.py`,
   `timeseries.py`). Behavior-preserving (no intentional bug fixes). → **Checkpoint D**.
@@ -86,5 +90,11 @@ questions needing product/legal input (e.g. exact exchange allow-list).
 
 ## Status
 
-- **Phase 0: docs in progress** — this file + backlog section. Then request **Checkpoint A** /
-  pre-Phase-1 design review. Do NOT code Phase 1 until reviewer approves the design.
+- **Phase 0: DONE** — docs + backlog freeze; Checkpoint A APPROVE_WITH_NOTES (review-202606191810).
+- **Phase 1: IMPLEMENTED (committed, NOT pushed)** — `vnfin/_contracts/{__init__,errors,fields,
+  keys,rows}.py` + `tests/test_contract_{fields,keys,rows}.py`. Explicit `MISSING` sentinel;
+  key-presence (not truthiness); strict `require_object`/`require_list`; strict
+  `require_non_empty_str`/`optional_present_non_empty_str`; `canonical_provider_key`;
+  `canonical_enum_tag`; atomic `reject_duplicate`; standardized `contract_error` ctx messages.
+  Private package only; no adapter wired; public-API snapshot unchanged; +79 tests; full suite
+  2161 green. **Awaiting Checkpoint B (naming/semantics) before any adapter migration.**
