@@ -10,35 +10,27 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-19 ~10:05 +07_
+_Last synced: 2026-06-19 ~10:12 +07_
 
 ---
 
 ## Now (WIP — max 1–2)
 
-- **#113 + #114** strict provider-timestamp guards (Vietcombank `_as_of` / BTMC `_parse_dt`).
-  `c76756a` + BLOCK fix `797ccad` (NOT pushed). Full suite 1559 passed, cov 94.12%.
-  **Awaiting reviewer RE-review** of 797ccad → then push + close #113/#114 + advance watermark.
+- **#116** BTMC weight parser — IMPLEMENTING (design APPROVED). Keep bare `g` unit but
+  clean-boundary guard; tests: VANG≠g, `1000 G` works, `.5/-5/0 G` reject; leading-zero policy.
+- **#117** BTMC same-ts dedup — queued next (design APPROVED).
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- _(cleared)_ — reviewer BLOCK on c76756a (#114 stripped raw before regex, accepted
-  ` 17/06/2026 15:38`) **fixed in `797ccad`** (match `_BTMC_TS` on raw directly + whitespace
-  reject tests). Awaiting re-review.
+- _(none)_
 
 ## Poller triage (newly triaged)
 
-- _(none pending design)_ — #116/#117 design **APPROVED (queued)** by reviewer
-  (review-202606191004-design-116-117-btmc.md). Implementation queued under Next; do NOT start
-  until #113/#114 (797ccad) is re-reviewed + pushed.
+- _(none pending)_
 
 ## Next (queued open bugs — fix ALL; group by domain to batch reviewer-approved stacks)
 
-BTMC (design APPROVED by reviewer — implement right after #113/#114 push, TDD red-first):
-- #116 BTMC weight parser: keep bare `g` unit but clean-boundary guard; tests prove VANG≠g,
-  `1000 G` works, `.5/-5/0 G` reject; leading-zero quantity policy. (review-202606191004-design)
-- #117 BTMC same-ts dedup: identical dup keep-first; conflicting same-ts → InvalidData;
-  older/newer deterministic.
+BTMC (remaining):
 - #118 BTMC `_row_index` accepts malformed `@row`; should raise InvalidData on present-malformed,
   keep fallback discovery only when `@row` absent/blank (poller #60, labeled bug). Design TBD.
 
@@ -90,3 +82,5 @@ Source-adapter input/identity/units hardening:
 - Closed external duplicate **PR #115** as superseded (code not run).
 - **#87** closed by reviewer as fixed (4db0c74 / a8479fc).
 - **#107 / #110** closed by reviewer/poller #59 as fixed (watermark 2026-06-19T03:01:44Z).
+- **#113 / #114** strict timestamp guards — pushed `a8479fc..9de091b`, closed (c76756a, 797ccad).
+  Reviewer APPROVE_WITH_NOTES (review-202606191010). Watermark 2026-06-19T03:11:37Z.
