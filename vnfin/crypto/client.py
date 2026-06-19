@@ -28,7 +28,7 @@ from __future__ import annotations
 import math
 from datetime import date, datetime
 
-from .binance import BinanceCryptoSource, _KNOWN_QUOTES as _BINANCE_QUOTES
+from .binance import BinanceCryptoSource, _KNOWN_QUOTES as _BINANCE_QUOTES, _USD_STABLE_QUOTES
 from .coinbase import CoinbaseCryptoSource, _KNOWN_QUOTES as _COINBASE_QUOTES
 from .models import CryptoBar, CryptoHistory
 
@@ -210,6 +210,42 @@ def _validate_crypto_result(
                 return f"missing unit: result {field} is missing or empty"
             if actual != chain_unit:
                 return f"unit mismatch: result {field} {actual!r} != chain unit {chain_unit!r}"
+
+    # Issue #69: returned crypto quote metadata must be canonical and internally
+    # consistent (exact strings, no strip/coerce). In a USD chain the quote asset
+    # must be a recognized USD-equivalent quote; the human unit strings must match
+    # the parsed legs. Contradictory metadata (currency='USD' but quote_asset='BTC',
+    # or price_unit='BTC per BTC') is rejected so it cannot block a healthy backup.
+    ba = hist.base_asset
+    qa = hist.quote_asset
+    if ba is not None and (not isinstance(ba, str) or not ba or ba != ba.strip()):
+        return f"malformed base_asset {ba!r}: expected a non-empty canonical string"
+    if qa is not None:
+        if not isinstance(qa, str) or not qa or qa != qa.strip():
+            return f"malformed quote_asset {qa!r}: expected a non-empty canonical string"
+        if chain_unit is not None and qa not in _USD_STABLE_QUOTES:
+            return (
+                f"quote_asset mismatch: {qa!r} is not a USD-equivalent quote "
+                f"for a {chain_unit} chain"
+            )
+    if hist.price_unit is not None:
+        pu = hist.price_unit
+        if not isinstance(pu, str):
+            return f"malformed price_unit {pu!r}: expected a string"
+        if isinstance(qa, str) and isinstance(ba, str):
+            expected = f"{qa} per {ba}"
+            if pu != expected:
+                return f"price_unit mismatch: {pu!r} != expected {expected!r}"
+    if hist.volume_unit is not None:
+        vu = hist.volume_unit
+        if not isinstance(vu, str):
+            return f"malformed volume_unit {vu!r}: expected a string"
+        if isinstance(ba, str) and vu != ba:
+            return f"volume_unit mismatch: {vu!r} != base asset {ba!r}"
+    if hist.provider_symbol is not None:
+        ps = hist.provider_symbol
+        if not isinstance(ps, str) or not ps or ps != ps.strip():
+            return f"malformed provider_symbol {ps!r}: expected a non-empty canonical string"
 
     # Issue #124: each bar key must be a timezone-AWARE datetime (the documented
     # CryptoBar.time contract — candle open time, tz-aware UTC). A naive datetime

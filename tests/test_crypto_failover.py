@@ -459,7 +459,7 @@ def _crypto_history(bars, **kwargs):
         value_unit="USD",
         base_asset="BTC",
         quote_asset="USDT",
-        price_unit="USD per BTC",
+        price_unit="USDT per BTC",
         volume_unit="BTC",
     )
     defaults.update(kwargs)
@@ -714,3 +714,47 @@ def test_accepts_none_crypto_fetched_at_utc():
 def test_rejects_malformed_crypto_warnings(bad_warnings):
     bars = (CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),)
     _assert_rejected_reason(_crypto_history(bars=bars, warnings=bad_warnings), "warnings")
+
+
+# --------------------------------------------------------------------------- #
+# Issue #69 — returned crypto quote metadata must be canonical + internally
+# consistent (USD chain). Contradictory/malformed metadata is rejected.
+# --------------------------------------------------------------------------- #
+def _good_bar():
+    return CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1)
+
+
+@pytest.mark.parametrize(
+    "kwargs,needle",
+    [
+        (dict(quote_asset="BTC"), "quote_asset mismatch"),       # not USD-equivalent
+        (dict(quote_asset=[]), "malformed quote_asset"),
+        (dict(quote_asset=True), "malformed quote_asset"),
+        (dict(quote_asset=" USDT"), "malformed quote_asset"),     # padded, non-canonical
+        (dict(price_unit="BTC per BTC"), "price_unit mismatch"),
+        (dict(price_unit="USD per ETH"), "price_unit mismatch"),
+        (dict(price_unit=[]), "malformed price_unit"),
+        (dict(volume_unit="ETH"), "volume_unit mismatch"),
+        (dict(volume_unit=[]), "malformed volume_unit"),
+        (dict(provider_symbol=[]), "malformed provider_symbol"),
+        (dict(provider_symbol=True), "malformed provider_symbol"),
+        (dict(provider_symbol=""), "malformed provider_symbol"),
+        (dict(provider_symbol="  "), "malformed provider_symbol"),
+    ],
+)
+def test_rejects_malformed_crypto_quote_metadata(kwargs, needle):
+    _assert_rejected_reason(_crypto_history(bars=(_good_bar(),), **kwargs), needle)
+
+
+def test_accepts_consistent_crypto_quote_metadata():
+    good = _crypto_history(bars=(_good_bar(),), quote_asset="USDT", price_unit="USDT per BTC", volume_unit="BTC", provider_symbol="BTCUSDT")
+    client = FailoverCryptoClient([_RawCryptoSource(good)])
+    assert client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3)).source == "raw"
+
+
+def test_malformed_crypto_quote_metadata_failsover_to_backup():
+    bad = _crypto_history(bars=(_good_bar(),), quote_asset="BTC")
+    good = _crypto_history(bars=(_good_bar(),), source="good")
+    client = FailoverCryptoClient([_RawCryptoSource(bad), _RawCryptoSource(good, name="good")])
+    out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert out.source == "good"

@@ -7,6 +7,14 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Crypto quote-metadata consistency guard** — the crypto failover result guard now rejects a
+  result whose returned quote metadata is malformed or internally contradictory: in a USD chain
+  ``quote_asset`` must be a recognized USD-equivalent quote (and a non-empty canonical string),
+  ``price_unit`` must equal ``"{quote_asset} per {base_asset}"``, ``volume_unit`` must equal the
+  base asset, and ``provider_symbol`` (when present) must be a non-empty canonical string. A
+  plausible-but-contradictory series (``currency="USD"`` with ``quote_asset="BTC"``, or
+  ``price_unit="BTC per BTC"``) is rejected so it cannot block a healthy backup.
+  ([#69](https://github.com/hungson175/vnfin/issues/69))
 - **Fundamental report metadata guard** — the fundamentals failover result guard now validates
   returned ``FinancialReport`` metadata regardless of caller AUTO: ``is_bank`` must be a real
   ``bool`` (a truthy string like ``"False"`` is rejected), ``model_type`` must be ``None`` or one
