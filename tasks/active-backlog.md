@@ -16,8 +16,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#141 (new bug, poller 17:35)** — VNDirect statement path doesn't type-check rows; a non-object
-  row leaks a raw AttributeError. Mirror the ratios-path guard (`isinstance(row, dict)` →
+- **#141** — VNDirect statement non-object row guard. IMPLEMENTED + committed `f8ff403` (NOT pushed): isinstance(row,dict) → InvalidData, mirrors ratios path. +5 TDD cases, suite 2082 green. **Awaiting reviewer review → push → close.** (#140 enhancement parked.)
   InvalidData) in `_build_statement_reports`. TDD → review → push → close. (#140 enhancement parked.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
