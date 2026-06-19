@@ -16,10 +16,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#78 (REOPENED 16:30)** — macro returned-indicator identity. IMPLEMENTED + committed
-  `cfd2282` (NOT pushed): Option A — `indicator_identity` on WB/IMF/DBnomics + MacroClient._fetch
-  validation (declared exact / undeclared→canonical). +9 TDD cases, suite 2046 green.
-  **Awaiting reviewer review → push → re-close.**
+- **#44 + #21 batch (REOPENED 16:40)** — IMPLEMENTED + committed (NOT pushed): #44 `d4ae617`
+  (VNDirect all reportType/modelType-skip → InvalidData; mixed→valid+warning); #21 `3e470b6`
+  (WorldBank observation indicator.id guard; UDF present blank/null symbol guard). +14 TDD cases,
+  suite 2060 green. **Awaiting reviewer review → push → re-close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -27,16 +27,8 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- **Response-contract/identity batch #44 + #21 (REOPENED 16:40)** — after #78 lands:
-  - **#44** — VNDirect: when ALL rows are skipped by reportType/modelType mismatch (no code
-    mismatch), still returns `()`; reviewer wants this treated as a malformed/contract miss
-    (note: distinct from #21's all-code-mismatch → already InvalidData).
-  - **#21** — WorldBank does not validate observation `indicator.id`; UDF present blank/null
-    symbol bypasses identity guard.
-  Scope via `./bin/gh-maintainer issue view 44` / `21`; TDD → review.
-- **#140 — "financial news" FEATURE request** (no bug label). NOT a bug fix → product/scope
-  decision for Boss/reviewer triage (reviewer closed similar #137 out-of-scope). Not implementing
-  autonomously; flagged to reviewer. (#136/#138/#139 closed invalid; #106/#21 no action.)
+- **#140 — "financial news" FEATURE request** (enhancement label). NOT a bug → Boss/product-scope
+  decision; parked (reviewer agrees, like #137). Not implementing autonomously.
 
 ## Next
 
@@ -54,6 +46,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#78 (reopen) — COMPLETE, pushed `1d8c780..6a73dac`, closed.** `cfd2282` — macro
+  returned-indicator identity: `indicator_identity` on WB/IMF/DBnomics + `_fetch` validation
+  (declared exact / undeclared→canonical). APPROVE_WITH_NOTES. Suite 2046 green.
 - **#112 + #21 (reopen) — COMPLETE, pushed `50eb27b..ded0b97`, closed.** #112 `e14de5e` GoldApi
   present-falsey updatedAt → InvalidData (raw-is-None-only fallback); #21 `9750858` VNDirect
   all-code-mismatch → InvalidData (wrong-identity, not no-data). APPROVE_WITH_NOTES. Suite 2039 green.
