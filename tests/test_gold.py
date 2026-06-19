@@ -298,6 +298,19 @@ def test_btmc_negative_price_raises_invalid():
         s.get_quotes()
 
 
+@pytest.mark.parametrize(
+    "buy,sell",
+    [(True, "20000000"), ("10000000", True), (True, True)],
+    ids=["bool_buy", "bool_sell", "bool_both"],
+)
+def test_btmc_boolean_price_raises_invalid(buy, sell):
+    # Issue #87: JSON booleans must not coerce into positive-looking VND prices.
+    bad = [("VÀNG MIẾNG TESTCO", "24k", buy, sell, "4322", "17/06/2026 15:38")]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=bad)))
+    with pytest.raises(InvalidData, match="bool"):
+        s.get_quotes()
+
+
 def test_btmc_bad_timestamp_raises_invalid():
     bad = [("VÀNG MIẾNG TESTCO", "24k", "10000000", "20000000", "4322", "garbage-time")]
     s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=bad)))
@@ -397,6 +410,19 @@ def test_pnj_negative_price_raises_invalid():
     bad = [("TESTCO", "Vàng miếng TESTCO 999.9", -1, 10000)]
     s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=bad)))
     with pytest.raises(InvalidData):
+        s.get_quotes()
+
+
+@pytest.mark.parametrize(
+    "giamua,giaban",
+    [(True, 10000), (20000, True), (True, True)],
+    ids=["bool_buy", "bool_sell", "bool_both"],
+)
+def test_pnj_boolean_price_raises_invalid(giamua, giaban):
+    # Issue #87: JSON booleans must not coerce into positive-looking VND prices.
+    bad = [("TESTCO", "Vàng miếng TESTCO 999.9", giaban, giamua)]
+    s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=bad)))
+    with pytest.raises(InvalidData, match="bool"):
         s.get_quotes()
 
 

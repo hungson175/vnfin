@@ -108,6 +108,9 @@ class _VNGoldSource(GoldSource):
 
     @staticmethod
     def _price(raw, name: str) -> float:
+        # Issue #87: reject JSON booleans before float() coerces True -> 1.0 / False -> 0.0.
+        if isinstance(raw, bool):
+            raise InvalidData(f"{name}: boolean price {raw!r} is not a numeric value")
         try:
             val = float(raw)
         except (TypeError, ValueError) as exc:
