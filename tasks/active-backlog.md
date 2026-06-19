@@ -25,12 +25,12 @@ _Last synced: 2026-06-19 ~10:12 +07_
   - **#123** macro point-key type — committed `ec7586c` (NOT pushed). Awaiting review.
   - **#124** price/crypto/gold bar-key type — committed `45ed0a8` (NOT pushed). Awaiting review
     (requested together with #123).
-  - **#126** provenance mismatch — committed `21c225f` + B1 `d013817` + B2 `8a3c12d` (NOT
-    pushed). Engine-level optional `provenance_of` guard (additive API) wired ALL 6 domains incl.
-    FX. BLOCK history: B1 (FX unwired + macro test gap) FIXED; B2 (strict — reject single-result
-    `source=None`/list/non-str; only `str`-equals or non-empty `frozenset` composite accepted)
-    FIXED. +25 TDD cases, suite 1742 green, failover.py cov 93%, additive API.
-    **Awaiting reviewer RE-review (B2) → push 21c225f..8a3c12d → close.**
+  - **#126** provenance mismatch — `21c225f`+B1 `d013817`+B2 `8a3c12d`+B3 `bbec58e` (NOT pushed).
+    Engine-level optional `provenance_of` guard (additive API) wired ALL 6 domains incl. FX.
+    BLOCK history: B1 (FX unwired+macro test gap) FIXED; B2 (strict scalar/frozenset-only) FIXED;
+    B3 (fundamentals frozenset(raw) raised TypeError on unhashable source → total
+    `_fundamental_provenance` helper) FIXED. ~+32 TDD cases, suite 1749 green, additive API.
+    **Awaiting reviewer RE-review (B3) → push 21c225f..bbec58e → close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
