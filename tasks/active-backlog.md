@@ -16,9 +16,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `ded0b97`, full suite 2039 green,
-  watermark 2026-06-19T09:14:42Z. Only open issue is **#140 (enhancement: financial news)** —
-  Boss/product-scope feature, NOT a bug; parked. Steady-state otherwise.
+- **#78 (REOPENED 16:30)** — macro identity: guard rejects a returned indicator_code/name that
+  matches ANOTHER indicator's canonical, but an ARBITRARY wrong string (e.g. "WRONG_INDICATOR")
+  matches none and is accepted. Fix: require returned code/name to EQUAL the REQUESTED
+  indicator's canonical. TDD → review → push → re-close. (#140 stays enhancement.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
