@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#141** — VNDirect statement non-object row guard. IMPLEMENTED + committed `f8ff403`
-  (NOT pushed): `isinstance(row, dict)` → InvalidData, mirrors ratios path. +5 TDD cases,
-  suite 2082 green. **Awaiting reviewer review → push → close.** (#140 enhancement parked.)
+- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `7df59e8`, full suite 2082 green,
+  watermark 2026-06-19T10:39:16Z. Only open issue is **#140 (enhancement: financial news)** —
+  Boss/product-scope feature, NOT a bug; parked. Steady-state otherwise.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -45,6 +45,8 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#141 — COMPLETE, pushed `b0037c0..7df59e8`, closed.** `f8ff403` — VNDirect statement
+  non-object row → InvalidData (mirrors ratios path). APPROVE_WITH_NOTES. Suite 2082 green.
 - **#66 + #26 batch (reopen) — COMPLETE, pushed `7915596..c6eb733`, closed.** #66 `266d7c0`
   (WorldBank duplicate observation-date guard); #26 `d238e68` (VNDirect ratios reject duplicate
   ratioCode within a reportDate). APPROVE_WITH_NOTES. Suite 2077 green.
