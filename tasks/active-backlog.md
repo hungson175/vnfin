@@ -16,7 +16,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#135 — Macro falsey unit-metadata relabel** — IMPLEMENTED + committed `24d6a94` (NOT pushed): reject present non-string unit/value_unit (falsey [] /{} /0/False no longer relabeled). +12 TDD cases, suite 1965 green. **Awaiting reviewer review → push → close.**
+- **#135 — Macro falsey unit-metadata relabel** — IMPLEMENTED + committed `24d6a94` (NOT pushed): reject present non-string unit/value_unit (falsey [] /{} /0/False no longer relabeled). +12 TDD cases, suite 1965 green. BLOCK (unit=None relabeled) FIXED `f1d6db6` — unit=None now rejected, value_unit=None allowed. Suite 1967 green. **Awaiting RE-review → push → close.**
   `indicator_code`/`indicator_name`/`country_name` type/shape validation in the macro result
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
