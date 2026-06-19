@@ -16,9 +16,8 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#116** BTMC weight parser — IMPLEMENTING (design APPROVED). Keep bare `g` unit but
-  clean-boundary guard; tests: VANG≠g, `1000 G` works, `.5/-5/0 G` reject; leading-zero policy.
-- **#117** BTMC same-ts dedup — queued next (design APPROVED).
+- **#117** BTMC same-product/same-timestamp dedup — IMPLEMENTING (design APPROVED). identical
+  same-ts dup keep-first; conflicting same-ts → InvalidData; older/newer deterministic.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -31,8 +30,11 @@ _Last synced: 2026-06-19 ~10:12 +07_
 ## Next (queued open bugs — fix ALL; group by domain to batch reviewer-approved stacks)
 
 BTMC (remaining):
-- #118 BTMC `_row_index` accepts malformed `@row`; should raise InvalidData on present-malformed,
-  keep fallback discovery only when `@row` absent/blank (poller #60, labeled bug). Design TBD.
+- #118 BTMC `_row_index` — design APPROVED (review-202606191030). Finalized rules:
+  present `@row` must be canonical positive index (str `[1-9]\d*` or positive `int`, NOT bool);
+  reject `1.0/True/'01'/' 1 '/[1]/{}/0/-1`; **None or "" → fallback**; **whitespace-only → raise**;
+  fallback `@n_N` discovery must also **validate the discovered suffix is canonical** (else raise),
+  with tests. Implement after #117 push (same file).
 
 Failover identity/units/bounds/ordering guards:
 - #69 crypto failover currency vs value_unit mismatch
@@ -84,3 +86,7 @@ Source-adapter input/identity/units hardening:
 - **#107 / #110** closed by reviewer/poller #59 as fixed (watermark 2026-06-19T03:01:44Z).
 - **#113 / #114** strict timestamp guards — pushed `a8479fc..9de091b`, closed (c76756a, 797ccad).
   Reviewer APPROVE_WITH_NOTES (review-202606191010). Watermark 2026-06-19T03:11:37Z.
+- **#116** BTMC malformed weight tokens — pushed `9de091b..d384006`, closed. Reviewer
+  APPROVE_WITH_NOTES (review-202606191021). Watermark 2026-06-19T03:21:45Z.
+  Future-hardening note (non-blocking): `_QTY` left boundary allows a digit glued to a letter
+  (`ABC5 LUONG`); out of #116 scope, revisit if such names ever appear.
