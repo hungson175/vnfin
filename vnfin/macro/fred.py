@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 from datetime import date, datetime, timezone
 from typing import Optional
 
@@ -227,6 +228,8 @@ class FREDMacroSource(HttpDataSource):
         iso = FREDMacroSource._as_iso(d, label)
         return date.fromisoformat(iso)
 
+    _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
     @staticmethod
     def _as_iso(d, label: str) -> str:
         if isinstance(d, (date, datetime)):
@@ -234,8 +237,10 @@ class FREDMacroSource(HttpDataSource):
         if not isinstance(d, str):
             raise InvalidData(f"fred: {label} date must be a date/datetime or YYYY-MM-DD string")
         s = d.strip()
+        if not FREDMacroSource._DATE_RE.match(s):
+            raise InvalidData(f"fred: malformed {label} date {d!r}")
         try:
-            parsed = datetime.strptime(s, "%Y-%m-%d").date()
+            parsed = date.fromisoformat(s)
         except ValueError as exc:
             raise InvalidData(f"fred: malformed {label} date {d!r}") from exc
         return parsed.strftime("%Y-%m-%d")

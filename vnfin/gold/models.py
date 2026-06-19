@@ -64,6 +64,8 @@ class GoldQuote:
         # Issue #15: hard-reject corrupted prices at the model boundary so no adapter
         # can accidentally emit a non-finite, non-positive, or negative-spread quote.
         for label, value in (("buy", self.buy), ("sell", self.sell)):
+            if isinstance(value, bool):
+                raise InvalidData(f"GoldQuote.{label} must be numeric, got bool {value!r}")
             if not isinstance(value, (int, float)):
                 raise InvalidData(f"GoldQuote.{label} must be numeric, got {value!r}")
             if not math.isfinite(value):

@@ -509,6 +509,30 @@ def test_rejects_returned_currency_mismatch():
     _assert_rejected_reason(bad, "unit mismatch")
 
 
+@pytest.mark.parametrize(
+    "currency,value_unit,expected_substring",
+    [
+        (None, "USD", "currency"),
+        ("USD", None, "value_unit"),
+        (None, None, "currency"),
+        ("", "USD", "currency"),
+        ("USD", "", "value_unit"),
+        (True, "USD", "currency"),
+        ("USD", [], "value_unit"),
+        ("USD", 123, "value_unit"),
+    ],
+)
+def test_rejects_missing_or_malformed_unit_metadata(currency, value_unit, expected_substring):
+    """A USD chain must reject CryptoHistory results with missing/empty/malformed
+    currency or value_unit; the unit guard must not accept absent metadata."""
+    bad = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),),
+        currency=currency,
+        value_unit=value_unit,
+    )
+    _assert_rejected_reason(bad, expected_substring)
+
+
 def test_rejects_returned_symbol_mismatch_and_failsover():
     # Regression: a result for a different base asset must be rejected and the
     # failover client must move on to the next source.

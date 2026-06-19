@@ -35,6 +35,7 @@ import math
 from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..validation import validate_iso_date_string
 from .base import GoldSource
 from .models import GoldBar, GoldHistory, GoldQuote
 
@@ -108,8 +109,8 @@ class StooqGoldSource(GoldSource):
 
     def _parse_date(self, raw: str) -> date:
         try:
-            return date.fromisoformat(raw)
-        except (ValueError, TypeError) as exc:
+            return validate_iso_date_string(raw, label="date")
+        except InvalidData as exc:
             raise InvalidData(f"{self.name}: bad date {raw!r}") from exc
 
     def _parse_price(self, raw: str, label: str = "Close") -> float:

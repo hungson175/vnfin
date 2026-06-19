@@ -190,7 +190,11 @@ def _validate_crypto_result(
     if chain_unit is not None:
         for field in ("currency", "value_unit"):
             actual = getattr(hist, field, None)
-            if actual is not None and actual != chain_unit:
+            if not isinstance(actual, str):
+                return f"malformed unit: result {field} has type {type(actual).__name__}"
+            if not actual:
+                return f"missing unit: result {field} is missing or empty"
+            if actual != chain_unit:
                 return f"unit mismatch: result {field} {actual!r} != chain unit {chain_unit!r}"
 
     # Sorting (#85).

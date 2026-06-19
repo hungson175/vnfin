@@ -96,6 +96,7 @@ class FailoverGoldClient:
         min_coverage: float = 0.5,
         warn_coverage: float = 0.9,
     ):
+        sources = list(sources)  # materialize once; guard + engine both need the list
         min_coverage = self._coverage_threshold(min_coverage, "min_coverage")
         warn_coverage = self._coverage_threshold(warn_coverage, "warn_coverage")
         if warn_coverage < min_coverage:

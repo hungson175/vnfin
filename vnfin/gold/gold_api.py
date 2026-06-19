@@ -10,6 +10,7 @@ Shape from docs/research/2026-06-18-gold-world.md and the provider's own server
 from __future__ import annotations
 
 import math
+import re
 from datetime import datetime, timezone
 
 from ..coerce import parse_provider_float
@@ -18,6 +19,16 @@ from .base import GoldSource
 from .models import GoldQuote
 
 _USD_PER_OZ = "USD/oz"
+
+# Strict ISO-8601 UTC timestamp grammar for api.gold-api.com's updatedAt field.
+# Accepts: 2026-06-17T18:10:08Z  or  2026-06-17T18:10:08+00:00  or  2026-06-17T18:10:08-07:00
+# Rejects date-only, compact, week-date, and other lenient forms that datetime.fromisoformat
+# would accept on Python 3.11+.
+_GOLD_API_TS_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
+    r"(?:\.\d+)?"
+    r"(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 # Supported world spot symbols for api.gold-api.com (XAU/USD and XAG/USD).
 _GOLD_API_SYMBOLS = frozenset({"XAU", "XAG"})
@@ -84,8 +95,13 @@ class GoldApiSource(GoldSource):
     def _parse_iso(self, raw):
         if not raw:
             return datetime.now(timezone.utc)
+        s = str(raw).strip()
+        if not _GOLD_API_TS_RE.match(s):
+            raise InvalidData(
+                f"{self.name}: updatedAt must be a full ISO-8601 timestamp, got {raw!r}"
+            )
         try:
-            dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
         except (ValueError, TypeError) as exc:
             raise InvalidData(f"{self.name}: bad updatedAt {raw!r}") from exc
         return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)

@@ -347,6 +347,24 @@ def test_default_world_gold_client_accepts_injected_sources():
     assert hist.source == "stooq"
 
 
+def test_failover_accepts_generator_sources_without_dropping_primary():
+    # Issue: __init__ used next(...) on sources before handing them to FailoverClient.
+    # If sources is a generator, the primary is consumed and never tried.
+    primary = CurrencyApiGoldSource(http_get=_static_get(_currency_usd_json(d="2026-06-17")))
+    backup = StooqGoldSource(http_get=_static_get(_STOOQ_CSV))
+
+    def _source_gen():
+        yield primary
+        yield backup
+
+    client = FailoverGoldClient(_source_gen())
+    assert len(client.sources) == 2
+    hist = client.get_history(date(2026, 6, 17), date(2026, 6, 17))
+    assert hist.source == "currency-api"
+    assert hist.attempts[0].name == "currency-api"
+    assert hist.attempts[0].ok is True
+
+
 # --------------------------------------------------------------------------- #
 # B11 — range-coverage acceptance (partial primary must not skip the backup)   #
 # --------------------------------------------------------------------------- #

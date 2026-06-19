@@ -29,6 +29,7 @@ import dataclasses
 
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
+from ..validation import validate_iso_date_string
 from .base import AUTO, FundamentalSource, is_known_bank, resolve_is_bank
 from .itemcodes import item_name
 from .models import (
@@ -427,8 +428,8 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
     @staticmethod
     def _parse_date(raw) -> date:
         try:
-            return date.fromisoformat(str(raw))
-        except (TypeError, ValueError) as exc:
+            return validate_iso_date_string(raw, label="date")
+        except InvalidData as exc:
             raise InvalidData(f"vndirect: bad date {raw!r}") from exc
 
     def _headers(self) -> dict:

@@ -22,6 +22,7 @@ from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
 from ..transport import DEFAULT_UA, HttpDataSource
+from ..validation import validate_iso_date_string
 from .models import Fund, FundHolding, FundList, NavHistory, NavPoint
 
 _BASE_URL = "https://api.fmarket.vn"
@@ -301,8 +302,8 @@ class FmarketFundSource(HttpDataSource):
         if not raw_date:
             raise InvalidData("fmarket: nav row missing navDate")
         try:
-            d = date.fromisoformat(str(raw_date))
-        except (TypeError, ValueError) as exc:
+            d = validate_iso_date_string(raw_date, label="navDate")
+        except InvalidData as exc:
             raise InvalidData(f"fmarket: malformed navDate {raw_date!r}") from exc
         nav = _as_float(row.get("nav"), f"nav on {raw_date}")
         # Issue #13: zero NAV is not a valid market observation.
@@ -410,13 +411,9 @@ def _coerce_date(value, label) -> date:
     Raises :class:`InvalidData` (never a raw ``ValueError``/``TypeError``) on a
     malformed caller-supplied date so the public method stays failover-safe.
     """
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
     try:
-        return date.fromisoformat(str(value))
-    except (TypeError, ValueError) as exc:
+        return validate_iso_date_string(value, label=label)
+    except InvalidData as exc:
         raise InvalidData(f"fmarket: malformed {label} {value!r}") from exc
 
 

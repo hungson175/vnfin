@@ -258,6 +258,44 @@ def test_valid_date_bounds_accepted():
     assert captured["params"]["observation_end"] == "2024-12-31"
 
 
+# --- Issue #117: FRED date bounds must be strict YYYY-MM-DD (zero-padded) -------
+
+@pytest.mark.parametrize(
+    "bad_start",
+    ["2024-1-1", "2024-01-1", "2024-1-01"],
+    ids=["month_no_pad", "day_no_pad", "month_pad_day_no_pad"],
+)
+def test_non_zero_padded_start_date_raises_invalid(bad_start):
+    captured = {"n": 0}
+
+    def _g(url, params, headers):
+        captured["n"] += 1
+        return fred_success()
+
+    src = FREDMacroSource(api_key="k", http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_series("GDPC1", start=bad_start)
+    assert captured["n"] == 0, "http_get called for non-zero-padded start"
+
+
+@pytest.mark.parametrize(
+    "bad_end",
+    ["2024-1-1", "2024-01-1", "2024-1-01"],
+    ids=["month_no_pad", "day_no_pad", "month_pad_day_no_pad"],
+)
+def test_non_zero_padded_end_date_raises_invalid(bad_end):
+    captured = {"n": 0}
+
+    def _g(url, params, headers):
+        captured["n"] += 1
+        return fred_success()
+
+    src = FREDMacroSource(api_key="k", http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_series("GDPC1", end=bad_end)
+    assert captured["n"] == 0, "http_get called for non-zero-padded end"
+
+
 # --- Issue #51: FRED application error envelopes must not parse as data ---------
 
 @pytest.mark.parametrize(

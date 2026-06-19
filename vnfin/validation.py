@@ -27,9 +27,11 @@ __all__ = [
     "validate_date_range",
     "validate_positive_int",
     "validate_country_iso3",
+    "validate_iso_date_string",
 ]
 
 _ISO4217 = re.compile(r"[A-Za-z]{3}")
+_STRICT_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def validate_non_empty_string(value, name: str = "symbol") -> str:
@@ -37,6 +39,29 @@ def validate_non_empty_string(value, name: str = "symbol") -> str:
     if not isinstance(value, str) or not value.strip():
         raise InvalidData(f"{name} must be a non-empty string, got {value!r}")
     return value.strip()
+
+
+def validate_iso_date_string(value, label: str = "date") -> date:
+    """Return ``date`` from a ``date``/``datetime`` object or a strict ISO string.
+
+    Strings must match ``YYYY-MM-DD`` exactly (zero-padded month and day) before
+    parsing. This prevents Python 3.11+ ``date.fromisoformat`` and
+    ``datetime.strptime`` from silently accepting non-zero-padded forms such as
+    ``2024-1-1`` or ``2024-01-1``.
+    """
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str):
+        raise InvalidData(f"{label} must be a date or YYYY-MM-DD string, got {value!r}")
+    stripped = value.strip()
+    if not _STRICT_ISO_DATE.fullmatch(stripped):
+        raise InvalidData(f"{label} must be a YYYY-MM-DD string, got {value!r}")
+    try:
+        return date.fromisoformat(stripped)
+    except ValueError as exc:
+        raise InvalidData(f"{label} must be a valid YYYY-MM-DD date, got {value!r}") from exc
 
 
 def validate_iso4217(code, name: str = "currency") -> str:

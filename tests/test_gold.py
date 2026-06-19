@@ -461,6 +461,18 @@ def test_goldapi_parses_iso_timestamp_utc():
     assert q.time == datetime(2026, 6, 17, 18, 10, 8, tzinfo=timezone.utc)
 
 
+@pytest.mark.parametrize(
+    "bad_ts",
+    ["2026-06-17", "2024-1-1T00:00:00Z", "2024-01-1T00:00:00Z", "2024-1-01T00:00:00Z"],
+    ids=["date_only", "compact_month_day", "compact_day", "compact_month"],
+)
+def test_goldapi_rejects_non_timestamp_updatedat(bad_ts):
+    # Issue #112: datetime.fromisoformat is lenient on Python 3.11+; require full timestamp.
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(updated=bad_ts)))
+    with pytest.raises(InvalidData, match="updatedAt"):
+        s.get_quote()
+
+
 def test_goldapi_silver_symbol():
     s = GoldApiSource(http_get=_static_get(_goldapi_json(price=71.48, symbol="XAG")), symbol="XAG")
     q = s.get_quote()
@@ -821,6 +833,26 @@ def test_vn_factory_unknown_provider_lists_valid():
 )
 def test_goldquote_rejects_non_positive_or_negative_spread(buy, sell):
     with pytest.raises(InvalidData):
+        GoldQuote(
+            time=datetime(2026, 6, 17, tzinfo=timezone.utc),
+            product="X",
+            buy=buy,
+            sell=sell,
+            unit="USD/oz",
+            currency="USD",
+            source="test",
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+@pytest.mark.parametrize(
+    "buy,sell",
+    [(True, 1.0), (1.0, True), (True, True)],
+    ids=["bool_buy", "bool_sell", "bool_both"],
+)
+def test_goldquote_rejects_boolean_prices(buy, sell):
+    # bool is a subclass of int and must not be accepted as a numeric price.
+    with pytest.raises(InvalidData, match="bool"):
         GoldQuote(
             time=datetime(2026, 6, 17, tzinfo=timezone.utc),
             product="X",

@@ -8,6 +8,7 @@ from vnfin.validation import (
     validate_date_range,
     validate_fraction,
     validate_iso4217,
+    validate_iso_date_string,
     validate_non_empty_string,
     validate_positive_int,
 )
@@ -92,3 +93,43 @@ class TestValidateFraction:
     def test_rejects_bad_values(self, bad):
         with pytest.raises(ValueError):
             validate_fraction(bad)
+
+
+class TestValidateIsoDateString:
+    def test_returns_date_from_date(self):
+        assert validate_iso_date_string(date(2024, 1, 15)) == date(2024, 1, 15)
+
+    def test_returns_date_from_datetime(self):
+        assert validate_iso_date_string(datetime(2024, 1, 15, 8, 30)) == date(2024, 1, 15)
+
+    def test_returns_date_from_string(self):
+        assert validate_iso_date_string("2024-01-15") == date(2024, 1, 15)
+
+    def test_returns_stripped_string(self):
+        assert validate_iso_date_string("  2024-01-15  ") == date(2024, 1, 15)
+
+    def test_rejects_invalid_calendar_date(self):
+        with pytest.raises(InvalidData):
+            validate_iso_date_string("2024-02-30")
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            "2024-1-1",
+            "2024-01-1",
+            "2024-1-01",
+            "2024/01/01",
+            "01-01-2024",
+            "2024-01",
+            "20240101",
+            "",
+            "   ",
+            None,
+            20240101,
+            True,
+            [],
+        ],
+    )
+    def test_rejects_malformed_values(self, bad):
+        with pytest.raises(InvalidData):
+            validate_iso_date_string(bad)

@@ -22,6 +22,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..validation import validate_iso_date_string
 from .base import GoldSource
 from .models import GoldBar, GoldHistory, GoldQuote
 
@@ -147,6 +148,6 @@ class CurrencyApiGoldSource(GoldSource):
         if not raw:
             return None
         try:
-            return date.fromisoformat(str(raw))
-        except (ValueError, TypeError) as exc:
+            return validate_iso_date_string(raw, label="date")
+        except InvalidData as exc:
             raise InvalidData(f"{self.name}: malformed date {raw!r}") from exc
