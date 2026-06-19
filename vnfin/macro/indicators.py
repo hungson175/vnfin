@@ -205,6 +205,19 @@ def normalize_indicator(indicator, *, _invalid_to_valueerror: bool = True) -> Ma
     raise InvalidData(f"macro: {msg}")
 
 
+def canonical_macro_indicator(indicator) -> MacroIndicator:
+    """Issue #48: resolve an indicator to :class:`MacroIndicator`, raising
+    ``InvalidData`` (never a raw ``ValueError``) for unknown/malformed values.
+
+    Use in source helper / public paths (``unit_for``, ``frequency_for``,
+    ``indicator_identity``, ``get_indicator``, ``get_canonical_indicator``) so an
+    unsupported indicator surfaces as a failover-safe ``SourceError`` instead of a
+    raw ``ValueError`` leaking out of the adapter. ``supports()`` keeps using
+    :func:`normalize_indicator` directly so it can stay quiet (return ``False``).
+    """
+    return normalize_indicator(indicator, _invalid_to_valueerror=False)
+
+
 def canonical_unit(indicator) -> str:
     """Canonical unit string for a logical indicator (the chain's promised unit)."""
     return CANONICAL_UNIT[normalize_indicator(indicator)]

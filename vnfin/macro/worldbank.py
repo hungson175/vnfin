@@ -36,10 +36,12 @@ from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import parse_canonical_int
 
+from .._contracts import canonical_country_iso3
 from .indicators import (
     Frequency,
     MacroIndicator,
     canonical_currency,
+    canonical_macro_indicator,
     normalize_indicator,
     validate_indicator_values,
 )
@@ -87,17 +89,9 @@ class WorldBankMacroSource(HttpDataSource):
 
     @staticmethod
     def _validate_country_iso3(value) -> str:
-        # Issue #32: validate before any string operation so non-string caller
-        # input raises InvalidData, not a raw AttributeError/TypeError.
-        name = WorldBankMacroSource.NAME
-        if not isinstance(value, str):
-            raise InvalidData(
-                f"{name}: country must be a 3-letter ISO3 code, got {type(value).__name__}"
-            )
-        c = value.strip().upper()
-        if not (len(c) == 3 and c.isalpha()):
-            raise InvalidData(f"{name}: country must be a 3-letter ISO3 code, got {value!r}")
-        return c
+        # Issue #32: shared canonical ISO3 contract — validates before any string
+        # operation (non-string/blank/wrong-length -> InvalidData, not a raw error).
+        return canonical_country_iso3(value, WorldBankMacroSource.NAME)
 
     # --- canonical-indicator interface (used by the macro failover chain) -- #
     def supports(self, indicator) -> bool:
@@ -109,7 +103,7 @@ class WorldBankMacroSource(HttpDataSource):
 
     def unit_for(self, indicator) -> str:
         """Canonical unit World Bank emits for ``indicator``."""
-        ind = normalize_indicator(indicator)
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
         try:
             return _WB_MAP[ind][1]
         except KeyError as exc:
@@ -122,8 +116,11 @@ class WorldBankMacroSource(HttpDataSource):
         :meth:`get_indicator`). ``indicator_name`` comes from the provider payload
         (free-form), so the name is ``None`` (code-only validation).
         """
-        ind = normalize_indicator(indicator)
-        code, _unit = _WB_MAP[ind]
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
+        try:
+            code, _unit = _WB_MAP[ind]
+        except KeyError as exc:
+            raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
         return (code.strip().upper(), None)
 
     def get_canonical_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
@@ -134,7 +131,7 @@ class WorldBankMacroSource(HttpDataSource):
         The result's ``unit`` is stamped to the canonical unit (WB percent series
         often omit ``unit`` in the payload).
         """
-        ind = normalize_indicator(indicator)
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
         try:
             code, unit = _WB_MAP[ind]
         except KeyError as exc:

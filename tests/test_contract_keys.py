@@ -104,3 +104,18 @@ class TestCanonicalIdentifier:
     def test_rejects_malformed(self, fn, bad):
         with pytest.raises(InvalidData):
             fn(bad, "ctx")
+
+
+# Phase 4 macro — canonical ISO3 country contract (#32).
+from vnfin._contracts import canonical_country_iso3
+
+
+@pytest.mark.parametrize("value,expected", [("VNM", "VNM"), ("usa", "USA"), ("  vnm ", "VNM")])
+def test_canonical_country_iso3_accepts_and_normalizes(value, expected):
+    assert canonical_country_iso3(value, "ctx") == expected
+
+
+@pytest.mark.parametrize("bad", ["US", "USAA", "1AB", "V N", "V.M", "", "   ", None, [], {}, True, 123])
+def test_canonical_country_iso3_rejects(bad):
+    with pytest.raises(InvalidData):
+        canonical_country_iso3(bad, "ctx")

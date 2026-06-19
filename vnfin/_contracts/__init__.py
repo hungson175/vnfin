@@ -25,6 +25,7 @@ from .fields import (
     require_present,
 )
 from .keys import (
+    canonical_country_iso3,
     canonical_enum_tag,
     canonical_fund_code,
     canonical_provider_key,
@@ -50,6 +51,7 @@ __all__ = [
     "canonical_enum_tag",
     "canonical_security_symbol",
     "canonical_fund_code",
+    "canonical_country_iso3",
     "require_object",
     "require_list",
     "reject_duplicate",

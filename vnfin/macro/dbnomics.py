@@ -41,7 +41,14 @@ from datetime import date, datetime, timezone
 from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
-from .indicators import Frequency, MacroIndicator, normalize_indicator, validate_indicator_values
+from .._contracts import canonical_country_iso3
+from .indicators import (
+    Frequency,
+    MacroIndicator,
+    canonical_macro_indicator,
+    normalize_indicator,
+    validate_indicator_values,
+)
 from .models import IndicatorSeries
 
 # Issue #104: canonical YYYY-MM-DD grammar for period_start_day (no strip/coerce).
@@ -93,7 +100,7 @@ class DBnomicsSource(HttpDataSource):
             return False
 
     def unit_for(self, indicator) -> str:
-        ind = normalize_indicator(indicator)
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
         try:
             return _DBN_MAP[ind][2]
         except KeyError as exc:
@@ -101,7 +108,7 @@ class DBnomicsSource(HttpDataSource):
 
     def frequency_for(self, indicator) -> Frequency:
         """Result frequency DBnomics emits for ``indicator``."""
-        ind = normalize_indicator(indicator)
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
         try:
             return _DBN_MAP[ind][3]
         except KeyError as exc:
@@ -112,17 +119,25 @@ class DBnomicsSource(HttpDataSource):
         mirroring :meth:`get_indicator`. The code is the country-specific IFS
         series id ``"{freq}.{cc}.{concept}"`` (hence country_iso3 is required);
         the name is ``"{indicator} ({concept})"``."""
-        ind = normalize_indicator(indicator)
-        freq, concept, _unit, _result_freq = _DBN_MAP[ind]
-        cc = _ISO3_TO_IFS_CC.get(self.normalize_country(country_iso3 or ""))
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
+        try:
+            freq, concept, _unit, _result_freq = _DBN_MAP[ind]
+        except KeyError as exc:
+            raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
+        # #32 + #21(macro): validate the country and require a mapped IFS code so we
+        # never construct an "A.None.*" series id from an unknown/malformed country.
+        country = canonical_country_iso3(country_iso3, self.NAME)
+        cc = _ISO3_TO_IFS_CC.get(country)
+        if cc is None:
+            raise InvalidData(f"{self.NAME}: no IFS country code for ISO3 {country}")
         return (f"{freq}.{cc}.{concept}", f"{ind.value} ({concept})")
 
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one IMF/IFS series for one country via DBnomics."""
-        ind = normalize_indicator(indicator)
-        country = self.normalize_country(country_iso3 or "")
-        if not country:
-            raise InvalidData(f"{self.NAME}: empty country code")
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
+        # #32: validate ISO3 before the IFS lookup (non-string/wrong-shape ->
+        # InvalidData, not a raw AttributeError or a silent None series id).
+        country = canonical_country_iso3(country_iso3, self.NAME)
         try:
             freq, concept, unit, result_freq = _DBN_MAP[ind]
         except KeyError as exc:

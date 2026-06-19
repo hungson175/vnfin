@@ -21,6 +21,9 @@ from .fields import MISSING, require_non_empty_str
 #: internal whitespace (``A B``) that broad stringification used to let through.
 _ALPHA_KEY_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 
+#: A canonical ISO3 country code: exactly three ASCII letters (after upper-normalize).
+_ISO3_RE = re.compile(r"[A-Z]{3}")
+
 #: A canonical security/fund identifier: letter-start then uppercase alphanumerics,
 #: no dot/hyphen/slash/punctuation/internal-space and not digit-first (#34/#33/#30/#9).
 #: Validated AFTER ``strip().upper()`` so padded/lower public inputs normalize (live
@@ -113,6 +116,25 @@ def _canonical_identifier(value, ctx: str, *, pattern=_SECURITY_ID_RE) -> str:
             ctx, f"non-canonical identifier {value!r}: expected [A-Z][A-Z0-9]*"
         )
     return norm
+
+
+def canonical_country_iso3(value, ctx: str) -> str:
+    """Return a canonical ISO3 country code (#32), or raise ``InvalidData``.
+
+    Input must be a string; normalized as ``strip().upper()`` then required to be
+    exactly ``[A-Z]{3}``. Non-string / blank / two- or four-letter / digit /
+    punctuation / container / bool fail closed *before* any network call or raw
+    ``.strip()``/``AttributeError``. Message matches the long-standing
+    ``"<ctx>: country must be a 3-letter ISO3 code, got ..."`` wording.
+    """
+    if not isinstance(value, str):
+        raise contract_error(
+            ctx, f"country must be a 3-letter ISO3 code, got {type(value).__name__}"
+        )
+    c = value.strip().upper()
+    if not _ISO3_RE.fullmatch(c):
+        raise contract_error(ctx, f"country must be a 3-letter ISO3 code, got {value!r}")
+    return c
 
 
 def canonical_security_symbol(value, ctx: str) -> str:

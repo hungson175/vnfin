@@ -47,7 +47,14 @@ from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import parse_canonical_int
-from .indicators import Frequency, MacroIndicator, normalize_indicator, validate_indicator_values
+from .._contracts import canonical_country_iso3
+from .indicators import (
+    Frequency,
+    MacroIndicator,
+    canonical_macro_indicator,
+    normalize_indicator,
+    validate_indicator_values,
+)
 from .models import IndicatorSeries
 
 # Canonical indicator -> (IMF WEO code, unit IMF emits).
@@ -74,16 +81,8 @@ class IMFDataMapperSource(HttpDataSource):
 
     @staticmethod
     def _validate_country_iso3(value) -> str:
-        """Validate ``country_iso3`` before any string operation or network call."""
-        name = IMFDataMapperSource.NAME
-        if not isinstance(value, str):
-            raise InvalidData(
-                f"{name}: country must be a 3-letter ISO3 code, got {type(value).__name__}"
-            )
-        c = value.strip().upper()
-        if not (len(c) == 3 and c.isalpha()):
-            raise InvalidData(f"{name}: country must be a 3-letter ISO3 code, got {value!r}")
-        return c
+        """Issue #32: shared canonical ISO3 contract (validate before any string op)."""
+        return canonical_country_iso3(value, IMFDataMapperSource.NAME)
 
     @staticmethod
     def normalize_country(country_iso3: str) -> str:
@@ -98,7 +97,7 @@ class IMFDataMapperSource(HttpDataSource):
 
     def unit_for(self, indicator) -> str:
         """Unit IMF emits for ``indicator``. Raises ``InvalidData`` if unsupported."""
-        ind = normalize_indicator(indicator)
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
         try:
             return _IMF_MAP[ind][1]
         except KeyError as exc:
@@ -108,8 +107,11 @@ class IMFDataMapperSource(HttpDataSource):
         """Issue #78: expected returned identity (code, name) for ``indicator``,
         mirroring :meth:`get_indicator` exactly (code = IMF concept code; name =
         ``"{indicator} ({code})"``)."""
-        ind = normalize_indicator(indicator)
-        code, _unit = _IMF_MAP[ind]
+        ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
+        try:
+            code, _unit = _IMF_MAP[ind]
+        except KeyError as exc:
+            raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
         return (code, f"{ind.value} ({code})")
 
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
