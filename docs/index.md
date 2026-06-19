@@ -57,6 +57,7 @@ README and task tutorials above.
 The following folders preserve design/research history. They are **not** the starting point for
 normal users:
 
+- `docs/architecture/provider-contracts.md` — the private `vnfin/_contracts/` layer (internal; not public API)
 - `docs/design/`
 - `docs/research/`
 - `docs/steps/`

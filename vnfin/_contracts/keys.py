@@ -154,6 +154,11 @@ def canonical_crypto_pair(value, ctx: str) -> str:
     whitespace / control / newline, leading/trailing/double hyphens, blank, and
     non-string all fail closed. ``fullmatch`` (not ``match``+``$``) means a trailing
     newline inside the body cannot sneak through.
+
+    NOTE: SHAPE-only — it does NOT validate that the quote asset is recognized. Call
+    sites that must reject unknown-quote pairs (e.g. ``BTC-FAKE``) should use
+    ``vnfin.crypto.client._normalize_crypto_symbol`` (which adds longest-known-quote
+    validation) or perform their own quote check.
     """
     if not isinstance(value, str):
         raise contract_error(ctx, f"crypto pair must be a string, got {type(value).__name__}")

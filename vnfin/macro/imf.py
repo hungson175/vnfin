@@ -116,8 +116,9 @@ class IMFDataMapperSource(HttpDataSource):
 
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one IMF WEO indicator series for one country (annual)."""
-        # Validate caller input before any network call or string operation.
-        country = self._validate_country_iso3(country_iso3 or "")
+        # Validate caller input before any network call. Pass the raw value (no
+        # ``or ""``) so a falsey non-string keeps its type-specific InvalidData message.
+        country = self._validate_country_iso3(country_iso3)
         try:
             ind = normalize_indicator(indicator)
         except ValueError as exc:

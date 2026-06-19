@@ -96,7 +96,9 @@ def validate_country_iso3(value) -> str:
             f"macro: country must be a 3-letter ISO3 code, got {type(value).__name__}"
         )
     c = value.strip().upper()
-    if not (len(c) == 3 and c.isalpha()):
+    # ASCII [A-Z]{3} — consistent with the private contract ``canonical_country_iso3``
+    # (rejects unicode-letter look-alikes that ``str.isalpha()`` would accept).
+    if not re.fullmatch(r"[A-Z]{3}", c):
         raise InvalidData(f"macro: country must be a 3-letter ISO3 code, got {value!r}")
     return c
 
