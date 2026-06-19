@@ -16,8 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#135 — Macro falsey unit-metadata relabel** — IMPLEMENTED + committed `24d6a94` (NOT pushed): reject present non-string unit/value_unit (falsey [] /{} /0/False no longer relabeled). +12 TDD cases, suite 1965 green. BLOCK (unit=None relabeled) FIXED `f1d6db6` — unit=None now rejected, value_unit=None allowed. Suite 1967 green. **Awaiting RE-review → push → close.**
-  `indicator_code`/`indicator_name`/`country_name` type/shape validation in the macro result
+- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `f764709`, full suite
+  1967 green, watermark 2026-06-19T07:37:52Z. Steady-state: record new poller/reviewer activity
+  here first, TDD + reviewer sign-off per fix.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -43,6 +44,11 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#135** macro falsey/None unit-metadata relabel — `24d6a94`+`f1d6db6`, pushed `89d16cd..f764709`,
+  closed. unit must be str (None + falsey-non-str rejected, '' placeholder kept); value_unit
+  Optional. APPROVE after unit=None BLOCK. Suite 1967 green.
+- **#134** macro descriptive metadata (indicator_code/name non-empty str, country_name str) —
+  `69afb38`, pushed `f4ad9f5..89d16cd`, closed. APPROVE_WITH_NOTES.
 - **Returned-metadata mini-batch — COMPLETE, pushed + closed (`f795bd1..a840e63`).**
   - **#69** `33007c6`+`831dd3f` — crypto quote-metadata consistency (quote_asset USD-equiv;
     price_unit accepts Binance quote-form OR Coinbase currency-form; volume_unit==base;
