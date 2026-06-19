@@ -948,3 +948,17 @@ def test_falsey_nonstring_macro_unit_failsover_to_backup():
     good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
     res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("bad", unit=[]), good])
     assert res.source == "good"
+
+
+def test_rejects_none_macro_unit():
+    # #135 BLOCK fix: IndicatorSeries.unit is a non-optional str; None must be
+    # rejected (not relabeled), unlike the legitimate empty-string placeholder.
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("bad", unit=None)])
+    assert "malformed unit" in ei.value.attempts[0].reason
+
+
+def test_accepts_none_macro_value_unit():
+    # value_unit is Optional[str]; None stays allowed.
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("ok", value_unit=None)])
+    assert res.source == "ok"
