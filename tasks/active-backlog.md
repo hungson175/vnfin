@@ -29,7 +29,16 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Paused bugs — after refactor
 
-- **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — WIP stash: `git stash@{0}`
+- **#93** (parked, poller 18:20) — OpenER required VND anchor non-finite values should fail closed
+  as InvalidData, not EmptyData. Fix in **Phase 4 FX** adapter migration.
+- **#30** (parked, poller 18:25) — index constituent `stockSymbol` must be a canonical security
+  identifier (reject internal space/slash/punctuation/newline), not just non-empty. Fix in
+  **Phase 4 indices/security-identifier** migration.
+- **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — addressed by the Phase 2
+  contract migration (`ec69a1e`); to be CLOSED in Phase 6 after Checkpoint C approves. WIP stash
+  `git stash@{0}` superseded (reference only). Original handoff:
+  `/tmp/vnfin-wip-handoff-44-45-21-26-202606191803.md`.
+- **(historical stash note)** — WIP stash: `git stash@{0}`
   ("WIP paused: #44/#45/#21/#26 ..."); handoff `/tmp/vnfin-wip-handoff-44-45-21-26-202606191803.md`.
   Partial+untested (#44/#45/#21 key-presence guards; #26 `canonical_item_code` helper unwired).
   All four issues OPEN. **Do NOT fix until the refactor contract foundation lands** — Phase 2 will
