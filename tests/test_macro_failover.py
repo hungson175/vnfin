@@ -294,7 +294,7 @@ def test_default_macro_client_get_indicator_real_sources_offline():
     # no network is touched; confirm WB (first) wins with synthetic GDP_GROWTH.
     wb_text = json.dumps([
         {"page": 1, "pages": 1, "per_page": 50, "total": 1},
-        [{"indicator": {"id": "X", "value": "Fake growth"},
+        [{"indicator": {"id": "NY.GDP.MKTP.KD.ZG", "value": "Fake growth"},
           "country": {"id": "ZZ", "value": "Fakeland"}, "countryiso3code": "ZZZ",
           "date": "2023", "value": 5.5, "unit": "", "obs_status": "", "decimal": 1}],
     ])

@@ -7,6 +7,19 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **VNDirect all-skipped-rows response guard** — when a non-empty VNDirect statement response has
+  *every* row skipped because its ``reportType``/``modelType`` contradicts the requested statement
+  contract, ``VNDirectFundamentalSource`` now raises ``InvalidData`` (template/cadence mismatch)
+  instead of returning an empty tuple that reads as clean no-data. A mix of valid + skipped rows
+  still returns the valid reports with a skip warning. ([#44](https://github.com/hungson175/vnfin/issues/44))
+- **WorldBank observation indicator.id guard** — ``WorldBankMacroSource`` now validates each
+  observation's ``indicator.id`` (present ⇒ non-blank string equal, canonical-normalized, to the
+  requested WDI code) before returning, matching the existing ``countryiso3code`` identity check.
+  ([#21](https://github.com/hungson175/vnfin/issues/21))
+- **UDF present blank/null symbol guard** — ``UDFSource.get_history`` now keys the response-symbol
+  identity check on presence, not truthiness: a present blank/``null``/non-string ``symbol`` is
+  rejected rather than treated as an absent field and stamped as the requested ticker (a truly
+  missing key stays legacy-compatible). ([#21](https://github.com/hungson175/vnfin/issues/21))
 - **Macro returned-indicator-identity guard** — the macro failover boundary now validates that a
   returned ``IndicatorSeries`` actually identifies the requested indicator. A source may declare
   its expected identity via ``indicator_identity(country_iso3, indicator) -> (code, name | None)``
