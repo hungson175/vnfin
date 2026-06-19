@@ -38,6 +38,16 @@ import math
 import re
 from datetime import date, datetime, timezone
 
+from .._contracts import (
+    MISSING,
+    canonical_provider_key,
+    optional_present,
+    optional_present_non_empty_str,
+    reject_duplicate,
+    require_non_empty_str,
+    require_object,
+    require_present,
+)
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
 from .base import AUTO, FundamentalSource, resolve_is_bank
@@ -156,18 +166,25 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         CafeF payloads do not always expose the ticker, so we only enforce this
         when a top-level ``Symbol`` (or ``Data.Symbol``) field is present.
         """
-        for key in ("Symbol",):
-            raw = parsed.get(key) if isinstance(parsed, dict) else None
-            if raw is None and isinstance(parsed, dict):
-                data = parsed.get("Data")
-                if isinstance(data, dict):
-                    raw = data.get(key)
-            if raw is not None:
-                response_symbol = str(raw).strip().upper()
-                if response_symbol and response_symbol != psym:
-                    raise InvalidData(
-                        f"{self.name}: response ticker {raw!r} does not match {psym!r}"
-                    )
+        # Issue #21: key-presence is the trigger, not truthiness, and a present
+        # Symbol must be validated in BOTH locations — a present-blank top-level
+        # Symbol must not MASK a contradictory ``Data.Symbol``. Each present Symbol
+        # (top-level or under Data) must be a non-empty string matching the request;
+        # a truly missing key stays legacy-compatible (CafeF may omit the ticker).
+        if not isinstance(parsed, dict):
+            return
+        containers = [parsed]
+        data = parsed.get("Data")
+        if isinstance(data, dict):
+            containers.append(data)
+        for container in containers:
+            sym = optional_present_non_empty_str(
+                container, "Symbol", f"{self.name} response Symbol", canonical=False
+            )
+            if sym is not None and sym.upper() != psym:
+                raise InvalidData(
+                    f"{self.name}: response ticker {sym!r} does not match {psym!r}"
+                )
 
     @staticmethod
     def _validate_value_unit(unit) -> None:
@@ -189,6 +206,22 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         if period is Period.QUARTER:
             return self._QUARTERLY_ROW_TAGS
         return self._ANNUAL_ROW_TAGS
+
+    def _reporttype_mismatch(self, pobj: dict, expected_tags) -> bool:
+        """Issue #45: whether a period row's ReportType is a *different* cadence.
+
+        Key-presence is the trigger: a missing ``ReportType`` returns ``False``
+        (legacy — keep the row); a PRESENT malformed/falsey/non-string value fails
+        closed (``InvalidData`` via the contract); a present valid tag not in
+        ``expected_tags`` returns ``True`` (skip). Used by both the statement and
+        ratio paths so a present malformed ReportType can never be erased to absent
+        and stamped as the requested cadence.
+        """
+        rt = optional_present(pobj, "ReportType")
+        if rt is MISSING:
+            return False
+        tag = require_non_empty_str(rt, f"{self.name} ReportType", canonical=False).upper()
+        return tag not in expected_tags
 
     def _periods(self, parsed) -> list:
         """Validate the outer envelope and return the list of period objects.
@@ -245,13 +278,10 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         reports = []
         skipped = 0
         for pobj in periods:
-            # Skip rows whose ReportType contradicts the requested period, e.g. a
-            # quarterly request returning annual-tagged rows (or vice versa). CafeF
-            # response rows use ``HK`` for annual and ``H`` for quarterly even
-            # though the request params are ``NAM``/``QUY``, so we compare against
-            # the normalized set of accepted row tags rather than the request string.
-            row_report_type = str(pobj.get("ReportType") or "").strip().upper()
-            if row_report_type and row_report_type not in expected_tags:
+            pobj = require_object(pobj, f"{self.name} period")
+            # Issue #45: skip rows whose ReportType names a different cadence; a
+            # PRESENT malformed/falsey ReportType fails closed (see helper).
+            if self._reporttype_mismatch(pobj, expected_tags):
                 skipped += 1
                 continue
             # Line-item data stays STRICT: a malformed/NaN/missing-Code row means a
@@ -309,6 +339,14 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         reports = []
         skipped = 0
         for pobj in periods:
+            pobj = require_object(pobj, f"{self.name} ratio period")
+            # Issue #45 (ratio path): ratios are period-agnostic (Period.UNKNOWN),
+            # so we do NOT skip on cadence — but a PRESENT ReportType must still be
+            # a well-formed tag (fail closed on malformed/falsey/non-string rather
+            # than erasing it to absent). Missing key stays legacy-compatible.
+            rt = optional_present(pobj, "ReportType")
+            if rt is not MISSING:
+                require_non_empty_str(rt, f"{self.name} ratio ReportType", canonical=False)
             items = self._ratio_line_items(pobj)
             try:
                 fiscal_date = self._fiscal_date(pobj, Period.ANNUAL)
@@ -354,16 +392,15 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         items: list[LineItem] = []
         seen: set[str] = set()
         for it in raw_items:
-            if not isinstance(it, dict):
-                raise InvalidData(f"{self.name}: line item is not an object")
-            code = it.get("Code")
-            if code is None or str(code).strip() == "":
-                raise InvalidData(f"{self.name}: line item missing Code")
-            code_str = str(code).strip()
-            if code_str in seen:
-                raise InvalidData(f"{self.name}: duplicate Code {code_str} in period")
-            seen.add(code_str)
-            name = self._line_item_name(it, code)
+            it = require_object(it, f"{self.name} line item")
+            # Issue #26: Code is a public line-item key (FinancialReport.get(),
+            # joins, dedup) -> canonical provider key, not str(raw).strip().
+            code_str = canonical_provider_key(
+                require_present(it, "Code", f"{self.name} line item Code"),
+                f"{self.name} line item Code",
+            )
+            reject_duplicate(code_str, seen, f"{self.name} line item Code in period")
+            name = self._line_item_name(it, code_str)
             value = self._num(it.get("Value"))
             if value_unit == "VND":
                 # CafeF reports statement money in THOUSAND VND; normalize to raw VND
@@ -398,16 +435,15 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         items: list[LineItem] = []
         seen: set[str] = set()
         for it in raw_items:
-            if not isinstance(it, dict):
-                raise InvalidData(f"{self.name}: line item is not an object")
-            code = it.get("Code")
-            if code is None or str(code).strip() == "":
-                raise InvalidData(f"{self.name}: line item missing Code")
-            code_str = str(code).strip()
-            if code_str in seen:
-                raise InvalidData(f"{self.name}: duplicate Code {code_str} in period")
-            seen.add(code_str)
-            name = self._line_item_name(it, code)
+            it = require_object(it, f"{self.name} line item")
+            # Issue #26: Code is a public line-item key (FinancialReport.get(),
+            # joins, dedup) -> canonical provider key, not str(raw).strip().
+            code_str = canonical_provider_key(
+                require_present(it, "Code", f"{self.name} line item Code"),
+                f"{self.name} line item Code",
+            )
+            reject_duplicate(code_str, seen, f"{self.name} line item Code in period")
+            name = self._line_item_name(it, code_str)
             value = self._num(it.get("Value"))
             if code_str in self._PER_SHARE_CODES:
                 # Per-share monetary value: thousand VND/share -> raw VND/share.

@@ -28,6 +28,15 @@ from datetime import date, datetime, timezone
 
 import dataclasses
 
+from .._contracts import (
+    MISSING,
+    canonical_provider_key,
+    optional_present,
+    reject_duplicate,
+    require_non_empty_str,
+    require_object,
+    require_present,
+)
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import validate_iso_date_string
@@ -266,23 +275,27 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         buckets: dict[str, list[LineItem]] = {}
         skipped_rows = 0
         code_mismatches = 0  # Issue #21: rows dropped for a wrong provider `code`
+        row_ctx = f"{self.name} statement row"
         for row in rows:
-            # Issue #141: a statement row must be an object before any .get(); a
-            # non-object row is malformed provider data, not a raw AttributeError.
-            # (Mirrors the ratios path guard.)
-            if not isinstance(row, dict):
-                raise InvalidData(
-                    f"{self.name}: statement row is not an object, got {type(row).__name__}"
-                )
+            # Issue #141: a statement row must be an object before any field access.
+            row = require_object(row, row_ctx)
             fd = row.get("fiscalDate")
             if not fd:
                 raise InvalidData(f"{self.name}: row missing fiscalDate")
             # Skip rows that contradict the requested contract (wrong reportType
             # or modelType). These are provider-side mislabels, not fatal errors.
-            row_report = str(row.get("reportType") or "").strip().upper()
-            if row_report and row_report != period.value:
-                skipped_rows += 1
-                continue
+            # Issue #44: reportType is cadence identity — key-presence is the
+            # trigger. A PRESENT malformed/falsey/non-string value fails closed; a
+            # present valid tag naming a different cadence is skipped; a missing key
+            # keeps the legacy no-cadence behavior.
+            rt = optional_present(row, "reportType")
+            if rt is not MISSING:
+                row_report = require_non_empty_str(
+                    rt, f"{self.name} statement reportType", canonical=False
+                ).upper()
+                if row_report != period.value:
+                    skipped_rows += 1
+                    continue
             row_model = _parse_model_type(row.get("modelType"))  # Issue #121: strict
             if row_model is not None and row_model != model_type:
                 skipped_rows += 1
@@ -376,11 +389,9 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         seen: dict[str, set] = {}
         skipped_rows = 0
         code_mismatches = 0  # Issue #21: ratio rows dropped for a wrong provider `code`
+        ratio_ctx = f"{self.name} ratio row"
         for row in rows:
-            if not isinstance(row, dict):
-                raise InvalidData(
-                    f"{self.name}: ratio row is not an object, got {type(row).__name__}"
-                )
+            row = require_object(row, ratio_ctx)
             rd = row.get("reportDate")
             if not rd:
                 raise InvalidData(f"{self.name}: ratio row missing reportDate")
@@ -397,12 +408,16 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
                     skipped_rows += 1
                     code_mismatches += 1
                     continue
-            # Issue #62: ratioCode and itemName must be strings; non-string values
-            # leak raw TypeError/AttributeError and must be caught here.
-            ratio_code = row.get("ratioCode")
-            if not isinstance(ratio_code, str) or not ratio_code.strip():
-                raise InvalidData(f"{self.name}: ratio row missing or malformed ratioCode")
-            ratio_code = ratio_code.strip()
+            # Issue #62 + #26: ratioCode is a public alpha line-item key (EPS, PE,
+            # ROE, ...), so it must be a canonical provider key string — numbers
+            # (incl. int/float) and non-string/blank/padded/punctuated values are
+            # malformed, not whatever str(raw) yields.
+            ratio_code = canonical_provider_key(
+                require_present(row, "ratioCode", f"{self.name} ratioCode"),
+                f"{self.name} ratioCode",
+                allow_int=False,
+                allow_integral_float=False,
+            )
             raw_name = row.get("itemName")
             if raw_name is not None and not isinstance(raw_name, str):
                 raise InvalidData(f"{self.name}: ratio row malformed itemName")
@@ -412,15 +427,10 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
                 buckets[rd] = []
                 seen[rd] = set()
                 order.append(rd)
-            # Issue #26 (reopen): a duplicate ratioCode within one reportDate is an
-            # ambiguous/conflicting observation key (downstream report.get() would
-            # be non-deterministic), not data to silently keep-first. Reject it, as
-            # the statement path already rejects a duplicate itemCode.
-            if ratio_code in seen[rd]:
-                raise InvalidData(
-                    f"{self.name}: duplicate ratioCode {ratio_code} for {rd}"
-                )
-            seen[rd].add(ratio_code)
+            # Issue #26: a duplicate ratioCode within one reportDate is an
+            # ambiguous/conflicting key; reject atomically (as statements reject a
+            # duplicate itemCode).
+            reject_duplicate(ratio_code, seen[rd], f"{self.name} ratioCode for {rd}")
             # EPS/BV are per-share monetary values; everything else is dimensionless.
             if ratio_code in {"EPS", "BV"}:
                 unit = "vnd_per_share"
@@ -494,16 +504,12 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
 
     @staticmethod
     def _item_code_str(raw) -> str:
-        if raw is None:
-            raise InvalidData("vndirect: row missing itemCode")
-        try:
-            f = float(raw)
-        except (TypeError, ValueError):
-            return str(raw)
-        # itemCode comes as a float (e.g. 11000.0) -> stable integer string
-        if math.isfinite(f) and f == int(f):
-            return str(int(f))
-        return str(raw)
+        # Issue #26: itemCode is a public line-item key (FinancialReport.get(),
+        # joins, dedup), so it must be a canonical provider key — not whatever
+        # str(raw) produces. VNDirect sends an integral float (e.g. 11000.0) which
+        # canonicalizes to "11000"; bool/container/None/fractional/non-canonical
+        # strings fail closed.
+        return canonical_provider_key(raw, "vndirect itemCode")
 
     @staticmethod
     def _num(raw) -> float:

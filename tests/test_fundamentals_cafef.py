@@ -1026,3 +1026,59 @@ def test_cafef_statement_and_ratio_line_units_are_allowed():
     )
     for li in ratio_reports[0].items:
         assert li.value_unit in allowed
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2 contract migration — fundamentals provider-shape matrices
+# (#45 ReportType, #21 Symbol top/Data, #26 Code) via vnfin._contracts.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("bad_rt", [None, [], {}, False, True, 123, "", "   "], ids=["null", "list", "dict", "false", "true", "int", "blank", "ws"])
+def test_cafef_statement_present_malformed_reporttype_rejected(bad_rt):
+    # #45: a PRESENT malformed/falsey/non-string ReportType fails closed.
+    p = _period("2025", 2025, 0, [("DTTBHCCDV", "x", 1)], report_type=bad_rt)
+    with pytest.raises(InvalidData):
+        _src(_envelope([p])).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+@pytest.mark.parametrize("bad_rt", [None, [], {}, False, 123], ids=["null", "list", "dict", "false", "int"])
+def test_cafef_ratio_present_malformed_reporttype_rejected(bad_rt):
+    # #45 ratio path: present malformed ReportType fails closed (period-agnostic,
+    # so no cadence skip, but malformed shape still rejected).
+    p = _period("2025", 2025, 0, [("EPS", "EPS", 1.0)], report_type=bad_rt)
+    with pytest.raises(InvalidData):
+        _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+
+
+@pytest.mark.parametrize("loc", ["top", "data"])
+@pytest.mark.parametrize("bad", [None, "", "   ", [], {}, 123, True, "OTHER"], ids=["null", "blank", "ws", "list", "dict", "int", "bool", "mismatch"])
+def test_cafef_present_malformed_or_mismatched_symbol_rejected(loc, bad):
+    # #21: present Symbol (top-level OR Data) malformed/null/blank/mismatch rejected.
+    payload = json.loads(corp_income_two_years())
+    if loc == "top":
+        payload["Symbol"] = bad
+    else:
+        payload["Data"]["Symbol"] = bad
+    with pytest.raises(InvalidData):
+        _src(json.dumps(payload)).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+def test_cafef_valid_top_symbol_does_not_mask_contradictory_data_symbol():
+    # #21 (masking note): a valid top-level Symbol must NOT cause the contradictory
+    # Data.Symbol to be skipped.
+    payload = json.loads(corp_income_two_years())
+    payload["Symbol"] = "TESTCO"
+    payload["Data"]["Symbol"] = "OTHER"
+    with pytest.raises(InvalidData, match="does not match"):
+        _src(json.dumps(payload)).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+@pytest.mark.parametrize(
+    "bad_code",
+    [None, "", "   ", 123.4, [11000], {}, True, "11000.5", "A B", "+11000", "011000", "A.B"],
+    ids=["null", "blank", "ws", "frac", "list", "dict", "bool", "decimal", "space", "signed", "leadzero", "dot"],
+)
+def test_cafef_statement_malformed_code_rejected(bad_code):
+    # #26: Code must be a canonical provider key.
+    p = _period("2025", 2025, 0, [(bad_code, "x", 1)])
+    with pytest.raises(InvalidData):
+        _src(_envelope([p])).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)

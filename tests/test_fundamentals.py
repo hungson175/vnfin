@@ -1070,7 +1070,7 @@ def test_vndirect_ratio_rejects_duplicate_ratiocode_within_date():
         _ratio_row("TESTCO", "PE", 10.0, "2025-12-31", "PE"),
         _ratio_row("TESTCO", "PE", 11.0, "2025-12-31", "PE"),  # duplicate ratioCode same date
     ]
-    with pytest.raises(InvalidData, match="duplicate ratioCode"):
+    with pytest.raises(InvalidData, match="duplicate"):
         _src(_stmt_envelope(rows)).get_financials(
             "TESTCO", StatementType.RATIOS, Period.ANNUAL
         )
@@ -1091,7 +1091,44 @@ def test_vndirect_ratio_distinct_codes_within_date_accepted():
 # (mirrors the ratios-path guard), not leak a raw AttributeError.
 @pytest.mark.parametrize("bad_row", ["a string", 123, None, [1, 2], 4.5], ids=["str", "int", "none", "list", "float"])
 def test_vndirect_statement_non_object_row_raises_invalid(bad_row):
-    with pytest.raises(InvalidData, match="statement row is not an object"):
+    with pytest.raises(InvalidData, match="expected an object"):
         _src(_stmt_envelope([bad_row])).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2 contract migration — VNDirect provider-shape matrices
+# (#44 reportType, #26 itemCode) via vnfin._contracts.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("bad_rt", [None, [], {}, False, True, 123, "", "   "], ids=["null", "list", "dict", "false", "true", "int", "blank", "ws"])
+def test_vndirect_statement_present_malformed_reporttype_rejected(bad_rt):
+    # #44: a PRESENT malformed/falsey/non-string reportType fails closed (a missing
+    # key keeps legacy behavior; a present valid-but-different cadence is skipped).
+    row = _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", bad_rt, 1)
+    with pytest.raises(InvalidData):
+        _src(_stmt_envelope([row])).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+@pytest.mark.parametrize(
+    "bad_ic",
+    [True, [11000], {}, None, 11000.5, "11000.5", "+11000", "011000", " 11000 ", "A B"],
+    ids=["bool", "list", "dict", "null", "frac", "decimal", "signed", "leadzero", "ws", "space"],
+)
+def test_vndirect_statement_malformed_itemcode_rejected(bad_ic):
+    # #26: itemCode must be a canonical provider key (built inline because _stmt_row
+    # float-coerces itemCode).
+    row = {
+        "code": "TESTCO",
+        "itemCode": bad_ic,
+        "reportType": "ANNUAL",
+        "modelType": 1.0,
+        "numericValue": 1.0,
+        "fiscalDate": "2025-12-31",
+    }
+    with pytest.raises(InvalidData):
+        _src(_stmt_envelope([row])).get_financials(
             "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
         )
