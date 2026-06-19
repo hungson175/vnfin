@@ -7,6 +7,16 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Macro frequency metadata guard** — the macro failover result guard now requires
+  ``IndicatorSeries.frequency`` to be a :class:`~vnfin.macro.Frequency` enum (a plain string,
+  bool, int, container, or ``None`` is rejected) and the point dates to be consistent with it
+  (annual → Jan 1; quarterly → Jan/Apr/Jul/Oct day 1; monthly → day 1; daily → unconstrained).
+  ([#132](https://github.com/hungson175/vnfin/issues/132))
+- **Macro projection metadata guard** — the macro failover result guard now requires
+  ``IndicatorSeries.projection_from_year`` to be ``None`` or a real non-bool integer year that
+  falls within the returned series span (``first_year <= year <= last_year``); booleans,
+  non-integers, and impossible out-of-span years are rejected.
+  ([#131](https://github.com/hungson175/vnfin/issues/131))
 - **Crypto quote-metadata consistency guard** — the crypto failover result guard now rejects a
   result whose returned quote metadata is malformed or internally contradictory: in a USD chain
   ``quote_asset`` must be a recognized USD-equivalent quote (and a non-empty canonical string),

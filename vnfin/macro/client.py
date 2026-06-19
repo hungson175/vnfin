@@ -41,6 +41,7 @@ from ..validation import validate_country_iso3
 from .dbnomics import DBnomicsSource
 from .imf import IMFDataMapperSource
 from .indicators import (
+    Frequency,
     MacroIndicator,
     canonical_currency,
     canonical_indicator_code,
@@ -278,6 +279,52 @@ class MacroClient:
                         f"{d} <= {prev_date} from source {series.source!r}"
                     )
                 prev_date = d
+
+            # Issue #132: frequency must be a Frequency enum and the point dates
+            # must be consistent with it (annual -> Jan 1; quarterly -> Jan/Apr/
+            # Jul/Oct day 1; monthly -> day 1; daily -> no constraint). A plain
+            # string like "annual" or a mismatched cadence is rejected.
+            freq = series.frequency
+            if not isinstance(freq, Frequency):
+                return (
+                    f"malformed frequency {freq!r} from source {series.source!r}: "
+                    "expected a Frequency enum"
+                )
+            for d, _v in series.points:
+                if freq is Frequency.ANNUAL and not (d.month == 1 and d.day == 1):
+                    return (
+                        f"point {d} inconsistent with annual frequency "
+                        f"(expected Jan 1) from source {series.source!r}"
+                    )
+                if freq is Frequency.QUARTERLY and not (d.month in (1, 4, 7, 10) and d.day == 1):
+                    return (
+                        f"point {d} inconsistent with quarterly frequency "
+                        f"(expected Jan/Apr/Jul/Oct day 1) from source {series.source!r}"
+                    )
+                if freq is Frequency.MONTHLY and d.day != 1:
+                    return (
+                        f"point {d} inconsistent with monthly frequency "
+                        f"(expected day 1) from source {series.source!r}"
+                    )
+
+            # Issue #131: projection_from_year must be None or a real non-bool int
+            # year within the returned series span (the projection boundary cannot
+            # fall before the first or after the last observation). ==first_year is
+            # allowed as the projection-only edge.
+            pfy = series.projection_from_year
+            if pfy is not None:
+                if isinstance(pfy, bool) or not isinstance(pfy, int):
+                    return (
+                        f"malformed projection_from_year {pfy!r} from source "
+                        f"{series.source!r}: expected None or an integer year"
+                    )
+                first_year = series.points[0][0].year
+                last_year = series.points[-1][0].year
+                if not (first_year <= pfy <= last_year):
+                    return (
+                        f"projection_from_year {pfy} out of series span "
+                        f"[{first_year}, {last_year}] from source {series.source!r}"
+                    )
 
             # Issue #96: every point value must be finite (no NaN/inf).
             for d, v in series.points:

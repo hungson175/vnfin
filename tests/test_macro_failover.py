@@ -732,3 +732,94 @@ def test_rejects_malformed_macro_warnings(bad_warnings):
     with pytest.raises(AllSourcesFailed) as ei:
         get_indicator("ZZZ", MacroIndicator.GDP, sources=[_WarnMacroSource("bad", bad_warnings)])
     assert "warnings" in ei.value.attempts[0].reason
+
+
+# --------------------------------------------------------------------------- #
+# Issue #132 — frequency must be a Frequency enum + point dates consistent.
+# Issue #131 — projection_from_year None or int year within the series span.
+# --------------------------------------------------------------------------- #
+from vnfin.macro.indicators import Frequency  # noqa: E402
+
+
+class _MetaMacroSource:
+    """Returns a valid GDP series with caller-set frequency/points/projection."""
+
+    def __init__(self, name, *, points=((date(2023, 1, 1), 42.0),), frequency=Frequency.ANNUAL, projection_from_year=None):
+        self.name = name
+        self._points = points
+        self._frequency = frequency
+        self._pfy = projection_from_year
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return IndicatorSeries(
+            country=country_iso3.upper(),
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=tuple(self._points),
+            source=self.name,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            frequency=self._frequency,
+            projection_from_year=self._pfy,
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+@pytest.mark.parametrize("bad_freq", ["annual", True, 1, None, []], ids=["str", "bool", "int", "none", "list"])
+def test_rejects_malformed_macro_frequency(bad_freq):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_MetaMacroSource("bad", frequency=bad_freq)])
+    assert "malformed frequency" in ei.value.attempts[0].reason
+
+
+@pytest.mark.parametrize(
+    "freq,bad_point",
+    [
+        (Frequency.ANNUAL, date(2023, 6, 15)),
+        (Frequency.QUARTERLY, date(2023, 2, 1)),
+        (Frequency.MONTHLY, date(2023, 1, 15)),
+    ],
+    ids=["annual_not_jan1", "quarterly_bad_month", "monthly_not_day1"],
+)
+def test_rejects_frequency_date_inconsistency(freq, bad_point):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_MetaMacroSource("bad", points=((bad_point, 42.0),), frequency=freq)])
+    assert "inconsistent with" in ei.value.attempts[0].reason
+
+
+@pytest.mark.parametrize(
+    "freq,point",
+    [
+        (Frequency.ANNUAL, date(2023, 1, 1)),
+        (Frequency.QUARTERLY, date(2023, 4, 1)),
+        (Frequency.MONTHLY, date(2023, 3, 1)),
+        (Frequency.DAILY, date(2023, 3, 17)),
+    ],
+    ids=["annual", "quarterly", "monthly", "daily_any"],
+)
+def test_accepts_consistent_frequency_dates(freq, point):
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_MetaMacroSource("ok", points=((point, 42.0),), frequency=freq)])
+    assert res.source == "ok"
+
+
+_SPAN = ((date(2020, 1, 1), 1.0), (date(2021, 1, 1), 2.0), (date(2022, 1, 1), 3.0))
+
+
+@pytest.mark.parametrize("bad_pfy", [True, 1.5, "2021", [], 2019, 2023], ids=["bool", "float", "str", "list", "before_first", "after_last"])
+def test_rejects_malformed_or_out_of_span_projection_year(bad_pfy):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_MetaMacroSource("bad", points=_SPAN, projection_from_year=bad_pfy)])
+    assert "projection_from_year" in ei.value.attempts[0].reason
+
+
+@pytest.mark.parametrize("pfy", [None, 2020, 2021, 2022], ids=["none", "eq_first", "mid", "eq_last"])
+def test_accepts_valid_projection_year(pfy):
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_MetaMacroSource("ok", points=_SPAN, projection_from_year=pfy)])
+    assert res.source == "ok"
