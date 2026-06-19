@@ -16,10 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#44 + #21 batch (REOPENED 16:40)** — IMPLEMENTED + committed (NOT pushed): #44 `d4ae617`
-  (VNDirect all reportType/modelType-skip → InvalidData; mixed→valid+warning); #21 `3e470b6`
-  (WorldBank observation indicator.id guard; UDF present blank/null symbol guard). +14 TDD cases,
-  suite 2060 green. **Awaiting reviewer review → push → re-close.**
+- **#66 + #26 batch (REOPENED 16:55)** — IMPLEMENTED + committed (NOT pushed): #66 `266d7c0`
+  (WorldBank seen-date guard); #26 `d238e68` (VNDirect ratios reject duplicate ratioCode).
+  +4 TDD cases, suite 2077 green. **Awaiting reviewer review → push → re-close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -27,13 +26,6 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- **Next batch (REOPENED 16:55) — after current #44/#21 review lands** (do NOT touch HEAD while
-  reviewer is mid-review of d4ae617/3e470b6):
-  - **#21 add-on** — VNDirect `row.get("code") or ""` lets a PRESENT falsey/non-string code
-    bypass the identity check (treated as no-code). A present `code` must be a valid string.
-  - **#66** — WorldBank lacks a seen-guard for duplicate annual observation dates.
-  - **#26** — VNDirect ratios silently keep first on a duplicate `ratioCode` within one
-    reportDate (should reject the duplicate, like statements do).
 - **#140 — "financial news" FEATURE request** (enhancement label). NOT a bug → Boss/product-scope
   decision; parked (reviewer agrees, like #137). Not implementing autonomously.
 
@@ -53,6 +45,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#44 + #21 batch (reopen) — COMPLETE, pushed `6a73dac..7915596`, closed.** #44 `d4ae617`
+  (VNDirect all reportType/modelType-skip → InvalidData); #21 `3e470b6`+`7915596` (WB
+  indicator.id; UDF present blank/null symbol; VNDirect present falsey/non-str code add-on).
+  APPROVE_WITH_NOTES. Suite 2073 green.
 - **#78 (reopen) — COMPLETE, pushed `1d8c780..6a73dac`, closed.** `cfd2282` — macro
   returned-indicator identity: `indicator_identity` on WB/IMF/DBnomics + `_fetch` validation
   (declared exact / undeclared→canonical). APPROVE_WITH_NOTES. Suite 2046 green.
