@@ -785,3 +785,25 @@ def test_malformed_report_metadata_falls_over_to_backup():
     client = FailoverFundamentalClient([primary, backup])
     reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
     assert reports[0].source == "cafef"
+
+
+# Issue #142 — the failover client canonicalizes the caller symbol so a lowercase/
+# padded symbol matches the normalized (uppercase) reports a direct source stamps,
+# and a malformed symbol fails closed before any source call.
+@pytest.mark.parametrize("sym", ["testco", "  testco  ", "TestCo", "TESTCO"])
+def test_fundamentals_lowercase_padded_symbol_matches_normalized_reports(sym):
+    primary = FakeSource("p", result=(_report("TESTCO", "p", 1.0),))
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials(sym, StatementType.INCOME, Period.ANNUAL)
+    assert reports and reports[0].symbol == "TESTCO"
+    assert primary.calls == 1
+
+
+@pytest.mark.parametrize("bad", ["TE ST", "TE/ST", "TE\nST", "FAKE$", "1ABC", b"TESTCO", "", "   "])
+def test_fundamentals_malformed_symbol_fails_closed_zero_call(bad):
+    from vnfin.exceptions import InvalidData
+    primary = FakeSource("p", result=(_report("TESTCO", "p", 1.0),))
+    client = FailoverFundamentalClient([primary])
+    with pytest.raises(InvalidData):
+        client.get_financials(bad, StatementType.INCOME, Period.ANNUAL)
+    assert primary.calls == 0

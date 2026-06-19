@@ -17,7 +17,7 @@ import math
 from datetime import date, datetime
 from numbers import Real
 
-from .._contracts import result_type_reason
+from .._contracts import canonical_security_symbol, result_type_reason
 from ..exceptions import AllSourcesFailed, InvalidData, VnfinError
 from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..validation import validate_non_empty_string, validate_positive_int
@@ -127,8 +127,12 @@ class FailoverFundamentalClient:
         ``statement`` and ``period`` accept either the enum or its string value,
         matching the top-level :func:`get_financials` convenience API.
         """
-        # Issue #79: validate caller inputs before any source call.
-        symbol = validate_non_empty_string(symbol, "symbol")
+        # Issue #79 + #142: the caller symbol is a canonical security identifier —
+        # normalize (strip().upper()) and validate its shape before any source call,
+        # so a lowercase/padded 'testco' matches the normalized reports the direct
+        # sources stamp ('TESTCO') instead of being rejected as a symbol mismatch,
+        # and a malformed symbol fails closed zero-call (consistent with price/index).
+        symbol = canonical_security_symbol(symbol, "symbol")
         st = _coerce_statement(statement)
         pd = _coerce_period(period)
         # AUTO (None) is forwarded to sources for auto-detection; only explicit
