@@ -611,3 +611,33 @@ def test_malformed_crypto_container_failsover_to_backup():
     out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
     # The malformed primary must be rejected (not raise raw) and the backup used.
     assert out.source == "good"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #124 — CryptoBar.time must be a timezone-AWARE datetime (tz-aware UTC).
+# Naive datetimes / non-datetime keys are rejected before sort/window logic.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad_time",
+    [
+        datetime(2024, 1, 2),  # naive
+        date(2024, 1, 2),      # date, not datetime
+        "2024-01-02",          # string
+        None,
+        1704153600,            # epoch int
+    ],
+    ids=["naive_datetime", "date", "str", "none", "int"],
+)
+def test_rejects_malformed_crypto_bar_time(bad_time):
+    bad = _crypto_history(bars=(CryptoBar(bad_time, 1, 1, 1, 1, 1),))
+    _assert_rejected_reason(bad, "malformed bar time")
+
+
+def test_malformed_crypto_bar_time_failsover_to_backup():
+    bad = _crypto_history(bars=(CryptoBar(datetime(2024, 1, 2), 1, 1, 1, 1, 1),))
+    good = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="good"
+    )
+    client = FailoverCryptoClient([_RawCryptoSource(bad), _RawCryptoSource(good)])
+    out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert out.source == "good"

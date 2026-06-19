@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime
 
 from .calendar import as_date, expected_latest_trading_day
 from .exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
@@ -234,6 +234,16 @@ def _validate_price_result(
             f"adjustment_policy mismatch: returned {hist.adjustment_policy!r} "
             f"!= chain policy {chain_policy!r}"
         )
+
+    # Issue #124: each bar key must be a timezone-AWARE datetime (the documented
+    # PriceBar.time contract). A naive datetime or a non-datetime key is rejected
+    # here, before the ascending-order compare and the window-coverage .date()
+    # call, so a malformed key is a recorded rejected attempt rather than a raw
+    # TypeError/AttributeError. ``utcoffset()`` is the robust aware check.
+    for bar in hist.bars:
+        t = bar.time
+        if not isinstance(t, datetime) or t.utcoffset() is None:
+            return f"malformed bar time {t!r}: expected a timezone-aware datetime"
 
     # Sorting (#85).
     for i in range(len(hist.bars) - 1):

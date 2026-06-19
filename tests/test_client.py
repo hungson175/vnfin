@@ -586,3 +586,36 @@ def test_all_malformed_containers_raise_clean_failure():
     with pytest.raises(AllSourcesFailed) as ei:
         client.get_daily("FPT", *WIDE)
     assert all("unexpected result type" in a.reason for a in ei.value.attempts)
+
+
+# --------------------------------------------------------------------------- #
+# Issue #124 — PriceBar.time must be a timezone-AWARE datetime. Naive datetimes
+# and non-datetime keys must be rejected before sort/window logic, never leak a
+# raw TypeError/AttributeError.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad_time",
+    [
+        datetime(2024, 1, 2),  # naive
+        date(2024, 1, 2),      # date, not datetime
+        "2024-01-02",          # string
+        None,
+        1704153600,            # epoch int
+    ],
+    ids=["naive_datetime", "date", "str", "none", "int"],
+)
+def test_rejects_malformed_price_bar_time(bad_time):
+    bad = _history_with_bars("bad", "FPT", (PriceBar(bad_time, 10, 11, 9, 10.5, 1000),))
+    client = FailoverPriceClient([RawFakeSource("bad", bad)])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_daily("FPT", *WIDE)
+    assert "malformed bar time" in ei.value.attempts[0].reason
+
+
+def test_malformed_price_bar_time_failsover_to_backup(synth):
+    bad = _history_with_bars("bad", "FPT", (PriceBar(datetime(2024, 1, 2), 10, 11, 9, 10.5, 1000),))
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("bad", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert "malformed bar time" in h.attempts[0].reason

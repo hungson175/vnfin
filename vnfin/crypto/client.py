@@ -26,7 +26,7 @@ that source is skipped by the capability guard without a network call.
 from __future__ import annotations
 
 import math
-from datetime import date
+from datetime import date, datetime
 
 from .binance import BinanceCryptoSource, _KNOWN_QUOTES as _BINANCE_QUOTES
 from .coinbase import CoinbaseCryptoSource, _KNOWN_QUOTES as _COINBASE_QUOTES
@@ -200,6 +200,15 @@ def _validate_crypto_result(
                 return f"missing unit: result {field} is missing or empty"
             if actual != chain_unit:
                 return f"unit mismatch: result {field} {actual!r} != chain unit {chain_unit!r}"
+
+    # Issue #124: each bar key must be a timezone-AWARE datetime (the documented
+    # CryptoBar.time contract — candle open time, tz-aware UTC). A naive datetime
+    # or non-datetime key is rejected before the ascending-order compare and the
+    # window .date() call, so a malformed key is a recorded rejected attempt.
+    for bar in hist.bars:
+        t = bar.time
+        if not isinstance(t, datetime) or t.utcoffset() is None:
+            return f"malformed bar time {t!r}: expected a timezone-aware datetime"
 
     # Sorting (#85).
     for i in range(len(hist.bars) - 1):

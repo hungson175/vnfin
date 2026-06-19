@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Failover bar time-key type guard** — the price, crypto, and gold failover result guards now
+  validate each bar's time key before the ascending-order compare and window/coverage logic.
+  ``PriceBar.time`` and ``CryptoBar.time`` must be timezone-aware ``datetime`` values (naive
+  datetimes and non-datetime keys are rejected); ``GoldBar.date`` must be a plain ``datetime.date``
+  (``datetime`` keys are rejected since they subclass ``date``). A malformed key is recorded as a
+  rejected source attempt instead of leaking a raw ``TypeError``/``AttributeError``.
+  ([#124](https://github.com/hungson175/vnfin/issues/124))
 - **Macro point-key type guard** — the macro failover result guard now rejects an
   ``IndicatorSeries`` whose ``points`` keys are not plain ``datetime.date`` values. ``datetime``
   keys (which subclass ``date`` but carry intraday/timezone meaning), as well as ``str`` /

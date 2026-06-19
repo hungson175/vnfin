@@ -233,6 +233,17 @@ def _validate_gold_result(hist, chain_unit: str | None) -> str | None:
     if hist.currency != "USD":
         return f"currency mismatch: returned {hist.currency!r} != 'USD'"
 
+    # Issue #124: each bar key must be a plain calendar ``date`` (the documented
+    # GoldBar.date contract — daily history, no intraday meaning). ``datetime`` is
+    # rejected explicitly because it subclasses ``date`` but carries intraday/tz
+    # meaning; non-date keys are rejected outright. Done before the ascending
+    # compare and before _coverage()'s ``b.date`` arithmetic so a malformed key is
+    # a recorded rejected attempt, not a raw TypeError.
+    for bar in hist.bars:
+        d = bar.date
+        if not isinstance(d, date) or isinstance(d, datetime):
+            return f"malformed bar date {d!r}: expected a plain datetime.date"
+
     # Sorting (#85).
     for i in range(len(hist.bars) - 1):
         if not (hist.bars[i].date < hist.bars[i + 1].date):

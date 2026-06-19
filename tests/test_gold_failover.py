@@ -622,3 +622,32 @@ def test_malformed_gold_container_failsover_to_backup():
     assert out.source == "good"
     assert out.attempts[0].ok is False
     assert "unexpected result type" in out.attempts[0].reason
+
+
+# --------------------------------------------------------------------------- #
+# Issue #124 — GoldBar.date must be a plain calendar date (daily history). A
+# datetime key (subclass of date, intraday/tz meaning) or non-date key is
+# rejected before the ascending compare and _coverage() arithmetic.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad_date",
+    [
+        datetime(2024, 1, 2),                          # datetime, not plain date
+        datetime(2024, 1, 2, tzinfo=timezone.utc),     # aware datetime
+        "2024-01-02",                                  # string
+        None,
+        20240102,                                      # int
+    ],
+    ids=["datetime", "aware_datetime", "str", "none", "int"],
+)
+def test_rejects_malformed_gold_bar_date(bad_date):
+    bad = _gold_history(bars=(GoldBar(bad_date, 2000.0),))
+    _assert_gold_rejected(bad, "malformed bar date")
+
+
+def test_malformed_gold_bar_date_failsover_to_backup():
+    bad = _gold_history(bars=(GoldBar(datetime(2024, 1, 2), 2000.0),))
+    good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="good")
+    client = FailoverGoldClient([_RawGoldSource(bad), _RawGoldSource(good)], min_coverage=0.0)
+    out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
+    assert out.source == "good"
