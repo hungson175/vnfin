@@ -216,6 +216,42 @@ def test_btmc_normalizes_weighted_gold_to_per_luong():
         assert q.sell == pytest.approx(200_000_000.0)
 
 
+def test_btmc_weight_token_strictness():
+    # Issue #116: when a product name carries an explicit recognized weight unit, the quantity
+    # must be a clean positive token. Malformed signed/partial/zero/leading-zero quantities must
+    # raise InvalidData instead of substring-matching (".5 LUONG" -> "5 LUONG") or silently
+    # falling back to the per-chi default, which would mis-scale the price.
+    def _row(name):
+        return [(name, "24k", "10000000", "20000000", "4322", "17/06/2026 15:38")]
+
+    def _buy(name):
+        return BTMCGoldSource(
+            http_get=_static_get(_btmc_json(rows=_row(name)))
+        ).get_quotes()[0].buy
+
+    _PER_GRAM = 1000.0 / 37.5  # 1000 GRAM = 1 KG in luong
+
+    # No recognized weight unit -> per-chi default; "VANG" must NOT trigger the bare 'g' unit.
+    assert _buy("VANG TESTCO") == pytest.approx(100_000_000.0)              # /0.1 luong
+    # Canonical positive weights scaled to per-luong.
+    assert _buy("VANG TESTCO 5 LUONG") == pytest.approx(10_000_000.0 / 5.0)
+    assert _buy("VANG TESTCO 1 KG") == pytest.approx(10_000_000.0 / _PER_GRAM)
+    assert _buy("VANG TESTCO 1000 GRAM") == pytest.approx(10_000_000.0 / _PER_GRAM)
+    assert _buy("VANG TESTCO 1000 G") == pytest.approx(10_000_000.0 / _PER_GRAM)
+    assert _buy("VANG TESTCO 1 CHI") == pytest.approx(100_000_000.0)        # 1 chi = 0.1 luong
+    assert _buy("VANG TESTCO 0.5 LUONG") == pytest.approx(10_000_000.0 / 0.5)  # fractional ok
+
+    for bad in (
+        "VANG TESTCO 0 LUONG", "VANG TESTCO 0 KG", "VANG TESTCO 0 GRAM", "VANG TESTCO 0 CHI",
+        "VANG TESTCO 0 G",
+        "VANG TESTCO 00 LUONG", "VANG TESTCO 05 LUONG",   # leading-zero integer
+        "VANG TESTCO -5 LUONG", "VANG TESTCO .5 LUONG",   # signed / partial decimal
+        "VANG TESTCO -5 G", "VANG TESTCO .5 G",
+    ):
+        with pytest.raises(InvalidData):
+            _buy(bad)
+
+
 def test_btmc_parses_dd_mm_yyyy_timestamp_as_vn_tz():
     s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
     q = next(q for q in s.get_quotes() if "TESTCO" in q.product)

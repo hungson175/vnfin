@@ -65,15 +65,25 @@ def _strip_accents(text: str) -> str:
 # Silver markers (BẠC = silver). Any product whose name contains one is excluded.
 _SILVER_MARKERS = ("bac",)
 
+# Issue #116: a clean positive quantity token. No leading sign/dot/glued digit (left lookbehind),
+# and the number is a non-leading-zero integer, a non-leading-zero decimal, or a 0.x fraction —
+# so "-5", ".5", "0", "00", "05" are rejected while "5", "1000", "1.5", "0.5" are accepted.
+_QTY = r"(?<![\d.,+\-])([1-9]\d*(?:[.,]\d+)?|0[.,]\d+)"
+
 # Weight tokens -> conversion factor to LƯỢNG. Order longest-first so "luong" wins
 # before a bare unit and "gram"/"kg" are matched as whole words.
 _WEIGHT_PATTERNS = (
-    (re.compile(r"(\d+(?:[.,]\d+)?)\s*kg\b"), lambda n: n * 1000.0 / _GRAMS_PER_LUONG),
-    (re.compile(r"(\d+(?:[.,]\d+)?)\s*gram\b"), lambda n: n / _GRAMS_PER_LUONG),
-    (re.compile(r"(\d+(?:[.,]\d+)?)\s*g\b"), lambda n: n / _GRAMS_PER_LUONG),
-    (re.compile(r"(\d+(?:[.,]\d+)?)\s*luong\b"), lambda n: n),
-    (re.compile(r"(\d+(?:[.,]\d+)?)\s*chi\b"), lambda n: n / _CHI_PER_LUONG),
+    (re.compile(_QTY + r"\s*kg\b"), lambda n: n * 1000.0 / _GRAMS_PER_LUONG),
+    (re.compile(_QTY + r"\s*gram\b"), lambda n: n / _GRAMS_PER_LUONG),
+    (re.compile(_QTY + r"\s*g\b"), lambda n: n / _GRAMS_PER_LUONG),
+    (re.compile(_QTY + r"\s*luong\b"), lambda n: n),
+    (re.compile(_QTY + r"\s*chi\b"), lambda n: n / _CHI_PER_LUONG),
 )
+
+# A recognized weight UNIT keyword present (whole word) means the name declares a weight, so a
+# malformed quantity must raise rather than silently fall back to the per-chi default. "vang"
+# does not match \bg\b (no boundary before the trailing g), so plain names stay per-chi.
+_WEIGHT_UNIT_RE = re.compile(r"\b(?:kg|gram|g|luong|chi)\b")
 
 
 def _is_silver(name: str) -> bool:
@@ -97,6 +107,11 @@ def _weight_in_luong(name: str) -> float:
             luong = to_luong(qty)
             if luong > 0:
                 return luong
+    # Issue #116: no clean positive weight matched. If the name nonetheless declares a recognized
+    # weight unit, the token is malformed (signed/partial/zero/leading-zero) and must surface
+    # instead of being mis-scaled as a default per-chi row.
+    if _WEIGHT_UNIT_RE.search(accent_free):
+        raise InvalidData(f"btmc: malformed weight token in {name!r}")
     # No explicit weight token -> a per-chỉ quote (1 chỉ).
     return 1.0 / _CHI_PER_LUONG
 
