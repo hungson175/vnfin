@@ -43,6 +43,9 @@ _TOPICS = frozenset(
 _SORTS = {"latest": "LATEST", "earliest": "EARLIEST", "relevance": "RELEVANCE"}
 # US equity ticker grammar (allows '.'/'-' e.g. BRK.B, BF-B); upper-normalized.
 _US_TICKER_RE = re.compile(r"[A-Z][A-Z0-9.\-]{0,15}")
+# Provider-returned ticker grammar: Alpha Vantage's ticker_sentiment uses the equity
+# form PLUS official CRYPTO:/FOREX: prefixes (e.g. CRYPTO:BTC, FOREX:USD).
+_PROVIDER_TICKER_RE = re.compile(r"(?:CRYPTO:|FOREX:)?[A-Z][A-Z0-9.\-]{0,15}")
 _MAX_TICKERS = 10
 _MAX_LIMIT = 100
 
@@ -82,9 +85,24 @@ class AlphaVantageNewsSource(HttpDataSource):
             raise InvalidData(
                 f"alpha_vantage: ticker must be a string, got {type(raw).__name__}"
             )
-        t = raw.strip().upper()
+        # strip only spaces (NOT \n/\t/control) so a control char is rejected by
+        # fullmatch rather than normalized away (B1).
+        t = raw.strip(" ").upper()
         if not _US_TICKER_RE.fullmatch(t):
             raise InvalidData(f"alpha_vantage: malformed ticker {raw!r}")
+        return t
+
+    @staticmethod
+    def _canon_provider_ticker(raw) -> str:
+        # Provider ticker_sentiment symbols include official CRYPTO:/FOREX: prefixes
+        # (B2). Same space-only strip so control chars fail closed.
+        if not isinstance(raw, str):
+            raise InvalidData(
+                f"alpha_vantage: provider ticker must be a string, got {type(raw).__name__}"
+            )
+        t = raw.strip(" ").upper()
+        if not _PROVIDER_TICKER_RE.fullmatch(t):
+            raise InvalidData(f"alpha_vantage: malformed provider ticker {raw!r}")
         return t
 
     def _validate_tickers(self, tickers):
@@ -106,16 +124,19 @@ class AlphaVantageNewsSource(HttpDataSource):
             raise InvalidData("alpha_vantage: topics must be a list/tuple of strings")
         out = []
         for t in topics:
-            if not isinstance(t, str) or t.strip().lower() not in _TOPICS:
+            # space-only strip so a control char (e.g. "finance\n") fails the
+            # allow-list check rather than being normalized into a valid topic (B1).
+            if not isinstance(t, str) or t.strip(" ").lower() not in _TOPICS:
                 raise InvalidData(f"alpha_vantage: unknown topic {t!r}")
-            out.append(t.strip().lower())
+            out.append(t.strip(" ").lower())
         return tuple(out) or None
 
     @staticmethod
     def _as_av_time(value, *, label, end: bool):
         """Map a date/datetime to provider ``YYYYMMDDTHHMMSS`` (day-window edges)."""
         if isinstance(value, datetime):
-            return value.strftime("%Y%m%dT%H%M%S")
+            # Alpha Vantage's documented format is YYYYMMDDTHHMM (no seconds) (B3).
+            return value.strftime("%Y%m%dT%H%M")
         if isinstance(value, date):
             return value.strftime("%Y%m%d") + ("T2359" if end else "T0000")
         raise InvalidData(f"alpha_vantage: {label} must be a date or datetime, got {value!r}")
@@ -266,7 +287,7 @@ class AlphaVantageNewsSource(HttpDataSource):
         for entry in raw:
             if not isinstance(entry, dict) or "ticker" not in entry:
                 raise InvalidData(f"{self.NAME}: malformed ticker_sentiment entry")
-            out.append(self._canon_ticker(entry["ticker"]))
+            out.append(self._canon_provider_ticker(entry["ticker"]))
         return tuple(out)
 
     @staticmethod

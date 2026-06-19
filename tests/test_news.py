@@ -155,3 +155,43 @@ def test_env_var_key_and_namespace(monkeypatch):
 def test_unknown_provider_rejected():
     with pytest.raises(ValueError):
         source("finnhub", api_key=_KEY)
+
+
+# B1 — control/newline must NOT be stripped into valid tickers/topics (zero network).
+@pytest.mark.parametrize("bad", ["AAPL\n", "AA\tPL", "AAPL\r", "AA PL", "\nAAPL"])
+def test_ticker_control_chars_fail_closed(bad):
+    with pytest.raises(InvalidData):
+        AlphaVantageNewsSource(api_key=_KEY, http_get=_no_network).search(tickers=(bad,))
+
+
+@pytest.mark.parametrize("bad", ["finance\n", "fin ance", "finance\t"])
+def test_topic_control_chars_fail_closed(bad):
+    with pytest.raises(InvalidData):
+        AlphaVantageNewsSource(api_key=_KEY, http_get=_no_network).search(topics=(bad,))
+
+
+# B2 — provider ticker_sentiment accepts official CRYPTO:/FOREX: forms.
+@pytest.mark.parametrize("prov,expected", [
+    ("CRYPTO:BTC", "CRYPTO:BTC"), ("FOREX:USD", "FOREX:USD"), ("AAPL", "AAPL"), ("brk.b", "BRK.B"),
+])
+def test_provider_ticker_sentiment_accepts_official_forms(prov, expected):
+    rows = [_row(ticker_sentiment=[{"ticker": prov}])]
+    res = search(tickers=("AAPL",), api_key=_KEY, http_get=lambda *a, **k: _feed(rows))
+    assert res.items[0].tickers == (expected,)
+
+
+@pytest.mark.parametrize("bad", ["BAD:BTC", "CRYPTO:bt c", "CRYPTO:BTC\n", "STOCK:AAPL"])
+def test_provider_ticker_sentiment_rejects_malformed(bad):
+    rows = [_row(ticker_sentiment=[{"ticker": bad}])]
+    with pytest.raises(InvalidData):
+        search(tickers=("AAPL",), api_key=_KEY, http_get=lambda *a, **k: _feed(rows))
+
+
+# B3 — datetime params emit documented YYYYMMDDTHHMM (no seconds).
+def test_datetime_params_emit_hhmm_no_seconds():
+    get = _capture()
+    search(tickers=("AAPL",), start=datetime(2025, 1, 1, 9, 30, 45),
+           end=datetime(2025, 1, 31, 16, 0, 5), api_key=_KEY, http_get=get)
+    p = get.calls[0]["params"]
+    assert p["time_from"] == "20250101T0930"  # HHMM, seconds dropped
+    assert p["time_to"] == "20250131T1600"
