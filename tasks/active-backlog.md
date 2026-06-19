@@ -16,11 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Gap fixes — 8 left** (open 43→8). Code-gaps: #21 WorldBank/DBnomics identity, #28 Vietcombank
-  currency codes, #66 crypto/stooq dup-key, #108 WorldBank/IMF strict year. Test-only gaps (guard
-  present, add regression test; red→reclassify as code): #26 CafeF dup, #49 FRED inverted-window,
-  #65 direct-source caller-input, #68 fmarket case-insensitive dup.
-  Done so far: #111, #119, #121, #120 shipped+closed.
+- **Gap fixes — 4 code-gaps left** (open 43→4): #21 WorldBank/DBnomics response identity,
+  #28 Vietcombank get_rates currency-code normalization, #66 crypto/stooq dup observation keys,
+  #108 WorldBank/IMF non-canonical year keys (+2024/02024). TDD red-first each.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -62,3 +60,6 @@ _All other backlog items verified-fixed and closed during the 2026-06-19 sweep (
 - **#119** CafeF Success bool — pushed `0b524a2`, closed. APPROVE.
 - **#121** VNDirect strict modelType — pushed `4e0c05f`+`d5b9e03`, closed. APPROVE (after whitespace BLOCK fix).
 - **#120** UDF fractional volume — pushed `ee710ac`, closed. APPROVE_WITH_NOTES. Open 12→8.
+- **#68** fmarket case-insensitive code dedup — pushed `ab706b2`, closed. APPROVE.
+- **#26, #49, #65** test-only gaps (guards already present) — regression tests added in `f2fb711`,
+  pushed, closed. APPROVE. Open 8→4.
