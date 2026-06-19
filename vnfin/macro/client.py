@@ -180,7 +180,7 @@ class MacroClient:
         return engine.run(country, ind)
 
     @staticmethod
-    def _reject_reason(series) -> str | None:
+    def _reject_reason(series, *args, **kwargs) -> str | None:
         if series is None or len(series.points) == 0:
             return "empty result"
         return None

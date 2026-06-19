@@ -165,6 +165,27 @@ def test_render_status_md_has_rows_and_no_secret():
     assert "down" in md.lower()
 
 
+def test_render_status_md_escapes_table_injection():
+    # Issue #89: pipe/newline characters in health fields must not forge extra rows.
+    forged = SourceHealth(
+        domain="prices|macro",
+        source="ssi\n| forged | source | probe | ok | yes | yes | yes | 1 | forged row |",
+        probe_id="prices/ssi/FPT",
+        status=HealthStatus.DOWN,
+        reachable=False,
+        schema_ok=None,
+        value_sane=None,
+        latency_ms=12.3,
+        checked_at_utc=_NOW,
+        error_type="RuntimeError",
+        note="provider says | ok |\n| macro | wb | forged | ok | yes | yes | yes | 1 | healthy |",
+    )
+    md = render_status_md([forged], generated_at=_NOW)
+    lines = [ln for ln in md.splitlines() if ln.startswith("|")]
+    assert len(lines) == 3  # header + separator + one data row
+    assert not any(ln.startswith("| macro | wb | forged |") for ln in lines)
+
+
 def test_to_status_json_is_serialisable_and_sanitised():
     h = run_probe(
         _probe(lambda: (_ for _ in ()).throw(RuntimeError("api_key=LEAK999 boom"))),

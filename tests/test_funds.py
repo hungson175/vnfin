@@ -837,6 +837,78 @@ def test_holdings_missing_envelope_status_and_code_raises_invalid():
         _src(payload).holdings(FAKE_ID_A)
 
 
+def test_list_funds_non_object_data_raises_invalid():
+    # Issue #91: success envelope with string `data` must not leak AttributeError.
+    payload = json.dumps({"status": 200, "code": 200, "message": "success", "data": "not-an-object"})
+    with pytest.raises(InvalidData, match="data is not an object"):
+        _src(payload).list_funds()
+
+
+def test_holdings_non_object_data_raises_invalid():
+    payload = json.dumps({"status": 200, "code": 200, "message": "success", "data": "not-an-object"})
+    with pytest.raises(InvalidData, match="data is not an object"):
+        _src(payload).holdings(FAKE_ID_A)
+
+
+def test_list_funds_bool_nav_raises_invalid():
+    # Issue #87: JSON booleans must not coerce into plausible NAV values.
+    rows = [
+        {
+            "id": FAKE_ID_A,
+            "code": "TESTCO",
+            "shortName": "TESTCO",
+            "name": "X",
+            "nav": True,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        }
+    ]
+    with pytest.raises(InvalidData, match="bool is not numeric"):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
+@pytest.mark.parametrize(
+    "mutator",
+    [
+        lambda r: r.update(name=["BAD", "NAME"]),
+        lambda r: r.update(name={"en": "BAD"}),
+        lambda r: r["owner"].update(name=["BAD", "MANAGER"]),
+        lambda r: r["dataFundAssetType"].update(code=["STOCK"]),
+        lambda r: r["dataFundAssetType"].update(code=True),
+    ],
+    ids=["name_list", "name_dict", "manager_list", "asset_type_list", "asset_type_bool"],
+)
+def test_list_funds_rejects_malformed_metadata(mutator):
+    # Issue #97: classification/display fields must be strings, not str(...) coercions.
+    row = {
+        "id": FAKE_ID_A,
+        "code": "TESTCO",
+        "shortName": "TESTCO",
+        "name": "FAKE FUND",
+        "nav": 100.0,
+        "dataFundAssetType": {"code": "STOCK"},
+        "owner": {"name": "FAKE MANAGER"},
+    }
+    row = dict(row)
+    row["owner"] = dict(row["owner"])
+    row["dataFundAssetType"] = dict(row["dataFundAssetType"])
+    mutator(row)
+    with pytest.raises(InvalidData, match="is not a string"):
+        _src(_fund_list_payload(rows=[row])).list_funds()
+
+
+@pytest.mark.parametrize(
+    "industry",
+    [["BANKING"], {"name": "BANKING"}, 123, True],
+    ids=["list", "dict", "int", "bool"],
+)
+def test_holdings_rejects_malformed_industry(industry):
+    # Issue #99: industry classification must be a string or absent.
+    top = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "industry": industry}]
+    with pytest.raises(InvalidData, match="industry is not a string"):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
 def test_holdings_malformed_weight_raises_invalid():
     top = [{"stockCode": "FAKE1", "netAssetPercent": "bad", "industry": "X"}]
     with pytest.raises(InvalidData):
@@ -846,6 +918,16 @@ def test_holdings_malformed_weight_raises_invalid():
 def test_holdings_weight_out_of_range_raises_invalid():
     top = [{"stockCode": "FAKE1", "netAssetPercent": 150.0, "industry": "X"}]
     with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+def test_holdings_aggregate_weight_above_100_raises_invalid():
+    # Issue #90: top disclosed holdings must not sum above 100%.
+    top = [
+        {"stockCode": "FAKE1", "netAssetPercent": 80.0, "industry": "X"},
+        {"stockCode": "FAKE2", "netAssetPercent": 70.0, "industry": "Y"},
+    ]
+    with pytest.raises(InvalidData, match="aggregate holdings weight exceeds 100%"):
         _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
 
 

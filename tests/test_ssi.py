@@ -148,3 +148,10 @@ def test_build_params_keys():
     s = SSIiBoardSource()
     params = s._build_params("FPT", "1D", 100, 200)
     assert params == {"resolution": "1D", "symbol": "FPT", "from": 100, "to": 200}
+
+
+def test_bool_ohlc_raises_invalid():
+    # Issue #87: JSON booleans must not become scaled VND prices via float(True).
+    rows = [("2024-01-02", True, True, True, True, True)]
+    with pytest.raises(InvalidData, match="bool is not numeric"):
+        _src(_envelope(rows=rows)).get_history("FPT", Interval.D1, *WIDE)

@@ -53,6 +53,8 @@ SENSITIVE_PARAMS = (
     "secretKey",
     "access_token",
     "accessToken",
+    "client_secret",
+    "clientSecret",
     "token",
     "key",
 )
@@ -79,6 +81,10 @@ def _norm_secret_name(name):
 #: Normalized set used for exact-match identity hashing.
 _NORMALIZED_SECRET_HASH_KEYS = frozenset(_norm_secret_name(k) for k in _SECRET_HASH_KEYS)
 
+#: Token fragments that mark a key/header name as secret-bearing when present
+#: after splitting on ``-``/``_`` (issue #38 residual: ``X-Client-Secret``).
+_SENSITIVE_NAME_TOKENS = frozenset({"secret"})
+
 
 def _is_secret_key_name(name):
     """Return True if ``name`` looks like a secret-bearing key.
@@ -92,7 +98,9 @@ def _is_secret_key_name(name):
         return True
     # Split on separators so X-API-Key -> {'x', 'api', 'key'} and check tokens.
     tokens = {t.lower() for t in _re.split(r"[-_]", str(name)) if t}
-    return bool(tokens & _NORMALIZED_SECRET_HASH_KEYS)
+    if tokens & _NORMALIZED_SECRET_HASH_KEYS:
+        return True
+    return bool(tokens & _SENSITIVE_NAME_TOKENS)
 
 # Matches ``<name>=<value>`` for a sensitive param inside a URL query string or a
 # (JSON/repr) dict, e.g. ``api_key=...``, ``"api_key": "..."``, ``'key': '...'``.
@@ -112,6 +120,50 @@ _AUTH_HEADER_RE = _re.compile(
     r"(?i)(?P<name>Authorization)(?P<sep>['\"]?\s*[=:]\s*['\"]?)(?P<val>[^'\"},)\r\n]+)"
 )
 
+# Matches quoted dict/JSON key/value pairs so secret-bearing header/param names
+# such as ``X-Client-Secret`` are redacted even when absent from
+# :data:`SENSITIVE_PARAMS`.
+_DICT_KV_RE = _re.compile(
+    r"(?P<q>['\"])"
+    r"(?P<key>[^'\"\\]+)"
+    r"(?P=q)\s*:\s*"
+    r"(?P<vq>['\"])"
+    r"(?P<val>[^'\"]*)"
+    r"(?P=vq)"
+)
+
+
+def _redact_dict_kv_secrets(text: str) -> str:
+    def _repl(match: _re.Match[str]) -> str:
+        key = match.group("key")
+        if not _is_secret_key_name(key):
+            return match.group(0)
+        q, vq = match.group("q"), match.group("vq")
+        return f"{q}{key}{q}: {vq}{_REDACTED}{vq}"
+
+    return _DICT_KV_RE.sub(_repl, text)
+
+
+def _redact_url_query_secrets(url: str) -> str:
+    """Redact secret-bearing query param values in a URL (issue #38 hyphenated names)."""
+    from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.query:
+        return url
+    pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    if not any(_is_secret_key_name(k) for k, _ in pairs):
+        return url
+    redacted = [(k, _REDACTED if _is_secret_key_name(k) else v) for k, v in pairs]
+    return urlunparse(parsed._replace(query=urlencode(redacted)))
+
+
+_URL_IN_TEXT_RE = _re.compile(r"https?://[^\s'\"<>]+")
+
+
+def _redact_urls_in_text(text: str) -> str:
+    return _URL_IN_TEXT_RE.sub(lambda m: _redact_url_query_secrets(m.group(0)), text)
+
 
 def redact_secrets(text):
     """Return ``text`` with any sensitive query-param value or ``Authorization``
@@ -128,6 +180,8 @@ def redact_secrets(text):
     s = text if isinstance(text, str) else str(text)
     s = _AUTH_HEADER_RE.sub(lambda m: m.group("name") + m.group("sep") + _REDACTED, s)
     s = _QS_SECRET_RE.sub(lambda m: m.group("name") + m.group("sep") + _REDACTED, s)
+    s = _redact_dict_kv_secrets(s)
+    s = _redact_urls_in_text(s)
     return s
 
 #: Browser User-Agent sent by the default client. Several VN/finance feeds reject the
@@ -315,7 +369,7 @@ class HttpDataSource:
             return _json.dumps(identity, sort_keys=True)
 
         return (
-            redact_secrets(url),
+            _redact_url_query_secrets(url),
             _url_secret_identity(url),
             _norm(params, keep_secret_identity=True),
             _norm(json_body, keep_secret_identity=True),

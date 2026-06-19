@@ -41,17 +41,40 @@ def _parse_json(text, who):
 
 def _as_float(value, ctx):
     """Coerce a JSON scalar to a finite float or raise InvalidData."""
-    import math
+    from ..coerce import parse_provider_float
 
-    if value is None:
-        raise InvalidData(f"fmarket: missing numeric value ({ctx})")
-    try:
-        out = float(value)
-    except (TypeError, ValueError) as exc:
-        raise InvalidData(f"fmarket: malformed number ({ctx})") from exc
-    if not math.isfinite(out):
-        raise InvalidData(f"fmarket: non-finite number ({ctx})")
-    return out
+    return parse_provider_float(value, label=ctx, source="fmarket")
+
+
+def _require_data_object(data, who: str) -> dict:
+    """Return ``data`` when it is a dict; treat ``None`` as empty; reject other shapes."""
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise InvalidData(f"fmarket: {who} data is not an object")
+    return data
+
+
+def _optional_str(value, *, ctx: str) -> str:
+    """Return a stripped string field, treating absent/blank as empty."""
+    if value is None or value == "":
+        return ""
+    if not isinstance(value, str):
+        raise InvalidData(f"fmarket: {ctx} is not a string")
+    return value.strip()
+
+
+def _pick_manager(owner: dict, *, fund_code: str) -> str:
+    for key in ("name", "shortName"):
+        val = owner.get(key)
+        if val is None or val == "":
+            continue
+        if not isinstance(val, str):
+            raise InvalidData(f"fmarket: fund {fund_code} owner {key} is not a string")
+        stripped = val.strip()
+        if stripped:
+            return stripped
+    return ""
 
 
 class FmarketFundSource(HttpDataSource):
@@ -97,7 +120,7 @@ class FmarketFundSource(HttpDataSource):
             "searchField": query,
         }
         parsed = self._post(_BASE_URL + _FILTER_PATH, body, who="filter")
-        data = parsed.get("data") or {}
+        data = _require_data_object(parsed.get("data"), who="filter")
         rows = data.get("rows")
         if not rows:
             raise EmptyData("fmarket: no funds returned")
@@ -165,12 +188,18 @@ class FmarketFundSource(HttpDataSource):
         fid = _validate_product_id(product_id)
         url = f"{_BASE_URL}{_DETAIL_PATH}/{fid}"
         parsed = self._get(url, who="holdings")
-        data = parsed.get("data") or {}
+        data = _require_data_object(parsed.get("data"), who="holdings")
         rows = data.get("productTopHoldingList")
         if not rows:
             raise EmptyData(f"fmarket: no holdings for product {product_id}")
         seen: set[str] = set()
-        return tuple(self._parse_holding(r, seen) for r in rows)
+        holdings = tuple(self._parse_holding(r, seen) for r in rows)
+        total_weight = sum(h.weight_pct for h in holdings)
+        if total_weight > 100.0 + 1e-9:
+            raise InvalidData(
+                f"fmarket: aggregate holdings weight exceeds 100% ({total_weight})"
+            )
+        return holdings
 
     # --- row parsers ------------------------------------------------------
 
@@ -206,20 +235,27 @@ class FmarketFundSource(HttpDataSource):
         owner = row.get("owner") or {}
         if not isinstance(owner, dict):
             raise InvalidData(f"fmarket: fund {code} owner is not an object")
-        manager = owner.get("name") or owner.get("shortName") or ""
+        manager = _pick_manager(owner, fund_code=code)
         asset = row.get("dataFundAssetType") or {}
         if not isinstance(asset, dict):
             raise InvalidData(
                 f"fmarket: fund {code} dataFundAssetType is not an object"
             )
-        asset_type = asset.get("code") or ""
+        asset_type = _optional_str(
+            asset.get("code"), ctx=f"fund {code} asset type code"
+        )
+        raw_name = row.get("name")
+        if raw_name is None or raw_name == "":
+            name = code
+        else:
+            name = _optional_str(raw_name, ctx=f"fund {code} name") or code
         return Fund(
             code=str(code),
-            name=str(row.get("name") or code),
+            name=name,
             id=fid,
             nav=nav,
-            manager=str(manager),
-            asset_type=str(asset_type),
+            manager=manager,
+            asset_type=asset_type,
             currency="VND",
         )
 
@@ -260,6 +296,8 @@ class FmarketFundSource(HttpDataSource):
                 f"fmarket: holding {stock_code} weight out of range: {weight}"
             )
         industry = row.get("industry")
+        if industry is not None and not isinstance(industry, str):
+            raise InvalidData(f"fmarket: holding {stock_code} industry is not a string")
         price = row.get("price")
         price_unit = None
         if price is not None:
@@ -273,7 +311,7 @@ class FmarketFundSource(HttpDataSource):
         return FundHolding(
             stock_code=stock_code,
             weight_pct=weight,
-            industry=str(industry) if industry is not None else None,
+            industry=industry,
             price_raw=price,
             price_unit=price_unit,
         )

@@ -225,6 +225,14 @@ def test_malformed_scalar_close_raises_invalid():
         src_with(json.dumps([bad])).get_klines("BTCUSDT", Interval.D1, *WIDE)
 
 
+def test_bool_scalar_close_raises_invalid():
+    # Issue #87: JSON booleans must not become plausible crypto prices.
+    bad = _kline(_GOOD)
+    bad[4] = True
+    with pytest.raises(InvalidData, match="bool is not numeric"):
+        src_with(json.dumps([bad])).get_klines("BTCUSDT", Interval.D1, *WIDE)
+
+
 def test_null_scalar_raises_invalid():
     bad = _kline(_GOOD)
     bad[2] = None  # high

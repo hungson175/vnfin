@@ -156,7 +156,7 @@ class FailoverGoldClient:
         )
         return (covered, expected)
 
-    def _reject_reason(self, hist) -> str | None:
+    def _reject_reason(self, hist, *args, **kwargs) -> str | None:
         if hist is None or len(hist.bars) == 0:
             return "empty result"
         covered, expected = self._coverage(hist)

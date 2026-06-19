@@ -58,10 +58,23 @@ def test_generic_reject_predicate_falls_through():
     fc = FailoverClient(
         [s1, s2],
         operation=_fetch,
-        reject=lambda r: "empty" if not r["rows"] else None,
+        reject=lambda r, *args, **kwargs: "empty" if not r["rows"] else None,
     )
     assert fc.run("ZZZ") == {"rows": [1, 2]}
     assert s1.calls == 1 and s2.calls == 1
+
+
+def test_generic_reject_one_arg_lambda_still_works():
+    """Review B2: public FailoverClient.reject(result) callbacks must keep working."""
+
+    class S:
+        name = "s"
+
+        def fetch(self, key):
+            return {"ok": True}
+
+    fc = FailoverClient([S()], operation=lambda src, key: src.fetch(key), reject=lambda r: None)
+    assert fc.run("ABC") == {"ok": True}
 
 
 def test_generic_capability_skips_without_call_or_attempt():

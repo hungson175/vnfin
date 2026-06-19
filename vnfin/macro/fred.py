@@ -36,6 +36,7 @@ import os
 from datetime import date, datetime, timezone
 from typing import Optional
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
 from ..transport import DEFAULT_UA, HttpDataSource
 from .models import IndicatorSeries
@@ -165,7 +166,7 @@ class FREDMacroSource(HttpDataSource):
                 continue  # FRED uses "." for missing -> skip
             try:
                 d = date.fromisoformat(str(obs.get("date")).strip())
-                value = float(raw)
+                value = parse_provider_float(raw, label=f"observation for {sid}", source=self.NAME)
             except (TypeError, ValueError) as exc:
                 raise InvalidData(f"{self.NAME}: malformed observation for {sid}") from exc
             if not math.isfinite(value):

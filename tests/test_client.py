@@ -116,6 +116,35 @@ def test_partial_start_coverage_warning_with_datetime_inputs(synth):
     assert any("partial_start_coverage" in w for w in h.warnings)
 
 
+def test_rejects_history_entirely_outside_requested_range(synth):
+    # Issue #84: non-empty series with zero bars in the window is a source miss.
+    from datetime import datetime, timezone
+
+    from vnfin.models import AdjustmentPolicy, PriceBar, PriceHistory
+
+    oor = PriceHistory(
+        symbol="FPT",
+        interval=Interval.D1,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED,
+        source="oor",
+        bars=(
+            PriceBar(datetime(2030, 1, 1, tzinfo=timezone.utc), 1.0, 1.0, 1.0, 1.0, 1),
+        ),
+        currency="VND",
+        value_unit="VND",
+    )
+    s1 = FakeSource("oor", oor)
+    s2 = FakeSource("good", _history_through("good", date(2025, 1, 2), n=2))
+    h = FailoverPriceClient([s1, s2]).get_daily("FPT", date(2025, 1, 1), date(2025, 1, 3))
+    assert h.source == "good"
+    assert s1.calls == 1 and s2.calls == 1
+
+    with pytest.raises(AllSourcesFailed):
+        FailoverPriceClient([FakeSource("oor", oor)]).get_daily(
+            "FPT", date(2025, 1, 1), date(2025, 1, 3)
+        )
+
+
 def _history_through(source, last_day, n=3):
     """Synthetic daily PriceHistory whose final bar lands exactly on ``last_day``.
 

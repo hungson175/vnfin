@@ -447,6 +447,86 @@ def test_redact_secrets_covers_required_camelcase_variants():
         assert f"{name}=REDACTED" in out, name
 
 
+def test_redact_secrets_covers_client_secret_variants():
+    """Issue #38 residual: OAuth-style client_secret names must be redacted."""
+    for name in ("client_secret", "clientSecret", "X-Client-Secret", "X-API-Secret"):
+        raw = f"params={{'{name}': 'FAKESECRET111'}}"
+        out = redact_secrets(raw)
+        assert "FAKESECRET111" not in out, name
+        assert "REDACTED" in out, name
+
+
+def test_redact_secrets_covers_hyphenated_url_query_secrets():
+    """Review B1: hyphenated secret names in URL query strings must redact."""
+    for url in (
+        "https://fake.invalid/?X-Client-Secret=ALPHA&x=1",
+        "https://fake.invalid/?X-API-Secret=BETA&x=1",
+    ):
+        out = redact_secrets(url)
+        assert "ALPHA" not in out and "BETA" not in out
+        assert "REDACTED" in out
+
+
+def test_transport_error_redacts_client_secret_in_params_and_headers():
+    """Issue #38: wrapped SourceUnavailable must not leak client_secret values."""
+
+    class Probe(HttpDataSource):
+        NAME = "probe"
+
+    def raising(url, params=None, headers=None, json_body=None):
+        raise ConnectionError(
+            f"provider exploded with params={params!r} headers={headers!r}"
+        )
+
+    cases = [
+        ("query", "https://fake.invalid/?client_secret=FAKESECRET111&x=1", None, None),
+        ("params", "https://fake.invalid/", {"client_secret": "FAKESECRET222"}, None),
+        ("headers", "https://fake.invalid/", None, {"X-Client-Secret": "FAKESECRET333"}),
+    ]
+    for label, url, params, headers in cases:
+        try:
+            Probe(http_get=raising)._request_text(url, params=params, headers=headers)
+        except SourceUnavailable as exc:
+            msg = str(exc)
+        else:
+            pytest.fail(f"{label}: expected SourceUnavailable")
+        assert "FAKESECRET" not in msg, label
+
+
+def test_cache_key_hides_client_secret_plaintext():
+    """Issue #38: cache keys must hash client_secret, never store plaintext."""
+    key_a = HttpDataSource._cache_key(
+        "https://fake.invalid/?client_secret=ALPHA", None, None, None
+    )
+    key_b = HttpDataSource._cache_key(
+        "https://fake.invalid/?client_secret=BETA", None, None, None
+    )
+    assert key_a != key_b
+    flat = repr(key_a) + repr(key_b)
+    assert "ALPHA" not in flat
+    assert "BETA" not in flat
+    assert "REDACTED" in flat
+
+    hdr_a = HttpDataSource._cache_key("u", None, None, {"X-Client-Secret": "ALPHA"})
+    hdr_b = HttpDataSource._cache_key("u", None, None, {"X-Client-Secret": "BETA"})
+    assert hdr_a != hdr_b
+    flat_hdr = repr(hdr_a) + repr(hdr_b)
+    assert "ALPHA" not in flat_hdr
+    assert "BETA" not in flat_hdr
+
+    url_a = HttpDataSource._cache_key(
+        "https://fake.invalid/?X-Client-Secret=ALPHA", None, None, None
+    )
+    url_b = HttpDataSource._cache_key(
+        "https://fake.invalid/?X-Client-Secret=BETA", None, None, None
+    )
+    assert url_a != url_b
+    flat_url = repr(url_a) + repr(url_b)
+    assert "ALPHA" not in flat_url
+    assert "BETA" not in flat_url
+    assert "REDACTED" in flat_url
+
+
 def test_cache_key_hashes_url_secret_identity():
     """B1 regression: secret values embedded directly in the URL must participate
     in the cache key identity so different credentials do not share a cache entry.

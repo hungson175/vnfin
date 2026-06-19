@@ -43,6 +43,7 @@ from __future__ import annotations
 import math
 from datetime import date, datetime, timezone
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
 from .indicators import Frequency, MacroIndicator, normalize_indicator, validate_indicator_values
@@ -184,7 +185,7 @@ class IMFDataMapperSource(HttpDataSource):
                 continue  # missing year -> skip
             try:
                 year = int(str(year_str).strip())
-                value = float(raw)
+                value = parse_provider_float(raw, label=f"observation for {code}", source=self.NAME)
             except (TypeError, ValueError) as exc:
                 raise InvalidData(f"{self.NAME}: malformed observation for {code}") from exc
             if not math.isfinite(value):

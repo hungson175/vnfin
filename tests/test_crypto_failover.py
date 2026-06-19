@@ -20,9 +20,11 @@ from vnfin.crypto import (
     BinanceCryptoSource,
     CoinbaseCryptoSource,
     CryptoHistory,
+    FailoverCryptoClient,
     default_crypto_client,
     default_crypto_sources,
 )
+from vnfin.crypto.models import CryptoBar
 from vnfin.exceptions import (
     AllSourcesFailed,
     SourceUnavailable,
@@ -287,3 +289,137 @@ def test_backup_normalizes_binance_symbol_to_coinbase_product():
     # Coinbase product path uses the hyphenated BASE-QUOTE form even though the
     # caller passed the Binance concatenated symbol.
     assert "BTC-USD" in captured["url"]
+
+
+def test_failover_crypto_client_materializes_iterator_sources():
+    # Issue #95: iterator/generator sources must not drop the primary entry.
+    class FakeCrypto:
+        unit = "USD"
+
+        def __init__(self, name):
+            self.name = name
+
+        def supports(self, interval):
+            return True
+
+        def get_klines(self, symbol, interval, start, end):
+            return CryptoHistory(
+                symbol=symbol,
+                interval=interval,
+                source=self.name,
+                currency="USD",
+                value_unit="USD",
+                bars=(
+                    CryptoBar(
+                        datetime(2026, 1, 1, tzinfo=UTC),
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                    ),
+                ),
+            )
+
+    client = FailoverCryptoClient(iter([FakeCrypto("primary"), FakeCrypto("backup")]))
+    assert [s.name for s in client.sources] == ["primary", "backup"]
+    assert client.get_klines("BTCUSDT", Interval.D1).source == "primary"
+
+    single = FailoverCryptoClient(iter([FakeCrypto("only")]))
+    assert [s.name for s in single.sources] == ["only"]
+    assert single.get_klines("BTCUSDT", Interval.D1).source == "only"
+
+
+def test_rejects_history_entirely_outside_requested_range():
+    # Issue #84: crypto failover must reject out-of-window histories.
+    class OutOfRangeCrypto:
+        unit = "USD"
+
+        def __init__(self, name):
+            self.name = name
+
+        def supports(self, interval):
+            return True
+
+        def get_klines(self, symbol, interval, start, end):
+            return CryptoHistory(
+                symbol=symbol,
+                interval=interval,
+                source=self.name,
+                currency="USD",
+                value_unit="USD",
+                bars=(
+                    CryptoBar(
+                        datetime(2030, 1, 1, tzinfo=UTC),
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                    ),
+                ),
+            )
+
+    class GoodCrypto(OutOfRangeCrypto):
+        def get_klines(self, symbol, interval, start, end):
+            return CryptoHistory(
+                symbol=symbol,
+                interval=interval,
+                source=self.name,
+                currency="USD",
+                value_unit="USD",
+                bars=(
+                    CryptoBar(
+                        datetime(2025, 1, 2, tzinfo=UTC),
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                    ),
+                ),
+            )
+
+    client = FailoverCryptoClient([OutOfRangeCrypto("oor"), GoodCrypto("good")])
+    h = client.get_klines("BTCUSDT", Interval.D1, date(2025, 1, 1), date(2025, 1, 3))
+    assert h.source == "good"
+
+    with pytest.raises(AllSourcesFailed):
+        FailoverCryptoClient([OutOfRangeCrypto("oor")]).get_klines(
+            "BTCUSDT", Interval.D1, date(2025, 1, 1), date(2025, 1, 3)
+        )
+
+
+def test_rejects_history_before_one_sided_start():
+    # Review B3: one-sided start bound must reject bars entirely before start.
+
+    class EarlyCrypto:
+        unit = "USD"
+        name = "early"
+
+        def supports(self, interval):
+            return True
+
+        def get_klines(self, symbol, interval, start, end):
+            return CryptoHistory(
+                symbol=symbol,
+                interval=interval,
+                source=self.name,
+                currency="USD",
+                value_unit="USD",
+                bars=(
+                    CryptoBar(
+                        datetime(2020, 1, 1, tzinfo=UTC),
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                    ),
+                ),
+            )
+
+    with pytest.raises(AllSourcesFailed):
+        FailoverCryptoClient([EarlyCrypto()]).get_klines(
+            "BTCUSDT", Interval.D1, start=date(2025, 1, 1), end=None
+        )

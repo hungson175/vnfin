@@ -12,6 +12,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData, VnfinError
 from .base import GoldSource
 from .models import GoldQuote
@@ -58,10 +59,7 @@ class GoldApiSource(GoldSource):
             raise EmptyData(f"{self.name}: {parsed.get('error')}")
         if "price" not in parsed:
             raise InvalidData(f"{self.name}: missing price field")
-        try:
-            price = float(parsed["price"])
-        except (TypeError, ValueError) as exc:
-            raise InvalidData(f"{self.name}: malformed price {parsed.get('price')!r}") from exc
+        price = parse_provider_float(parsed["price"], label="price", source=self.name)
         # Issue #12: zero price is not a valid spot, and the unit is USD/oz so the
         # reported currency must be USD (or missing, in which case we default to USD).
         if not math.isfinite(price) or price <= 0:

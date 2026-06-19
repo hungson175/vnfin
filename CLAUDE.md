@@ -33,7 +33,34 @@ Run the checklist in `docs/vnstock-blacklist.md` before every research task, and
 2. Commit safe local milestones often; never commit secrets.
 3. Prefer primary sources; verify current facts with web search (VNStock excluded).
 4. Be conservative on legal/licensing uncertainty and flag the risk.
-5. Use `tm-send` (never raw `tmux send-keys`) for agent messages; keep them short with a timestamp/source prefix.
+5. Use `tm-send` (never raw `tmux send-keys`) for cross-session agent messages. Every message uses the global prefix `{session}/{role} [HH:MM +07]:` and ends with `- reply via tm-send`.
+
+### tm-send routing (hard rule — separate tmux sessions)
+
+`vnfin-oss` and `vnfin-oss-reviewer` are **different tmux sessions**. Bare `tm-send vnfin-oss-reviewer "..."` from this workspace detects the **current** session (`vnfin-oss`), fails to resolve that role, and **falls back to the first pane in `vnfin-oss`** — i.e. **you message yourself**. Never do that.
+
+**Always use exact session targeting (`-s '=…'`) and the global message format:**
+
+From **this builder** to the reviewer:
+
+```bash
+tm-send -s '=vnfin-oss-reviewer' vnfin-oss-reviewer \
+  "vnfin-oss/vnfin-oss [$(date '+%H:%M') +07]: <message> - reply via tm-send"
+```
+
+From the **reviewer** (or elsewhere) back to this builder:
+
+```bash
+tm-send -s '=vnfin-oss' vnfin-oss \
+  "vnfin-oss-reviewer/vnfin-oss-reviewer [$(date '+%H:%M') +07]: <message> - reply via tm-send"
+```
+
+**Verify delivery** in tm-send output before assuming the handoff worked:
+
+- Good: `Detected session: vnfin-oss-reviewer` · `Resolved role 'vnfin-oss-reviewer' to pane: %80` · `Message sent to vnfin-oss-reviewer (vnfin-oss-reviewer:%80)`
+- Bad (self-send): `Detected session: vnfin-oss` · `Role 'vnfin-oss-reviewer' not found` · `Falling back to first pane: %79`
+
+**List panes/roles:** `tm-send -s '=vnfin-oss-reviewer' --list`
 
 ## Testing discipline
 
@@ -55,6 +82,7 @@ Work with `vnfin-oss-reviewer` (tmux) at all important checkpoints — never shi
 - **Every 2–3 steps:** the reviewer reviews the overall structure and proposes architecture — keep the long-term vision in mind, but plan only 2–3 steps ahead.
 - **You decide when to pause** for an architecture review + refactoring pass (when an abstraction starts to strain, or at the 2–3 step mark). Build independent domains in parallel via **git worktrees** to avoid write conflicts; merge only with green integration tests.
 - **Reviewer parallelism:** several jobs may be in review at once. At every handoff, tell `vnfin-oss-reviewer` to **spawn its own sub-agents** (one per job/domain) so reviews run in parallel and never serialize behind each other.
+- **tm-send to reviewer:** use `-s '=vnfin-oss-reviewer'` and the global prefix (see **tm-send routing** above). A missing `-s` silently delivers to your own pane and the reviewer never sees the request.
 
 ## Maintainership
 

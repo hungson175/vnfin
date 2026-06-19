@@ -45,6 +45,7 @@ import math
 import re
 from datetime import date, datetime, time, timezone
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData, UnsupportedInterval
 from ..models import Interval
 from ..transport import DEFAULT_UA, HttpDataSource
@@ -307,11 +308,11 @@ class CoinbaseCryptoSource(HttpDataSource):
             try:
                 sec = int(row[_TIME])
                 tm = datetime.fromtimestamp(sec, tz=timezone.utc)
-                lp = float(row[_LOW])
-                hp = float(row[_HIGH])
-                op = float(row[_OPEN])
-                cp = float(row[_CLOSE])
-                vol = float(row[_VOLUME])
+                lp = parse_provider_float(row[_LOW], label=f"low at row {i}", source=self.name)
+                hp = parse_provider_float(row[_HIGH], label=f"high at row {i}", source=self.name)
+                op = parse_provider_float(row[_OPEN], label=f"open at row {i}", source=self.name)
+                cp = parse_provider_float(row[_CLOSE], label=f"close at row {i}", source=self.name)
+                vol = parse_provider_float(row[_VOLUME], label=f"volume at row {i}", source=self.name)
             except (TypeError, ValueError, OverflowError) as exc:
                 raise InvalidData(f"{self.name}: malformed scalar at row {i}") from exc
             if not all(math.isfinite(x) for x in (op, hp, lp, cp, vol)):

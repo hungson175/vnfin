@@ -11,6 +11,7 @@ One fetch (base=USD) yields every pair versus VND. Spot/current only — no hist
 """
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData
@@ -42,8 +43,17 @@ class OpenErApiFXSource(FXSource):
         if not isinstance(rates, dict):
             raise InvalidData(f"{self.name}: missing rates object")
         vnd_per_usd = rates.get(self.QUOTE)
-        if not isinstance(vnd_per_usd, (int, float)) or vnd_per_usd <= 0:
+        if isinstance(vnd_per_usd, bool) or not isinstance(vnd_per_usd, (int, float)) or vnd_per_usd <= 0:
             raise InvalidData(f"{self.name}: missing/invalid {self.QUOTE} anchor")
+        usd_self = rates.get("USD")
+        if (
+            isinstance(usd_self, bool)
+            or not isinstance(usd_self, (int, float))
+            or not math.isfinite(usd_self)
+            or usd_self <= 0
+            or abs(usd_self - 1.0) > 1e-9
+        ):
+            raise InvalidData(f"{self.name}: invalid USD self-rate anchor")
         as_of = self._as_of(payload)
 
         out: list[FXRate] = []
@@ -55,7 +65,7 @@ class OpenErApiFXSource(FXSource):
                 code = self._normalize_ccy(code)
             except InvalidData:
                 continue
-            if not isinstance(per_usd, (int, float)) or per_usd <= 0:
+            if isinstance(per_usd, bool) or not isinstance(per_usd, (int, float)) or per_usd <= 0:
                 continue  # unusable leg
             vnd_per_unit = vnd_per_usd / per_usd  # VND per 1 `code`
             try:

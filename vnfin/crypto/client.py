@@ -64,6 +64,7 @@ class FailoverCryptoClient:
     """
 
     def __init__(self, sources, max_attempts: int = 3):
+        sources = list(sources)
         # The unit this chain promises callers (e.g. "USD" for the default chain),
         # taken from the sources' declared ``unit`` (already homogeneity-checked by the
         # generic engine). A result whose actual currency/value_unit differs from this
@@ -78,7 +79,9 @@ class FailoverCryptoClient:
                 symbol, interval, start, end
             ),
             capability=lambda src, symbol, interval, start, end: src.supports(interval),
-            reject=lambda hist: self._reject_reason(hist, self._chain_unit),
+            reject=lambda hist, _sym, _interval, start, end: self._reject_reason(
+                hist, self._chain_unit, start, end
+            ),
             unit_of=_crypto_unit,
             max_attempts=max_attempts,
             failure_factory=lambda attempts, symbol, interval, start, end: AllSourcesFailed(
@@ -110,9 +113,31 @@ class FailoverCryptoClient:
         return self._engine.run(symbol, interval, start, end)
 
     @staticmethod
-    def _reject_reason(hist, chain_unit) -> str | None:
+    def _reject_reason(hist, chain_unit, start, end) -> str | None:
         if hist is None or len(hist.bars) == 0:
             return "empty result"
+        from datetime import date as _date
+
+        def _as_date(val):
+            if val is None:
+                return None
+            if hasattr(val, "date"):
+                return val.date()
+            return val if isinstance(val, _date) else None
+
+        sd, ed = _as_date(start), _as_date(end)
+        if sd is not None or ed is not None:
+            in_window = False
+            for bar in hist.bars:
+                d = bar.time.date()
+                if sd is not None and d < sd:
+                    continue
+                if ed is not None and d > ed:
+                    continue
+                in_window = True
+                break
+            if not in_window:
+                return "no bars in requested date range"
         # Unit guard on the RESULT: a chain that promises ``chain_unit`` (e.g. USD)
         # must never silently serve a series denominated in another currency. A
         # non-USD pair like ETHBTC returns currency/value_unit "BTC"; reject it so the

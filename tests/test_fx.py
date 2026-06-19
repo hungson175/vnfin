@@ -100,6 +100,25 @@ def test_open_er_api_missing_vnd_anchor_is_invalid():
         src.get_rate("EUR")
 
 
+def test_open_er_api_bool_vnd_anchor_is_invalid():
+    # Issue #87: JSON booleans must not become FX rates.
+    bad = '{"result": "success", "base_code": "USD", "rates": {"VND": true, "USD": 1, "EUR": 0.9}}'
+    src = OpenErApiFXSource(http_get=_http(bad))
+    with pytest.raises(InvalidData):
+        src.get_rates()
+
+
+def test_open_er_api_drifted_usd_self_rate_is_invalid():
+    # Issue #93: USD-base payloads must carry rates["USD"] == 1.
+    bad = (
+        '{"result": "success", "base_code": "USD", "time_last_update_unix": 1781740800, '
+        '"rates": {"USD": 2.0, "VND": 25000.0, "EUR": 0.9}}'
+    )
+    src = OpenErApiFXSource(http_get=_http(bad))
+    with pytest.raises(InvalidData, match="USD self-rate"):
+        src.get_rates()
+
+
 def test_open_er_api_unsupported_quote_rejected():
     src = OpenErApiFXSource(http_get=_http(_OPEN_ER))
     with pytest.raises((InvalidData, ValueError)):

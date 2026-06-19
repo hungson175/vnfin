@@ -35,6 +35,7 @@ import math
 import re
 from datetime import date, datetime, time, timezone
 
+from ..coerce import parse_provider_float
 from ..exceptions import (
     EmptyData,
     InvalidData,
@@ -266,11 +267,11 @@ class BinanceCryptoSource(HttpDataSource):
             try:
                 ms = int(row[_OPEN_TIME])
                 tm = datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc)
-                op = float(row[_OPEN])
-                hp = float(row[_HIGH])
-                lp = float(row[_LOW])
-                cp = float(row[_CLOSE])
-                vol = float(row[_VOLUME])
+                op = parse_provider_float(row[_OPEN], label=f"open at row {i}", source=self.name)
+                hp = parse_provider_float(row[_HIGH], label=f"high at row {i}", source=self.name)
+                lp = parse_provider_float(row[_LOW], label=f"low at row {i}", source=self.name)
+                cp = parse_provider_float(row[_CLOSE], label=f"close at row {i}", source=self.name)
+                vol = parse_provider_float(row[_VOLUME], label=f"volume at row {i}", source=self.name)
             except (TypeError, ValueError, OverflowError) as exc:
                 # Malformed scalar (null, garbage string, overflow) must surface as a
                 # SourceError so a failover client fails over instead of crashing.

@@ -116,7 +116,9 @@ class FailoverPriceClient:
                 symbol, interval, start, end
             ),
             capability=lambda src, symbol, interval, start, end: src.supports(interval),
-            reject=self._reject_reason,
+            reject=lambda hist, _sym, _interval, start, end: FailoverPriceClient._reject_reason(
+                hist, start, end
+            ),
             unit_of=_price_unit,
             max_attempts=max_attempts,
             failure_factory=lambda attempts, symbol, interval, start, end: AllSourcesFailed(
@@ -160,9 +162,23 @@ class FailoverPriceClient:
         return replace(hist, attempts=attempts, warnings=warnings)
 
     @staticmethod
-    def _reject_reason(hist) -> str | None:
+    def _reject_reason(hist, start, end) -> str | None:
         if hist is None or len(hist.bars) == 0:
             return "empty result"
+        sd = as_date(start)
+        ed = as_date(end)
+        if sd is not None or ed is not None:
+            in_window = False
+            for bar in hist.bars:
+                d = bar.time.date()
+                if sd is not None and d < sd:
+                    continue
+                if ed is not None and d > ed:
+                    continue
+                in_window = True
+                break
+            if not in_window:
+                return "no bars in requested date range"
         return None
 
     @staticmethod

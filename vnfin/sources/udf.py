@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 from datetime import date, datetime, time, timezone
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData, UnsupportedInterval
 from ..models import AdjustmentPolicy, Interval, PriceBar, PriceHistory
 from ..transport import DEFAULT_UA, HttpDataSource
@@ -159,11 +160,11 @@ class UDFSource(HttpDataSource, PriceSource):
         for i in range(n):
             try:
                 tm = datetime.fromtimestamp(int(t[i]), tz=timezone.utc).astimezone(VN_TZ)
-                op = float(o[i]) * self.PRICE_SCALE
-                hp = float(h[i]) * self.PRICE_SCALE
-                lp = float(l[i]) * self.PRICE_SCALE
-                cp = float(c[i]) * self.PRICE_SCALE
-                raw_vol = float(v[i]) * self.VOLUME_SCALE
+                op = parse_provider_float(o[i], label=f"open at row {i}", source=self.name) * self.PRICE_SCALE
+                hp = parse_provider_float(h[i], label=f"high at row {i}", source=self.name) * self.PRICE_SCALE
+                lp = parse_provider_float(l[i], label=f"low at row {i}", source=self.name) * self.PRICE_SCALE
+                cp = parse_provider_float(c[i], label=f"close at row {i}", source=self.name) * self.PRICE_SCALE
+                raw_vol = parse_provider_float(v[i], label=f"volume at row {i}", source=self.name) * self.VOLUME_SCALE
             except (TypeError, ValueError, OverflowError) as exc:
                 # Malformed scalar (null, garbage string, overflow) must surface as a
                 # SourceError so FailoverPriceClient fails over instead of crashing.

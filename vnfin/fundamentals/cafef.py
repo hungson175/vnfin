@@ -427,13 +427,9 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
 
     @staticmethod
     def _num(raw) -> float:
-        try:
-            v = float(raw)
-        except (TypeError, ValueError) as exc:
-            raise InvalidData(f"cafef: malformed Value {raw!r}") from exc
-        if not math.isfinite(v):
-            raise InvalidData(f"cafef: non-finite Value {raw!r}")
-        return v
+        from ..coerce import parse_provider_float
+
+        return parse_provider_float(raw, label="Value", source="cafef")
 
     @staticmethod
     def _int(raw, *, field) -> int:

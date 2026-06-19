@@ -214,6 +214,13 @@ def _b(x: bool | None) -> str:
     return "—" if x is None else ("yes" if x else "no")
 
 
+def _md_cell(text) -> str:
+    """Escape a value for safe inclusion in a Markdown table cell."""
+    s = "" if text is None else str(text)
+    s = s.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+    return s.replace("|", "\\|")
+
+
 def render_status_md(healths: list[SourceHealth], *, generated_at: dt.datetime | None = None) -> str:
     ts = _now(generated_at).isoformat()
     lines = [
@@ -227,9 +234,10 @@ def render_status_md(healths: list[SourceHealth], *, generated_at: dt.datetime |
     for h in healths:
         lat = "" if h.latency_ms is None else h.latency_ms
         lines.append(
-            f"| {h.domain} | {h.source} | {h.probe_id} | {h.status.value} "
-            f"| {_b(h.reachable)} | {_b(h.schema_ok)} | {_b(h.value_sane)} | {lat} "
-            f"| {redact_secrets(h.note)} |"
+            f"| {_md_cell(h.domain)} | {_md_cell(h.source)} | {_md_cell(h.probe_id)} "
+            f"| {_md_cell(h.status.value)} | {_md_cell(_b(h.reachable))} "
+            f"| {_md_cell(_b(h.schema_ok))} | {_md_cell(_b(h.value_sane))} | {_md_cell(lat)} "
+            f"| {_md_cell(redact_secrets(h.note))} |"
         )
     return "\n".join(lines) + "\n"
 

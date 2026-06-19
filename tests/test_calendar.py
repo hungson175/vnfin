@@ -106,6 +106,23 @@ def test_holiday_set_is_frozen_and_nonempty():
     assert len(VN_MARKET_HOLIDAYS) > 0
 
 
+def test_2026_national_day_includes_aug_31_closure():
+    # Issue #92: HNX 2026 schedule closes Mon Aug 31 through Wed Sep 2.
+    assert date(2026, 8, 31) in VN_MARKET_HOLIDAYS
+    assert is_trading_day(date(2026, 8, 31)) is False
+    assert expected_latest_trading_day(date(2026, 9, 1)) == date(2026, 8, 28)
+    assert expected_latest_trading_day(date(2026, 9, 2)) == date(2026, 8, 28)
+    assert is_trading_day(date(2026, 9, 3)) is True
+
+
+def test_2025_labor_day_includes_may_2_closure():
+    # Issue #92 comment: HNX 2025 schedule closes Wed Apr 30 through Fri May 2.
+    assert date(2025, 5, 2) in VN_MARKET_HOLIDAYS
+    assert is_trading_day(date(2025, 5, 2)) is False
+    assert expected_latest_trading_day(date(2025, 5, 2)) == date(2025, 4, 29)
+    assert previous_trading_day(date(2025, 5, 5)) == date(2025, 4, 29)
+
+
 def test_year_outside_maintained_range_degrades_to_weekend_logic():
     # Far-future year with no maintained holidays: a plain weekday is a trading day,
     # and the weekend still rolls back correctly. (No crash, graceful degradation.)

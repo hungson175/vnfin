@@ -96,7 +96,7 @@ class FailoverFundamentalClient:
         return self._engine.run(symbol, st, pd, is_bank, limit)
 
     @staticmethod
-    def _reject_reason(reports) -> str | None:
+    def _reject_reason(reports, *args, **kwargs) -> str | None:
         if not reports:
             return "empty result"
         return None

@@ -29,6 +29,7 @@ import json
 import math
 from datetime import date, datetime, timezone
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
 
@@ -271,7 +272,9 @@ class WorldBankMacroSource(HttpDataSource):
 
             try:
                 year = int(str(obs.get("date")).strip())
-                value = float(raw_value)
+                value = parse_provider_float(
+                    raw_value, label=f"observation for {code}", source=self.NAME
+                )
             except (TypeError, ValueError) as exc:
                 raise InvalidData(f"{self.NAME}: malformed observation for {code}") from exc
             if not math.isfinite(value):

@@ -7,6 +7,32 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **VN trading calendar** — add missing 2025-05-02 and 2026-08-31 official market closures so
+  `expected_latest_trading_day()` no longer treats National Day / Labor Day bridge sessions as
+  trading days. ([#92](https://github.com/hungson175/vnfin/issues/92))
+- **Health STATUS.md renderer** — escape pipe and newline characters in every Markdown table cell
+  so provider/exception text cannot inject forged health rows. ([#89](https://github.com/hungson175/vnfin/issues/89))
+- **Secret redaction (`client_secret`)** — classify OAuth-style `client_secret` / `X-Client-Secret`
+  names as sensitive for redaction and deterministic cache-key hashing; wrapped transport errors no
+  longer leak plaintext credentials. ([#38](https://github.com/hungson175/vnfin/issues/38))
+- **Fmarket nested `data` validation** — `list_funds()` and `holdings()` raise `InvalidData` when
+  the success envelope carries a non-object `data` payload instead of leaking `AttributeError`.
+  ([#91](https://github.com/hungson175/vnfin/issues/91))
+- **Provider numeric coercion** — shared `parse_provider_float()` rejects JSON booleans before
+  coercion across price, crypto, fund, fundamental, and FX parsers so `true` cannot become
+  plausible financial values. ([#87](https://github.com/hungson175/vnfin/issues/87))
+- **OpenER USD self-rate anchor** — reject USD-base payloads whose `rates["USD"]` drifts from 1
+  before deriving cross-rates, preventing silently wrong USD/VND values. ([#93](https://github.com/hungson175/vnfin/issues/93))
+- **FailoverCryptoClient iterator sources** — materialize `sources` before unit-guard and engine
+  wiring so generator/iterator chains keep the primary source. ([#95](https://github.com/hungson175/vnfin/issues/95))
+- **Fmarket metadata typing** — `list_funds()` and `holdings()` reject non-string fund name,
+  manager, asset-type, and industry fields instead of stringifying malformed provider values.
+  ([#97](https://github.com/hungson175/vnfin/issues/97), [#99](https://github.com/hungson175/vnfin/issues/99))
+- **Fmarket holdings aggregate weight** — reject top-holdings baskets whose weights sum above
+  100%. ([#90](https://github.com/hungson175/vnfin/issues/90))
+- **Price/crypto failover date window** — reject non-empty histories with no bars inside the
+  requested `[start, end]` range so out-of-window results fail over instead of succeeding.
+  ([#84](https://github.com/hungson175/vnfin/issues/84))
 - **CafeF fundamentals (`Quater=5`)** — annual reports whose older rows carry CafeF's
   `ReportType=NAM` marker `Quater=5` no longer abort the entire response: an annual report's
   fiscal date is the year-end regardless of the `Quater` marker, and a single period-marker

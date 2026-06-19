@@ -11,6 +11,8 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .coverage
+coverage_report.md
+uv.lock
 tests/cassettes_private/
 build/
 dist/

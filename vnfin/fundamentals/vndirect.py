@@ -393,13 +393,9 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
 
     @staticmethod
     def _num(raw) -> float:
-        try:
-            v = float(raw)
-        except (TypeError, ValueError) as exc:
-            raise InvalidData(f"vndirect: malformed numericValue {raw!r}") from exc
-        if not math.isfinite(v):
-            raise InvalidData(f"vndirect: non-finite numericValue {raw!r}")
-        return v
+        from ..coerce import parse_provider_float
+
+        return parse_provider_float(raw, label="numericValue", source="vndirect")
 
     @staticmethod
     def _parse_date(raw) -> date:

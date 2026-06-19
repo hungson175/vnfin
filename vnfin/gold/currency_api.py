@@ -20,6 +20,7 @@ from __future__ import annotations
 import math
 from datetime import date, datetime, timedelta, timezone
 
+from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
 from .base import GoldSource
 from .models import GoldBar, GoldHistory, GoldQuote
@@ -58,10 +59,7 @@ class CurrencyApiGoldSource(GoldSource):
             usd_xau = doc["usd"]["xau"]
         except (KeyError, TypeError) as exc:
             raise InvalidData(f"{self.name}: missing usd.xau") from exc
-        try:
-            rate = float(usd_xau)
-        except (TypeError, ValueError) as exc:
-            raise InvalidData(f"{self.name}: malformed usd.xau {usd_xau!r}") from exc
+        rate = parse_provider_float(usd_xau, label="usd.xau", source=self.name)
         if not math.isfinite(rate) or rate <= 0:
             # rate == 0 would divide-by-zero; surface as InvalidData (failover-safe).
             raise InvalidData(f"{self.name}: non-positive usd.xau {usd_xau!r}")

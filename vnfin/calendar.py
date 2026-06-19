@@ -71,6 +71,7 @@ VN_MARKET_HOLIDAYS: frozenset[date] = frozenset(
         date(2025, 4, 7),  # Hung Kings' Commemoration (observed)
         date(2025, 4, 30),  # Reunification Day
         date(2025, 5, 1),  # International Labour Day
+        date(2025, 5, 2),  # Labor Day bridge (HNX 2025 schedule)
         date(2025, 9, 1),  # National Day (observed)
         date(2025, 9, 2),  # National Day
         # --- 2026 ---
@@ -84,6 +85,7 @@ VN_MARKET_HOLIDAYS: frozenset[date] = frozenset(
         date(2026, 4, 27),  # Hung Kings' Commemoration (observed, Apr 26 is Sunday)
         date(2026, 4, 30),  # Reunification Day
         date(2026, 5, 1),  # International Labour Day
+        date(2026, 8, 31),  # National Day bridge (HNX 2026 schedule)
         date(2026, 9, 1),  # National Day (observed)
         date(2026, 9, 2),  # National Day
     }

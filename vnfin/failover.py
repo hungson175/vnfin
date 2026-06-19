@@ -29,6 +29,7 @@ unit. This makes a scale/unit mix structurally impossible, not merely unlikely.
 """
 from __future__ import annotations
 
+import inspect
 from typing import Any, Callable, Iterable, Optional
 
 from .exceptions import AllSourcesFailed, SourceError, UnitMismatchError
@@ -39,8 +40,31 @@ def _always_capable(source, *args, **kwargs) -> bool:
     return True
 
 
-def _accept_all(result) -> Optional[str]:
+def _accept_all(result, *args, **kwargs) -> Optional[str]:
     return None
+
+
+def _call_reject(
+    reject: Callable[..., Optional[str]], result: Any, *args, **kwargs
+) -> Optional[str]:
+    """Invoke ``reject`` preserving one-arg ``reject(result)`` compatibility."""
+    try:
+        sig = inspect.signature(reject)
+    except (TypeError, ValueError):
+        sig = None
+    if sig is not None:
+        pos = [
+            p
+            for p in sig.parameters.values()
+            if p.kind
+            not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+        ]
+        if len(pos) == 1:
+            return reject(result)
+    try:
+        return reject(result, *args, **kwargs)
+    except TypeError:
+        return reject(result)
 
 
 def _unit_attr(source):
@@ -159,7 +183,7 @@ class FailoverClient:
                     SourceAttempt(src.name, False, f"{type(exc).__name__}: {exc}")
                 )
                 continue
-            reason = self._reject(result)
+            reason = _call_reject(self._reject, result, *args, **kwargs)
             if reason:
                 attempts.append(SourceAttempt(src.name, False, reason))
                 continue
