@@ -16,7 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#41 (REOPENED)** — `_unwrap` fractional/bool status/code. FIXED + committed `32a4587` (NOT pushed): reject bool / non-integral / non-finite float before int(); ints/integral-float/digit-str valid. +12 TDD cases, suite 1978 green. **Awaiting reviewer review → push → close.**
+- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `9bedc2e`, full suite
+  1979 green, watermark 2026-06-19T07:58:56Z. Steady-state: record new poller/reviewer activity
+  here first, TDD + reviewer sign-off per fix.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -42,6 +44,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#41 (reopen)** Fmarket envelope status/code fractional/bool guard — `32a4587`, pushed
+  `0ba8a5b..9bedc2e`, closed. `int(200.9)` truncation gap closed; bool/non-integral/non-finite
+  float rejected; ints/integral-float/digit-str valid. APPROVE. Suite 1979 green.
 - **#135** macro falsey/None unit-metadata relabel — `24d6a94`+`f1d6db6`, pushed `89d16cd..f764709`,
   closed. unit must be str (None + falsey-non-str rejected, '' placeholder kept); value_unit
   Optional. APPROVE after unit=None BLOCK. Suite 1967 green.
