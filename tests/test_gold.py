@@ -1127,7 +1127,9 @@ def test_pnj_rejects_non_finite_price():
 def test_pnj_rejects_missing_or_non_string_product_key(masp, tensp):
     rows = [(masp, tensp, 20000, 10000)]
     s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
-    with pytest.raises(InvalidData, match="product key"):
+    # #143: a present non-string tensp now fails closed earlier ("tensp is not a
+    # string"); a truly missing product key still raises "row missing product key".
+    with pytest.raises(InvalidData, match="product key|tensp is not a string"):
         s.get_quotes()
 
 
@@ -1229,3 +1231,40 @@ def test_goldapi_absent_updated_at_falls_back_to_now():
     q = s.get_quote()
     assert q.time.tzinfo is not None
     assert abs((datetime.now(timezone.utc) - q.time).total_seconds()) < 300
+
+
+# Issue #143 — PNJ must classify silver by BOTH masp code and descriptive tensp name.
+def test_pnj_silver_named_row_with_gold_code_excluded_all_silver_empty():
+    # masp code carries NO 'bạc' marker, but the tensp NAME does -> must be excluded;
+    # an all-silver feed yields EmptyData (not a misclassified gold quote).
+    rows = [("AG999", "Bạc PNJ 999.9", 20000, 10000)]
+    s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
+    with pytest.raises(EmptyData):
+        s.get_quotes()
+
+
+def test_pnj_mixed_silver_and_gold_returns_only_gold():
+    rows = [
+        ("TESTCO", "Vàng miếng TESTCO 999.9", 20000, 10000),  # gold
+        ("AG999", "Bạc PNJ 999.9", 21000, 11000),             # silver by name only
+    ]
+    quotes = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows))).get_quotes()
+    assert [q.product for q in quotes] == ["TESTCO"]
+
+
+def test_pnj_silver_by_code_marker_excluded():
+    # control: a 'bac' marker in the masp code still excludes (all-silver -> EmptyData).
+    rows = [("BAC999", "Trang sức 999.9", 20000, 10000)]
+    with pytest.raises(EmptyData):
+        PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows))).get_quotes()
+
+
+def test_pnj_silver_row_with_malformed_price_is_skipped_not_fatal():
+    # silver exclusion happens BEFORE price parsing, so a silver row's garbage price
+    # is skipped, not a fatal InvalidData; the gold row still returns.
+    rows = [
+        ("AG999", "Bạc PNJ 999.9", "garbage", "garbage"),     # silver + bad price
+        ("TESTCO", "Vàng miếng TESTCO 999.9", 20000, 10000),  # gold
+    ]
+    quotes = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows))).get_quotes()
+    assert [q.product for q in quotes] == ["TESTCO"]

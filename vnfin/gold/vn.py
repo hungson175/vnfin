@@ -339,7 +339,21 @@ class PNJGoldSource(_VNGoldSource):
             if not isinstance(row, dict):
                 raise InvalidData(f"{self.name}: row is not an object")
             code = row.get("masp")
-            name = row.get("tensp") or code
+            raw_name = row.get("tensp")
+            # Issue #143 (strict edge): a PRESENT tensp must be a string — a non-string
+            # descriptive name is malformed provider data.
+            if raw_name is not None and not isinstance(raw_name, str):
+                raise InvalidData(f"{self.name}: row tensp is not a string: {raw_name!r}")
+            # Issue #143: PNJ is a GOLD feed — exclude silver by inspecting BOTH the
+            # product code (masp) AND the descriptive name (tensp), BEFORE duplicate
+            # tracking and price parsing/scaling. A silver row whose masp code lacks the
+            # 'bạc' marker (but whose tensp carries it) must not be classified as gold;
+            # a silver row with a malformed price is simply skipped, not fatal.
+            if (isinstance(code, str) and _is_silver(code)) or (
+                isinstance(raw_name, str) and _is_silver(raw_name)
+            ):
+                continue
+            name = raw_name or code
             # Issue #67: the product key (masp, or tensp as a fallback) must be a
             # non-empty string before any quote is built.
             product: str | None = None
@@ -354,9 +368,6 @@ class PNJGoldSource(_VNGoldSource):
             if norm in seen:
                 raise InvalidData(f"{self.name}: duplicate product key {product!r}")
             seen.add(norm)
-            # Defensive: PNJ is a gold feed, but exclude any silver row should one appear.
-            if _is_silver(product):
-                continue
             raw_buy = row.get("giamua")
             raw_sell = row.get("giaban")
             # "Raw gold purchase" rows (masp RAW_*) are buy-only: one side is blank ("")
