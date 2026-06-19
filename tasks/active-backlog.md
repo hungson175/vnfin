@@ -29,6 +29,9 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Refactor done today (Phase 4 batches)
 
+- **Phase 4 batch 5 (gold #143) — COMPLETE, pushed `33033cf..734aa9f`; #143 CLOSED.** PNJ excludes
+  silver by masp+tensp (via `_is_silver`) before dedup/price; all-silver → EmptyData; non-string
+  tensp → InvalidData. Suite 2570 green. Checkpoint E APPROVE_WITH_NOTES (review-202606192324).
 - **Phase 4 batch 4 (crypto/FX boundary) — COMPLETE, pushed `b4db48d..8b57ece`; #9 + #93 CLOSED.**
   `canonical_crypto_asset`/`canonical_crypto_pair` (v0.2: BTCUSDT/BTC-USD; slash rejected; fullmatch)
   + longest-known-quote validation at the crypto boundary (zero-call); Binance/Coinbase
@@ -52,10 +55,9 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Paused bugs — after refactor
 
-- **#143** (parked, poller 18:45) — fix in **Phase 4 gold** adapter migration (NEXT batch).
+- **#144** (parked, poller 19:45) — Fmarket NAV window issue; **Phase 4 funds NAV/window batch**
+  (NEXT). Do not fix now.
 - **#142** (parked, poller 18:35) — fundamentals residual; Phase 6 fundamentals close-loop.
-- **#144** (parked, poller 19:45) — Fmarket NAV window issue; **separate Phase 4 funds NAV/window
-  batch** (NOT the closed #33/#34 identifier batch). Do not fix now.
 - **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — addressed by the Phase 2
   contract migration (`ec69a1e`); to be CLOSED in Phase 6 after Checkpoint C approves. WIP stash
   `git stash@{0}` superseded (reference only). Original handoff:
