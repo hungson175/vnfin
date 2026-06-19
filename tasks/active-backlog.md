@@ -16,26 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Returned-metadata mini-batch #69/#131/#132/#133** — design APPROVE_WITH_NOTES
-  (review-202606191405). ALL IMPLEMENTED + committed (NOT pushed), suite 1930 green, gates pass,
-  no public-API change:
-  - **#69** `33007c6` — crypto quote-metadata consistency (USD-equiv quote_asset, price_unit==
-    "{quote} per {base}", volume_unit==base, provider_symbol non-empty canonical). Also fixed the
-    inconsistent failover fixture default price_unit.
-  - **#131+#132** `4548dcc` — macro frequency (Frequency enum + date/freq consistency) and
-    projection_from_year (None or int year within span).
-  - **#133** `1e5bf85` — price exchange/provider_symbol non-empty canonical str.
-  #133 APPROVE, #131/#132 APPROVE; #69 BLOCK (B1 silent-skip, B2 Coinbase USDC) FIXED `831dd3f` (price_unit accepts quote-form OR currency-form; reject units w/o base). **Awaiting #69 re-review → push f795bd1..HEAD → close all 4.**
-
-- **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129 + #130** —
-  design APPROVED (review-202606191336 #125r/#129; #127/#128 confirmed 13:38; #130 folded in).
-  ALL IMPLEMENTED + committed (NOT pushed), full suite 1866 green, gates pass, no public-API change:
-  - **#125-inner** `7199a4f` — per-domain row/item object type checks before deref.
-  - **#129** `ae71706` — fundamentals `fiscal_date` must be plain date.
-  - **#127** `9e3e61f` — `fetched_at_utc` tz-aware UTC when present (shared `_fetched_at_utc_reason`).
-  - **#128** `1898a51` — `warnings` must be `tuple[str,...]` (shared `_warnings_reason`).
-  - **#130** `046f1ba` — fundamentals report `is_bank`/`model_type`/`provider_symbol` metadata.
-  **Awaiting ONE combined reviewer code review (f6b96da..HEAD) → push → close all 5.**
+- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `a840e63`, full suite
+  green. Maintainer in steady-state: record new poller/reviewer activity here first, TDD +
+  reviewer sign-off per fix.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -43,21 +26,32 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- **Returned-metadata mini-batch: #69 / #131 / #132 / #133** (after #130 follow-up lands):
-  - **#69** (REOPENED) — crypto quote-metadata residual.
-  - **#131** — macro `projection_from_year`: None or real non-bool int year; sane vs first obs.
-  - **#132** — macro `frequency`: must be a `Frequency` enum (reject str/bool/int/container/None);
-    point dates consistent with frequency.
-  - **#133** — price returned security metadata: `exchange` present⇒non-empty (accepted set),
-    `provider_symbol` present⇒non-empty str not contradicting requested symbol.
-  Scope each via `./bin/gh-maintainer issue view <n>`; combined design then TDD.
+- _(none pending)_
 
-## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
+## Next
 
-_All other backlog items verified-fixed and closed during the 2026-06-19 sweep (43→12 open)._
+- _(none)_
+
+## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
+
+- #69: `quote_asset=None` + a normalized (currency-form) `price_unit` is currently accepted;
+  a stricter "quote_asset mandatory" policy would be a separate follow-up (reviewer note 14:21).
+- #130: `model_type` allow-list is fixed to {1,2,3,101,102,103}; widen only if an official set is documented.
+- #133: no accepted-exchange set / provider_symbol contradiction rule yet (deferred until a
+  provider-symbol mapping is defined).
+- #116: `_QTY` left boundary allows a digit glued to a letter (`ABC5 LUONG`) — revisit if such names appear.
+- #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
 
+- **Returned-metadata mini-batch — COMPLETE, pushed + closed (`f795bd1..a840e63`).**
+  - **#69** `33007c6`+`831dd3f` — crypto quote-metadata consistency (quote_asset USD-equiv;
+    price_unit accepts Binance quote-form OR Coinbase currency-form; volume_unit==base;
+    provider_symbol canonical). APPROVE after B1(silent-skip)/B2(Coinbase USDC) re-review.
+  - **#131+#132** `4548dcc` — macro projection_from_year span + frequency enum/date consistency.
+    APPROVE.
+  - **#133** `1e5bf85` — price exchange/provider_symbol non-empty canonical str. APPROVE.
+  Suite 1933 green.
 - **Failover metadata/inner-row batch — COMPLETE, pushed + closed (`f6b96da..f795bd1`).**
   - **#125-reopen** `7199a4f` — inner row/item object type checks. APPROVE.
   - **#129** `ae71706` — fundamentals fiscal_date plain-date. APPROVE.
