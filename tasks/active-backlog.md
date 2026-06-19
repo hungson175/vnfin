@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Schema/FX batch (#87 + #28)** — IMPLEMENTED + committed (NOT pushed): #87 `454fe42` health
-  check_schema rejects JSON bool on numeric paths; #28 `90474d9` Vietcombank rejects duplicate
-  CurrencyCode. +9 TDD cases, suite 2032 green. **Awaiting reviewer review → push → re-close.**
+- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `2117c51`, full suite 2032 green,
+  watermark 2026-06-19T08:59:46Z. Only open issue is **#140 (enhancement: financial news)** —
+  a Boss/product-scope feature, NOT a bug; parked pending Boss decision. Steady-state otherwise.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -46,6 +46,11 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **Schema/FX batch (#87 + #28) (reopen) — COMPLETE, pushed `2356fa4..2117c51`, closed.**
+  - **#87** `454fe42` — health check_schema rejects JSON bool on numeric (int,float) paths
+    (unless bool explicitly allowed). APPROVE_WITH_NOTES.
+  - **#28** `90474d9` — Vietcombank get_rates rejects duplicate canonical CurrencyCode (fail
+    closed). APPROVE_WITH_NOTES. Suite 2032 green.
 - **DBnomics batch (#104 + #66) (reopen) — COMPLETE, pushed `2e6b884..2356fa4`, closed.**
   `e7a43c4` — strict canonical period_start_day grammar (reject compact/ISO-week/padded/
   non-str) + duplicate-date guard. APPROVE (review-202606191553). Suite 2026 green.
