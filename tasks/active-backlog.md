@@ -39,8 +39,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **#140 financial news: DONE** (Boss-approved-in-issue; pushed `ca293d6..efdf2d3`, CLOSED;
   reviewer review-202606200026). BYOK `vnfin.news` over Alpha Vantage NEWS_SENTIMENT — daily
   headline metadata only, no scraping/full-text/real-time. Suite 2667 green; public-API additive.
-- **✅ 0 OPEN ISSUES.** All bugs fixed, full contract refactor (Phases 0–6) shipped, and both
-  enhancements delivered (#145 diagnostics, #140 news). origin/master `efdf2d3`. Steady-state.
+- **#146 liquidity & position sizing: DONE** (Boss-authored; pushed `e518878..4ce11dc`, CLOSED;
+  reviewer review-202606200632). Additive offline `vnfin.liquidity` (from_price_history + profile;
+  ADV stats + max-order sizing; close*volume estimate labeled). Suite 2705 green; public-API additive.
+- **✅ 0 OPEN ISSUES (re-confirmed).** All bugs fixed, full contract refactor (Phases 0–6) shipped,
+  and three enhancements delivered (#145 diagnostics, #140 news, #146 liquidity). origin/master
+  `4ce11dc`. Steady-state; poller watching.
 
 ## Refactor done today (Phase 4 batches)
 
