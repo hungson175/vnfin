@@ -16,9 +16,8 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `082526e`, full suite
-  2017 green, watermark 2026-06-19T08:43:47Z. Steady-state: record new poller/reviewer activity
-  here first, TDD + reviewer sign-off per fix. (Reviewer triaging poller 15:40 next.)
+- **DBnomics batch (#104 + #66)** (REOPENED 15:40) — DBnomics parser residuals: #104 strict
+  `period_start_day` exact `YYYY-MM-DD` string; #66 DBnomics duplicate-date guard. TDD → review.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -26,7 +25,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- _(none pending)_
+- **Schema/FX batch (#87 + #28)** (REOPENED 15:40) — next after DBnomics batch: #87 health
+  SchemaSpec must reject numeric booleans; #28 Vietcombank must reject duplicate CurrencyCode.
+  (#136 closed invalid, #137 out-of-scope by reviewer; #106/#21 no action.)
 
 ## Next
 
