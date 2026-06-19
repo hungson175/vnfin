@@ -16,16 +16,20 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ---
 
-## ⏸️ REFACTOR MODE — Boss directive 2026-06-19 ~18:01: refactoring is first priority
+## ✅ CONTRACT REFACTOR COMPLETE — 0 OPEN BUGS (2026-06-19 ~23:35)
 
-**GitHub bug fixing is PAUSED** — log new bugs to "Paused bugs — after refactor" below; do NOT
-fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
+The provider-boundary + typed-result contract refactor is **DONE**, all reviewer-gated:
+Phase 0 (freeze) → 1 (`_contracts` primitives) → 2 (fundamentals migration) → 3 (typed-result
+extraction) → 4 (6 adapter batches: funds, macro, security/index, crypto/FX, gold, funds-NAV) →
+6 (fundamentals close-loop). `origin/master` at `2c079a0`, full suite **2591 green**, public-API
+byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by the migration).
 
-- **Active work:** provider-boundary + typed-result **contract refactor** — see
-  `tasks/refactor-provider-contracts.md` (plan from reviewer review-202606191803). Phase 0 docs in
-  progress → request reviewer Checkpoint A / pre-Phase-1 design review before coding.
-- **Safe checkpoint:** code tree CLEAN at `5c05566` (last reviewed+pushed; 0 open bugs; suite
-  green). Nothing pushed/closed.
+- **Bugs closed via the refactor (15):** #33 #34 #32 #48 #30 #75 #9 #93 #143 #144 #142 #44 #45 #26 #21.
+- **`open_bugs = []`.** Only open issues are **enhancements**: #140 (financial news) + #145 — both
+  product decisions for Boss, NOT bugs.
+- **Optional remaining:** Phase 5 cleanup — `docs/architecture/provider-contracts.md` +
+  shared test factories; Phase-5 notes logged below (IMF message, validate_country_iso3
+  consistency, canonical_crypto_pair shape-only). Not required for correctness.
 
 ## Refactor done today (Phase 4 batches)
 
