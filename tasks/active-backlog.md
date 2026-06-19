@@ -16,10 +16,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#130 follow-up** — `model_type` allow-list. Initial fix (046f1ba) shipped+closed, but reviewer
-  found it accepted any non-bool int; #130 REOPENED. Tightened to None or canonical
-  `{1,2,3,101,102,103}` (reject -1/0/4/99/104/999) — committed `65bb2c4` (NOT pushed), +13 TDD
-  cases, suite 1879 green. **Awaiting reviewer review → push → re-close #130.**
+- **Returned-metadata mini-batch #69/#131/#132/#133** — combined design sent
+  (/tmp/vnfin-mini-batch-69-131-132-133-design-202606191402.md). Awaiting reviewer convergence
+  (5 open questions). Then 4 TDD commits + 1 combined review. See Poller-triage section for
+  per-issue invariants.
 
 - **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129 + #130** —
   design APPROVED (review-202606191336 #125r/#129; #127/#128 confirmed 13:38; #130 folded in).
@@ -52,6 +52,14 @@ _All other backlog items verified-fixed and closed during the 2026-06-19 sweep (
 
 ## Done today (trim periodically)
 
+- **Failover metadata/inner-row batch — COMPLETE, pushed + closed (`f6b96da..f795bd1`).**
+  - **#125-reopen** `7199a4f` — inner row/item object type checks. APPROVE.
+  - **#129** `ae71706` — fundamentals fiscal_date plain-date. APPROVE.
+  - **#127** `9e3e61f` — fetched_at_utc tz-aware UTC (shared helper). APPROVE_WITH_NOTES.
+  - **#128** `1898a51` — warnings tuple[str,...] (shared helper). APPROVE_WITH_NOTES.
+  - **#130** `046f1ba`+`65bb2c4` — fundamentals report metadata (is_bank/model_type/
+    provider_symbol); model_type allow-listed to {1,2,3,101,102,103} after reviewer follow-up
+    BLOCK (reopened then re-closed). APPROVE. Suite 1879 green.
 - **#123–#126 failover returned-object guard cluster — COMPLETE, all pushed + closed.**
   - **#125** outer container type-check — `8226ab5`. APPROVE.
   - **#123** macro point-key plain-date — `ec7586c`. APPROVE.
