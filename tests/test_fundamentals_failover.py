@@ -608,3 +608,62 @@ def test_malformed_line_item_object_falls_over_to_backup():
     reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
     assert reports[0].source == "cafef"
     assert primary.calls == 1 and backup.calls == 1
+
+
+# --- Issue #129: fundamentals report fiscal_date must be a plain datetime.date ---
+def _report_with_fiscal_date(fiscal_date):
+    return FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=fiscal_date,
+        items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="VND",
+    )
+
+
+@pytest.mark.parametrize(
+    "bad_fd",
+    [
+        datetime(2025, 12, 31),
+        datetime(2025, 12, 31, tzinfo=timezone.utc),
+        "2025-12-31",
+        None,
+        20251231,
+        [],
+    ],
+    ids=["naive_datetime", "aware_datetime", "str", "none", "int", "list"],
+)
+def test_rejects_malformed_report_fiscal_date(bad_fd):
+    _assert_fundamental_rejected(lambda: _report_with_fiscal_date(bad_fd), "malformed fiscal_date")
+
+
+def test_malformed_fiscal_date_falls_over_to_backup():
+    primary = FakeSource("vndirect", result=(_report_with_fiscal_date(datetime(2025, 12, 31)),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
+
+
+def test_accepts_plain_report_fiscal_date():
+    primary = FakeSource("vndirect", result=(_report_with_fiscal_date(date(2025, 12, 31)),))
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].fiscal_date == date(2025, 12, 31)
+
+
+def test_malformed_fiscal_date_takes_precedence_over_empty_items():
+    # Ordering: a malformed fiscal_date with zero items must report fiscal_date,
+    # proving the #129 guard runs before the zero-line check.
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=datetime(2025, 12, 31),
+        items=(),
+        source="vndirect",
+        currency="VND",
+    )
+    _assert_fundamental_rejected(lambda: bad, "malformed fiscal_date")

@@ -7,6 +7,12 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Fundamental fiscal_date type guard** — the fundamentals failover result guard now rejects a
+  ``FinancialReport`` whose ``fiscal_date`` is not a plain ``datetime.date`` (``datetime`` — aware
+  or naive — as well as ``str`` / ``None`` / ``int`` / ``list`` are rejected). The check runs
+  before the zero-line and identity checks so a malformed date is the canonical rejection reason
+  and the chain fails over instead of accepting a misdated report.
+  ([#129](https://github.com/hungson175/vnfin/issues/129))
 - **Failover inner row/item type guard** — the price, crypto, gold, macro, and fundamentals
   failover result guards now validate each inner row/item object before dereferencing it: bars
   must be the domain bar type (``PriceBar`` / ``CryptoBar`` / ``GoldBar``), macro points must be

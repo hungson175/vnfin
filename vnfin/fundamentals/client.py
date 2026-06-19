@@ -14,6 +14,7 @@ construction, making a scale/currency mix structurally impossible.
 from __future__ import annotations
 
 import math
+from datetime import date, datetime
 from numbers import Real
 
 from ..exceptions import AllSourcesFailed, InvalidData, VnfinError
@@ -170,6 +171,16 @@ def _validate_fundamental_result(
     for report in reports:
         if not isinstance(report, FinancialReport):
             return f"unexpected report type {type(report).__name__}"
+
+        # Issue #129: fiscal_date must be a plain calendar date (same rule as
+        # macro point keys / gold bar dates). ``datetime`` is rejected explicitly
+        # because it subclasses ``date`` but carries intraday/tz meaning a fiscal
+        # period must not have; str/None/int/list are rejected outright. Checked
+        # first so a malformed date is the canonical rejection reason and never
+        # leaks through a diagnostic string that interpolates report.fiscal_date.
+        fd = report.fiscal_date
+        if not isinstance(fd, date) or isinstance(fd, datetime):
+            return f"malformed fiscal_date {fd!r}: expected a plain date"
 
         # Issue #81: reject zero-line reports.
         if len(report.items) == 0:
