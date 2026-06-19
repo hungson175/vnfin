@@ -103,7 +103,11 @@ class GoldApiSource(GoldSource):
         )
 
     def _parse_iso(self, raw):
-        if not raw:
+        # Issue #112 (reopen): only a truly absent/null updatedAt falls back to
+        # now(). A PRESENT but falsey/non-string value (False/0/''/[]/{}) is
+        # corrupted freshness metadata and must be rejected via the strict ISO
+        # check below, not silently relabeled with the current time.
+        if raw is None:
             return datetime.now(timezone.utc)
         s = str(raw).strip()
         if not _GOLD_API_TS_RE.match(s):

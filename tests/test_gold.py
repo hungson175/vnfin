@@ -1211,3 +1211,21 @@ def test_currencyapi_history_rejects_mismatched_document_date_among_valid_dates(
     s = CurrencyApiGoldSource(http_get=_g)
     with pytest.raises(InvalidData, match="document date"):
         s.get_history(date(2026, 6, 15), date(2026, 6, 17))
+
+
+# --------------------------------------------------------------------------- #
+# Issue #112 (reopen) — gold-api present-but-falsey updatedAt must NOT fall back
+# to now(); only absent/null falls back.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("bad", [False, 0, "", [], {}, "not-a-timestamp"], ids=["false", "zero", "blank", "list", "dict", "garbage"])
+def test_goldapi_rejects_present_falsey_updated_at(bad):
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(updated=bad)), symbol="XAU")
+    with pytest.raises(InvalidData, match="updatedAt"):
+        s.get_quote()
+
+
+def test_goldapi_absent_updated_at_falls_back_to_now():
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(updated=None)), symbol="XAU")
+    q = s.get_quote()
+    assert q.time.tzinfo is not None
+    assert abs((datetime.now(timezone.utc) - q.time).total_seconds()) < 300
