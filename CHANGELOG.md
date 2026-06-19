@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Failover inner row/item type guard** — the price, crypto, gold, macro, and fundamentals
+  failover result guards now validate each inner row/item object before dereferencing it: bars
+  must be the domain bar type (``PriceBar`` / ``CryptoBar`` / ``GoldBar``), macro points must be
+  a ``(date, value)`` 2-tuple/list (a mapping is rejected, never unpacked), and fundamentals line
+  items must be ``LineItem``. A malformed inner object (dict, ``None``, scalar, wrong-shape pair)
+  is now a recorded rejected source attempt and the chain fails over, instead of leaking a raw
+  ``AttributeError`` / ``ValueError``. ([#125](https://github.com/hungson175/vnfin/issues/125))
 - **Failover provenance guard** — every domain failover client (price, crypto, gold, macro,
   fundamentals, FX) now verifies that an accepted result's stamped ``source`` matches the source
   that actually produced it. A result whose provenance does not match (e.g. a primary returning

@@ -591,3 +591,20 @@ def test_fundamental_invalid_source_marker_cannot_collide_with_source_name():
     )
     with pytest.raises(AllSourcesFailed):
         solo.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+# Issue #125 (reopen) — malformed inner line-item object (reject before deref).
+@pytest.mark.parametrize("bad_item", [object(), None, {}, 42, "x"], ids=["object", "none", "dict", "int", "str"])
+def test_rejects_malformed_line_item_object(bad_item):
+    _assert_fundamental_rejected(
+        lambda: _report_with_items([bad_item]), "malformed line item object"
+    )
+
+
+def test_malformed_line_item_object_falls_over_to_backup():
+    primary = FakeSource("vndirect", result=(_report_with_items([object()]),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
+    assert primary.calls == 1 and backup.calls == 1

@@ -673,3 +673,16 @@ def test_crypto_provenance_match_is_accepted():
     client = FailoverCryptoClient([_RawCryptoSource(good, name="real")])
     out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
     assert out.source == "real"
+
+
+# Issue #125 (reopen) — malformed inner crypto bar object.
+@pytest.mark.parametrize("bad_row", [object(), None, {}, "bar", 42], ids=["object", "none", "dict", "str", "int"])
+def test_rejects_malformed_crypto_bar_object(bad_row):
+    _assert_rejected_reason(_crypto_history(bars=(bad_row,)), "malformed bar object")
+
+
+def test_malformed_crypto_bar_object_failsover_to_backup():
+    good = _crypto_history(bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="good")
+    client = FailoverCryptoClient([_RawCryptoSource(_crypto_history(bars=(object(),))), _RawCryptoSource(good, name="good")])
+    out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert out.source == "good"

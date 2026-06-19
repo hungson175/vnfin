@@ -241,6 +241,10 @@ def _validate_gold_result(hist, chain_unit: str | None) -> str | None:
     # compare and before _coverage()'s ``b.date`` arithmetic so a malformed key is
     # a recorded rejected attempt, not a raw TypeError.
     for bar in hist.bars:
+        # Issue #125 (reopen): reject a malformed inner row object before
+        # dereferencing .date (also protects _coverage()'s b.date arithmetic).
+        if not isinstance(bar, GoldBar):
+            return f"malformed bar object {type(bar).__name__}"
         d = bar.date
         if not isinstance(d, date) or isinstance(d, datetime):
             return f"malformed bar date {d!r}: expected a plain datetime.date"

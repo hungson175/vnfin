@@ -674,3 +674,16 @@ def test_gold_provenance_match_is_accepted():
     client = FailoverGoldClient([_RawGoldSource(good, name="real")], min_coverage=0.0)
     out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
     assert out.source == "real"
+
+
+# Issue #125 (reopen) — malformed inner gold bar object (must reject before _coverage).
+@pytest.mark.parametrize("bad_row", [object(), None, {}, "bar", 42], ids=["object", "none", "dict", "str", "int"])
+def test_rejects_malformed_gold_bar_object(bad_row):
+    _assert_gold_rejected(_gold_history(bars=(bad_row,)), "malformed bar object")
+
+
+def test_malformed_gold_bar_object_failsover_to_backup():
+    good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="good")
+    client = FailoverGoldClient([_RawGoldSource(_gold_history(bars=(object(),))), _RawGoldSource(good, name="good")], min_coverage=0.0)
+    out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
+    assert out.source == "good"

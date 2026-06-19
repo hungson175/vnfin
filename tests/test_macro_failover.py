@@ -626,3 +626,29 @@ def test_macro_provenance_match_is_accepted():
     src = _StampMacroSource("real", "real")
     res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[src])
     assert res.source == "real"
+
+
+# Issue #125 (reopen) — malformed macro point shape (reject before unpack).
+@pytest.mark.parametrize(
+    "points",
+    [
+        [object()],
+        [()],
+        [(date(2024, 1, 1), 1.0, 2.0)],
+        [{date(2024, 1, 1): 1.0, date(2024, 1, 2): 2.0}],
+        ["xy"],
+    ],
+    ids=["object", "empty_tuple", "3tuple", "dict_2keys", "str2"],
+)
+def test_rejects_malformed_macro_point_shape(points):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_PointsMacroSource("bad", points)])
+    assert "malformed point" in ei.value.attempts[0].reason
+
+
+def test_malformed_macro_point_shape_failsover_to_backup():
+    good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
+    res = get_indicator(
+        "ZZZ", MacroIndicator.GDP, sources=[_PointsMacroSource("bad", [object()]), good]
+    )
+    assert res.source == "good"

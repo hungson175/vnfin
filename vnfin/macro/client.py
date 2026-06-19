@@ -236,6 +236,17 @@ class MacroClient:
                         f"but requested {indicator.value}"
                     )
 
+            # Issue #125 (reopen): each point must be a 2-element (date, value)
+            # tuple/list BEFORE any unpack. A mapping (even length 2) or a
+            # scalar/1-/3-tuple would otherwise unpack into the wrong values or
+            # raise a raw ValueError; reject it as a failover attempt instead.
+            for point in series.points:
+                if not (isinstance(point, (tuple, list)) and len(point) == 2):
+                    return (
+                        f"malformed point {point!r} from source {series.source!r}: "
+                        "expected a (date, value) pair"
+                    )
+
             # Issue #123: each point key must be a plain calendar ``date``, the
             # documented IndicatorSeries contract. ``datetime`` is rejected
             # explicitly because it subclasses ``date`` but carries intraday/tz

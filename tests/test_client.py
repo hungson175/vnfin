@@ -667,3 +667,25 @@ def test_single_source_malformed_price_provenance_raises():
     client = FailoverPriceClient([RawFakeSource("real", bad)])
     with pytest.raises(AllSourcesFailed):
         client.get_daily("FPT", *WIDE)
+
+
+# --------------------------------------------------------------------------- #
+# Issue #125 (reopen) — a malformed inner row object inside an otherwise typed
+# container must be rejected before deref, not leak a raw AttributeError.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("bad_row", [object(), None, {}, "bar", 42], ids=["object", "none", "dict", "str", "int"])
+def test_rejects_malformed_price_bar_object(bad_row):
+    bad = _history_with_bars("real", "FPT", (bad_row,))
+    client = FailoverPriceClient([RawFakeSource("real", bad)])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_daily("FPT", *WIDE)
+    assert "malformed bar object" in ei.value.attempts[0].reason
+
+
+def test_malformed_price_bar_object_failsover_to_backup(synth):
+    bad = _history_with_bars("real", "FPT", (object(),))
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("real", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert "malformed bar object" in h.attempts[0].reason

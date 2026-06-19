@@ -242,6 +242,11 @@ def _validate_price_result(
     # call, so a malformed key is a recorded rejected attempt rather than a raw
     # TypeError/AttributeError. ``utcoffset()`` is the robust aware check.
     for bar in hist.bars:
+        # Issue #125 (reopen): reject a malformed inner row object before
+        # dereferencing .time, so a dict/None/other row is a recorded rejected
+        # attempt instead of a raw AttributeError.
+        if not isinstance(bar, PriceBar):
+            return f"malformed bar object {type(bar).__name__}"
         t = bar.time
         if not isinstance(t, datetime) or t.utcoffset() is None:
             return f"malformed bar time {t!r}: expected a timezone-aware datetime"

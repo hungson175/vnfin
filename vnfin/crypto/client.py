@@ -207,6 +207,10 @@ def _validate_crypto_result(
     # or non-datetime key is rejected before the ascending-order compare and the
     # window .date() call, so a malformed key is a recorded rejected attempt.
     for bar in hist.bars:
+        # Issue #125 (reopen): reject a malformed inner row object before
+        # dereferencing .time.
+        if not isinstance(bar, CryptoBar):
+            return f"malformed bar object {type(bar).__name__}"
         t = bar.time
         if not isinstance(t, datetime) or t.utcoffset() is None:
             return f"malformed bar time {t!r}: expected a timezone-aware datetime"

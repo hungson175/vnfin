@@ -21,7 +21,7 @@ from ..failover import FailoverClient
 from ..validation import validate_non_empty_string, validate_positive_int
 from .base import AUTO, FundamentalSource, resolve_is_bank
 from .cafef import CafeFFundamentalSource
-from .models import FinancialReport, Period, StatementType, _coerce_period, _coerce_statement
+from .models import FinancialReport, LineItem, Period, StatementType, _coerce_period, _coerce_statement
 from .vndirect import VNDirectFundamentalSource
 
 # Default fundamentals failover chain: primary first, backup second.
@@ -222,6 +222,13 @@ def _validate_fundamental_result(
         # never flow downstream as if the source were healthy.
         seen_codes: set[str] = set()
         for item in report.items:
+            # Issue #125 (reopen): reject a malformed inner item object before
+            # _validate_line_item dereferences .item_code/.value.
+            if not isinstance(item, LineItem):
+                return (
+                    f"malformed line item object {type(item).__name__} in report "
+                    f"{report.fiscal_date}"
+                )
             reason = _validate_line_item(item, report.fiscal_date)
             if reason is not None:
                 return reason
