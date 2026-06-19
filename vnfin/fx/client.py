@@ -100,6 +100,9 @@ class FailoverFXClient:
             sources,
             operation=_operation,
             unit_of=lambda src: getattr(src, "unit", None),
+            # Issue #126: reject an FXRate whose stamped source does not match the
+            # source that produced it (provenance/audit integrity); never relabel.
+            provenance_of=lambda rate: getattr(rate, "source", None),
             max_attempts=max_attempts,
         )
 

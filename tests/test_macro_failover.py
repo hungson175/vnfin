@@ -582,3 +582,47 @@ def test_accepts_plain_date_macro_points():
     res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[src])
     assert res.source == "ok"
     assert [p[0] for p in res.points] == [date(2022, 1, 1), date(2023, 1, 1)]
+
+
+# --------------------------------------------------------------------------- #
+# Issue #126 — provenance: an IndicatorSeries stamped with a source that is not
+# the producing source's name is rejected; failover continues.
+# --------------------------------------------------------------------------- #
+class _StampMacroSource:
+    """Returns a valid IndicatorSeries stamped with an arbitrary `stamped` source."""
+
+    def __init__(self, name, stamped):
+        self.name = name
+        self._stamped = stamped
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return IndicatorSeries(
+            country=country_iso3.upper(),
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=((date(2023, 1, 1), 42.0),),
+            source=self._stamped,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+def test_rejects_macro_provenance_mismatch_and_failsover():
+    bad = _StampMacroSource("real", "claimed_backup")
+    good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[bad, good])
+    assert res.source == "good"
+
+
+def test_macro_provenance_match_is_accepted():
+    src = _StampMacroSource("real", "real")
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[src])
+    assert res.source == "real"

@@ -8,7 +8,7 @@ All notable changes to `vnfin` are documented here. The format follows
 
 ### Fixed
 - **Failover provenance guard** — every domain failover client (price, crypto, gold, macro,
-  fundamentals) now verifies that an accepted result's stamped ``source`` matches the source
+  fundamentals, FX) now verifies that an accepted result's stamped ``source`` matches the source
   that actually produced it. A result whose provenance does not match (e.g. a primary returning
   a result labelled with another provider's name) is recorded as a rejected source attempt and
   the chain fails over — the provenance is never silently relabelled — so audit logs, backtests,

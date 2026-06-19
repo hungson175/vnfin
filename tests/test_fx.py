@@ -231,18 +231,23 @@ def test_vietcombank_malformed_xml_is_invalid():
 # failover client + unit guard
 # --------------------------------------------------------------------------- #
 class _FakeFX:
-    def __init__(self, name, *, unit="VND-per-foreign-unit", rate=25000.0, raises=None, bad_unit=False):
+    def __init__(self, name, *, unit="VND-per-foreign-unit", rate=25000.0, raises=None, bad_unit=False, claimed_source=None):
         self.name = name
         self.unit = unit
         self._rate = rate
         self._raises = raises
         self._bad_unit = bad_unit
+        # #126: stamp a different .source than .name to exercise the provenance guard.
+        self._claimed_source = claimed_source
 
     def get_rate(self, base, quote="VND"):
         if self._raises is not None:
             raise self._raises
         u = "USD per 1 VND" if self._bad_unit else f"VND per 1 {base}"
-        return FXRate(base=base, quote=quote, rate=self._rate, unit=u, as_of_utc=_NOW, source=self.name)
+        return FXRate(
+            base=base, quote=quote, rate=self._rate, unit=u, as_of_utc=_NOW,
+            source=self._claimed_source or self.name,
+        )
 
 
 def test_failover_uses_backup_when_primary_unavailable():
@@ -277,6 +282,22 @@ def test_failover_rejects_infinite_rate():
 def test_failover_rejects_bool_rate():
     c = FailoverFXClient([_FakeFX("a", rate=True), _FakeFX("b", rate=26000.0)])
     assert c.get_rate("USD").source == "b"
+
+
+def test_failover_rejects_fx_provenance_mismatch_and_falls_over():
+    # #126: source "a" returns a rate stamped as another provider -> rejected,
+    # backup "b" served instead.
+    c = FailoverFXClient(
+        [_FakeFX("a", claimed_source="claimed_backup"), _FakeFX("b", rate=26000.0)]
+    )
+    r = c.get_rate("USD")
+    assert r.source == "b" and r.rate == pytest.approx(26000.0)
+
+
+def test_failover_fx_provenance_match_is_accepted():
+    c = FailoverFXClient([_FakeFX("a", rate=26000.0)])
+    r = c.get_rate("USD")
+    assert r.source == "a"
 
 
 # --------------------------------------------------------------------------- #
