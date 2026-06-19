@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `a840e63`, full suite
-  green. Maintainer in steady-state: record new poller/reviewer activity here first, TDD +
-  reviewer sign-off per fix.
+- **#134 — Macro failover descriptive metadata type guard** (new, reviewer poller 14:22).
+  `indicator_code`/`indicator_name`/`country_name` type/shape validation in the macro result
+  guard. TDD red-first → reviewer review → push → close. Scope via `./bin/gh-maintainer issue view 134`.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
