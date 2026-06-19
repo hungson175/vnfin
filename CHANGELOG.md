@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **WorldBank duplicate observation-date guard** — ``WorldBankMacroSource`` now rejects a
+  duplicate observation date within one response (``InvalidData``) instead of silently keeping
+  both ambiguous observations. ([#66](https://github.com/hungson175/vnfin/issues/66))
+- **VNDirect duplicate ratioCode guard** — the VNDirect ratios path now rejects a duplicate
+  ``ratioCode`` within one ``reportDate`` (``InvalidData``) instead of silently keeping the first,
+  matching how the statement path already rejects a duplicate ``itemCode``.
+  ([#26](https://github.com/hungson175/vnfin/issues/26))
 - **VNDirect all-skipped-rows response guard** — when a non-empty VNDirect statement response has
   *every* row skipped because its ``reportType``/``modelType`` contradicts the requested statement
   contract, ``VNDirectFundamentalSource`` now raises ``InvalidData`` (template/cadence mismatch)

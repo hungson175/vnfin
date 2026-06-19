@@ -405,8 +405,14 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
                 buckets[rd] = []
                 seen[rd] = set()
                 order.append(rd)
+            # Issue #26 (reopen): a duplicate ratioCode within one reportDate is an
+            # ambiguous/conflicting observation key (downstream report.get() would
+            # be non-deterministic), not data to silently keep-first. Reject it, as
+            # the statement path already rejects a duplicate itemCode.
             if ratio_code in seen[rd]:
-                continue  # keep first (newest) occurrence within a date
+                raise InvalidData(
+                    f"{self.name}: duplicate ratioCode {ratio_code} for {rd}"
+                )
             seen[rd].add(ratio_code)
             # EPS/BV are per-share monetary values; everything else is dimensionless.
             if ratio_code in {"EPS", "BV"}:

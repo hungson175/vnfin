@@ -1061,3 +1061,27 @@ def test_vndirect_ratio_present_falsey_code_does_not_bypass(bad_code):
         _src(_stmt_envelope(rows)).get_financials(
             "TESTCO", StatementType.RATIOS, Period.ANNUAL
         )
+
+
+# Issue #26 (reopen) — VNDirect ratios must reject a duplicate ratioCode within
+# one reportDate (was silently keep-first).
+def test_vndirect_ratio_rejects_duplicate_ratiocode_within_date():
+    rows = [
+        _ratio_row("TESTCO", "PE", 10.0, "2025-12-31", "PE"),
+        _ratio_row("TESTCO", "PE", 11.0, "2025-12-31", "PE"),  # duplicate ratioCode same date
+    ]
+    with pytest.raises(InvalidData, match="duplicate ratioCode"):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.RATIOS, Period.ANNUAL
+        )
+
+
+def test_vndirect_ratio_distinct_codes_within_date_accepted():
+    rows = [
+        _ratio_row("TESTCO", "PE", 10.0, "2025-12-31", "PE"),
+        _ratio_row("TESTCO", "PB", 2.0, "2025-12-31", "PB"),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.ANNUAL
+    )
+    assert len(reports) == 1 and len(reports[0].items) == 2
