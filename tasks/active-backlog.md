@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `f764709`, full suite
-  1967 green, watermark 2026-06-19T07:37:52Z. Steady-state: record new poller/reviewer activity
-  here first, TDD + reviewer sign-off per fix.
+- **#41 (REOPENED 14:50)** — `_unwrap` still does `int(raw)` on status/code, so a fractional
+  status/code (e.g. `200.9`) is silently truncated/accepted. TDD: reject fractional status/code
+  → reviewer review → push → close. Locate `_unwrap`; reviewer confirmed via static review.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
