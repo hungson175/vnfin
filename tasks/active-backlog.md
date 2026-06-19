@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#106 (REOPENED)** — OpenER fractional timestamp truncation. FIXED + committed `9e22a89`
-  (NOT pushed): `_as_of` accepts only int/integral-finite-float; fractional/non-finite → now()
-  fallback. +7 TDD cases, suite 1986 green. **Awaiting reviewer review → push → re-close.**
+- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `35ed92c`, full suite
+  1986 green, watermark 2026-06-19T08:26:22Z. Steady-state: record new poller/reviewer activity
+  here first, TDD + reviewer sign-off per fix. (Reviewer triaging poller 15:25 next.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -44,6 +44,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#106 (reopen)** OpenER fractional `time_last_update_unix` truncation — `9e22a89`, pushed
+  `faf3810..35ed92c`, closed. `_as_of` accepts only int/integral-finite-float; fractional/
+  non-finite → tz-aware now() fallback. APPROVE. Suite 1986 green.
 - **#41 (reopen)** Fmarket envelope status/code fractional/bool guard — `32a4587`, pushed
   `0ba8a5b..9bedc2e`, closed. `int(200.9)` truncation gap closed; bool/non-integral/non-finite
   float rejected; ints/integral-float/digit-str valid. APPROVE. Suite 1979 green.
