@@ -154,6 +154,12 @@ class FailoverFundamentalClient:
 # be dimensionless, per-share VND, or VND.
 _VND_CHAIN_ALLOWED_LINE_UNITS = frozenset({"VND", "vnd_per_share", "ratio", None})
 
+# Issue #130: canonical VNDirect statement modelType ids — corporate 1/2/3
+# (income/balance/cashflow) and bank 101/102/103. CafeF and ratios carry None.
+# A returned model_type must be None or one of these; arbitrary ints (-1/0/4/
+# 99/104/999) are not real templates and must be rejected.
+_CANONICAL_MODEL_TYPES = frozenset({1, 2, 3, 101, 102, 103})
+
 
 def _validate_fundamental_result(
     reports,
@@ -233,10 +239,14 @@ def _validate_fundamental_result(
                 "expected a bool"
             )
         mt = report.model_type
-        if mt is not None and (isinstance(mt, bool) or not isinstance(mt, int)):
+        if mt is not None and (
+            isinstance(mt, bool)
+            or not isinstance(mt, int)
+            or mt not in _CANONICAL_MODEL_TYPES
+        ):
             return (
                 f"malformed model_type {mt!r} in report {report.fiscal_date}: "
-                "expected None or a non-bool integer"
+                f"expected None or a canonical template id {sorted(_CANONICAL_MODEL_TYPES)}"
             )
         ps = report.provider_symbol
         if ps is not None and (not isinstance(ps, str) or not ps.strip()):

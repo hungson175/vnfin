@@ -748,9 +748,23 @@ def test_rejects_malformed_report_is_bank(bad):
     _assert_fundamental_rejected(lambda: _report_meta(is_bank=bad), "malformed is_bank")
 
 
-@pytest.mark.parametrize("bad", [True, False, 1.9, "1", "01", "+1", [], {}, "x"], ids=["true", "false", "float", "s1", "s01", "splus1", "list", "dict", "sx"])
+@pytest.mark.parametrize(
+    "bad",
+    [True, False, 1.9, "1", "01", "+1", [], {}, "x", -1, 0, 4, 99, 104, 999],
+    ids=["true", "false", "float", "s1", "s01", "splus1", "list", "dict", "sx", "neg1", "zero", "four", "n99", "n104", "n999"],
+)
 def test_rejects_malformed_report_model_type(bad):
+    # #130 follow-up: model_type must be None or a canonical template id; arbitrary
+    # non-bool ints (-1/0/4/99/104/999) are not real templates and are rejected.
     _assert_fundamental_rejected(lambda: _report_meta(model_type=bad), "malformed model_type")
+
+
+@pytest.mark.parametrize("mt", [1, 2, 3, 101, 102, 103, None], ids=["c1", "c2", "c3", "b101", "b102", "b103", "none"])
+def test_accepts_canonical_report_model_type(mt):
+    primary = FakeSource("vndirect", result=(_report_meta(model_type=mt),))
+    client = FailoverFundamentalClient([primary])
+    out = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)[0]
+    assert out.model_type == mt
 
 
 @pytest.mark.parametrize("bad", [[], {}, True, 123, "", "   "], ids=["list", "dict", "bool", "int", "blank", "whitespace"])
