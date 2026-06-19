@@ -16,10 +16,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#78 (REOPENED 16:30)** — macro identity: guard rejects a returned indicator_code/name that
-  matches ANOTHER indicator's canonical, but an ARBITRARY wrong string (e.g. "WRONG_INDICATOR")
-  matches none and is accepted. Fix: require returned code/name to EQUAL the REQUESTED
-  indicator's canonical. TDD → review → push → re-close. (#140 stays enhancement.)
+- **#78 (REOPENED 16:30)** — macro returned-indicator identity. IMPLEMENTED + committed
+  `cfd2282` (NOT pushed): Option A — `indicator_identity` on WB/IMF/DBnomics + MacroClient._fetch
+  validation (declared exact / undeclared→canonical). +9 TDD cases, suite 2046 green.
+  **Awaiting reviewer review → push → re-close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -27,6 +27,13 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
+- **Response-contract/identity batch #44 + #21 (REOPENED 16:40)** — after #78 lands:
+  - **#44** — VNDirect: when ALL rows are skipped by reportType/modelType mismatch (no code
+    mismatch), still returns `()`; reviewer wants this treated as a malformed/contract miss
+    (note: distinct from #21's all-code-mismatch → already InvalidData).
+  - **#21** — WorldBank does not validate observation `indicator.id`; UDF present blank/null
+    symbol bypasses identity guard.
+  Scope via `./bin/gh-maintainer issue view 44` / `21`; TDD → review.
 - **#140 — "financial news" FEATURE request** (no bug label). NOT a bug fix → product/scope
   decision for Boss/reviewer triage (reviewer closed similar #137 out-of-scope). Not implementing
   autonomously; flagged to reviewer. (#136/#138/#139 closed invalid; #106/#21 no action.)
