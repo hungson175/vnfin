@@ -125,7 +125,9 @@ class BinanceCryptoSource(HttpDataSource):
     def normalize_symbol(self, symbol: str) -> str:
         if symbol is None or not isinstance(symbol, str) or not symbol.strip():
             raise InvalidData(f"{self.name}: empty/invalid symbol {symbol!r}")
-        return symbol.strip().upper()
+        # strip only ordinary spaces (NOT \n/\t/control) so a trailing newline
+        # survives into parse_symbol and fails closed there (#9 B2 adapter gap).
+        return symbol.strip(" ").upper()
 
     @staticmethod
     def _validate_asset_token(token: str, label: str, symbol: str):

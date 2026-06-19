@@ -861,3 +861,19 @@ def test_coinbase_asset_token_fullmatch_rejects_control(bad_token):
     from vnfin.exceptions import InvalidData
     with pytest.raises(InvalidData):
         CoinbaseCryptoSource._validate_asset_token(bad_token, "base", "X")
+
+
+@pytest.mark.parametrize("bad", ["BTCUSDT\n", "BTCUSDT\t", "BTC\nUSDT", "BTCUSDT\r"])
+def test_binance_parse_symbol_rejects_control_chars(bad):
+    # #9 B2 adapter gap: normalize_symbol strips only spaces, so a trailing newline
+    # survives and parse_symbol fails closed (no quote match / token fullmatch).
+    from vnfin.exceptions import InvalidData
+    with pytest.raises(InvalidData):
+        BinanceCryptoSource().parse_symbol(bad)
+
+
+@pytest.mark.parametrize("bad", ["BTC-USD\n", "BTC-USD\t", "BTC\n-USD", "BTC-USD\r"])
+def test_coinbase_parse_symbol_rejects_control_chars(bad):
+    from vnfin.exceptions import InvalidData
+    with pytest.raises(InvalidData):
+        CoinbaseCryptoSource().parse_symbol(bad)
