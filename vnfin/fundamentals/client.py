@@ -42,6 +42,22 @@ def _fundamental_unit(source):
     return getattr(source, "unit", None)
 
 
+def _fundamental_provenance(reports) -> frozenset:
+    """Total/safe provenance extractor for the report-tuple composite result (#126).
+
+    Returns the ``frozenset`` of stamped report sources for the engine's
+    provenance guard. A non-string source (including an unhashable ``list`` /
+    ``set``) is mapped to a hashable, never-matching marker string so building
+    the ``frozenset`` cannot raise a raw ``TypeError`` and the guard rejects the
+    malformed provenance cleanly instead of leaking the exception to the caller.
+    """
+    names = set()
+    for r in reports:
+        src = getattr(r, "source", None)
+        names.add(src if isinstance(src, str) else f"<non-string source: {type(src).__name__}>")
+    return frozenset(names)
+
+
 class FailoverFundamentalClient:
     """Try fundamental sources in priority order, up to ``max_attempts`` calls.
 
@@ -63,10 +79,10 @@ class FailoverFundamentalClient:
             unit_of=_fundamental_unit,
             # Issue #126: a composite result is a tuple of reports; provenance is
             # the set of stamped report sources, all of which must match the
-            # source that produced them.
-            provenance_of=lambda reports: frozenset(
-                getattr(r, "source", None) for r in reports
-            ),
+            # producing source. The extractor is total/safe — a non-string (e.g.
+            # unhashable list) report source is mapped to a hashable marker so the
+            # frozenset never raises a raw TypeError and the guard rejects cleanly.
+            provenance_of=_fundamental_provenance,
             max_attempts=max_attempts,
             failure_factory=lambda attempts, symbol, statement, period, is_bank, limit: AllSourcesFailed(
                 symbol, getattr(statement, "value", statement), attempts

@@ -538,3 +538,37 @@ def test_rejects_fundamental_report_with_none_source():
     client = FailoverFundamentalClient([primary, backup])
     reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
     assert reports[0].source == "cafef"
+
+
+@pytest.mark.parametrize(
+    "bad_source",
+    [["vndirect"], {"vndirect"}, ("vndirect",), 123, None],
+    ids=["list", "set", "tuple", "int", "none"],
+)
+def test_rejects_fundamental_unhashable_or_nonstring_source(bad_source):
+    # #126 B3: a typed FinancialReport whose source is non-string (incl.
+    # unhashable list/set) must be rejected cleanly (never a raw TypeError from
+    # building the provenance frozenset); a valid backup is used.
+    primary = FakeSource("vndirect", result=(_report("TESTCO", bad_source, 1.0),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
+    assert primary.calls == 1 and backup.calls == 1
+
+
+def test_single_source_unhashable_fundamental_source_raises_clean():
+    primary = FakeSource("vndirect", result=(_report("TESTCO", ["vndirect"], 1.0),))
+    client = FailoverFundamentalClient([primary])
+    with pytest.raises(AllSourcesFailed):
+        client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+def test_valid_fundamental_tuple_all_sources_match_is_accepted():
+    primary = FakeSource(
+        "vndirect",
+        result=(_report("TESTCO", "vndirect", 1.0), _report("TESTCO", "vndirect", 2.0, fiscal_date="2024-12-31")),
+    )
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert {r.source for r in reports} == {"vndirect"}
