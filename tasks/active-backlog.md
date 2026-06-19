@@ -20,12 +20,14 @@ _Last synced: 2026-06-19 ~10:12 +07_
   (review-202606191252-consolidated). Order: #125 → #123/#124 → #126 (engine-level provenance
   guard + result-source extractor for fundamentals tuple; reject not restamp; gold datetime keys
   rejected).
-  - **#125 container type-check — IMPLEMENTED, committed (awaiting reviewer code review).**
-    price/crypto/gold/macro guards now `isinstance` the container first → "unexpected result
-    type <T>" rejection. +28 TDD cases, suite 1691 green, CHANGELOG updated.
-  - #123 macro point-key type — NEXT.
-  - #124 price/crypto/gold bar-key type — after #123.
-  - #126 provenance mismatch — last.
+  - **#125** container type-check — DONE: pushed `8226ab5`, closed. APPROVE (review-202606191256
+    + full-gate 202606191258).
+  - **#123** macro point-key type — committed `ec7586c` (NOT pushed). Awaiting review.
+  - **#124** price/crypto/gold bar-key type — committed `45ed0a8` (NOT pushed). Awaiting review
+    (requested together with #123).
+  - **#126** provenance mismatch — LAST. Held until #123/#124 land (engine-level change, avoid
+    deep stack). Plan: engine `provenance_of` guard + result-source extractor (fundamentals
+    returns a tuple), reject mismatch (not restamp).
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
