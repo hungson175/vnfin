@@ -133,7 +133,7 @@ class AlphaVantageNewsSource(HttpDataSource):
 
     @staticmethod
     def _as_av_time(value, *, label, end: bool):
-        """Map a date/datetime to provider ``YYYYMMDDTHHMMSS`` (day-window edges)."""
+        """Map a date/datetime to provider ``YYYYMMDDTHHMM`` (no seconds; day-window edges)."""
         if isinstance(value, datetime):
             # Alpha Vantage's documented format is YYYYMMDDTHHMM (no seconds) (B3).
             return value.strftime("%Y%m%dT%H%M")
@@ -169,11 +169,14 @@ class AlphaVantageNewsSource(HttpDataSource):
         tps = self._validate_topics(topics)
         if not tks and not tps:
             raise InvalidData("alpha_vantage: provide at least one of tickers or topics")
-        if not isinstance(sort, str) or sort.strip().lower() not in _SORTS:
+        # strip only spaces (NOT \n/\t/control) so 'latest\n' fails closed (B1) rather
+        # than being normalized and sent.
+        sort_key = sort.strip(" ").lower() if isinstance(sort, str) else None
+        if sort_key not in _SORTS:
             raise InvalidData(f"alpha_vantage: sort must be one of {sorted(_SORTS)}, got {sort!r}")
         lim = self._validate_limit(limit)
 
-        params = {"function": "NEWS_SENTIMENT", "apikey": self._api_key, "sort": _SORTS[sort.strip().lower()], "limit": lim}
+        params = {"function": "NEWS_SENTIMENT", "apikey": self._api_key, "sort": _SORTS[sort_key], "limit": lim}
         if tks:
             params["tickers"] = ",".join(tks)
         if tps:

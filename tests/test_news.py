@@ -195,3 +195,10 @@ def test_datetime_params_emit_hhmm_no_seconds():
     p = get.calls[0]["params"]
     assert p["time_from"] == "20250101T0930"  # HHMM, seconds dropped
     assert p["time_to"] == "20250131T1600"
+
+
+# B1 (sort) — control/newline in sort must fail closed, zero network.
+@pytest.mark.parametrize("bad", ["latest\n", "\tlatest", "lat est", "relevance\r"])
+def test_sort_control_chars_fail_closed(bad):
+    with pytest.raises(InvalidData):
+        AlphaVantageNewsSource(api_key=_KEY, http_get=_no_network).search(tickers=("AAPL",), sort=bad)
