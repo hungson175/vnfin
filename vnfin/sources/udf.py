@@ -187,7 +187,11 @@ class UDFSource(HttpDataSource, PriceSource):
                 raise InvalidData(f"{self.name}: non-positive price at row {i}")
             if raw_vol < 0:
                 raise InvalidData(f"{self.name}: negative volume at row {i}")
-            vol = int(round(raw_vol))
+            # Issue #120: equity/index volume must be whole after VOLUME_SCALE. A fractional
+            # value is provider/parse drift; reject it rather than silently rounding.
+            if not raw_vol.is_integer():
+                raise InvalidData(f"{self.name}: fractional volume {raw_vol!r} at row {i}")
+            vol = int(raw_vol)
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
                 raise InvalidData(f"{self.name}: OHLC invariant violated at {tm.date()}")
             bars.append(PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol))

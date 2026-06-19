@@ -203,6 +203,21 @@ def test_negative_volume_raises_invalid(synth):
         src_with(synth.bare(rows=bad)).get_history("FPT", Interval.D1, *WIDE)
 
 
+def test_fractional_volume_raises_invalid(synth):
+    # Issue #120: equity/index UDF volume must be a whole number after VOLUME_SCALE. A
+    # fractional volume is provider/parse drift and must raise InvalidData instead of being
+    # silently rounded via int(round(...)).
+    bad = [("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000.5)]
+    with pytest.raises(InvalidData):
+        src_with(synth.bare(rows=bad)).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_whole_float_volume_accepted(synth):
+    rows = [("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000.0)]
+    hist = src_with(synth.bare(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
+    assert hist.bars[0].volume == 1000
+
+
 def test_missing_array_raises_invalid(synth):
     payload = json.dumps(
         {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [72.5], "l": [71.8], "v": [1000]}
