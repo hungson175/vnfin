@@ -7,6 +7,11 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **GoldApi quote freshness** — ``GoldApiSource._parse_iso()`` requires a full ISO-8601
+  timestamp for ``updatedAt`` (``YYYY-MM-DDTHH:MM:SSZ``, with optional fractional seconds
+  and offset) and raises ``InvalidData`` on date-only, compact-date, ISO week-date, and
+  time-only strings instead of coercing them into a midnight-UTC spot quote.
+  ([#112](https://github.com/hungson175/vnfin/issues/112))
 - **Provider timestamp coercion** — shared ``parse_provider_int()`` rejects JSON booleans
   before epoch timestamp conversion in UDF, Binance, and Coinbase paths; OpenER bool
   timestamps fall back to now instead of epoch. ([#106](https://github.com/hungson175/vnfin/issues/106))

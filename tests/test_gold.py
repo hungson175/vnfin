@@ -6,7 +6,7 @@ docs/research/2026-06-18-gold-vietnam-domestic.md and docs/research/2026-06-18-g
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -433,6 +433,58 @@ def test_goldapi_parses_iso_timestamp_utc():
     s = GoldApiSource(http_get=_static_get(_goldapi_json(updated="2026-06-17T18:10:08Z")))
     q = s.get_quote()
     assert q.time == datetime(2026, 6, 17, 18, 10, 8, tzinfo=timezone.utc)
+
+
+# --- Issue #112: updatedAt must be a full ISO-8601 timestamp -----------------
+# Python's datetime.fromisoformat accepts date-only, compact-date, and ISO
+# week-date strings, silently turning malformed freshness metadata into a
+# midnight-UTC spot timestamp. The provider documents updatedAt as a full
+# timestamp (YYYY-MM-DDTHH:MM:SSZ), so anything without a time component is
+# schema drift and must raise stable InvalidData.
+@pytest.mark.parametrize(
+    "bad_updated",
+    [
+        "2026-06-17",       # date-only: no intraday freshness
+        "20260617",         # compact date accepted by fromisoformat
+        "2026-W25-3",       # ISO week date accepted by fromisoformat
+        "2026-06",          # year-month
+        "18:10:08",         # time-only, no date
+        "not-a-timestamp",  # outright garbage
+    ],
+)
+def test_goldapi_non_timestamp_updatedat_raises_invalid(bad_updated):
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(updated=bad_updated)))
+    with pytest.raises(InvalidData):
+        s.get_quote()
+
+
+@pytest.mark.parametrize(
+    "good_updated,expected",
+    [
+        ("2026-06-17T18:10:08Z", datetime(2026, 6, 17, 18, 10, 8, tzinfo=timezone.utc)),
+        ("2026-06-17T18:10:08+00:00", datetime(2026, 6, 17, 18, 10, 8, tzinfo=timezone.utc)),
+        # fractional seconds and an explicit offset are still full timestamps
+        ("2026-06-17T18:10:08.500Z", datetime(2026, 6, 17, 18, 10, 8, 500_000, tzinfo=timezone.utc)),
+        (
+            "2026-06-17T18:10:08+07:00",
+            datetime(2026, 6, 17, 18, 10, 8, tzinfo=timezone(timedelta(hours=7))),
+        ),
+    ],
+)
+def test_goldapi_accepts_full_timestamps(good_updated, expected):
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(updated=good_updated)))
+    q = s.get_quote()
+    assert q.time == expected
+
+
+def test_goldapi_missing_updatedat_falls_back_to_now():
+    # An absent/empty updatedAt is not schema drift; keep the existing
+    # fetch-time fallback rather than failing the quote.
+    payload = json.dumps({"currency": "USD", "price": 4296.9, "symbol": "XAU"})
+    s = GoldApiSource(http_get=_static_get(payload))
+    q = s.get_quote()
+    assert q.time.tzinfo is not None
+    assert abs((datetime.now(timezone.utc) - q.time).total_seconds()) < 60
 
 
 def test_goldapi_silver_symbol():
