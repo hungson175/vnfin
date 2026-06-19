@@ -101,6 +101,22 @@ item). `provenance_of`/provenance check stays in `failover.py` (or moves behind 
 (or after gold as an approach-proof if reviewer prefers). Handoff per checkpoint: commit/range,
 exact tests/gates, this old→new map, public-API byte-equality, no-new-bug-scope, no source drift.
 
+## Phase 4 design — adapter migrations (per-domain, Checkpoint E each)
+
+Order: **Fmarket funds** → macro sources (WB/DBnomics/FRED/IMF) → UDF → gold sources → FX/crypto.
+Each batch migrates the adapter's provider-field access onto `_contracts` and fail-closed-fixes the
+relevant parked bugs; per-batch Checkpoint-E handoff includes commit/range, exact tests/gates,
+adapter contract mapping, which parked issues are resolved, and confirmation of no unrelated scope.
+
+**New shared contract needed (funds batch, reused by indices/identifier batches): canonical
+security/fund identifier** — for Fmarket `stockCode`/`fundCode` (#34/#33), index constituent
+`stockSymbol` (#30), and identifier validation (#9). Proposed grammar (PENDING reviewer confirm):
+non-empty, unpadded, upper-normalized, must match `[A-Z][A-Z0-9]*` (letter-start, then uppercase
+alnum) → rejects internal space / slash / punctuation / newline / blank / non-string. Open question
+for reviewer: do any real VN tickers / Fmarket fund codes contain `.`/`-`/digit-first (e.g. index
+codes like `VN30`)? If so, widen the grammar. To live in `_contracts/keys.py` as
+`canonical_security_symbol(value, ctx)`.
+
 ## Candidate shared test matrices (Phase 1/2)
 
 ```
