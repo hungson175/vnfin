@@ -7,6 +7,7 @@ round numbers (USD/VND = 25,000) so no real provider snapshot is committed.
 from __future__ import annotations
 
 import datetime as dt
+import json
 import pathlib
 
 import pytest
@@ -718,3 +719,36 @@ def test_accepts_rate_inside_bid_ask_spread():
     client = FailoverFXClient([_FakeFXSource(rate)])
     result = client.get_rate("USD", "VND")
     assert result.rate == 25_100.0
+
+
+# --------------------------------------------------------------------------- #
+# Issue #106 (reopen) — OpenER fractional time_last_update_unix must NOT be
+# truncated by int() into a falsely-precise as_of_utc; fractional/non-finite
+# falls back to a tz-aware "now" (optional-metadata path).
+# --------------------------------------------------------------------------- #
+def _open_er_payload(ts):
+    return json.dumps(
+        {"result": "success", "base_code": "USD", "time_last_update_unix": ts,
+         "rates": {"USD": 1.0, "VND": 25000.0, "EUR": 0.9}}
+    )
+
+
+_TRUNCATED = dt.datetime.fromtimestamp(1700000000, tz=dt.timezone.utc)  # 2023-11-14...
+
+
+@pytest.mark.parametrize("ts", [1700000000.9, 1700000000.5, 1700000000.001, float("inf"), float("nan")], ids=["frac9", "frac5", "frac001", "inf", "nan"])
+def test_open_er_fractional_timestamp_falls_back_to_now_not_truncated(ts):
+    src = OpenErApiFXSource(http_get=_http(_open_er_payload(ts)))
+    r = src.get_rate("USD")
+    # Must NOT be the int()-truncated precise value.
+    assert r.as_of_utc != _TRUNCATED
+    # Falls back to a recent tz-aware now (well after the 2023 truncation target).
+    assert r.as_of_utc.tzinfo is not None
+    assert abs((dt.datetime.now(dt.timezone.utc) - r.as_of_utc).total_seconds()) < 300
+
+
+@pytest.mark.parametrize("ts", [1700000000, 1700000000.0], ids=["int", "integral_float"])
+def test_open_er_integral_timestamp_is_precise(ts):
+    src = OpenErApiFXSource(http_get=_http(_open_er_payload(ts)))
+    r = src.get_rate("USD")
+    assert r.as_of_utc == _TRUNCATED

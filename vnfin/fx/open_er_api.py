@@ -82,7 +82,15 @@ class OpenErApiFXSource(FXSource):
         ts = payload.get("time_last_update_unix")
         if isinstance(ts, bool):
             return datetime.now(timezone.utc)
-        if isinstance(ts, (int, float)) and ts > 0:
+        # Issue #106 (reopen): a fractional numeric timestamp (e.g. 1700000000.9)
+        # must NOT be silently truncated by int() into a falsely-precise as_of.
+        # Accept only an integer or an integral, finite float; treat a fractional
+        # or non-finite value like missing/malformed freshness metadata and fall
+        # back to a tz-aware "now" (the optional-metadata path).
+        is_integral = isinstance(ts, int) or (
+            isinstance(ts, float) and math.isfinite(ts) and ts.is_integer()
+        )
+        if is_integral and ts > 0:
             try:
                 return datetime.fromtimestamp(int(ts), tz=timezone.utc)
             except (ValueError, OverflowError, OSError):

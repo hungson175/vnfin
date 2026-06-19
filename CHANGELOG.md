@@ -7,6 +7,11 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **OpenER fractional timestamp guard** — ``OpenErApiFXSource`` no longer truncates a fractional
+  ``time_last_update_unix`` (e.g. ``1700000000.9``) via ``int()`` into a falsely-precise
+  ``as_of_utc``. Only an integer or an integral, finite float is used as the provider timestamp;
+  a fractional or non-finite value is treated like missing/malformed freshness metadata and falls
+  back to a timezone-aware "now". ([#106](https://github.com/hungson175/vnfin/issues/106))
 - **Fmarket envelope status/code integer guard** — the Fmarket application-envelope check no
   longer accepts a fractional or boolean ``status``/``code``: ``int(200.9)`` previously truncated
   to ``200`` and passed the 2xx gate, and a ``bool`` would coerce. A non-integral float, a
