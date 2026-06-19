@@ -16,8 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **DBnomics batch (#104 + #66)** — IMPLEMENTED + committed `e7a43c4` (NOT pushed): strict canonical period_start_day grammar + duplicate-date guard. +9 TDD cases, suite 2026 green. **Awaiting reviewer review → push → re-close.**
-  `period_start_day` exact `YYYY-MM-DD` string; #66 DBnomics duplicate-date guard. TDD → review.
+- **DBnomics batch (#104 + #66)** — IMPLEMENTED + committed `e7a43c4` (NOT pushed): strict
+  canonical period_start_day grammar + duplicate-date guard. +9 TDD cases, suite 2026 green.
+  **Awaiting reviewer review → push → re-close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
