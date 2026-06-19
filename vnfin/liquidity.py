@@ -99,12 +99,16 @@ def _bar_point(bar) -> LiquidityPoint:
     if not isinstance(bar, PriceBar):
         raise InvalidData(f"liquidity: bar is not a PriceBar, got {type(bar).__name__}")
     t = bar.time
-    if not isinstance(t, datetime):
-        raise InvalidData(f"liquidity: bar time is not a datetime, got {t!r}")
+    # B1: the bar key must be a timezone-AWARE datetime (the PriceBar.time contract); a
+    # naive datetime or non-datetime is malformed (would corrupt the daily date key).
+    if not isinstance(t, datetime) or t.utcoffset() is None:
+        raise InvalidData(f"liquidity: bar time {t!r} must be a timezone-aware datetime")
     d = t.date()
     close = bar.close
-    if isinstance(close, bool) or not isinstance(close, (int, float)) or not math.isfinite(close) or close < 0:
-        raise InvalidData(f"liquidity: malformed close {close!r} on {d}")
+    # B2: close inherits price positivity (close > 0); zero/negative/non-finite is malformed.
+    # A zero VOLUME day is still allowed (no trades, valid price).
+    if isinstance(close, bool) or not isinstance(close, (int, float)) or not math.isfinite(close) or close <= 0:
+        raise InvalidData(f"liquidity: close must be a positive finite number, got {close!r} on {d}")
     vol = bar.volume
     if isinstance(vol, bool) or not isinstance(vol, int) or vol < 0:
         raise InvalidData(f"liquidity: malformed volume {vol!r} on {d}")
@@ -134,6 +138,15 @@ def from_price_history(
         raise InvalidData("liquidity: empty price history")
 
     points = tuple(_bar_point(b) for b in history.bars)
+    # B1: daily keys must be strictly ascending — a duplicate date would double-count and
+    # an unsorted series would make start > end. (PriceHistory bars are documented
+    # strictly-ascending; enforce it here too.)
+    for i in range(len(points) - 1):
+        if not (points[i].date < points[i + 1].date):
+            raise InvalidData(
+                f"liquidity: daily bars are not strictly ascending by date "
+                f"({points[i + 1].date} after {points[i].date})"
+            )
     values = [p.daily_value_vnd for p in points]
     volumes = [p.volume for p in points]
     avg_val = statistics.fmean(values)

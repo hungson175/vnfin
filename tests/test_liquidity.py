@@ -161,3 +161,37 @@ def test_profile_inverted_dates_rejected_zero_calls():
 # namespace
 def test_liquidity_namespace():
     assert vnfin.liquidity.from_price_history is from_price_history
+
+
+# B1 — bar-key contract: aware datetime, strictly-ascending, no duplicates.
+def test_naive_datetime_bar_rejected():
+    naive = PriceBar(time=datetime(2025, 1, 2), open=100.0, high=100.0, low=100.0, close=100.0, volume=10)
+    with pytest.raises(InvalidData, match="timezone-aware"):
+        from_price_history(_hist([naive]))
+
+
+def test_non_datetime_bar_time_rejected():
+    bad = PriceBar(time="2025-01-02", open=100.0, high=100.0, low=100.0, close=100.0, volume=10)
+    with pytest.raises(InvalidData, match="timezone-aware"):
+        from_price_history(_hist([bad]))
+
+
+def test_duplicate_daily_keys_rejected():
+    with pytest.raises(InvalidData, match="ascending"):
+        from_price_history(_hist([_bar(date(2025, 1, 2), 100.0, 10), _bar(date(2025, 1, 2), 200.0, 20)]))
+
+
+def test_unsorted_daily_keys_rejected():
+    with pytest.raises(InvalidData, match="ascending"):
+        from_price_history(_hist([_bar(date(2025, 1, 3), 100.0, 10), _bar(date(2025, 1, 2), 200.0, 20)]))
+
+
+# B2 — zero close rejected (inherits price positivity); zero volume still allowed.
+def test_zero_close_rejected():
+    with pytest.raises(InvalidData, match="positive"):
+        from_price_history(_hist([_bar(date(2025, 1, 2), 0.0, 10)]))
+
+
+def test_zero_volume_with_positive_close_allowed():
+    p = from_price_history(_hist([_bar(date(2025, 1, 2), 100.0, 0)]))
+    assert p.avg_daily_value_vnd == 0.0 and len(p) == 1
