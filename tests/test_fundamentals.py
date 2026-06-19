@@ -413,6 +413,30 @@ def test_vndirect_empty_list_data_raises_empty_not_invalid():
         _src(text).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
+def _row_with_model_type(mt):
+    row = _stmt_row("TESTCO", 11000, 1000.0, "2025-12-31", "ANNUAL", 1)
+    row["modelType"] = mt  # override the floated default with the raw test value
+    return row
+
+
+@pytest.mark.parametrize("bad_mt", [1.9, 2.5, "1.9", "1.0", "01", "abc", True])
+def test_vndirect_malformed_model_type_raises_invalid(bad_mt):
+    # Issue #121: modelType is integer template identity, not a lossy coercion target.
+    # Fractional numbers/strings, leading-zero/non-canonical strings, and bool must raise
+    # InvalidData instead of being truncated via int(float(...)).
+    text = _stmt_envelope([_row_with_model_type(bad_mt)])
+    with pytest.raises(InvalidData):
+        _src(text).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+@pytest.mark.parametrize("good_mt", [1, 1.0, "1"])
+def test_vndirect_canonical_model_type_accepted(good_mt):
+    # int, integral float (provider sends 1.0), and canonical digit string are all accepted.
+    text = _stmt_envelope([_row_with_model_type(good_mt)])
+    reports = _src(text).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert len(reports) == 1
+
+
 def test_period_unknown_rejected_for_statements():
     # Issue #10: Period.UNKNOWN is only meaningful for ratios; statements must
     # reject it before touching the network.

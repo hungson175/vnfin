@@ -23,6 +23,7 @@ the research doc. No vnstock or derivative material was consulted.
 from __future__ import annotations
 
 import math
+import re
 from datetime import date, datetime, timezone
 
 import dataclasses
@@ -57,6 +58,31 @@ _BANK_MODEL = {
 #: ratios are dimensionless or per-share VND. Anything else is a contract
 #: violation and raises InvalidData (see issue #70).
 _ALLOWED_LINE_UNITS = frozenset({"VND", "vnd_per_share", "ratio", None})
+
+_CANONICAL_INT_STR = re.compile(r"[1-9]\d*|0")
+
+
+def _parse_model_type(raw):
+    """Issue #121: ``modelType`` is integer statement-template identity, not a lossy
+    coercion target. Accept an ``int`` (excluding ``bool``), an integral ``float``
+    (the provider sends e.g. ``1.0``), or a canonical digit-only string (``"1"``,
+    ``"102"``). Reject ``bool``, fractional numbers/strings, and non-canonical shapes
+    with :class:`InvalidData`. ``None`` (absent tag) returns ``None`` so the caller can
+    skip the row, preserving the tag-less fallback behavior.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        raise InvalidData(f"vndirect: malformed modelType {raw!r}")
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float):
+        if raw.is_integer():
+            return int(raw)
+        raise InvalidData(f"vndirect: malformed modelType {raw!r}")
+    if isinstance(raw, str) and _CANONICAL_INT_STR.fullmatch(raw.strip()):
+        return int(raw.strip())
+    raise InvalidData(f"vndirect: malformed modelType {raw!r}")
 
 
 class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
@@ -187,11 +213,8 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         votes = {True: 0, False: 0}
         for row in rows:
             raw = row.get("modelType") if isinstance(row, dict) else None
-            if raw is None:
-                continue
-            try:
-                mt = int(float(raw))
-            except (TypeError, ValueError):
+            mt = _parse_model_type(raw)  # Issue #121: strict; None -> skip, malformed -> raise
+            if mt is None:
                 continue
             votes[mt >= 100] += 1
         if votes[True] == 0 and votes[False] == 0:
@@ -252,10 +275,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             if row_report and row_report != period.value:
                 skipped_rows += 1
                 continue
-            try:
-                row_model = int(float(row.get("modelType")))
-            except (TypeError, ValueError):
-                row_model = None
+            row_model = _parse_model_type(row.get("modelType"))  # Issue #121: strict
             if row_model is not None and row_model != model_type:
                 skipped_rows += 1
                 continue
