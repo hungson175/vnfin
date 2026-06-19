@@ -7,6 +7,9 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Index constituents data envelope** — validate ``data`` is a list before treating
+  falsy containers as empty membership; malformed SUCCESS payloads raise
+  ``InvalidData`` instead of ``EmptyData``. ([#103](https://github.com/hungson175/vnfin/issues/103))
 - **Macro response containment** — FRED and World Bank adapters drop observations
   outside the requested date/year window and raise ``EmptyData`` when no in-window
   points remain. ([#105](https://github.com/hungson175/vnfin/issues/105))

@@ -160,10 +160,10 @@ class IndexConstituentsSource(HttpDataSource):
             raise InvalidData(f"{self.name}: code={code}")
 
         data = parsed.get("data")
-        if not data:
-            raise EmptyData(f"{self.name}: no members for group {group}")
         if not isinstance(data, list):
             raise InvalidData(f"{self.name}: 'data' is not a list")
+        if not data:
+            raise EmptyData(f"{self.name}: no members for group {group}")
 
         members: list[IndexMember] = []
         seen: set[str] = set()

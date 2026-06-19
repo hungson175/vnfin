@@ -407,6 +407,17 @@ def test_constituents_empty_data_raises_empty():
         s.get_constituents("VN30")
 
 
+@pytest.mark.parametrize(
+    "data",
+    [{}, "", 0, False, None],
+    ids=["empty_dict", "empty_string", "zero", "false", "none"],
+)
+def test_constituents_malformed_data_container_raises_invalid(data):
+    payload = json.dumps({"code": "SUCCESS", "data": data})
+    with pytest.raises(InvalidData, match="not a list"):
+        IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
+
+
 def test_constituents_error_code_raises_invalid():
     payload = json.dumps({"code": "ERROR", "message": "bad group", "data": None})
     with pytest.raises(InvalidData):
