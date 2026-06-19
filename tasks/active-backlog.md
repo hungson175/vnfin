@@ -39,6 +39,8 @@ BTMC (design APPROVED by reviewer — implement right after #113/#114 push, TDD 
   `1000 G` works, `.5/-5/0 G` reject; leading-zero quantity policy. (review-202606191004-design)
 - #117 BTMC same-ts dedup: identical dup keep-first; conflicting same-ts → InvalidData;
   older/newer deterministic.
+- #118 BTMC `_row_index` accepts malformed `@row`; should raise InvalidData on present-malformed,
+  keep fallback discovery only when `@row` absent/blank (poller #60, labeled bug). Design TBD.
 
 Failover identity/units/bounds/ordering guards:
 - #69 crypto failover currency vs value_unit mismatch
