@@ -80,8 +80,8 @@ def _parse_model_type(raw):
         if raw.is_integer():
             return int(raw)
         raise InvalidData(f"vndirect: malformed modelType {raw!r}")
-    if isinstance(raw, str) and _CANONICAL_INT_STR.fullmatch(raw.strip()):
-        return int(raw.strip())
+    if isinstance(raw, str) and _CANONICAL_INT_STR.fullmatch(raw):
+        return int(raw)  # exact (no strip): " 1 ", "+1", "01" are non-canonical -> rejected
     raise InvalidData(f"vndirect: malformed modelType {raw!r}")
 
 

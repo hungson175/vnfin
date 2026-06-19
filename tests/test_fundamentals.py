@@ -419,7 +419,15 @@ def _row_with_model_type(mt):
     return row
 
 
-@pytest.mark.parametrize("bad_mt", [1.9, 2.5, "1.9", "1.0", "01", "abc", True])
+@pytest.mark.parametrize(
+    "bad_mt",
+    [
+        1.9, 2.5, "1.9", "1.0", "01", "abc", True,   # fractional / non-canonical / bool
+        " 1 ", " 1", "1 ", "+1", "-1",                # whitespace / signed strings
+        float("inf"), float("nan"),                    # non-finite
+        [1], {"i": 1},                                  # non-scalar
+    ],
+)
 def test_vndirect_malformed_model_type_raises_invalid(bad_mt):
     # Issue #121: modelType is integer template identity, not a lossy coercion target.
     # Fractional numbers/strings, leading-zero/non-canonical strings, and bool must raise
