@@ -837,6 +837,76 @@ def test_cafef_bool_year_raises_invalid():
         )
 
 
+@pytest.mark.parametrize(
+    "year",
+    [
+        2024.9,  # fractional numeric
+        "+2024",  # signed string
+        "02024",  # leading-zero string
+    ],
+)
+def test_cafef_noncanonical_year_raises_invalid(year):
+    """Issue #94: broad int() coercion must not normalize schema-drift values."""
+    periods = [
+        {
+            "Time": "2025",
+            "Year": year,
+            "Quater": 0,
+            "ReportType": "HK",
+            "Conten": "x",
+            "Value": [{"Code": "REV", "Name": "Revenue", "Value": 1.0}],
+        }
+    ]
+    with pytest.raises(InvalidData, match="Year"):
+        _src(_envelope(periods)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )
+
+
+@pytest.mark.parametrize(
+    "quater",
+    [
+        1.9,  # fractional numeric
+        "+1",  # signed string
+        "01",  # leading-zero string
+    ],
+)
+def test_cafef_noncanonical_quater_raises_invalid(quater):
+    """Issue #94: broad int() coercion must not normalize schema-drift values."""
+    periods = [
+        {
+            "Time": "2025",
+            "Year": 2025,
+            "Quater": quater,
+            "ReportType": "HK",
+            "Conten": "x",
+            "Value": [{"Code": "REV", "Name": "Revenue", "Value": 1.0}],
+        }
+    ]
+    with pytest.raises(InvalidData, match="Quater"):
+        _src(_envelope(periods)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )
+
+
+def test_cafef_canonical_string_year_and_quater_accepted():
+    """Valid integer strings must keep working after strict parsing."""
+    periods = [
+        {
+            "Time": "2025",
+            "Year": "2025",
+            "Quater": "0",
+            "ReportType": "HK",
+            "Conten": "x",
+            "Value": [{"Code": "REV", "Name": "Revenue", "Value": 1.0}],
+        }
+    ]
+    reports = _src(_envelope(periods)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    assert reports[0].fiscal_date == date(2025, 12, 31)
+
+
 # --------------------------------------------------------------------------- #
 # Regression — issue #26: CafeF statement/ratio periods must reject duplicate
 # line-item Code values within a single period.

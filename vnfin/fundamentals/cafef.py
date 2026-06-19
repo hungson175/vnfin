@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import re
 from datetime import date, datetime, timezone
 
 from ..exceptions import EmptyData, InvalidData, VnfinError
@@ -428,8 +429,8 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         the Vietnamese fiscal quarter-end. CafeF gives us a numeric ``Year`` and
         ``Quater``; we parse them defensively.
         """
-        year = self._int(period_obj.get("Year"), field="Year")
-        q = self._int(period_obj.get("Quater"), field="Quater")
+        year = self._strict_int(period_obj.get("Year"), "Year")
+        q = self._strict_int(period_obj.get("Quater"), "Quater")
         # Annual context: the fiscal date is the year-end no matter the Quater
         # marker (0, 5, ...). This is the fix for CafeF's older annual rows that
         # carry Quater=5 and previously aborted the whole annual response.
@@ -487,13 +488,32 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         return stripped or str(code).strip()
 
     @staticmethod
-    def _int(raw, *, field) -> int:
+    def _strict_int(raw, field_name: str) -> int:
+        """Parse ``Year`` / ``Quater`` as a canonical integer.
+
+        Rejects schema-drift values that broad ``int(raw)`` would silently
+        normalize: floats, signed strings, leading-zero strings, non-numeric
+        strings, lists, dicts, ``None`` and bools. A valid input is either an
+        ``int`` (but not ``bool``) or a string that exactly matches a base-10
+        integer without sign or leading zeros (``"0"`` is allowed).
+
+        ``Year`` is additionally required to be a four-digit positive year
+        (1000-9999). ``Quater`` range is enforced by the caller in the right
+        period context, so annual markers such as ``0`` and ``5`` keep working.
+        """
         if isinstance(raw, bool):
-            raise InvalidData(f"cafef: bad {field} {raw!r}")
-        try:
-            return int(raw)
-        except (TypeError, ValueError) as exc:
-            raise InvalidData(f"cafef: bad {field} {raw!r}") from exc
+            raise InvalidData(f"cafef: bad {field_name} {raw!r}")
+        if isinstance(raw, int):
+            value = raw
+        elif isinstance(raw, str):
+            if not re.fullmatch(r"(?:0|[1-9]\d*)", raw):
+                raise InvalidData(f"cafef: bad {field_name} {raw!r}")
+            value = int(raw)
+        else:
+            raise InvalidData(f"cafef: bad {field_name} {raw!r}")
+        if field_name == "Year" and not (1000 <= value <= 9999):
+            raise InvalidData(f"cafef: bad {field_name} {raw!r}")
+        return value
 
     def _headers(self) -> dict:
         return {"User-Agent": DEFAULT_UA}
