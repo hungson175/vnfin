@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Failover fetched_at_utc freshness guard** — the price, crypto, gold, macro, and fundamentals
+  failover result guards now reject a present-but-malformed ``fetched_at_utc``: a value must be a
+  timezone-aware ``datetime`` at UTC offset (naive datetimes, non-UTC datetimes, strings, and
+  other types are rejected). ``None`` remains allowed (the field is optional). For fundamentals
+  the check is applied per ``FinancialReport``. This matches the FX ``as_of_utc`` boundary so a
+  corrupt source can no longer block a healthy backup with untrustworthy freshness metadata.
+  ([#127](https://github.com/hungson175/vnfin/issues/127))
 - **Fundamental fiscal_date type guard** — the fundamentals failover result guard now rejects a
   ``FinancialReport`` whose ``fiscal_date`` is not a plain ``datetime.date`` (``datetime`` — aware
   or naive — as well as ``str`` / ``None`` / ``int`` / ``list`` are rejected). The check runs

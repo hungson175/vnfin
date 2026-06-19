@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -689,3 +689,34 @@ def test_malformed_price_bar_object_failsover_to_backup(synth):
     h = client.get_daily("FPT", *WIDE)
     assert h.source == "good"
     assert "malformed bar object" in h.attempts[0].reason
+
+
+# --------------------------------------------------------------------------- #
+# Issue #127 — present-malformed fetched_at_utc freshness metadata is rejected
+# (None stays allowed).
+# --------------------------------------------------------------------------- #
+_BAD_TS = [
+    datetime(2026, 6, 19, 3, 0, 0),  # naive
+    datetime(2026, 6, 19, 10, 0, 0, tzinfo=timezone(timedelta(hours=7))),  # non-UTC
+    "2026-06-19T03:00:00Z",
+    1718766000,
+]
+_BAD_TS_IDS = ["naive", "non_utc", "str", "int"]
+
+
+@pytest.mark.parametrize("bad_ts", _BAD_TS, ids=_BAD_TS_IDS)
+def test_rejects_malformed_price_fetched_at_utc(bad_ts, synth):
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    bad = _history_with_bars("real", "FPT", bars, fetched_at_utc=bad_ts)
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("real", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert "fetched_at_utc" in h.attempts[0].reason
+
+
+def test_accepts_none_price_fetched_at_utc():
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    hist = _history_with_bars("real", "FPT", bars, fetched_at_utc=None)
+    client = FailoverPriceClient([RawFakeSource("real", hist)])
+    assert client.get_daily("FPT", *WIDE).source == "real"

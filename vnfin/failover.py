@@ -30,10 +30,30 @@ unit. This makes a scale/unit mix structurally impossible, not merely unlikely.
 from __future__ import annotations
 
 import inspect
+from datetime import datetime, timedelta
 from typing import Any, Callable, Iterable, Optional
 
 from .exceptions import AllSourcesFailed, SourceError, UnitMismatchError
 from .models import SourceAttempt
+
+
+def _fetched_at_utc_reason(value) -> Optional[str]:
+    """Return a rejection reason for a malformed ``fetched_at_utc`` value (#127).
+
+    ``fetched_at_utc`` is optional audit/freshness metadata: ``None`` is allowed
+    (a separate policy choice). A *present* value must be a timezone-aware
+    ``datetime`` whose offset is exactly UTC (``utcoffset() == timedelta(0)``);
+    a naive datetime, a non-UTC datetime, a string, or any other type is
+    malformed provenance and is rejected. The value is never normalized.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, datetime):
+        return f"malformed fetched_at_utc {value!r}: expected a UTC-aware datetime"
+    offset = value.utcoffset()
+    if offset is None or offset != timedelta(0):
+        return f"malformed fetched_at_utc {value!r}: expected a UTC-aware datetime"
+    return None
 
 
 def _always_capable(source, *args, **kwargs) -> bool:

@@ -12,7 +12,7 @@ newest-first. The two fixtures below match each provider's real shape exactly.
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -686,3 +686,20 @@ def test_malformed_crypto_bar_object_failsover_to_backup():
     client = FailoverCryptoClient([_RawCryptoSource(_crypto_history(bars=(object(),))), _RawCryptoSource(good, name="good")])
     out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
     assert out.source == "good"
+
+
+# Issue #127 — present-malformed crypto fetched_at_utc rejected (None allowed).
+@pytest.mark.parametrize(
+    "bad_ts",
+    [datetime(2026, 6, 19, 3), datetime(2026, 6, 19, 10, tzinfo=timezone(timedelta(hours=7))), "2026-06-19T03:00:00Z", 1718766000],
+    ids=["naive", "non_utc", "str", "int"],
+)
+def test_rejects_malformed_crypto_fetched_at_utc(bad_ts):
+    bars = (CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),)
+    _assert_rejected_reason(_crypto_history(bars=bars, fetched_at_utc=bad_ts), "fetched_at_utc")
+
+
+def test_accepts_none_crypto_fetched_at_utc():
+    bars = (CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),)
+    client = FailoverCryptoClient([_RawCryptoSource(_crypto_history(bars=bars, fetched_at_utc=None))])
+    assert client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3)).source == "raw"

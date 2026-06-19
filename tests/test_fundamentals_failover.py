@@ -11,7 +11,7 @@ network, no real provider rows.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -667,3 +667,32 @@ def test_malformed_fiscal_date_takes_precedence_over_empty_items():
         currency="VND",
     )
     _assert_fundamental_rejected(lambda: bad, "malformed fiscal_date")
+
+
+# Issue #127 — present-malformed fundamentals fetched_at_utc rejected (per report; None allowed).
+def _report_with_ts(fetched_at_utc):
+    return FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="VND",
+        fetched_at_utc=fetched_at_utc,
+    )
+
+
+@pytest.mark.parametrize(
+    "bad_ts",
+    [datetime(2026, 6, 19, 3), datetime(2026, 6, 19, 10, tzinfo=timezone(timedelta(hours=7))), "2026-06-19T03:00:00Z", 1718766000],
+    ids=["naive", "non_utc", "str", "int"],
+)
+def test_rejects_malformed_fundamental_fetched_at_utc(bad_ts):
+    _assert_fundamental_rejected(lambda: _report_with_ts(bad_ts), "fetched_at_utc")
+
+
+def test_accepts_none_fundamental_fetched_at_utc():
+    primary = FakeSource("vndirect", result=(_report_with_ts(None),))
+    client = FailoverFundamentalClient([primary])
+    assert client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)[0].source == "vndirect"

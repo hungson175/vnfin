@@ -33,7 +33,7 @@ from .coinbase import CoinbaseCryptoSource, _KNOWN_QUOTES as _COINBASE_QUOTES
 from .models import CryptoBar, CryptoHistory
 
 from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
-from ..failover import FailoverClient
+from ..failover import FailoverClient, _fetched_at_utc_reason
 from ..models import Interval
 from ..validation import validate_date_range, validate_non_empty_string
 
@@ -173,6 +173,11 @@ def _validate_crypto_result(
         return f"unexpected result type {type(hist).__name__}"
     if len(hist.bars) == 0:
         return "empty result"
+
+    # Issue #127: reject present-malformed fetched_at_utc freshness metadata.
+    reason = _fetched_at_utc_reason(hist.fetched_at_utc)
+    if reason:
+        return reason
 
     # Identity checks (#82). Crypto sources may return their provider-specific
     # product symbol (e.g. "BTC-USD" for a "BTCUSDT" request), so a strict string

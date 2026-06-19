@@ -36,7 +36,7 @@ from dataclasses import replace
 from datetime import date, datetime
 
 from ..exceptions import AllSourcesFailed, InvalidData, UnitMismatchError
-from ..failover import FailoverClient
+from ..failover import FailoverClient, _fetched_at_utc_reason
 from ..validation import validate_country_iso3
 from .dbnomics import DBnomicsSource
 from .imf import IMFDataMapperSource
@@ -187,6 +187,11 @@ class MacroClient:
                 return f"unexpected result type {type(series).__name__}"
             if len(series.points) == 0:
                 return "empty result"
+
+            # Issue #127: reject present-malformed fetched_at_utc metadata.
+            meta_reason = _fetched_at_utc_reason(series.fetched_at_utc)
+            if meta_reason:
+                return meta_reason
 
             # Issue #78: reject returned identity that contradicts the request.
             if series.country != country:

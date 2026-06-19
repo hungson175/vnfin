@@ -6,7 +6,7 @@ unit-homogeneity guard. Uses fake in-memory sources and fabricated values; no
 network, no real provider rows.
 """
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -652,3 +652,45 @@ def test_malformed_macro_point_shape_failsover_to_backup():
         "ZZZ", MacroIndicator.GDP, sources=[_PointsMacroSource("bad", [object()]), good]
     )
     assert res.source == "good"
+
+
+# Issue #127 — present-malformed macro fetched_at_utc rejected (None allowed).
+class _TsMacroSource:
+    def __init__(self, name, fetched_at_utc):
+        self.name = name
+        self._ts = fetched_at_utc
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return IndicatorSeries(
+            country=country_iso3.upper(),
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=((date(2023, 1, 1), 42.0),),
+            source=self.name,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            fetched_at_utc=self._ts,
+        )
+
+
+@pytest.mark.parametrize(
+    "bad_ts",
+    [datetime(2026, 6, 19, 3), datetime(2026, 6, 19, 10, tzinfo=timezone(timedelta(hours=7))), "2026-06-19T03:00:00Z", 1718766000],
+    ids=["naive", "non_utc", "str", "int"],
+)
+def test_rejects_malformed_macro_fetched_at_utc(bad_ts):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_TsMacroSource("bad", bad_ts)])
+    assert "fetched_at_utc" in ei.value.attempts[0].reason
+
+
+def test_accepts_none_macro_fetched_at_utc():
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_TsMacroSource("ok", None)])
+    assert res.source == "ok"
