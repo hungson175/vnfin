@@ -33,6 +33,7 @@ Focused answers for common operational tasks:
 - **[Run live tests](how-to/live-tests.md)** — real network checks, environment guard, diagnostics.
 - **[Explain source coverage](how-to/source-diagnostics.md)** — offline `vnfin.diagnostics` preflight for coverage gaps / single-source legs.
 - **[Get financial-news headlines](how-to/news.md)** — BYOK `vnfin.news` daily headline metadata (Alpha Vantage, no scraping).
+- **[Size a position by liquidity](how-to/liquidity.md)** — offline `vnfin.liquidity` ADV stats + max-order sizing from daily history.
 
 ## Reference
 

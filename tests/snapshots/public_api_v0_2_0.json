@@ -20,7 +20,8 @@
         "fx",
         "exceptions",
         "diagnostics",
-        "news"
+        "news",
+        "liquidity"
       ],
       "members": {
         "AdjustmentPolicy": {
@@ -441,6 +442,9 @@
           "kind": "module"
         },
         "indices": {
+          "kind": "module"
+        },
+        "liquidity": {
           "kind": "module"
         },
         "macro": {
@@ -4602,6 +4606,238 @@
             }
           ],
           "returns": "VPSIndexSource"
+        }
+      }
+    },
+    "vnfin.liquidity": {
+      "all": [
+        "LiquidityPoint",
+        "LiquidityProfile",
+        "from_price_history",
+        "profile"
+      ],
+      "members": {
+        "LiquidityPoint": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "date",
+              "type": "date"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "close",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "volume",
+              "type": "int"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "daily_value_vnd",
+              "type": "float"
+            },
+            {
+              "default_repr": "'close_x_volume_estimate'",
+              "has_default": true,
+              "name": "value_kind",
+              "type": "str"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "LiquidityProfile": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "symbol",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "start",
+              "type": "date"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "end",
+              "type": "date"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "points",
+              "type": "tuple[LiquidityPoint, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "avg_daily_value_vnd",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "median_daily_value_vnd",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "avg_daily_volume",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "median_daily_volume",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "adv_fraction",
+              "type": "float"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "max_order_value_vnd",
+              "type": "float"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "capital_vnd",
+              "type": "float | None"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "capital_as_avg_daily_value_pct",
+              "type": "float | None"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "max_order_as_capital_pct",
+              "type": "float | None"
+            },
+            {
+              "default_repr": "'close_x_volume_estimate'",
+              "has_default": true,
+              "name": "value_kind",
+              "type": "str"
+            },
+            {
+              "default_repr": "''",
+              "has_default": true,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "name": "currency",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "from_price_history": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "history"
+            },
+            {
+              "default_repr": "0.1",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "adv_fraction"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "capital_vnd"
+            }
+          ],
+          "returns": "LiquidityProfile"
+        },
+        "profile": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "symbol"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "start"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "end"
+            },
+            {
+              "default_repr": "0.1",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "adv_fraction"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "capital_vnd"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "client"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "default_repr": "25.0",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "LiquidityProfile"
         }
       }
     },

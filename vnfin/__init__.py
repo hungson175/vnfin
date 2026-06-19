@@ -28,6 +28,7 @@ from . import (
     fx,
     gold,
     indices,
+    liquidity,
     macro,
     news,
     prices,
@@ -64,6 +65,7 @@ __all__ = [
     "exceptions",
     "diagnostics",
     "news",
+    "liquidity",
 ]
 __version__ = "0.2.0"
 

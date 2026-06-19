@@ -143,6 +143,21 @@ a missing key raises `SourceUnavailable`, with the key redacted from all errors)
 are links + provider metadata/sentiment only — never article bodies. See
 [design/news-sources.md](design/news-sources.md) and [how-to/news.md](how-to/news.md).
 
+## `vnfin.liquidity` — daily liquidity & position sizing (offline)
+
+`vnfin.liquidity` is an additive, **offline** namespace (issue #146) that derives
+liquidity/marketability stats and a max-order estimate from an existing daily
+`PriceHistory` — never a new data source, never provider-published turnover:
+
+- `vnfin.liquidity.from_price_history(history, *, adv_fraction=0.10, capital_vnd=None) -> LiquidityProfile`
+- `vnfin.liquidity.profile(symbol, start, end, *, adv_fraction=0.10, capital_vnd=None, client=None, ...) -> LiquidityProfile`
+- `LiquidityPoint` / `LiquidityProfile` are frozen dataclasses.
+
+Traded value is `close * volume` (`value_kind="close_x_volume_estimate"`, with a warning) —
+an estimate, not a turnover field. Accepts only daily VND equity series (index points /
+crypto / non-VND rejected). See [design/liquidity-position-sizing.md](design/liquidity-position-sizing.md)
+and [how-to/liquidity.md](how-to/liquidity.md).
+
 ## Stability and backwards compatibility
 
 This facade is **additive**. Every previously documented import still works unchanged,

@@ -420,6 +420,18 @@ def test_news_module_is_in_surface():
     assert news["members"]["NewsItem"]["frozen"] is True
 
 
+def test_liquidity_module_is_in_surface():
+    # #146: the additive public vnfin.liquidity module must be captured.
+    live = build_surface()
+    assert "vnfin.liquidity" in live["modules"]
+    liq = live["modules"]["vnfin.liquidity"]
+    for name in ("LiquidityPoint", "LiquidityProfile", "from_price_history", "profile"):
+        assert name in liq["all"], name
+        assert name in liq["members"], name
+    assert liq["members"]["LiquidityProfile"]["kind"] == "dataclass"
+    assert liq["members"]["LiquidityProfile"]["frozen"] is True
+
+
 def test_public_classes_capture_constructor():
     live = build_surface()
     # BTMCGoldSource takes a widget_key; its constructor must be in the surface
