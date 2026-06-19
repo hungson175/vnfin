@@ -20,7 +20,7 @@ from numbers import Real
 from .._contracts import canonical_security_symbol, result_type_reason
 from ..exceptions import AllSourcesFailed, InvalidData, VnfinError
 from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
-from ..validation import validate_non_empty_string, validate_positive_int
+from ..validation import validate_positive_int
 from .base import AUTO, FundamentalSource, resolve_is_bank
 from .cafef import CafeFFundamentalSource
 from .models import FinancialReport, LineItem, Period, StatementType, _coerce_period, _coerce_statement
