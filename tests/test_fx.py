@@ -150,6 +150,21 @@ def test_vietcombank_skips_zero_transfer():
     assert "DKK" not in {r.base for r in src.get_rates()}
 
 
+def test_vietcombank_get_rates_skips_malformed_currency_codes():
+    # Issue #28: provider rows whose CurrencyCode is not a valid ISO-4217 shape must not be
+    # returned (get_rates previously skipped only empty codes, unlike get_rate's validation).
+    xml = (
+        "<ExrateList><DateTime>6/18/2026 3:53:15 PM</DateTime>"
+        '<Exrate CurrencyCode="USDX" Buy="1" Transfer="25000" Sell="2"/>'   # 4 letters
+        '<Exrate CurrencyCode="U1D" Buy="1" Transfer="25000" Sell="2"/>'    # has a digit
+        '<Exrate CurrencyCode="US" Buy="1" Transfer="25000" Sell="2"/>'     # 2 letters
+        '<Exrate CurrencyCode="USD" Buy="24900" Transfer="25000" Sell="25200"/>'
+        "</ExrateList>"
+    )
+    rates = VietcombankFXSource(http_get=_http(xml)).get_rates("VND")
+    assert {r.base for r in rates} == {"USD"}
+
+
 def test_vietcombank_as_of_is_utc_from_vn_local():
     # "6/18/2026 3:53:15 PM" VN local (UTC+7) -> 08:53:15 UTC
     src = VietcombankFXSource(http_get=_http(_VCB_XML))

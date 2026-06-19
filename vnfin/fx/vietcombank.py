@@ -29,6 +29,10 @@ _VN_TZ = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh; feed timestamps are V
 # malformed timestamp so it raises instead of silently falling back to now().
 _VCB_TS = re.compile(r"^\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2}:\d{2}(?: [AP]M)?$")
 
+# Issue #28: a valid ISO-4217 currency code is exactly three letters (codes are upper-cased
+# before matching). Rows failing this shape are skipped rather than returned.
+_VCB_CCY = re.compile(r"[A-Z]{3}")
+
 
 class VietcombankFXSource(FXSource):
     NAME = "vietcombank"
@@ -51,6 +55,10 @@ class VietcombankFXSource(FXSource):
             # Issue #47: skip the provider's VND/VND self-rate (and any row whose
             # base is the quote currency).
             if code == self.QUOTE:
+                continue
+            # Issue #28: skip rows whose code is not a valid ISO-4217 shape (3 letters),
+            # so malformed provider codes are never returned (get_rate already validates).
+            if not _VCB_CCY.fullmatch(code):
                 continue
             transfer = self._num(node.get("Transfer"), required=True, label="Transfer")
             if not code or transfer is None or transfer <= 0:
