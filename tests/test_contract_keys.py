@@ -145,7 +145,7 @@ def test_canonical_crypto_asset_normalizes(value, expected):
     assert canonical_crypto_asset(value, "asset") == expected
 
 
-@pytest.mark.parametrize("bad", [None, 123, b"BTC", "", " ", "B", "BT C", "BT-C", "BT/C", "BT.C", "B\nTC", "x" * 16])
+@pytest.mark.parametrize("bad", [None, 123, b"BTC", "", " ", "B", "BT C", "BT-C", "BT/C", "BT.C", "B\nTC", "BTC\n", "x" * 16])
 def test_canonical_crypto_asset_rejects(bad):
     with pytest.raises(InvalidData):
         canonical_crypto_asset(bad, "asset")
@@ -173,6 +173,9 @@ def test_canonical_crypto_pair_accepts(value, expected):
         "BTC--USD",         # double hyphen
         "BTC.USD",          # punctuation
         "ABC",              # too short for concatenated (needs >= 4)
+        "BTCUSDT\n",        # trailing newline must NOT be normalized away
+        "BTC-USD\n",        # trailing newline (hyphenated)
+        "\tBTCUSDT",        # leading tab
     ],
 )
 def test_canonical_crypto_pair_rejects(bad):

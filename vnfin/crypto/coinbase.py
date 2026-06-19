@@ -61,7 +61,7 @@ _VOLUME = 5
 _MIN_FIELDS = 6
 
 # Conservative asset-token pattern: uppercase ASCII alphanumerics only.
-_ASSET_RE = re.compile(r"^[A-Z0-9]{1,20}$")
+_ASSET_RE = re.compile(r"[A-Z0-9]{1,20}")
 
 # USD-stablecoin quote assets reported to callers as ``currency="USD"`` (~1:1).
 _USD_STABLE_QUOTES = ("USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDP", "DAI", "USD")
@@ -141,7 +141,7 @@ class CoinbaseCryptoSource(HttpDataSource):
     @staticmethod
     def _validate_asset_token(token: str, label: str, symbol: str):
         """Reject asset tokens containing spaces, slashes, or non-alphanumeric chars."""
-        if not _ASSET_RE.match(token):
+        if not _ASSET_RE.fullmatch(token):  # fullmatch: no trailing-newline hole
             raise InvalidData(
                 f"coinbase: malformed {label} asset {token!r} in symbol {symbol!r}"
             )

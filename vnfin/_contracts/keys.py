@@ -136,7 +136,9 @@ def canonical_crypto_asset(value, ctx: str) -> str:
     """
     if not isinstance(value, str):
         raise contract_error(ctx, f"crypto asset must be a string, got {type(value).__name__}")
-    s = value.strip().upper()
+    # strip only spaces (NOT \n/\t/control) so a trailing newline can't be normalized
+    # away into acceptance; fullmatch then rejects any residual control/whitespace.
+    s = value.strip(" ").upper()
     if not _CRYPTO_ASSET_RE.fullmatch(s):
         raise contract_error(
             ctx, f"malformed crypto asset {value!r}: expected [A-Z0-9]{{2,15}}"
@@ -155,7 +157,9 @@ def canonical_crypto_pair(value, ctx: str) -> str:
     """
     if not isinstance(value, str):
         raise contract_error(ctx, f"crypto pair must be a string, got {type(value).__name__}")
-    s = value.strip().upper()
+    # strip only spaces (NOT \n/\t/control) so a trailing newline cannot be normalized
+    # away; fullmatch then rejects any residual control/whitespace char.
+    s = value.strip(" ").upper()
     if not _CRYPTO_PAIR_RE.fullmatch(s):
         raise contract_error(
             ctx,

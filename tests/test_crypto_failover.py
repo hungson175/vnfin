@@ -819,7 +819,8 @@ def test_crypto_malformed_pair_fails_closed_zero_calls():
 
     c = CountingCrypto()
     client = FailoverCryptoClient([c])
-    for bad in ["BTC/USD", "BTC USDT", "BTC\nUSDT", "BTC-", "-USD", "BTC--USD", "", "   ", "B"]:
+    for bad in ["BTC/USD", "BTC USDT", "BTC\nUSDT", "BTC-", "-USD", "BTC--USD", "", "   ", "B",
+                "BTC-FAKE", "BTCXYZ", "FAKE1ZZZ", "BTCUSDT\n", "BTC-USD\n"]:  # B1 unknown-quote + B2 trailing-newline
         with pytest.raises(InvalidData):
             client.get_klines(bad, Interval.D1, date(2025, 1, 1), date(2025, 1, 3))
     assert c.calls == 0
@@ -844,3 +845,19 @@ def test_crypto_pair_normalizes_padded_lower():
         "  btcusdt  ", Interval.D1, date(2025, 1, 1), date(2025, 1, 3)
     )
     assert h.source == "good" and h.symbol == "BTCUSDT"
+
+
+@pytest.mark.parametrize("bad_token", ["BTC\n", "BT C", "BTC\t", "BTC$", "BTC\r"])
+def test_binance_asset_token_fullmatch_rejects_control(bad_token):
+    # B2: _ASSET_RE must use fullmatch so a control char (trailing newline) cannot
+    # slip through the old match(...$) hole.
+    from vnfin.exceptions import InvalidData
+    with pytest.raises(InvalidData):
+        BinanceCryptoSource._validate_asset_token(bad_token, "base", "X")
+
+
+@pytest.mark.parametrize("bad_token", ["BTC\n", "BT C", "BTC\t", "BTC$", "BTC\r"])
+def test_coinbase_asset_token_fullmatch_rejects_control(bad_token):
+    from vnfin.exceptions import InvalidData
+    with pytest.raises(InvalidData):
+        CoinbaseCryptoSource._validate_asset_token(bad_token, "base", "X")

@@ -63,14 +63,25 @@ def _crypto_unit(source):
 _KNOWN_QUOTES = tuple(
     sorted(frozenset(_BINANCE_QUOTES) | frozenset(_COINBASE_QUOTES), key=len, reverse=True)
 )
+_KNOWN_QUOTES_SET = frozenset(_KNOWN_QUOTES)
 
 
 def _normalize_crypto_symbol(symbol: str) -> str:
     """Issue #9 (crypto): a crypto symbol is a canonical trading PAIR, not a security
     ticker. Reject malformed shapes (slash, internal whitespace/control/newline,
-    leading/trailing/double hyphen, non-string, blank) before the failover engine
-    runs; accept concatenated (BTCUSDT) or hyphenated (BTC-USD), normalized upper."""
-    return canonical_crypto_pair(symbol, "crypto symbol")
+    leading/trailing/double hyphen, non-string, blank) AND pairs whose quote asset is
+    not a recognized quote — all before the failover engine runs (zero source call),
+    so an unservable pair fails closed with InvalidData, never AllSourcesFailed.
+    Accept concatenated (BTCUSDT) or hyphenated (BTC-USD), normalized upper."""
+    sym = canonical_crypto_pair(symbol, "crypto symbol")
+    # B1: require a recognized quote (longest-known-quote parsing) so an unknown-quote
+    # pair (e.g. BTC-FAKE / BTCXYZ / FAKE1ZZZ) fails closed here, not deep in adapters.
+    if "-" in sym:
+        if sym.split("-", 1)[1] not in _KNOWN_QUOTES_SET:
+            raise InvalidData(f"crypto symbol: unknown quote asset in {symbol!r}")
+    elif not any(sym.endswith(q) and len(sym) > len(q) for q in _KNOWN_QUOTES):
+        raise InvalidData(f"crypto symbol: cannot determine quote asset in {symbol!r}")
+    return sym
 
 
 def _base_asset(symbol: str) -> str | None:
