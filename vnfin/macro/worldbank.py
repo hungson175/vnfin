@@ -269,6 +269,7 @@ class WorldBankMacroSource(HttpDataSource):
         indicator_name = None
         unit = ""
         points: list[tuple[date, float]] = []
+        seen_dates: set[date] = set()  # Issue #66: reject duplicate observation dates
 
         for obs in observations or []:
             if not isinstance(obs, dict):
@@ -343,6 +344,13 @@ class WorldBankMacroSource(HttpDataSource):
                 # raw ValueError from the date constructor.
                 raise InvalidData(f"{self.NAME}: invalid year {year} for {code}") from exc
 
+            # Issue #66 (reopen): a duplicate observation date in one response is an
+            # ambiguous observation key, not data to silently keep both of.
+            if d in seen_dates:
+                raise InvalidData(
+                    f"{self.NAME}: duplicate observation date {d.isoformat()} for {code}"
+                )
+            seen_dates.add(d)
             points.append((d, value))
 
         points.sort(key=lambda p: p[0])

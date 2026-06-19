@@ -821,3 +821,16 @@ def test_wb_accepts_matching_observation_indicator_id():
     # default _obs uses code=INDICATOR -> matches the requested WDI code.
     res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     assert res.indicator_code == INDICATOR.strip().upper()
+
+
+# Issue #66 (reopen) — WorldBank must reject duplicate observation dates.
+def test_wb_rejects_duplicate_observation_date():
+    rows = [_obs("ZZ", COUNTRY, 2023, 1.1), _obs("ZZ", COUNTRY, 2023, 2.2)]  # same year twice
+    payload = json.dumps([_meta(2), rows])
+    with pytest.raises(InvalidData, match="duplicate observation date"):
+        _src(payload).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
+
+
+def test_wb_distinct_observation_dates_accepted():
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
+    assert len(res.points) == 3
