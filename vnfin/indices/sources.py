@@ -199,7 +199,7 @@ class IndexConstituentsSource(HttpDataSource):
             )
 
         return IndexConstituents(
-            index=index.strip().upper(),
+            index=index,  # already canonical from canonical_security_symbol above
             source=self.name,
             members=tuple(members),
             provider_group=group,

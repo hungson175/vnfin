@@ -579,7 +579,7 @@ def test_constituents_facade_malformed_selector_zero_http(bad):
         index_constituents(bad, http_get=_raising(AssertionError("HTTP called")))
 
 
-@pytest.mark.parametrize("bad", _BAD_SELECTORS[:8])
+@pytest.mark.parametrize("bad", _BAD_SELECTORS)
 def test_index_history_malformed_selector_zero_http(bad):
     with pytest.raises(InvalidData):
         IndexClient(http_get=_raising(AssertionError("HTTP called"))).index_history(bad)
