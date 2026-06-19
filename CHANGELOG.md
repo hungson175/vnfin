@@ -7,6 +7,10 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Price security-metadata guard** — the price failover result guard now rejects a returned
+  ``PriceHistory`` whose ``exchange`` or ``provider_symbol`` is present but not a non-empty
+  canonical string (containers, booleans, numbers, blank, or whitespace-padded values are
+  rejected; ``None`` is allowed). ([#133](https://github.com/hungson175/vnfin/issues/133))
 - **Macro frequency metadata guard** — the macro failover result guard now requires
   ``IndicatorSeries.frequency`` to be a :class:`~vnfin.macro.Frequency` enum (a plain string,
   bool, int, container, or ``None`` is rejected) and the point dates to be consistent with it

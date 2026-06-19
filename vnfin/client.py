@@ -245,6 +245,16 @@ def _validate_price_result(
             f"!= chain policy {chain_policy!r}"
         )
 
+    # Issue #133: returned security metadata, when present, must be a non-empty
+    # canonical string (exact, no surrounding whitespace) — these fields feed
+    # dataframe attrs, joins, and display. A container, bool, number, blank, or
+    # padded value is rejected so it cannot block a healthy backup. (No accepted
+    # exchange set / provider-symbol contradiction rule is enforced yet.)
+    for field in ("exchange", "provider_symbol"):
+        val = getattr(hist, field, None)
+        if val is not None and (not isinstance(val, str) or not val or val != val.strip()):
+            return f"malformed {field} {val!r}: expected a non-empty canonical string"
+
     # Issue #124: each bar key must be a timezone-AWARE datetime (the documented
     # PriceBar.time contract). A naive datetime or a non-datetime key is rejected
     # here, before the ascending-order compare and the window-coverage .date()

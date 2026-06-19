@@ -745,3 +745,43 @@ def test_accepts_valid_price_warnings():
     hist = _history_with_bars("real", "FPT", bars, warnings=("a soft note",))
     client = FailoverPriceClient([RawFakeSource("real", hist)])
     assert client.get_daily("FPT", *WIDE).source == "real"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #133 — returned price security metadata (exchange / provider_symbol),
+# when present, must be a non-empty canonical string.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "field,bad",
+    [
+        ("exchange", []), ("exchange", {}), ("exchange", True), ("exchange", 123),
+        ("exchange", ""), ("exchange", " HOSE"),
+        ("provider_symbol", []), ("provider_symbol", {}), ("provider_symbol", True),
+        ("provider_symbol", 123), ("provider_symbol", ""), ("provider_symbol", "AAA "),
+    ],
+    ids=["ex_list", "ex_dict", "ex_bool", "ex_int", "ex_blank", "ex_padded",
+         "ps_list", "ps_dict", "ps_bool", "ps_int", "ps_blank", "ps_padded"],
+)
+def test_rejects_malformed_price_security_metadata(field, bad, synth):
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    bad_hist = _history_with_bars("real", "FPT", bars, **{field: bad})
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("real", bad_hist), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert f"malformed {field}" in h.attempts[0].reason
+
+
+def test_accepts_present_price_security_metadata():
+    # Non-empty canonical strings are accepted (no accepted-set/contradiction rule).
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    hist = _history_with_bars("real", "FPT", bars, exchange="HOSE", provider_symbol="FPT")
+    client = FailoverPriceClient([RawFakeSource("real", hist)])
+    assert client.get_daily("FPT", *WIDE).source == "real"
+
+
+def test_accepts_none_price_security_metadata():
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    hist = _history_with_bars("real", "FPT", bars, exchange=None, provider_symbol=None)
+    client = FailoverPriceClient([RawFakeSource("real", hist)])
+    assert client.get_daily("FPT", *WIDE).source == "real"
