@@ -25,9 +25,12 @@ _Last synced: 2026-06-19 ~10:12 +07_
   - **#123** macro point-key type — committed `ec7586c` (NOT pushed). Awaiting review.
   - **#124** price/crypto/gold bar-key type — committed `45ed0a8` (NOT pushed). Awaiting review
     (requested together with #123).
-  - **#126** provenance mismatch — LAST. Held until #123/#124 land (engine-level change, avoid
-    deep stack). Plan: engine `provenance_of` guard + result-source extractor (fundamentals
-    returns a tuple), reject mismatch (not restamp).
+  - **#126** provenance mismatch — IMPLEMENTED, committed (awaiting reviewer code review).
+    Engine-level optional `provenance_of` guard (appended last in signature → additive API) +
+    `_provenance_mismatch` helper; wired in all 5 domains (fundamentals uses report-tuple
+    extractor). Reject not restamp. Test doubles `_RawCryptoSource`/`_RawGoldSource` gained a
+    `name` param to match stamped source. +8 TDD cases, suite 1725 green, failover.py cov 92%,
+    CHANGELOG updated, public-API surface unchanged (additive).
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 

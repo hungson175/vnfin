@@ -430,13 +430,18 @@ def test_rejects_history_before_one_sided_start():
 
 
 class _RawCryptoSource:
-    """Test double that returns a CryptoHistory exactly as configured."""
+    """Test double that returns a CryptoHistory exactly as configured.
 
-    name = "raw"
+    ``name`` defaults to ``"raw"`` (matching ``_crypto_history``'s default
+    ``source="raw"``) so the provenance guard (#126) accepts it; pass ``name`` to
+    match a custom stamped ``source``.
+    """
+
     unit = "USD"
 
-    def __init__(self, history):
+    def __init__(self, history, name="raw"):
         self._history = history
+        self.name = name
 
     def supports(self, interval):
         return True
@@ -607,7 +612,7 @@ def test_rejects_malformed_crypto_result_container(bad):
 
 def test_malformed_crypto_container_failsover_to_backup():
     good = _crypto_history(bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="good")
-    client = FailoverCryptoClient([_RawCryptoSource({}), _RawCryptoSource(good)])
+    client = FailoverCryptoClient([_RawCryptoSource({}), _RawCryptoSource(good, name="good")])
     out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
     # The malformed primary must be rejected (not raise raw) and the backup used.
     assert out.source == "good"
@@ -638,6 +643,33 @@ def test_malformed_crypto_bar_time_failsover_to_backup():
     good = _crypto_history(
         bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="good"
     )
-    client = FailoverCryptoClient([_RawCryptoSource(bad), _RawCryptoSource(good)])
+    client = FailoverCryptoClient([_RawCryptoSource(bad), _RawCryptoSource(good, name="good")])
     out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
     assert out.source == "good"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #126 — provenance: a CryptoHistory stamped with a source that is not the
+# producing source's name is rejected; failover continues.
+# --------------------------------------------------------------------------- #
+def test_rejects_crypto_provenance_mismatch_and_failsover():
+    bad = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="claimed_backup"
+    )
+    good = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="good"
+    )
+    client = FailoverCryptoClient(
+        [_RawCryptoSource(bad, name="real"), _RawCryptoSource(good, name="good")]
+    )
+    out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert out.source == "good"
+
+
+def test_crypto_provenance_match_is_accepted():
+    good = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="real"
+    )
+    client = FailoverCryptoClient([_RawCryptoSource(good, name="real")])
+    out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert out.source == "real"

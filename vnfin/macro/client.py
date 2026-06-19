@@ -162,6 +162,7 @@ class MacroClient:
             capability=lambda src, country, i: _capable(src, country, i),
             reject=self._reject_reason_for(ind),
             unit_of=_unit_of_for(ind),
+            provenance_of=lambda series: getattr(series, "source", None),  # #126
             max_attempts=self._max_attempts,
             failure_factory=lambda attempts, country, i: AllSourcesFailed(
                 f"{country}/{getattr(i, 'value', i)}", None, attempts

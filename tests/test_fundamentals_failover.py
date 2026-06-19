@@ -510,3 +510,21 @@ def test_rejects_invalid_limit():
         client.get_financials(
             "TESTCO", StatementType.INCOME, Period.ANNUAL, limit="eight"
         )
+
+
+# --- Issue #126: provenance — a report tuple stamped with a source that is not
+# the producing source's name is rejected; failover continues. -----------------
+def test_rejects_fundamental_provenance_mismatch_and_failsover():
+    primary = FakeSource("vndirect", result=(_report("TESTCO", "claimed_backup", 1.0),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
+    assert primary.calls == 1 and backup.calls == 1
+
+
+def test_fundamental_provenance_match_is_accepted():
+    primary = FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "vndirect"

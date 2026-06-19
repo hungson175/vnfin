@@ -619,3 +619,27 @@ def test_malformed_price_bar_time_failsover_to_backup(synth):
     h = client.get_daily("FPT", *WIDE)
     assert h.source == "good"
     assert "malformed bar time" in h.attempts[0].reason
+
+
+# --------------------------------------------------------------------------- #
+# Issue #126 — a result whose stamped .source does not match the source that
+# produced it is a provenance violation: rejected (never relabelled), failover
+# continues, audit/backtest can trust result.source.
+# --------------------------------------------------------------------------- #
+def test_rejects_provenance_mismatch_and_failsover(synth):
+    t = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    # Source named "real" returns a history stamped as another provider.
+    bad = _history_with_bars("claimed_backup", "FPT", (PriceBar(t, 10, 11, 9, 10.5, 1000),))
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("real", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert "provenance mismatch" in h.attempts[0].reason
+
+
+def test_provenance_match_is_accepted():
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    hist = _history_with_bars("real", "FPT", bars)
+    client = FailoverPriceClient([RawFakeSource("real", hist)])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "real"

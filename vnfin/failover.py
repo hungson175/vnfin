@@ -72,6 +72,34 @@ def _unit_attr(source):
     return getattr(source, "unit", None)
 
 
+def _provenance_mismatch(claimed, source_name) -> Optional[str]:
+    """Return a rejection reason if a result's stamped provenance does not match
+    the source that produced it, else ``None`` (#126).
+
+    ``claimed`` is the source value(s) extracted from the result: a single source
+    name, or an iterable of names for a composite result (e.g. a tuple of
+    reports). A ``None`` claim is treated as indeterminate (the container/identity
+    guards cover that case) and is not rejected here; any concrete value — or
+    composite member — that differs from ``source_name`` is a provenance
+    violation. ``str`` is treated as a single name, never iterated char-by-char.
+    """
+    if claimed is None:
+        return None
+    if isinstance(claimed, str):
+        claimed_names = {claimed}
+    elif isinstance(claimed, (set, frozenset, list, tuple)):
+        claimed_names = set(claimed)
+    else:
+        claimed_names = {claimed}
+    mismatched = {c for c in claimed_names if c != source_name}
+    if mismatched:
+        return (
+            "provenance mismatch: result stamped source "
+            f"{sorted(repr(c) for c in mismatched)} but produced by source {source_name!r}"
+        )
+    return None
+
+
 class FailoverClient:
     """Generic sequential failover over a homogeneous set of sources.
 
@@ -93,6 +121,7 @@ class FailoverClient:
         failure_factory: Optional[Callable[..., BaseException]] = None,
         no_capable_factory: Optional[Callable[..., BaseException]] = None,
         finalize: Optional[Callable[..., Any]] = None,
+        provenance_of: Optional[Callable[[Any], Any]] = None,
     ):
         if on_unit_mismatch not in ("raise", "skip"):
             raise ValueError(
@@ -111,6 +140,7 @@ class FailoverClient:
         self._capability = capability
         self._reject = reject
         self._unit_of = unit_of
+        self._provenance_of = provenance_of
         self.max_attempts = max_attempts
         self._failure_factory = failure_factory
         self._no_capable_factory = no_capable_factory
@@ -187,6 +217,16 @@ class FailoverClient:
             if reason:
                 attempts.append(SourceAttempt(src.name, False, reason))
                 continue
+            # Issue #126: a result is accepted only if its stamped provenance
+            # matches the source that actually produced it. A mismatch (e.g. a
+            # primary returning a result labelled with the backup's name) is a
+            # recorded rejected attempt — never silently relabelled — so audit
+            # logs / backtests / reconciliation can trust ``result.source``.
+            if self._provenance_of is not None:
+                pmis = _provenance_mismatch(self._provenance_of(result), src.name)
+                if pmis is not None:
+                    attempts.append(SourceAttempt(src.name, False, pmis))
+                    continue
             attempts.append(SourceAttempt(src.name, True, "ok"))
             if self._finalize is not None:
                 return self._finalize(result, tuple(attempts), *args, **kwargs)

@@ -104,6 +104,7 @@ class FailoverPriceClient:
             capability=lambda src, symbol, interval, start, end: src.supports(interval),
             reject=self._reject_reason,
             unit_of=_price_unit,
+            provenance_of=lambda hist: getattr(hist, "source", None),  # #126
             max_attempts=max_attempts,
             failure_factory=lambda attempts, symbol, interval, start, end: AllSourcesFailed(
                 symbol, interval, attempts

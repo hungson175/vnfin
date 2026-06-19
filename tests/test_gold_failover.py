@@ -516,12 +516,12 @@ def test_b11_custom_min_coverage_accepts_lower_completeness():
 
 
 class _RawGoldSource(GoldSource):
-    name = "raw"
     unit = "USD/oz"
     provides_history = True
 
-    def __init__(self, history):
+    def __init__(self, history, name="raw"):
         self._history = history
+        self.name = name
 
     def get_history(self, start, end):
         return self._history
@@ -616,7 +616,7 @@ def test_rejects_malformed_gold_result_container(bad):
 def test_malformed_gold_container_failsover_to_backup():
     good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="good")
     client = FailoverGoldClient(
-        [_RawGoldSource({}), _RawGoldSource(good)], min_coverage=0.0
+        [_RawGoldSource({}), _RawGoldSource(good, name="good")], min_coverage=0.0
     )
     out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
     assert out.source == "good"
@@ -648,6 +648,29 @@ def test_rejects_malformed_gold_bar_date(bad_date):
 def test_malformed_gold_bar_date_failsover_to_backup():
     bad = _gold_history(bars=(GoldBar(datetime(2024, 1, 2), 2000.0),))
     good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="good")
-    client = FailoverGoldClient([_RawGoldSource(bad), _RawGoldSource(good)], min_coverage=0.0)
+    client = FailoverGoldClient(
+        [_RawGoldSource(bad), _RawGoldSource(good, name="good")], min_coverage=0.0
+    )
     out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
     assert out.source == "good"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #126 — provenance: a GoldHistory stamped with a source that is not the
+# producing source's name is rejected; failover continues.
+# --------------------------------------------------------------------------- #
+def test_rejects_gold_provenance_mismatch_and_failsover():
+    bad = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="claimed_backup")
+    good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="good")
+    client = FailoverGoldClient(
+        [_RawGoldSource(bad, name="real"), _RawGoldSource(good, name="good")], min_coverage=0.0
+    )
+    out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
+    assert out.source == "good"
+
+
+def test_gold_provenance_match_is_accepted():
+    good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="real")
+    client = FailoverGoldClient([_RawGoldSource(good, name="real")], min_coverage=0.0)
+    out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
+    assert out.source == "real"

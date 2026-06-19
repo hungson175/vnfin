@@ -117,6 +117,7 @@ class FailoverGoldClient:
             capability=lambda src, start, end: getattr(src, "provides_history", False),
             reject=self._reject_reason,
             unit_of=_gold_unit,
+            provenance_of=lambda hist: getattr(hist, "source", None),  # #126
             max_attempts=max_attempts,
             failure_factory=lambda attempts, start, end: AllSourcesFailed(
                 "XAU/USD", "1d", attempts

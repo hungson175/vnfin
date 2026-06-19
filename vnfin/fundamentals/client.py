@@ -61,6 +61,12 @@ class FailoverFundamentalClient:
             ),
             reject=self._reject_reason,
             unit_of=_fundamental_unit,
+            # Issue #126: a composite result is a tuple of reports; provenance is
+            # the set of stamped report sources, all of which must match the
+            # source that produced them.
+            provenance_of=lambda reports: frozenset(
+                getattr(r, "source", None) for r in reports
+            ),
             max_attempts=max_attempts,
             failure_factory=lambda attempts, symbol, statement, period, is_bank, limit: AllSourcesFailed(
                 symbol, getattr(statement, "value", statement), attempts

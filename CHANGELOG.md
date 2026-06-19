@@ -7,6 +7,14 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Failover provenance guard** — every domain failover client (price, crypto, gold, macro,
+  fundamentals) now verifies that an accepted result's stamped ``source`` matches the source
+  that actually produced it. A result whose provenance does not match (e.g. a primary returning
+  a result labelled with another provider's name) is recorded as a rejected source attempt and
+  the chain fails over — the provenance is never silently relabelled — so audit logs, backtests,
+  and reconciliation can trust ``result.source`` / ``report.source``. Implemented as an optional
+  engine-level ``provenance_of`` guard with a result-source extractor that also handles composite
+  results (the fundamentals report tuple). ([#126](https://github.com/hungson175/vnfin/issues/126))
 - **Failover bar time-key type guard** — the price, crypto, and gold failover result guards now
   validate each bar's time key before the ascending-order compare and window/coverage logic.
   ``PriceBar.time`` and ``CryptoBar.time`` must be timezone-aware ``datetime`` values (naive
