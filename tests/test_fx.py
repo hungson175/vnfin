@@ -166,6 +166,30 @@ def test_vietcombank_get_rates_skips_malformed_currency_codes():
     assert {r.base for r in rates} == {"USD"}
 
 
+def test_vietcombank_rejects_duplicate_currency_code():
+    # Issue #28 (reopen): two USD rows with conflicting rates must fail closed,
+    # not return ambiguous duplicate FXRate(base="USD") rows.
+    xml = (
+        "<ExrateList><DateTime>6/18/2026 3:53:15 PM</DateTime>"
+        '<Exrate CurrencyCode="USD" Buy="24000" Transfer="25000" Sell="26000"/>'
+        '<Exrate CurrencyCode="USD" Buy="25000" Transfer="26000" Sell="27000"/>'
+        "</ExrateList>"
+    )
+    with pytest.raises(InvalidData, match="duplicate CurrencyCode"):
+        VietcombankFXSource(http_get=_http(xml)).get_rates("VND")
+
+
+def test_vietcombank_distinct_currency_codes_accepted():
+    xml = (
+        "<ExrateList><DateTime>6/18/2026 3:53:15 PM</DateTime>"
+        '<Exrate CurrencyCode="USD" Buy="24000" Transfer="25000" Sell="26000"/>'
+        '<Exrate CurrencyCode="EUR" Buy="27000" Transfer="28000" Sell="29000"/>'
+        "</ExrateList>"
+    )
+    rates = VietcombankFXSource(http_get=_http(xml)).get_rates("VND")
+    assert {r.base for r in rates} == {"USD", "EUR"}
+
+
 def test_vietcombank_as_of_is_utc_from_vn_local():
     # "6/18/2026 3:53:15 PM" VN local (UTC+7) -> 08:53:15 UTC
     src = VietcombankFXSource(http_get=_http(_VCB_XML))

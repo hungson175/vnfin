@@ -50,6 +50,7 @@ class VietcombankFXSource(FXSource):
 
         as_of = self._as_of(root)
         out: list[FXRate] = []
+        seen: set[str] = set()
         for node in root.iter("Exrate"):
             code = (node.get("CurrencyCode") or "").strip().upper()
             # Issue #47: skip the provider's VND/VND self-rate (and any row whose
@@ -65,10 +66,17 @@ class VietcombankFXSource(FXSource):
                 continue  # no usable transfer (VND-per-unit) rate
             bid = self._num(node.get("Buy"), label="Buy")
             ask = self._num(node.get("Sell"), label="Sell")
+            # Issue #28: a duplicate canonical CurrencyCode in one feed yields
+            # conflicting FXRate(base=...) rows (e.g. two USD rates). Fail closed
+            # rather than return ambiguous duplicates.
+            if code in seen:
+                raise InvalidData(f"{self.name}: duplicate CurrencyCode {code} in feed")
             try:
-                out.append(self._build_rate(code, transfer, as_of, bid=bid, ask=ask))
+                rate = self._build_rate(code, transfer, as_of, bid=bid, ask=ask)
             except InvalidData:
                 continue
+            out.append(rate)
+            seen.add(code)
         if not out:
             raise EmptyData(f"{self.name}: no usable rates in feed")
         out.sort(key=lambda r: r.base)
