@@ -15,6 +15,7 @@ from ..coerce import parse_provider_float, parse_provider_int
 from ..exceptions import EmptyData, InvalidData, UnsupportedInterval
 from ..models import AdjustmentPolicy, Interval, PriceBar, PriceHistory
 from ..transport import DEFAULT_UA, HttpDataSource
+from ..validation import validate_date_range, validate_non_empty_string
 from .base import VN_TZ, PriceSource
 
 
@@ -58,6 +59,14 @@ class UDFSource(HttpDataSource, PriceSource):
 
     # --- core flow ---
     def get_history(self, symbol, interval, start, end) -> PriceHistory:
+        # Issue #65: validate caller inputs before normalization or range conversion
+        # so direct source calls raise stable InvalidData instead of raw TypeError.
+        symbol = validate_non_empty_string(symbol, f"{self.name} symbol")
+        if not isinstance(interval, Interval):
+            raise InvalidData(
+                f"{self.name}: interval must be a vnfin.models.Interval, got {type(interval).__name__}"
+            )
+        validate_date_range(start, end, name=f"{self.name} history")
         if not self.supports(interval):
             raise UnsupportedInterval(
                 f"{self.name} does not support interval {getattr(interval, 'value', interval)}"

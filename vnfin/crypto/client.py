@@ -25,13 +25,17 @@ that source is skipped by the capability guard without a network call.
 """
 from __future__ import annotations
 
-from .binance import BinanceCryptoSource
-from .coinbase import CoinbaseCryptoSource
-from .models import CryptoHistory
+import math
+from datetime import date
+
+from .binance import BinanceCryptoSource, _KNOWN_QUOTES as _BINANCE_QUOTES
+from .coinbase import CoinbaseCryptoSource, _KNOWN_QUOTES as _COINBASE_QUOTES
+from .models import CryptoBar, CryptoHistory
 
 from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from ..failover import FailoverClient
 from ..models import Interval
+from ..validation import validate_date_range, validate_non_empty_string
 
 # Default crypto failover chain (deepest/widest first).
 _DEFAULT_CRYPTO_SOURCE_CLASSES = (BinanceCryptoSource, CoinbaseCryptoSource)
@@ -47,10 +51,35 @@ def _crypto_unit(source):
     return getattr(source, "unit", None)
 
 
-def _validate_symbol(symbol) -> None:
+# Quotes recognized by the crypto adapters, longest-first, so stripping a known
+# quote suffix yields the base asset for identity checks.
+_KNOWN_QUOTES = tuple(
+    sorted(frozenset(_BINANCE_QUOTES) | frozenset(_COINBASE_QUOTES), key=len, reverse=True)
+)
+
+
+def _normalize_crypto_symbol(symbol: str) -> str:
     """Issue #9: reject empty/malformed symbols before the failover engine runs."""
-    if not isinstance(symbol, str) or not symbol.strip():
-        raise InvalidData(f"crypto symbol must be a non-empty string, got {symbol!r}")
+    return validate_non_empty_string(symbol, "crypto symbol")
+
+
+def _base_asset(symbol: str) -> str | None:
+    """Extract the base asset from a crypto pair, normalizing case and format.
+
+    Accepts both hyphenated products (``BTC-USD``) and concatenated pairs
+    (``BTCUSDT``). Unknown or malformed inputs return ``None``.
+    """
+    if not isinstance(symbol, str):
+        return None
+    sym = symbol.strip().upper()
+    if not sym:
+        return None
+    if "-" in sym:
+        return sym.split("-", 1)[0]
+    for quote in _KNOWN_QUOTES:
+        if sym.endswith(quote) and len(sym) > len(quote):
+            return sym[: -len(quote)]
+    return sym
 
 
 class FailoverCryptoClient:
@@ -79,9 +108,7 @@ class FailoverCryptoClient:
                 symbol, interval, start, end
             ),
             capability=lambda src, symbol, interval, start, end: src.supports(interval),
-            reject=lambda hist, _sym, _interval, start, end: self._reject_reason(
-                hist, self._chain_unit, start, end
-            ),
+            reject=self._reject_reason,
             unit_of=_crypto_unit,
             max_attempts=max_attempts,
             failure_factory=lambda attempts, symbol, interval, start, end: AllSourcesFailed(
@@ -108,48 +135,122 @@ class FailoverCryptoClient:
     def get_klines(
         self, symbol, interval: Interval = Interval.D1, start=None, end=None
     ) -> CryptoHistory:
-        # Issue #9: reject empty/malformed symbols before the failover engine runs.
-        _validate_symbol(symbol)
+        # Issue #9/#77: validate caller inputs before the failover engine runs.
+        symbol = _normalize_crypto_symbol(symbol)
+        if not isinstance(interval, Interval):
+            raise InvalidData(
+                f"interval must be a vnfin.models.Interval, got {type(interval).__name__}"
+            )
+        if start is not None or end is not None:
+            validate_date_range(start, end, name="crypto klines", allow_none=True)
         return self._engine.run(symbol, interval, start, end)
 
-    @staticmethod
-    def _reject_reason(hist, chain_unit, start, end) -> str | None:
-        if hist is None or len(hist.bars) == 0:
-            return "empty result"
-        from datetime import date as _date
+    def _reject_reason(self, hist, symbol, interval, start, end) -> str | None:
+        return _validate_crypto_result(
+            hist,
+            symbol=symbol,
+            interval=interval,
+            chain_unit=self._chain_unit,
+            start=start,
+            end=end,
+        )
 
-        def _as_date(val):
-            if val is None:
-                return None
-            if hasattr(val, "date"):
-                return val.date()
-            return val if isinstance(val, _date) else None
 
-        sd, ed = _as_date(start), _as_date(end)
-        if sd is not None or ed is not None:
-            in_window = False
-            for bar in hist.bars:
-                d = bar.time.date()
-                if sd is not None and d < sd:
-                    continue
-                if ed is not None and d > ed:
-                    continue
-                in_window = True
-                break
-            if not in_window:
-                return "no bars in requested date range"
-        # Unit guard on the RESULT: a chain that promises ``chain_unit`` (e.g. USD)
-        # must never silently serve a series denominated in another currency. A
-        # non-USD pair like ETHBTC returns currency/value_unit "BTC"; reject it so the
-        # client fails over (or fails loudly) instead of mislabeling BTC values as USD.
-        if chain_unit is not None:
-            actual = getattr(hist, "currency", None) or getattr(hist, "value_unit", None)
+def _validate_crypto_result(
+    hist,
+    *,
+    symbol: str,
+    interval: Interval,
+    chain_unit: str | None,
+    start,
+    end,
+) -> str | None:
+    """Return a rejection reason or ``None`` if the crypto result is acceptable."""
+    if hist is None or len(hist.bars) == 0:
+        return "empty result"
+
+    # Identity checks (#82). Crypto sources may return their provider-specific
+    # product symbol (e.g. "BTC-USD" for a "BTCUSDT" request), so a strict string
+    # match would break legitimate failover. Instead we compare the parsed base
+    # asset, which rejects wrong-asset results (e.g. ETHUSDT for a BTCUSDT request)
+    # while still accepting the same base across product formats.
+    if not isinstance(hist.symbol, str) or not hist.symbol.strip():
+        return f"malformed returned symbol {hist.symbol!r}"
+    req_base = _base_asset(symbol)
+    result_base = _base_asset(hist.base_asset) if hist.base_asset else _base_asset(hist.symbol)
+    if req_base is None or result_base != req_base:
+        return (
+            f"symbol mismatch: returned {hist.symbol!r} "
+            f"(base {result_base!r}) != requested {symbol!r} (base {req_base!r})"
+        )
+    if hist.interval != interval:
+        return f"interval mismatch: returned {hist.interval!r} != requested {interval!r}"
+
+    # Unit/currency/value_unit consistency (#69).
+    if chain_unit is not None:
+        for field in ("currency", "value_unit"):
+            actual = getattr(hist, field, None)
             if actual is not None and actual != chain_unit:
-                return (
-                    f"unit mismatch: result currency {actual!r} != chain unit "
-                    f"{chain_unit!r}"
-                )
-        return None
+                return f"unit mismatch: result {field} {actual!r} != chain unit {chain_unit!r}"
+
+    # Sorting (#85).
+    for i in range(len(hist.bars) - 1):
+        if not (hist.bars[i].time < hist.bars[i + 1].time):
+            return "bars are not strictly ascending by time"
+
+    # Row-level financial invariants (#86).
+    for bar in hist.bars:
+        reason = _validate_crypto_bar(bar)
+        if reason:
+            return reason
+
+    # Window coverage (preserved).
+    def _as_date(val):
+        if val is None:
+            return None
+        if hasattr(val, "date"):
+            return val.date()
+        return val if isinstance(val, date) else None
+
+    sd, ed = _as_date(start), _as_date(end)
+    if sd is not None or ed is not None:
+        in_window = False
+        for bar in hist.bars:
+            d = bar.time.date()
+            if sd is not None and d < sd:
+                continue
+            if ed is not None and d > ed:
+                continue
+            in_window = True
+            break
+        if not in_window:
+            return "no bars in requested date range"
+    return None
+
+
+def _validate_crypto_bar(bar: CryptoBar) -> str | None:
+    """Return a rejection reason if ``bar`` violates OHLC invariants (#86)."""
+    for field in ("open", "high", "low", "close", "volume"):
+        value = getattr(bar, field)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return f"bar {bar.time}: {field} has malformed type {type(value).__name__}"
+        if not math.isfinite(value):
+            return f"bar {bar.time}: {field} must be finite, got {value!r}"
+    for field in ("open", "high", "low", "close"):
+        value = getattr(bar, field)
+        if value <= 0:
+            return f"bar {bar.time}: {field} must be positive, got {value!r}"
+    if bar.volume < 0:
+        return f"bar {bar.time}: volume must be non-negative, got {bar.volume!r}"
+    if not (bar.low <= bar.open <= bar.high):
+        return (
+            f"bar {bar.time}: open {bar.open} not in [low {bar.low}, high {bar.high}]"
+        )
+    if not (bar.low <= bar.close <= bar.high):
+        return (
+            f"bar {bar.time}: close {bar.close} not in [low {bar.low}, high {bar.high}]"
+        )
+    return None
 
 
 def default_crypto_client(

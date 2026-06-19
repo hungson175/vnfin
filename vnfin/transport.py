@@ -26,6 +26,7 @@ to change. Only when ``json_body`` is given does the 4-arg form get used.
 from __future__ import annotations
 
 import json as _json
+import math as _math
 import random as _random
 import re as _re
 import time as _time
@@ -207,6 +208,15 @@ DEFAULT_BACKOFF_BASE = 0.5
 DEFAULT_BACKOFF_MAX = 8.0
 
 
+def _validate_positive_number(value, name: str) -> float:
+    """Issue #37: reject bool/string/non-positive transport options up front."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{name} must be a number, got {type(value).__name__}")
+    if not (value > 0 and _math.isfinite(value)):
+        raise ValueError(f"{name} must be a positive finite number, got {value!r}")
+    return float(value)
+
+
 def _is_transient(exc: BaseException) -> bool:
     """Return True if ``exc`` is a *transient* transport failure worth retrying.
 
@@ -275,7 +285,7 @@ class HttpDataSource:
         # ``(url, params, headers)`` signature; POST callers additionally pass
         # ``json_body`` as a 4th positional arg. The default client accepts both.
         self._http_get = http_get or self._default_http_get
-        self._timeout = timeout
+        self._timeout = _validate_positive_number(timeout, "timeout")
 
         # --- retry/backoff (opt-in) -------------------------------------- #
         # ``max_retries`` is the number of *extra* attempts after the first. ``0``
@@ -286,8 +296,12 @@ class HttpDataSource:
         if max_retries < 0:
             raise ValueError(f"max_retries must be non-negative, got {max_retries}")
         self._max_retries = max_retries
-        self._backoff_base = backoff_base
-        self._backoff_max = backoff_max
+        self._backoff_base = _validate_positive_number(backoff_base, "backoff_base")
+        self._backoff_max = _validate_positive_number(backoff_max, "backoff_max")
+        if self._backoff_max < self._backoff_base:
+            raise ValueError(
+                f"backoff_max ({backoff_max!r}) must be >= backoff_base ({backoff_base!r})"
+            )
         # Injectable so tests run instantly and deterministically.
         self._sleep = sleep or _time.sleep
         self._rand = rand or _random.random
@@ -334,6 +348,27 @@ class HttpDataSource:
             # plaintext secret; never embed it in a repr/log/error.
             return hashlib.sha256(str(value).encode("utf-8")).hexdigest()[:16]
 
+        def _collect_secret_identities(obj, prefix=""):
+            """Recursively collect hashes for every secret-bearing key value.
+
+            Walks dicts and the items of list/tuple sequences so nested secrets
+            (e.g. ``json_body={"auth": {"api_key": "A"}}``) still distinguish
+            requests with different credentials (issue #22).
+            """
+            identity = {}
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    key_path = f"{prefix}.{k}" if prefix else k
+                    if _is_secret_key_name(k):
+                        identity[key_path] = _secret_hash(v)
+                    identity.update(_collect_secret_identities(v, key_path))
+            elif isinstance(obj, (list, tuple)):
+                for i, item in enumerate(obj):
+                    identity.update(
+                        _collect_secret_identities(item, f"{prefix}[{i}]")
+                    )
+            return identity
+
         def _norm(obj, keep_secret_identity=False):
             if obj is None:
                 return None
@@ -344,11 +379,7 @@ class HttpDataSource:
             if keep_secret_identity:
                 # Build a parallel identity token for each secret value so two
                 # requests with different credentials do not collide.
-                identity = {}
-                if isinstance(obj, dict):
-                    for k, v in obj.items():
-                        if _is_secret_key_name(k):
-                            identity[k] = _secret_hash(v)
+                identity = _collect_secret_identities(obj)
                 # Redact first, then pair with identity hashes. This guarantees the
                 # plaintext secret never appears in the returned key tuple.
                 serialized = (redact_secrets(serialized), _json.dumps(identity, sort_keys=True))

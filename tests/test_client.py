@@ -1,10 +1,10 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 import pytest
 
 from vnfin.client import FailoverPriceClient
 from vnfin.exceptions import AllSourcesFailed, EmptyData, SourceUnavailable
-from vnfin.models import Interval
+from vnfin.models import Interval, PriceBar, PriceHistory
 from vnfin.sources.base import PriceSource
 
 WIDE = (date(2024, 1, 1), date(2024, 1, 31))
@@ -14,6 +14,39 @@ class FakeSource(PriceSource):
     def __init__(self, name, result, supported=(Interval.D1,)):
         self._name = name
         self._result = result  # a PriceHistory or an Exception to raise
+        self._supported = set(supported)
+        self.calls = 0
+
+    @property
+    def name(self):
+        return self._name
+
+    def supports(self, interval):
+        return interval in self._supported
+
+    def get_history(self, symbol, interval, start, end):
+        self.calls += 1
+        if isinstance(self._result, Exception):
+            raise self._result
+        # Synthetic helpers may hard-code a symbol; ensure the fake behaves like a
+        # real source and returns the requested public symbol so identity checks
+        # do not reject otherwise-valid synthetic results.
+        if hasattr(self._result, "symbol") and self._result.symbol != symbol:
+            from dataclasses import replace
+
+            return replace(self._result, symbol=symbol)
+        return self._result
+
+
+class RawFakeSource(PriceSource):
+    """Like FakeSource but does NOT patch the returned symbol.
+
+    Used for tests that intentionally want a wrong-identity result.
+    """
+
+    def __init__(self, name, result, supported=(Interval.D1,)):
+        self._name = name
+        self._result = result
         self._supported = set(supported)
         self.calls = 0
 
@@ -391,3 +424,137 @@ def test_get_history_rejects_empty_symbol_before_source_call(synth, bad_symbol):
     with pytest.raises(InvalidData):
         client.get_history(bad_symbol, Interval.D1, *WIDE)
     assert s.calls == 0
+
+
+# --- Batch-1 result guards: identity, metadata, OHLC invariants, sorting ----------
+
+
+def _history_with_bars(source, symbol, bars, **kwargs):
+    from vnfin.models import AdjustmentPolicy, PriceHistory
+
+    defaults = dict(
+        symbol=symbol,
+        interval=Interval.D1,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED,
+        source=source,
+        currency="VND",
+        value_unit="VND",
+    )
+    defaults.update(kwargs)
+    return PriceHistory(bars=bars, **defaults)
+
+
+def _make_bad_history(**kwargs):
+    from datetime import datetime, timezone
+    from vnfin.models import AdjustmentPolicy
+
+    defaults = dict(
+        symbol="FPT",
+        interval=Interval.D1,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED,
+        source="bad",
+        bars=(PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 72, 73, 71, 72.5, 1000),),
+        currency="VND",
+        value_unit="VND",
+    )
+    defaults.update(kwargs)
+    return PriceHistory(**defaults)
+
+
+def test_rejects_returned_symbol_mismatch(synth):
+    bad = _make_bad_history(symbol="OTHER")
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("bad", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert h.attempts[0].ok is False and "symbol mismatch" in h.attempts[0].reason
+
+
+def test_lowercase_symbol_accepted_when_source_returns_uppercase():
+    # Regression: real sources normalize to uppercase; the failover client must not
+    # reject a valid result just because the caller passed a lowercase selector.
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    upper = _history_with_bars("upper", "VNM", bars)
+    client = FailoverPriceClient([RawFakeSource("upper", upper)])
+    h = client.get_daily("vnm", *WIDE)
+    assert h.symbol == "VNM"
+    assert h.source == "upper"
+
+
+def test_rejects_returned_interval_mismatch(synth):
+    bad = _make_bad_history(interval=Interval.W1)
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("bad", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert h.attempts[0].ok is False and "interval mismatch" in h.attempts[0].reason
+
+
+def test_rejects_returned_unit_mismatch(synth):
+    bad = _make_bad_history(currency="USD", value_unit="USD")
+    good = FakeSource("good", synth.make_history("good", 2))
+    good.unit = "VND"
+    bad_src = RawFakeSource("bad", bad)
+    bad_src.unit = "VND"
+    client = FailoverPriceClient([bad_src, good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert h.attempts[0].ok is False and "currency mismatch" in h.attempts[0].reason
+
+
+def test_rejects_returned_adjustment_policy_mismatch(synth):
+    from vnfin.models import AdjustmentPolicy
+
+    bad = _make_bad_history(adjustment_policy=AdjustmentPolicy.RAW)
+    good = FakeSource("good", synth.make_history("good", 2))
+    good.adjustment_policy = AdjustmentPolicy.PROVIDER_ADJUSTED
+    bad_src = RawFakeSource("bad", bad)
+    bad_src.adjustment_policy = AdjustmentPolicy.PROVIDER_ADJUSTED
+    client = FailoverPriceClient([bad_src, good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert "adjustment_policy mismatch" in h.attempts[0].reason
+
+
+def test_rejects_unsorted_bars(synth):
+    from datetime import datetime, timezone
+
+    bars = (
+        PriceBar(datetime(2024, 1, 3, tzinfo=timezone.utc), 73, 73, 73, 73, 1000),
+        PriceBar(datetime(2024, 1, 1, tzinfo=timezone.utc), 71, 71, 71, 71, 1000),
+    )
+    bad = _history_with_bars("bad", "FPT", bars)
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("bad", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert "not strictly ascending" in h.attempts[0].reason
+
+
+@pytest.mark.parametrize(
+    "bar_factory,expected_substring",
+    [
+        (
+            lambda t: PriceBar(t, 100, 90, 110, 95, 1000),
+            "open 100 not in [low 110, high 90]",
+        ),
+        (
+            lambda t: PriceBar(t, 100, 110, 90, 95, -5),
+            "volume must be non-negative",
+        ),
+        (
+            lambda t: PriceBar(t, -1, 1, -2, 0, 1000),
+            "open must be positive",
+        ),
+    ],
+)
+def test_rejects_economically_impossible_bars(synth, bar_factory, expected_substring):
+    from datetime import datetime, timezone
+
+    t = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    bad = _history_with_bars("bad", "FPT", (bar_factory(t),))
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("bad", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert expected_substring in h.attempts[0].reason

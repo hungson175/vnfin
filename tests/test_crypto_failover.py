@@ -27,6 +27,7 @@ from vnfin.crypto import (
 from vnfin.crypto.models import CryptoBar
 from vnfin.exceptions import (
     AllSourcesFailed,
+    InvalidData,
     SourceUnavailable,
     UnitMismatchError,
     UnsupportedInterval,
@@ -423,3 +424,146 @@ def test_rejects_history_before_one_sided_start():
         FailoverCryptoClient([EarlyCrypto()]).get_klines(
             "BTCUSDT", Interval.D1, start=date(2025, 1, 1), end=None
         )
+
+
+# --- Batch-1 result guards --------------------------------------------------
+
+
+class _RawCryptoSource:
+    """Test double that returns a CryptoHistory exactly as configured."""
+
+    name = "raw"
+    unit = "USD"
+
+    def __init__(self, history):
+        self._history = history
+
+    def supports(self, interval):
+        return True
+
+    def get_klines(self, symbol, interval, start, end):
+        return self._history
+
+
+def _crypto_history(bars, **kwargs):
+    defaults = dict(
+        symbol="BTCUSDT",
+        interval=Interval.D1,
+        source="raw",
+        currency="USD",
+        value_unit="USD",
+        base_asset="BTC",
+        quote_asset="USDT",
+        price_unit="USD per BTC",
+        volume_unit="BTC",
+    )
+    defaults.update(kwargs)
+    return CryptoHistory(bars=bars, **defaults)
+
+
+def test_rejects_invalid_interval_before_source_call():
+    src = _RawCryptoSource(_crypto_history(bars=()))
+    client = FailoverCryptoClient([src])
+    with pytest.raises(InvalidData):
+        client.get_klines("BTCUSDT", "D1", date(2024, 1, 1), date(2024, 1, 2))
+    assert src._history is not None  # no call made
+
+
+def test_rejects_inverted_date_range_before_source_call():
+    src = _RawCryptoSource(_crypto_history(bars=()))
+    client = FailoverCryptoClient([src])
+    with pytest.raises(InvalidData):
+        client.get_klines(
+            "BTCUSDT", Interval.D1, date(2024, 1, 3), date(2024, 1, 1)
+        )
+
+
+def test_rejects_empty_symbol_before_source_call():
+    src = _RawCryptoSource(_crypto_history(bars=()))
+    client = FailoverCryptoClient([src])
+    with pytest.raises(InvalidData):
+        client.get_klines("", Interval.D1, date(2024, 1, 1), date(2024, 1, 2))
+
+
+def _assert_rejected_reason(history, expected_substring):
+    client = FailoverCryptoClient([_RawCryptoSource(history)])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert expected_substring in ei.value.attempts[0].reason
+
+
+def test_rejects_returned_interval_mismatch():
+    bad = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),),
+        interval=Interval.W1,
+    )
+    _assert_rejected_reason(bad, "interval mismatch")
+
+
+def test_rejects_returned_currency_mismatch():
+    bad = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),),
+        currency="BTC",
+        value_unit="BTC",
+    )
+    _assert_rejected_reason(bad, "unit mismatch")
+
+
+def test_rejects_returned_symbol_mismatch_and_failsover():
+    # Regression: a result for a different base asset must be rejected and the
+    # failover client must move on to the next source.
+    bad = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),),
+        symbol="ETHUSDT",
+        base_asset="ETH",
+        quote_asset="USDT",
+    )
+    good = _crypto_history(
+        bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),),
+        symbol="BTCUSDT",
+        source="good",
+        base_asset="BTC",
+        quote_asset="USDT",
+    )
+
+    class NamedRaw(_RawCryptoSource):
+        def __init__(self, history, name):
+            super().__init__(history)
+            self.name = name
+
+    client = FailoverCryptoClient([NamedRaw(bad, "bad"), NamedRaw(good, "good")])
+    h = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert h.symbol == "BTCUSDT"
+    assert h.source == "good"
+
+
+def test_rejects_unsorted_bars():
+    bars = (
+        CryptoBar(datetime(2024, 1, 3, tzinfo=UTC), 3, 3, 3, 3, 3),
+        CryptoBar(datetime(2024, 1, 1, tzinfo=UTC), 1, 1, 1, 1, 1),
+    )
+    bad = _crypto_history(bars=bars)
+    _assert_rejected_reason(bad, "not strictly ascending")
+
+
+@pytest.mark.parametrize(
+    "bar_factory,expected_substring",
+    [
+        (
+            lambda t: CryptoBar(t, 100, 90, 110, 95, 1.0),
+            "open 100 not in [low 110, high 90]",
+        ),
+        (
+            lambda t: CryptoBar(t, 100, 110, 90, 95, -1.0),
+            "volume must be non-negative",
+        ),
+        (
+            lambda t: CryptoBar(t, -1, 1, -2, 0, 1.0),
+            "open must be positive",
+        ),
+    ],
+)
+def test_rejects_economically_impossible_bars(bar_factory, expected_substring):
+    t = datetime(2024, 1, 2, tzinfo=UTC)
+    bad = _crypto_history(bars=(bar_factory(t),))
+    _assert_rejected_reason(bad, expected_substring)

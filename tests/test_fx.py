@@ -461,3 +461,80 @@ def test_vietcombank_skips_non_positive_bid_ask():
     rates = src.get_rates()
     assert "USD" not in {r.base for r in rates}
     assert "EUR" in {r.base for r in rates}
+
+
+# --- Batch-1 failover result guards -----------------------------------------
+
+
+def _fx_rate(**kwargs):
+    defaults = dict(
+        base="USD",
+        quote="VND",
+        rate=25_000.0,
+        unit="VND per 1 USD",
+        as_of_utc=_NOW,
+        source="fake",
+        bid=None,
+        ask=None,
+    )
+    defaults.update(kwargs)
+    return FXRate(**defaults)
+
+
+class _FakeFXSource:
+    name = "fake"
+    unit = "VND-per-foreign-unit"
+
+    def __init__(self, rate):
+        self._rate = rate
+
+    def get_rate(self, base, quote):
+        return self._rate
+
+
+def _assert_fx_rejected(rate, expected_substring):
+    from vnfin.exceptions import AllSourcesFailed
+
+    client = FailoverFXClient([_FakeFXSource(rate)])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_rate("USD", "VND")
+    assert expected_substring in ei.value.attempts[0].reason
+
+
+def test_rejects_naive_as_of_utc():
+    rate = _fx_rate(as_of_utc=dt.datetime(2026, 6, 18, 3, 0, 0))
+    _assert_fx_rejected(rate, "as_of_utc must be a timezone-aware datetime")
+
+
+def test_rejects_non_utc_timezone_as_of_utc():
+    # Issue #83 follow-up: tz-aware but not UTC must be rejected.
+    tz_plus7 = dt.timezone(dt.timedelta(hours=7))
+    rate = _fx_rate(as_of_utc=dt.datetime(2026, 6, 18, 10, 0, 0, tzinfo=tz_plus7))
+    _assert_fx_rejected(rate, "as_of_utc must be UTC")
+
+
+def test_rejects_string_as_of_utc():
+    rate = _fx_rate(as_of_utc="2026-06-18T03:00:00Z")
+    _assert_fx_rejected(rate, "as_of_utc must be a timezone-aware datetime")
+
+
+def test_rejects_negative_bid():
+    rate = _fx_rate(bid=-1.0, ask=25_200.0)
+    _assert_fx_rejected(rate, "non-positive or non-finite bid")
+
+
+def test_rejects_ask_below_bid():
+    rate = _fx_rate(bid=25_200.0, ask=25_000.0)
+    _assert_fx_rejected(rate, "ask 25000.0 < bid 25200.0")
+
+
+def test_rejects_rate_outside_bid_ask_spread():
+    rate = _fx_rate(rate=25_500.0, bid=25_000.0, ask=25_200.0)
+    _assert_fx_rejected(rate, "not in bid-ask spread")
+
+
+def test_accepts_rate_inside_bid_ask_spread():
+    rate = _fx_rate(rate=25_100.0, bid=25_000.0, ask=25_200.0)
+    client = FailoverFXClient([_FakeFXSource(rate)])
+    result = client.get_rate("USD", "VND")
+    assert result.rate == 25_100.0

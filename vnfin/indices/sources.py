@@ -37,6 +37,7 @@ from ..sources.ssi import SSIiBoardSource
 from ..sources.vndirect import VNDirectSource
 from ..sources.vps import VPSSource
 from ..transport import DEFAULT_UA, HttpDataSource
+from ..validation import validate_non_empty_string
 from .models import IndexConstituents, IndexMember
 
 # Canonical index symbol -> provider-specific symbol, per source. Only entries that
@@ -143,6 +144,8 @@ class IndexConstituentsSource(HttpDataSource):
         return _GROUP_ALIASES.get(canon, canon)
 
     def get_constituents(self, index: str) -> IndexConstituents:
+        # Issue #75: reject malformed index selectors before URL construction.
+        index = validate_non_empty_string(index, "index")
         group = self.normalize_group(index)
         url = f"{self.BASE_URL}{self.GROUP_PATH}/{group}"
         headers = {"User-Agent": DEFAULT_UA, "Accept": "application/json"}

@@ -112,6 +112,27 @@ CANONICAL_CURRENCY: dict[MacroIndicator, Optional[str]] = {
 }
 
 
+# Canonical indicator identity metadata. These stable, provider-independent
+# strings identify each logical indicator. The macro client's result guard uses
+# them to detect a series whose code/name clearly belongs to a different
+# indicator than the one requested.
+CANONICAL_INDICATOR_CODE: dict[MacroIndicator, str] = {
+    MacroIndicator.GDP: "gdp",
+    MacroIndicator.GDP_GROWTH: "gdp_growth",
+    MacroIndicator.CPI: "cpi",
+    MacroIndicator.INFLATION: "inflation",
+    MacroIndicator.UNEMPLOYMENT: "unemployment",
+}
+
+CANONICAL_INDICATOR_NAME: dict[MacroIndicator, str] = {
+    MacroIndicator.GDP: "Gross Domestic Product",
+    MacroIndicator.GDP_GROWTH: "GDP Growth",
+    MacroIndicator.CPI: "Consumer Price Index",
+    MacroIndicator.INFLATION: "Inflation",
+    MacroIndicator.UNEMPLOYMENT: "Unemployment",
+}
+
+
 #: Indicators whose values are economic *levels* and therefore must be strictly
 #: positive (e.g. nominal GDP, CPI index). Percent/rate indicators may be negative.
 _LEVEL_INDICATORS: frozenset[MacroIndicator] = frozenset({MacroIndicator.GDP, MacroIndicator.CPI})
@@ -192,6 +213,16 @@ def canonical_unit(indicator) -> str:
 def canonical_currency(indicator) -> Optional[str]:
     """Canonical currency for a logical indicator, or ``None`` when not money-denominated."""
     return CANONICAL_CURRENCY[normalize_indicator(indicator)]
+
+
+def canonical_indicator_code(indicator) -> str:
+    """Canonical indicator code for a logical indicator."""
+    return CANONICAL_INDICATOR_CODE[normalize_indicator(indicator)]
+
+
+def canonical_indicator_name(indicator) -> str:
+    """Canonical human-readable indicator name for a logical indicator."""
+    return CANONICAL_INDICATOR_NAME[normalize_indicator(indicator)]
 
 
 def _source_unit_for(source, indicator) -> Optional[str]:

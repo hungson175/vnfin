@@ -14,9 +14,10 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional, Union
 
-from ..client import FailoverPriceClient, _validate_symbol
+from ..client import FailoverPriceClient
 from ..exceptions import InvalidData, VnfinError
 from ..models import Interval, PriceHistory
+from ..validation import validate_date_range, validate_non_empty_string
 from .models import IndexConstituents
 from .sources import (
     IndexConstituentsSource,
@@ -34,34 +35,9 @@ def default_index_sources(http_get=None, timeout: float = 25.0):
     return [c(http_get=http_get, timeout=timeout) for c in _DEFAULT_INDEX_SOURCE_CLASSES]
 
 
-def _validate_date_range(start, end) -> None:
-    """Validate the requested window before any source call.
-
-    ``start`` and ``end`` are required (a ``date`` or ``datetime``). Missing dates
-    or an inverted range raise a stable ``VnfinError`` so the public API never
-    leaks the underlying ``datetime.combine(None, ...)`` ``TypeError`` and never
-    burns failover attempts on a caller-input mistake.
-    """
-    if start is None or end is None:
-        missing = [n for n, v in (("start", start), ("end", end)) if v is None]
-        raise VnfinError(
-            "index_history requires both 'start' and 'end' dates; missing: "
-            + ", ".join(missing)
-        )
-    if not isinstance(start, date) or not isinstance(end, date):
-        raise VnfinError(
-            "index_history 'start' and 'end' must be datetime.date or datetime.datetime"
-        )
-    try:
-        reversed_range = start > end
-    except TypeError as exc:  # mixing naive date with datetime, etc.
-        raise VnfinError(
-            "index_history 'start' and 'end' must be comparable (same date/datetime type)"
-        ) from exc
-    if reversed_range:
-        raise VnfinError(
-            f"index_history requires start <= end, got start={start} > end={end}"
-        )
+def _validate_index_selector(value, name: str = "index") -> str:
+    """Issue #75: reject malformed index selectors before any URL/provider call."""
+    return validate_non_empty_string(value, name)
 
 
 class IndexClient:
@@ -100,13 +76,22 @@ class IndexClient:
         BEFORE any source/failover call — never a raw ``TypeError``/``ValueError``.
         """
         # Issue #9: reject empty/malformed symbols before the failover engine runs.
-        _validate_symbol(symbol)
-        _validate_date_range(start, end)
+        # Issue #97: normalize to uppercase so failover identity checks are
+        # case-insensitive and match the canonical symbols returned by sources.
+        symbol = validate_non_empty_string(symbol, "symbol").upper()
+        validate_date_range(start, end, name="index_history")
         return self._client.get_history(symbol, interval, start, end)
 
     def constituents(self, index: str) -> IndexConstituents:
         """Current index membership (no weights from this source)."""
-        return self._constituents.get_constituents(index)
+        index = _validate_index_selector(index, "index")
+        result = self._constituents.get_constituents(index)
+        # Ensure the returned typed object carries the normalized selector.
+        if result.index != index:
+            from dataclasses import replace
+
+            result = replace(result, index=index)
+        return result
 
 
 def index_history(

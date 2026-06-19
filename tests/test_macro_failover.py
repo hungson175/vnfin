@@ -23,6 +23,10 @@ from vnfin.macro import (
     IndicatorSeries,
     MacroIndicator,
     WorldBankMacroSource,
+    canonical_currency,
+    canonical_indicator_code,
+    canonical_indicator_name,
+    canonical_unit,
     default_macro_client,
     default_macro_sources,
     get_indicator,
@@ -49,6 +53,8 @@ class FakeMacroSource:
         return u
 
     def get_indicator(self, country_iso3, indicator):
+        from vnfin.macro.indicators import canonical_currency
+
         ind = MacroIndicator(indicator)
         b = self._behavior.get(ind, "ok")
         if b == "unavailable":
@@ -60,12 +66,12 @@ class FakeMacroSource:
         unit = self.unit_for(ind)
         return IndicatorSeries(
             country=country_iso3.upper(),
-            indicator_code=f"FAKE_{ind.value}",
-            indicator_name=f"Fake {ind.value}",
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
             points=((date(2023, 1, 1), 42.0),),
             source=self._name,
             unit=unit,
-            currency="USD",
+            currency=canonical_currency(ind),
             fetched_at_utc=datetime.now(timezone.utc),
         )
 
@@ -144,10 +150,10 @@ def test_only_noncanonical_unit_sources_raises_all_sources_failed():
         get_indicator("ZZZ", MacroIndicator.GDP, sources=[a, b])
 
 
-def test_finalize_refuses_to_relabel_a_drifted_unit():
+def test_reject_reason_refuses_to_relabel_a_drifted_unit():
     # B7 backstop: a source declares the canonical unit (passes the pre-filter)
-    # but its returned series carries a DIFFERENT non-empty unit. finalize must
-    # refuse to relabel it -> UnitMismatchError, not a silently relabelled result.
+    # but its returned series carries a DIFFERENT non-empty unit. The result guard
+    # must reject it so failover can move on, not silently relabel it.
     class DriftingSource:
         name = "drift"
 
@@ -168,8 +174,9 @@ def test_finalize_refuses_to_relabel_a_drifted_unit():
                 fetched_at_utc=datetime.now(timezone.utc),
             )
 
-    with pytest.raises(UnitMismatchError):
+    with pytest.raises(AllSourcesFailed) as ei:
         get_indicator("ZZZ", MacroIndicator.GDP, sources=[DriftingSource()])
+    assert "unit mismatch" in ei.value.attempts[0].reason
 
 
 def test_default_gdp_chain_does_not_raise_unit_mismatch():
@@ -353,3 +360,111 @@ def test_country_validation_runs_before_network():
     with pytest.raises(InvalidData):
         get_indicator("US", MacroIndicator.GDP_GROWTH, sources=[CountingSource("a", PCT)])
     assert calls["n"] == 0
+
+
+# --- Batch-1 result guards: identity, unit/currency, level-indicator values ----
+
+
+def _make_fake_for_guard(indicator, **overrides):
+    class GuardSource:
+        name = "guard"
+
+        def __init__(self):
+            self.unit_for = lambda ind: canonical_unit(indicator)
+            self.supports = lambda ind: True
+
+        def get_indicator(self, country_iso3, indicator_arg):
+            defaults = dict(
+                country=country_iso3.upper(),
+                indicator_code=canonical_indicator_code(indicator),
+                indicator_name=canonical_indicator_name(indicator),
+                points=((date(2023, 1, 1), 42.0),),
+                source="guard",
+                unit=canonical_unit(indicator),
+                value_unit=canonical_unit(indicator),
+                currency=canonical_currency(indicator),
+                fetched_at_utc=datetime.now(timezone.utc),
+            )
+            defaults.update(overrides)
+            return IndicatorSeries(**defaults)
+
+    return GuardSource()
+
+
+def test_rejects_returned_country_mismatch():
+    src = _make_fake_for_guard(MacroIndicator.GDP_GROWTH, country="USA")
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.GDP_GROWTH, sources=[src])
+    assert "country" in ei.value.attempts[0].reason
+
+
+def test_rejects_returned_unit_mismatch():
+    src = _make_fake_for_guard(MacroIndicator.GDP_GROWTH, unit="USD bn", value_unit="USD bn")
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.GDP_GROWTH, sources=[src])
+    assert "unit" in ei.value.attempts[0].reason
+
+
+def test_rejects_returned_currency_mismatch():
+    src = _make_fake_for_guard(MacroIndicator.GDP, currency="VND")
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.GDP, sources=[src])
+    assert "currency" in ei.value.attempts[0].reason
+
+
+def test_rejects_negative_gdp_level():
+    src = _make_fake_for_guard(MacroIndicator.GDP, points=((date(2023, 1, 1), -1.0),))
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.GDP, sources=[src])
+    assert "must be positive" in ei.value.attempts[0].reason
+
+
+def test_rejects_unemployment_out_of_bounds():
+    src = _make_fake_for_guard(
+        MacroIndicator.UNEMPLOYMENT, points=((date(2023, 1, 1), 101.0),)
+    )
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.UNEMPLOYMENT, sources=[src])
+    assert "between 0 and 100" in ei.value.attempts[0].reason
+
+
+# --- Issue #78 follow-up: returned series must answer the requested indicator ----
+
+
+def test_rejects_returned_indicator_mismatch():
+    src = _make_fake_for_guard(
+        MacroIndicator.INFLATION,
+        indicator_code=canonical_indicator_code(MacroIndicator.GDP),
+        indicator_name=canonical_indicator_name(MacroIndicator.GDP),
+    )
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.INFLATION, sources=[src])
+    assert "indicator" in ei.value.attempts[0].reason
+
+
+# --- Issue #95: series points must be strictly ascending by date -----------------
+
+
+def test_rejects_unsorted_points():
+    src = _make_fake_for_guard(
+        MacroIndicator.GDP_GROWTH,
+        points=((date(2023, 1, 1), 5.0), (date(2022, 1, 1), 4.0)),
+    )
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.GDP_GROWTH, sources=[src])
+    assert "ascending" in ei.value.attempts[0].reason
+
+
+# --- Issue #96: point values must be finite -------------------------------------
+
+
+def test_rejects_non_finite_point_values():
+    from math import nan
+
+    src = _make_fake_for_guard(
+        MacroIndicator.GDP_GROWTH,
+        points=((date(2023, 1, 1), nan),),
+    )
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("VNM", MacroIndicator.GDP_GROWTH, sources=[src])
+    assert "finite" in ei.value.attempts[0].reason

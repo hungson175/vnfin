@@ -116,6 +116,11 @@ class FREDMacroSource(HttpDataSource):
         params = {"series_id": sid, "api_key": self._api_key, "file_type": "json"}
         window_start = self._as_date(start, "start") if start is not None else None
         window_end = self._as_date(end, "end") if end is not None else None
+        # Issue #49: reject inverted windows before any provider call.
+        if window_start is not None and window_end is not None and window_start > window_end:
+            raise InvalidData(
+                f"fred: start {window_start.isoformat()} is after end {window_end.isoformat()}"
+            )
         if window_start is not None:
             params["observation_start"] = window_start.isoformat()
         if window_end is not None:

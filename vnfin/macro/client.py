@@ -31,18 +31,23 @@ the price client skips a source that does not support an interval.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 
 from ..exceptions import AllSourcesFailed, InvalidData, UnitMismatchError
 from ..failover import FailoverClient
+from ..validation import validate_country_iso3
 from .dbnomics import DBnomicsSource
 from .imf import IMFDataMapperSource
 from .indicators import (
     MacroIndicator,
     canonical_currency,
+    canonical_indicator_code,
+    canonical_indicator_name,
     canonical_unit,
     eligible_sources,
     normalize_indicator,
+    validate_indicator_values,
 )
 from .models import IndicatorSeries
 from .worldbank import WorldBankMacroSource
@@ -129,18 +134,6 @@ class MacroClient:
     def max_attempts(self) -> int:
         return self._max_attempts
 
-    @staticmethod
-    def _validate_country_iso3(value) -> str:
-        # Issue #32: country must be a syntactically valid 3-letter ISO3 code.
-        if not isinstance(value, str):
-            raise InvalidData(
-                f"macro: country must be a 3-letter ISO3 code, got {type(value).__name__}"
-            )
-        c = value.strip().upper()
-        if not (len(c) == 3 and c.isalpha()):
-            raise InvalidData(f"macro: country must be a 3-letter ISO3 code, got {value!r}")
-        return c
-
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one canonical indicator for one country over the failover chain.
 
@@ -149,7 +142,7 @@ class MacroClient:
         indicators and malformed countries both raise ``InvalidData`` before any
         source is contacted.
         """
-        country = self._validate_country_iso3(country_iso3)
+        country = validate_country_iso3(country_iso3)
         ind = normalize_indicator(indicator, _invalid_to_valueerror=False)
 
         # B6/B7: filter to sources whose declared unit == the canonical unit for
@@ -166,7 +159,7 @@ class MacroClient:
             sources,
             operation=lambda src, country, i: _fetch(src, country, i),
             capability=lambda src, country, i: _capable(src, country, i),
-            reject=self._reject_reason,
+            reject=self._reject_reason_for(ind),
             unit_of=_unit_of_for(ind),
             max_attempts=self._max_attempts,
             failure_factory=lambda attempts, country, i: AllSourcesFailed(
@@ -180,10 +173,87 @@ class MacroClient:
         return engine.run(country, ind)
 
     @staticmethod
-    def _reject_reason(series, *args, **kwargs) -> str | None:
-        if series is None or len(series.points) == 0:
-            return "empty result"
-        return None
+    def _reject_reason_for(indicator):
+        unit = canonical_unit(indicator)
+        currency = canonical_currency(indicator)
+
+        def _reject_reason(series, country, i) -> str | None:
+            if series is None or len(series.points) == 0:
+                return "empty result"
+
+            # Issue #78: reject returned identity that contradicts the request.
+            if series.country != country:
+                return (
+                    f"country mismatch: source {series.source!r} returned "
+                    f"country {series.country!r} but requested {country!r}"
+                )
+
+            # Issue #71: reject conflicting explicit unit/currency metadata.
+            got_unit = series.unit or ""
+            if got_unit and got_unit != unit:
+                return (
+                    f"unit mismatch: source {series.source!r} returned "
+                    f"unit {got_unit!r} but the canonical unit is {unit!r}"
+                )
+            got_value_unit = series.value_unit or ""
+            if got_value_unit and got_value_unit != unit:
+                return (
+                    f"value_unit mismatch: source {series.source!r} returned "
+                    f"value_unit {got_value_unit!r} but the canonical unit is {unit!r}"
+                )
+            got_currency = series.currency
+            if got_currency is not None and got_currency != currency:
+                return (
+                    f"currency mismatch: source {series.source!r} returned "
+                    f"currency {got_currency!r} but the canonical currency is {currency!r}"
+                )
+
+            # Issue #78 follow-up: returned series must answer the requested indicator.
+            if not series.indicator_code:
+                return f"indicator_code is empty for {indicator.value}"
+            if not series.indicator_name:
+                return f"indicator_name is empty for {indicator.value}"
+            for other in MacroIndicator:
+                if other == indicator:
+                    continue
+                if series.indicator_code == canonical_indicator_code(other):
+                    return (
+                        f"indicator_code mismatch: source {series.source!r} returned "
+                        f"{series.indicator_code!r} (canonical code for {other.value}) "
+                        f"but requested {indicator.value}"
+                    )
+                if series.indicator_name == canonical_indicator_name(other):
+                    return (
+                        f"indicator_name mismatch: source {series.source!r} returned "
+                        f"{series.indicator_name!r} (canonical name for {other.value}) "
+                        f"but requested {indicator.value}"
+                    )
+
+            # Issue #95: points must be strictly ascending by date.
+            prev_date = None
+            for d, _v in series.points:
+                if prev_date is not None and d <= prev_date:
+                    return (
+                        f"points are not strictly ascending by date: "
+                        f"{d} <= {prev_date} from source {series.source!r}"
+                    )
+                prev_date = d
+
+            # Issue #96: every point value must be finite (no NaN/inf).
+            for d, v in series.points:
+                if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+                    return (
+                        f"non-finite value {v!r} at {d} from source {series.source!r}"
+                    )
+
+            # Issue #86: level indicators must be positive; unemployment bounded.
+            try:
+                validate_indicator_values(indicator, list(series.points), series.source)
+            except InvalidData as exc:
+                return str(exc)
+            return None
+
+        return _reject_reason
 
     @staticmethod
     def _finalize_for(indicator):

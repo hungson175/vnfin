@@ -187,6 +187,22 @@ def test_index_client_history_returns_canonical_symbol():
     assert h.provider_symbol == "UPCOMINDEX"
 
 
+def test_index_client_history_normalizes_lowercase_symbol():
+    # Regression: callers may pass lowercase selectors; identity checks must compare
+    # normalized/canonical symbols, not the raw caller string.
+    c = IndexClient(http_get=_get(_bare_udf()))
+    h = c.index_history("vnindex", date(2024, 6, 1), date(2024, 6, 30))
+    assert h.symbol == "VNINDEX"
+    assert h.provider_symbol == "VNINDEX"
+
+
+def test_index_client_history_normalizes_lowercase_alias():
+    c = IndexClient(http_get=_get(_bare_udf()))
+    h = c.index_history("upcom", date(2024, 6, 1), date(2024, 6, 30))
+    assert h.symbol == "UPCOM"
+    assert h.provider_symbol == "UPCOMINDEX"
+
+
 def test_no_data_status_raises_empty():
     s = VPSIndexSource(http_get=_get(_bare_udf(status="no_data")))
     with pytest.raises(EmptyData):
@@ -518,3 +534,20 @@ def test_constituents_to_dataframe():
     assert list(df["symbol"]) == ["TESTCO", "ZZZ", "FAKE1"]
     assert df.attrs["index"] == "VN30"
     assert df.attrs["source"] == "ssi_iboard_query"
+
+
+# --- Batch-1 issue #75: malformed index selectors ---------------------------
+
+
+@pytest.mark.parametrize("bad_index", [None, "", "   ", 123, []])
+def test_constituents_source_rejects_malformed_index_selector(bad_index):
+    s = IndexConstituentsSource(http_get=_get(_constituents_payload()))
+    with pytest.raises(InvalidData):
+        s.get_constituents(bad_index)
+
+
+@pytest.mark.parametrize("bad_index", [None, "", "   ", 123])
+def test_index_client_constituents_rejects_malformed_index_selector(bad_index):
+    c = IndexClient(http_get=_get(_constituents_payload()))
+    with pytest.raises(InvalidData):
+        c.constituents(bad_index)

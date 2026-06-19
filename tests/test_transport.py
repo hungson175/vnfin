@@ -572,3 +572,51 @@ def test_cache_distinguishes_x_api_key_header_values():
     flat = repr(list(probe._cache.keys()))
     assert "ALPHA" not in flat
     assert "BETA" not in flat
+
+
+# --- Issue #37: transport option validation ---------------------------------
+
+
+@pytest.mark.parametrize("bad", ["25", True, False, -1, 0])
+def test_invalid_timeout_raises(bad):
+    with pytest.raises((TypeError, ValueError)):
+        HttpDataSource(http_get=lambda *a: "x", timeout=bad)
+
+
+@pytest.mark.parametrize("bad", ["0.5", True, False, -0.5, 0])
+def test_invalid_backoff_base_raises(bad):
+    with pytest.raises((TypeError, ValueError)):
+        HttpDataSource(http_get=lambda *a: "x", max_retries=1, backoff_base=bad)
+
+
+@pytest.mark.parametrize("bad", ["8", True, False, -1, 0])
+def test_invalid_backoff_max_raises(bad):
+    with pytest.raises((TypeError, ValueError)):
+        HttpDataSource(http_get=lambda *a: "x", max_retries=1, backoff_max=bad)
+
+
+def test_backoff_max_less_than_base_raises():
+    with pytest.raises(ValueError, match="backoff_max"):
+        HttpDataSource(
+            http_get=lambda *a: "x", max_retries=1, backoff_base=2.0, backoff_max=1.0
+        )
+
+
+def test_cache_distinguishes_nested_json_body_secrets():
+    """Issue #22: nested secrets must keep cache entries distinct."""
+    calls = []
+
+    def fake_get(url, params=None, headers=None, json_body=None):
+        calls.append(json_body)
+        key = json_body["auth"]["api_key"] if json_body else "none"
+        return f"response-for-{key}"
+
+    probe = HttpDataSource(http_get=fake_get, cache_ttl=3600)
+    body_a = {"auth": {"api_key": "ALPHA"}}
+    body_b = {"auth": {"api_key": "BETA"}}
+    assert probe._request_text("u", json_body=body_a) == "response-for-ALPHA"
+    assert probe._request_text("u", json_body=body_b) == "response-for-BETA"
+    assert len(calls) == 2
+    flat = repr(list(probe._cache.keys()))
+    assert "ALPHA" not in flat
+    assert "BETA" not in flat

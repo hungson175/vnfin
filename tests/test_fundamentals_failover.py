@@ -40,7 +40,7 @@ from vnfin.fundamentals.base import FundamentalSource
 # --------------------------------------------------------------------------- #
 # Test doubles
 # --------------------------------------------------------------------------- #
-def _report(symbol, source, value, fiscal_date="2025-12-31"):
+def _report(symbol, source, value, fiscal_date="2025-12-31", is_bank=False):
     fd = datetime.strptime(fiscal_date, "%Y-%m-%d").date()
     return FinancialReport(
         symbol=symbol,
@@ -50,6 +50,7 @@ def _report(symbol, source, value, fiscal_date="2025-12-31"):
         items=(LineItem(item_code="11000", name="net revenue", value=value, value_unit="VND"),),
         source=source,
         currency="VND",
+        is_bank=is_bank,
         fetched_at_utc=datetime.now(timezone.utc),
     )
 
@@ -158,6 +159,20 @@ def test_all_sources_fail_raises_all_sources_failed():
         client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
+def test_failover_accepts_generator_sources_without_dropping_primary():
+    """Issue: __init__ consumed the first generator element before passing the
+    sources to FailoverClient. A generator must be materialized first so the
+    primary source is preserved and used."""
+    primary = FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 11.0),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient((s for s in [primary, backup]))
+    assert len(client.sources) == 2
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "vndirect"
+    assert primary.calls == 1
+    assert backup.calls == 0
+
+
 def test_failover_passes_is_bank_and_limit_through():
     captured = {}
 
@@ -167,7 +182,7 @@ def test_failover_passes_is_bank_and_limit_through():
             captured["limit"] = limit
             return super().get_financials(symbol, statement, period, is_bank=is_bank, limit=limit)
 
-    primary = Recorder("vndirect", result=(_report("ZZBANK", "vndirect", 5.0),))
+    primary = Recorder("vndirect", result=(_report("ZZBANK", "vndirect", 5.0, is_bank=True),))
     client = FailoverFundamentalClient([primary])
     client.get_financials("ZZBANK", StatementType.INCOME, Period.ANNUAL, is_bank=True, limit=3)
     assert captured == {"is_bank": True, "limit": 3}
@@ -251,3 +266,125 @@ def test_client_get_financials_rejects_bad_period_string():
     client = FailoverFundamentalClient([primary])
     with pytest.raises(VnfinError):
         client.get_financials("TESTCO", "income", "quaterly")
+
+
+# --- Batch-1 result guards --------------------------------------------------
+
+
+def _assert_fundamental_rejected(report_factory, expected_substring, *, is_bank=False):
+    client = FailoverFundamentalClient([FakeSource("vndirect", result=(report_factory(),))])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=is_bank
+        )
+    assert expected_substring in ei.value.attempts[0].reason
+
+
+def test_rejects_empty_line_items():
+    empty = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(),
+        source="vndirect",
+        currency="VND",
+    )
+    _assert_fundamental_rejected(lambda: empty, "no line items")
+
+
+def test_rejects_returned_symbol_mismatch():
+    _assert_fundamental_rejected(
+        lambda: _report("OTHER", "vndirect", 1.0), "symbol mismatch"
+    )
+
+
+def test_rejects_returned_statement_type_mismatch():
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.BALANCE,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="VND",
+    )
+    _assert_fundamental_rejected(lambda: bad, "statement_type mismatch")
+
+
+def test_rejects_returned_period_mismatch():
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.QUARTER,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="VND",
+    )
+    _assert_fundamental_rejected(lambda: bad, "period mismatch")
+
+
+def test_rejects_unknown_period_for_non_ratio_statements():
+    """Issue: Period.UNKNOWN is only valid for ratios. A source returning
+    Period.UNKNOWN for an annual income request must be rejected."""
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.UNKNOWN,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="VND",
+    )
+    _assert_fundamental_rejected(lambda: bad, "period mismatch")
+
+
+def test_rejects_returned_is_bank_mismatch():
+    _assert_fundamental_rejected(
+        lambda: _report("TESTCO", "vndirect", 1.0, is_bank=True),
+        "is_bank mismatch",
+        is_bank=False,
+    )
+
+
+def test_rejects_returned_currency_mismatch():
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="USD",
+    )
+    _assert_fundamental_rejected(lambda: bad, "currency mismatch")
+
+
+def test_rejects_returned_line_item_unit_mismatch():
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="USD"),),
+        source="vndirect",
+        currency="VND",
+    )
+    _assert_fundamental_rejected(lambda: bad, "value_unit mismatch")
+
+
+def test_rejects_invalid_is_bank_string():
+    client = FailoverFundamentalClient([FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))])
+    with pytest.raises(VnfinError):
+        client.get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank="False"
+        )
+
+
+def test_rejects_invalid_limit():
+    client = FailoverFundamentalClient([FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))])
+    with pytest.raises(VnfinError):
+        client.get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, limit="eight"
+        )

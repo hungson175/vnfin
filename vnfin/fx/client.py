@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 import re
+import datetime as dt
 
 from ..exceptions import InvalidData
 from ..failover import FailoverClient
@@ -44,6 +45,32 @@ def _validate(result, req_base: str, req_quote: str) -> str | None:
         return f"malformed rate type {type(result.rate).__name__}"
     if not math.isfinite(result.rate) or not (result.rate > 0):
         return f"non-positive or non-finite rate {result.rate!r}"
+
+    # Issue #83: as_of_utc must be a timezone-aware UTC datetime.
+    if not isinstance(result.as_of_utc, dt.datetime) or result.as_of_utc.tzinfo is None:
+        return f"as_of_utc must be a timezone-aware datetime, got {result.as_of_utc!r}"
+    if result.as_of_utc.tzinfo is not dt.timezone.utc:
+        return f"as_of_utc must be UTC, got timezone {result.as_of_utc.tzinfo!r}"
+
+    # Issue #72: bid/ask metadata validation.
+    if result.bid is not None:
+        if isinstance(result.bid, bool) or not isinstance(result.bid, (int, float)):
+            return f"malformed bid type {type(result.bid).__name__}"
+        if not math.isfinite(result.bid) or not (result.bid > 0):
+            return f"non-positive or non-finite bid {result.bid!r}"
+    if result.ask is not None:
+        if isinstance(result.ask, bool) or not isinstance(result.ask, (int, float)):
+            return f"malformed ask type {type(result.ask).__name__}"
+        if not math.isfinite(result.ask) or not (result.ask > 0):
+            return f"non-positive or non-finite ask {result.ask!r}"
+    if result.bid is not None and result.ask is not None and result.ask < result.bid:
+        return f"ask {result.ask!r} < bid {result.bid!r}"
+    if (
+        result.bid is not None
+        and result.ask is not None
+        and not (result.bid <= result.rate <= result.ask)
+    ):
+        return f"rate {result.rate!r} not in bid-ask spread [{result.bid!r}, {result.ask!r}]"
     return None
 
 

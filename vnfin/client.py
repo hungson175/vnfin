@@ -10,14 +10,15 @@ loop; the engine is now shared so other domains can reuse it.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import replace
-
 from datetime import date
 
 from .calendar import as_date, expected_latest_trading_day
 from .exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from .failover import FailoverClient
-from .models import AdjustmentPolicy, Interval, PriceHistory
+from .models import AdjustmentPolicy, Interval, PriceBar, PriceHistory
+from .validation import validate_date_range, validate_non_empty_string
 
 
 def _price_unit(source):
@@ -25,42 +26,25 @@ def _price_unit(source):
     return getattr(source, "unit", None)
 
 
-def _require_date_range(start, end) -> None:
-    """Validate the requested window BEFORE any source/failover call (B5).
-
-    The price API requires an explicit ``start`` and ``end`` (a ``date`` or
-    ``datetime``). Missing dates, a wrong type, or an inverted range raise a stable
-    :class:`~vnfin.exceptions.InvalidData` (a ``VnfinError``) up front. This keeps
-    the public surface from leaking the raw ``TypeError`` that
-    ``datetime.combine(None, ...)`` would otherwise produce deep inside a source,
-    and avoids burning failover attempts on a caller-input mistake.
-    """
-    if start is None or end is None:
-        missing = [n for n, v in (("start", start), ("end", end)) if v is None]
-        raise InvalidData(
-            "price history requires both 'start' and 'end' dates; missing: "
-            + ", ".join(missing)
+def _chain_adjustment_policy(sources) -> AdjustmentPolicy | None:
+    """Return the single declared adjustment policy of ``sources``, or ``None``."""
+    seen = set()
+    for src in sources:
+        pol = (
+            getattr(src, "ADJUSTMENT_POLICY", None)
+            or getattr(src, "adjustment_policy", None)
+            or AdjustmentPolicy.UNKNOWN
         )
-    if not isinstance(start, date) or not isinstance(end, date):
-        raise InvalidData(
-            "price history 'start' and 'end' must be datetime.date or datetime.datetime"
-        )
-    try:
-        reversed_range = start > end
-    except TypeError as exc:  # mixing naive date with datetime, etc.
-        raise InvalidData(
-            "price history 'start' and 'end' must be comparable (same date/datetime type)"
-        ) from exc
-    if reversed_range:
-        raise InvalidData(
-            f"price history requires start <= end, got start={start} > end={end}"
-        )
-
-
-def _validate_symbol(symbol) -> None:
-    """Validate a price/index/crypto-style symbol before any source call (Issue #9)."""
-    if not isinstance(symbol, str) or not symbol.strip():
-        raise InvalidData(f"symbol must be a non-empty string, got {symbol!r}")
+        if isinstance(pol, AdjustmentPolicy) and pol != AdjustmentPolicy.UNKNOWN:
+            seen.add(pol)
+        elif isinstance(pol, str) and pol.strip().lower() != AdjustmentPolicy.UNKNOWN.value:
+            try:
+                seen.add(AdjustmentPolicy(pol.strip().lower()))
+            except ValueError:
+                pass
+    if len(seen) == 1:
+        return seen.pop()
+    return None
 
 
 def _adjustment_policy_guard(sources):
@@ -110,15 +94,15 @@ class FailoverPriceClient:
         sources = list(sources)  # materialize once; guard + engine both need the list
         # Issue #7: homogenous adjustment policies before the generic engine runs.
         _adjustment_policy_guard(sources)
+        self._chain_unit = _price_unit(next((s for s in sources if _price_unit(s) is not None), None))
+        self._chain_policy = _chain_adjustment_policy(sources)
         self._engine = FailoverClient(
             sources,
             operation=lambda src, symbol, interval, start, end: src.get_history(
                 symbol, interval, start, end
             ),
             capability=lambda src, symbol, interval, start, end: src.supports(interval),
-            reject=lambda hist, _sym, _interval, start, end: FailoverPriceClient._reject_reason(
-                hist, start, end
-            ),
+            reject=self._reject_reason,
             unit_of=_price_unit,
             max_attempts=max_attempts,
             failure_factory=lambda attempts, symbol, interval, start, end: AllSourcesFailed(
@@ -140,8 +124,10 @@ class FailoverPriceClient:
 
     def get_history(self, symbol, interval: Interval = Interval.D1, start=None, end=None) -> PriceHistory:
         # Issue #9: reject empty/malformed symbols before the failover engine runs.
-        _validate_symbol(symbol)
-        _require_date_range(start, end)
+        # Issue #97: normalize to uppercase so identity checks are case-insensitive
+        # and match real sources that canonicalize symbols.
+        symbol = validate_non_empty_string(symbol, "symbol").upper()
+        validate_date_range(start, end, name="price history")
         # Issue #23: validate the interval is an Interval enum before the failover
         # engine's capability probe / no_capable_factory touches it. This prevents
         # a raw AttributeError from ``interval.value`` on a malformed caller value.
@@ -154,32 +140,23 @@ class FailoverPriceClient:
     def get_daily(self, symbol, start, end) -> PriceHistory:
         return self.get_history(symbol, Interval.D1, start, end)
 
+    def _reject_reason(self, hist, symbol, interval, start, end) -> str | None:
+        return _validate_price_result(
+            hist,
+            symbol=symbol,
+            interval=interval,
+            chain_unit=self._chain_unit,
+            chain_policy=self._chain_policy,
+            start=start,
+            end=end,
+        )
+
     @staticmethod
     def _finalize(hist, attempts, symbol, interval, start, end) -> PriceHistory:
         warnings = tuple(hist.warnings) + FailoverPriceClient._coverage_warnings(
             hist, start, end
         )
         return replace(hist, attempts=attempts, warnings=warnings)
-
-    @staticmethod
-    def _reject_reason(hist, start, end) -> str | None:
-        if hist is None or len(hist.bars) == 0:
-            return "empty result"
-        sd = as_date(start)
-        ed = as_date(end)
-        if sd is not None or ed is not None:
-            in_window = False
-            for bar in hist.bars:
-                d = bar.time.date()
-                if sd is not None and d < sd:
-                    continue
-                if ed is not None and d > ed:
-                    continue
-                in_window = True
-                break
-            if not in_window:
-                return "no bars in requested date range"
-        return None
 
     @staticmethod
     def _coverage_warnings(hist, start, end, tolerance_days: int = 7) -> tuple[str, ...]:
@@ -220,3 +197,87 @@ class FailoverPriceClient:
                     f"requested end {ed} (expected latest trading day {expected_last})"
                 )
         return tuple(warns)
+
+
+def _validate_price_result(
+    hist,
+    *,
+    symbol: str,
+    interval: Interval,
+    chain_unit: str | None,
+    chain_policy: AdjustmentPolicy | None,
+    start,
+    end,
+) -> str | None:
+    """Return a rejection reason or ``None`` if the price result is acceptable."""
+    if hist is None or len(hist.bars) == 0:
+        return "empty result"
+
+    # Identity checks (#82).
+    if hist.symbol != symbol:
+        return f"symbol mismatch: returned {hist.symbol!r} != requested {symbol!r}"
+    if hist.interval != interval:
+        return f"interval mismatch: returned {hist.interval!r} != requested {interval!r}"
+
+    # Unit and adjustment-policy metadata checks (#73).
+    if chain_unit is not None:
+        if hist.currency != chain_unit:
+            return f"currency mismatch: returned {hist.currency!r} != chain unit {chain_unit!r}"
+        if hist.value_unit != chain_unit:
+            return f"value_unit mismatch: returned {hist.value_unit!r} != chain unit {chain_unit!r}"
+    if chain_policy is not None and hist.adjustment_policy != chain_policy:
+        return (
+            f"adjustment_policy mismatch: returned {hist.adjustment_policy!r} "
+            f"!= chain policy {chain_policy!r}"
+        )
+
+    # Sorting (#85).
+    for i in range(len(hist.bars) - 1):
+        if not (hist.bars[i].time < hist.bars[i + 1].time):
+            return "bars are not strictly ascending by time"
+
+    # Row-level financial invariants (#86).
+    for bar in hist.bars:
+        reason = _validate_price_bar(bar)
+        if reason:
+            return reason
+
+    # Window coverage (preserved from original reject path).
+    sd = as_date(start)
+    ed = as_date(end)
+    if sd is not None or ed is not None:
+        in_window = False
+        for bar in hist.bars:
+            d = bar.time.date()
+            if sd is not None and d < sd:
+                continue
+            if ed is not None and d > ed:
+                continue
+            in_window = True
+            break
+        if not in_window:
+            return "no bars in requested date range"
+    return None
+
+
+def _validate_price_bar(bar: PriceBar) -> str | None:
+    """Return a rejection reason if ``bar`` violates OHLC invariants (#86)."""
+    for field in ("open", "high", "low", "close"):
+        value = getattr(bar, field)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return f"bar {bar.time}: {field} has malformed type {type(value).__name__}"
+        if not math.isfinite(value) or value <= 0:
+            return f"bar {bar.time}: {field} must be positive and finite, got {value!r}"
+    if not (bar.low <= bar.open <= bar.high):
+        return (
+            f"bar {bar.time}: open {bar.open} not in [low {bar.low}, high {bar.high}]"
+        )
+    if not (bar.low <= bar.close <= bar.high):
+        return (
+            f"bar {bar.time}: close {bar.close} not in [low {bar.low}, high {bar.high}]"
+        )
+    if isinstance(bar.volume, bool) or not isinstance(bar.volume, int):
+        return f"bar {bar.time}: volume must be an int, got {type(bar.volume).__name__}"
+    if not (0 <= bar.volume):
+        return f"bar {bar.time}: volume must be non-negative, got {bar.volume!r}"
+    return None

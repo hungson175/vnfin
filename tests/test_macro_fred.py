@@ -184,6 +184,26 @@ def test_garbage_date_raises_invalid():
         _src(fred_success(obs=[("not-a-date", "1.0")])).get_series("FAKESERIES")
 
 
+# --- Issue #107: FRED observation dates must be strict YYYY-MM-DD --------------
+
+@pytest.mark.parametrize(
+    "bad_date",
+    [
+        "20240101",       # compact date
+        "2024-W01-01",    # ISO week-date
+        "",               # empty string
+        None,             # non-string / non-date
+        20240101,         # integer
+        True,             # bool
+        [],               # list
+    ],
+    ids=["compact", "iso_week", "empty", "none", "int", "bool", "list"],
+)
+def test_malformed_observation_date_raises_invalid(bad_date):
+    with pytest.raises(InvalidData):
+        _src(fred_success(obs=[(bad_date, "1.0")])).get_series("FAKESERIES")
+
+
 # --- transport / input -----------------------------------------------------
 
 def test_transport_error_wrapped_as_unavailable():
