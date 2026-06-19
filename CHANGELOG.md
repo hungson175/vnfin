@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Fundamental failover line-item guard** — the fundamentals failover result guard now
+  validates returned ``LineItem`` fields before accepting a source result: ``item_code`` must
+  be a non-empty string, ``name`` must be a string (empty allowed), ``value`` must be a finite
+  non-bool number, and duplicate ``item_code`` values in one report are rejected. A custom or
+  future source returning ``NaN``/``Infinity``/bool/str values, blank/non-string codes, or
+  duplicate-conflicting codes is now rejected and the backup attempted instead.
+  ([#122](https://github.com/hungson175/vnfin/issues/122))
 - **Provider timestamp coercion** — shared ``parse_provider_int()`` rejects JSON booleans
   before epoch timestamp conversion in UDF, Binance, and Coinbase paths; OpenER bool
   timestamps fall back to now instead of epoch. ([#106](https://github.com/hungson175/vnfin/issues/106))

@@ -374,6 +374,116 @@ def test_rejects_returned_line_item_unit_mismatch():
     _assert_fundamental_rejected(lambda: bad, "value_unit mismatch")
 
 
+# --- Issue #122: strict returned LineItem key/value guards -----------------
+#
+# FailoverFundamentalClient validated report identity/emptiness/value_unit but
+# NOT the actual LineItem.item_code / value shape. A custom or future source can
+# bypass the adapter parsers and return NaN/Infinity/bool/str values, blank/bool
+# item codes, or duplicate-conflicting codes and still be treated as a clean
+# failover success. The result guard must reject these before accepting a result.
+
+
+def _report_with_items(items):
+    return FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=tuple(items),
+        source="vndirect",
+        currency="VND",
+    )
+
+
+@pytest.mark.parametrize(
+    "bad_value",
+    [float("nan"), float("inf"), float("-inf"), True, False, "1000", None, [1.0]],
+    ids=["nan", "inf", "-inf", "bool_true", "bool_false", "str", "none", "list"],
+)
+def test_rejects_malformed_line_item_value(bad_value):
+    _assert_fundamental_rejected(
+        lambda: _report_with_items(
+            [LineItem(item_code="11000", name="net revenue", value=bad_value, value_unit="VND")]
+        ),
+        "value",
+    )
+
+
+@pytest.mark.parametrize(
+    "bad_code",
+    ["", "   ", None, True, False, 11000, 11000.0, ["11000"]],
+    ids=["blank", "whitespace", "none", "bool_true", "bool_false", "int", "float", "list"],
+)
+def test_rejects_malformed_line_item_code(bad_code):
+    _assert_fundamental_rejected(
+        lambda: _report_with_items(
+            [LineItem(item_code=bad_code, name="net revenue", value=1.0, value_unit="VND")]
+        ),
+        "item_code",
+    )
+
+
+@pytest.mark.parametrize(
+    "bad_name",
+    [None, True, 123, 1.0, ["name"]],
+    ids=["none", "bool", "int", "float", "list"],
+)
+def test_rejects_non_string_line_item_name(bad_name):
+    _assert_fundamental_rejected(
+        lambda: _report_with_items(
+            [LineItem(item_code="11000", name=bad_name, value=1.0, value_unit="VND")]
+        ),
+        "name",
+    )
+
+
+def test_accepts_empty_line_item_name():
+    """Relaxed policy: an empty human name is allowed (some provider codes have
+    no label); only a non-string name is rejected."""
+    primary = FakeSource(
+        "vndirect",
+        result=(
+            _report_with_items(
+                [LineItem(item_code="11000", name="", value=1.0, value_unit="VND")]
+            ),
+        ),
+    )
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].items[0].name == ""
+
+
+def test_rejects_duplicate_line_item_code_within_report():
+    _assert_fundamental_rejected(
+        lambda: _report_with_items(
+            [
+                LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),
+                LineItem(item_code="11000", name="net revenue", value=2.0, value_unit="VND"),
+            ]
+        ),
+        "duplicate",
+    )
+
+
+def test_malformed_primary_line_items_falls_over_to_backup():
+    """A primary returning malformed line items must be rejected and the backup
+    (with clean items) used instead."""
+    primary = FakeSource(
+        "vndirect",
+        result=(
+            _report_with_items(
+                [LineItem(item_code="11000", name="net revenue", value=float("nan"), value_unit="VND")]
+            ),
+        ),
+    )
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
+    assert primary.calls == 1
+    assert backup.calls == 1
+
+
 def test_rejects_invalid_is_bank_string():
     client = FailoverFundamentalClient([FakeSource("vndirect", result=(_report("TESTCO", "vndirect", 1.0),))])
     with pytest.raises(VnfinError):

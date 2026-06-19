@@ -16,9 +16,13 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ NONE — all GitHub issues closed (open count 0).** The 43-issue sweep is complete
-  (reviewer-confirmed). Maintainer is in steady-state: handle new poller/reviewer activity as
-  it arrives, record here first, TDD + reviewer sign-off per fix.
+- **#122 — Fundamental failover accepts malformed LineItem keys/values** (real OPEN bug,
+  reviewer-triaged poller 12:15, labelled `bug`). `FailoverFundamentalClient` validates report
+  identity/emptiness/value_unit but NOT `LineItem.item_code`/`value` shape. TDD: red-first
+  no-network tests where a primary source returns malformed line items (nan/inf/bool/str value,
+  blank/bool item_code, duplicate-conflicting code) → enforce strict line-item validation in the
+  failover result guard → malformed primary rejected + backup attempted → reviewer sign-off →
+  push master → close.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 

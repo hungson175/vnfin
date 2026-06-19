@@ -13,6 +13,9 @@ construction, making a scale/currency mix structurally impossible.
 """
 from __future__ import annotations
 
+import math
+from numbers import Real
+
 from ..exceptions import AllSourcesFailed, InvalidData, VnfinError
 from ..failover import FailoverClient
 from ..validation import validate_non_empty_string, validate_positive_int
@@ -183,12 +186,57 @@ def _validate_fundamental_result(
                 f"currency mismatch: report {report.fiscal_date} has currency "
                 f"{report.currency!r} != chain unit {chain_unit!r}"
             )
+        # Issue #122: a source result is "successful" only if its returned line
+        # items are themselves well-formed. A custom/future source can bypass the
+        # adapter parsers and hand back NaN/Infinity/bool/str values, blank or
+        # non-string item codes, or duplicate-conflicting codes; reject these
+        # before the result is accepted so malformed-but-plausible financials
+        # never flow downstream as if the source were healthy.
+        seen_codes: set[str] = set()
         for item in report.items:
+            reason = _validate_line_item(item, report.fiscal_date)
+            if reason is not None:
+                return reason
             if item.value_unit not in _VND_CHAIN_ALLOWED_LINE_UNITS:
                 return (
                     f"value_unit mismatch: item {item.item_code!r} has value_unit "
                     f"{item.value_unit!r} which is not allowed in a {chain_unit} chain"
                 )
+            # item_code is a validated non-empty string by this point.
+            if item.item_code in seen_codes:
+                return (
+                    f"duplicate item_code {item.item_code!r} in report "
+                    f"{report.fiscal_date}"
+                )
+            seen_codes.add(item.item_code)
+    return None
+
+
+def _validate_line_item(item, fiscal_date) -> str | None:
+    """Return a rejection reason for a malformed returned ``LineItem`` (#122).
+
+    ``item_code`` must be a non-empty string; ``name`` must be a string (an empty
+    name is allowed — some provider codes have no human label); ``value`` must be
+    a finite real number that is not a ``bool``. ``bool`` is rejected explicitly
+    because it is an ``int`` subclass and would otherwise pass the numeric check.
+    """
+    code = item.item_code
+    if not isinstance(code, str) or not code.strip():
+        return (
+            f"malformed item_code {code!r} in report {fiscal_date}: "
+            "expected a non-empty string"
+        )
+    if not isinstance(item.name, str):
+        return (
+            f"malformed name {item.name!r} for item {code!r} in report "
+            f"{fiscal_date}: expected a string"
+        )
+    value = item.value
+    if isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value):
+        return (
+            f"malformed value {value!r} for item {code!r} in report "
+            f"{fiscal_date}: expected a finite number"
+        )
     return None
 
 
