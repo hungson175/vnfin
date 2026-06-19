@@ -345,3 +345,24 @@ def test_in_window_observations_kept_when_bounds_supplied():
         "FAKESERIES", start=date(2025, 1, 1), end=date(2025, 12, 31)
     )
     assert res.points == ((date(2025, 6, 1), pytest.approx(1.0)),)
+
+
+# --- units metadata (issue #102) -------------------------------------------
+
+@pytest.mark.parametrize(
+    "units",
+    [["Percent"], {"name": "Percent"}, True, 1],
+    ids=["list", "dict", "bool", "int"],
+)
+def test_malformed_units_metadata_raises_invalid(units):
+    payload = fred_success(units=units)
+    with pytest.raises(InvalidData, match="units"):
+        _src(payload).get_series("FAKESERIES")
+
+
+def test_missing_units_metadata_defaults_to_empty_string():
+    payload = json.dumps(
+        {"observations": [{"date": "2024-01-01", "value": "1.0"}]}
+    )
+    res = _src(payload).get_series("FAKESERIES")
+    assert res.unit == ""

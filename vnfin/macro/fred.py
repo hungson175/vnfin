@@ -27,6 +27,7 @@ Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - transport/network error            -> ``SourceUnavailable``
 - non-JSON / missing observations key -> ``InvalidData``
 - malformed scalar / bad date        -> ``InvalidData``
+- present malformed ``units`` metadata -> ``InvalidData``
 - observation outside request window -> skipped; none left -> ``EmptyData``
 - empty / all-missing                 -> ``EmptyData``
 """
@@ -160,7 +161,7 @@ class FREDMacroSource(HttpDataSource):
         observations = data.get("observations")
         if not isinstance(observations, list):
             raise InvalidData(f"{self.NAME}: 'observations' is not a list")
-        units = data.get("units") if isinstance(data.get("units"), str) else ""
+        units = self._parse_units(data, sid)
 
         points: list[tuple[date, float]] = []
         seen_dates: set[date] = set()
@@ -185,6 +186,18 @@ class FREDMacroSource(HttpDataSource):
             points.append((d, value))
         points.sort(key=lambda p: p[0])
         return units, points
+
+    @staticmethod
+    def _parse_units(data: dict, sid: str) -> str:
+        """Return provider unit label; reject present non-string ``units`` values."""
+        if "units" not in data:
+            return ""
+        raw = data.get("units")
+        if raw is None or raw == "":
+            return ""
+        if isinstance(raw, str):
+            return raw
+        raise InvalidData(f"{FREDMacroSource.NAME}: malformed units metadata for {sid}")
 
     @staticmethod
     def _contained_points(

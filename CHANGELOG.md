@@ -7,6 +7,8 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **FRED units metadata** — reject present non-string top-level ``units`` values instead
+  of silently stamping an empty unit label. ([#102](https://github.com/hungson175/vnfin/issues/102))
 - **Index constituents data envelope** — validate ``data`` is a list before treating
   falsy containers as empty membership; malformed SUCCESS payloads raise
   ``InvalidData`` instead of ``EmptyData``. ([#103](https://github.com/hungson175/vnfin/issues/103))
