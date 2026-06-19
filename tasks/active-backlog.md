@@ -14,21 +14,25 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ---
 
-## ⏸️ PAUSED — Boss directive 2026-06-19 ~18:01: refactoring is first priority
+## ⏸️ REFACTOR MODE — Boss directive 2026-06-19 ~18:01: refactoring is first priority
 
-**Freeze all bug-fix implementation.** Log new bugs (Later bucket) only; do NOT fix, push, or
-close until the reviewer's refactor design/plan arrives. Hold at a safe checkpoint.
+**GitHub bug fixing is PAUSED** — log new bugs to "Paused bugs — after refactor" below; do NOT
+fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
+- **Active work:** provider-boundary + typed-result **contract refactor** — see
+  `tasks/refactor-provider-contracts.md` (plan from reviewer review-202606191803). Phase 0 docs in
+  progress → request reviewer Checkpoint A / pre-Phase-1 design review before coding.
 - **Safe checkpoint:** code tree CLEAN at `5c05566` (last reviewed+pushed; 0 open bugs; suite
-  green). WIP for the #44/#45/#21/#26 batch is FROZEN in `git stash@{0}` (clearly marked).
-  Nothing pushed/closed. Handoff: `/tmp/vnfin-wip-handoff-44-45-21-26-202606191803.md`.
+  green). Nothing pushed/closed.
 
-## Later — frozen/queued bug batch (resume after refactor)
+## Paused bugs — after refactor
 
-- **Fundamentals provider-shape hardening batch: #44 + #45 + #21 + #26** (REOPENED 17:55) —
-  partial WIP in `stash@{0}` (#44 VNDirect reportType, #45 CafeF ReportType, #21 CafeF Symbol
-  key-presence done; #26 `canonical_item_code` helper added but NOT wired; NO tests yet). All four
-  issues remain OPEN. See handoff doc. (#140 enhancement also parked.)
+- **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — WIP stash: `git stash@{0}`
+  ("WIP paused: #44/#45/#21/#26 ..."); handoff `/tmp/vnfin-wip-handoff-44-45-21-26-202606191803.md`.
+  Partial+untested (#44/#45/#21 key-presence guards; #26 `canonical_item_code` helper unwired).
+  All four issues OPEN. **Do NOT fix until the refactor contract foundation lands** — Phase 2 will
+  handle them via migration, Phase 6 closes them. Do not apply the stash before then.
+- **#140 — "financial news" enhancement** — parked (product/scope, not a bug).
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
