@@ -16,10 +16,13 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#118** BTMC `_row_index` malformed `@row` — IMPLEMENTING (design APPROVED, notes folded).
-  Canonical positive index (str `[1-9]\d*` or positive int, not bool); None/"" → fallback;
-  whitespace-only → raise; reject `1.0/True/'01'/' 1 '/[1]/{}/0/-1`; validate fallback `@n_N`
-  suffix canonical.
+- **Failover-guard cluster verification** (#69,#72,#73,#74,#83,#85,#86). FINDING (Explore map
+  2026-06-19): these guards appear ALREADY PRESENT in code (added in earlier batch commits
+  ab727ef/d78b245-era) but have NO dedicated regression tests and the issues are still open.
+  Approach: write a regression test encoding each reporter's reproduction (TDD-characterization).
+  Test PASSES → guard works → close issue with the now-committed test. Test FAILS → real gap →
+  fix it. Same likely applies to the source-adapter cluster — verify before re-implementing.
+  Starting with FX group (#72 bid/ask, #83 as_of_utc) in `vnfin/fx/client.py`.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -87,3 +90,5 @@ Source-adapter input/identity/units hardening:
   (`ABC5 LUONG`); out of #116 scope, revisit if such names ever appear.
 - **#117** BTMC same-ts dedup — pushed `d384006..22bb20c`, closed (5050468, 2366ff6). Reviewer
   APPROVE (re-review inline after BLOCK on missing regression tests). Watermark 03:33:22Z.
+- **#118** BTMC `@row` index validation — pushed `22bb20c..d97ef89`, closed (d97ef89). Reviewer
+  APPROVE_WITH_NOTES (review-202606191038). Watermark 03:39:55Z. BTMC cluster complete.
