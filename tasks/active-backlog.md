@@ -25,7 +25,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
   - **#131+#132** `4548dcc` — macro frequency (Frequency enum + date/freq consistency) and
     projection_from_year (None or int year within span).
   - **#133** `1e5bf85` — price exchange/provider_symbol non-empty canonical str.
-  **Awaiting ONE combined reviewer review (f795bd1..HEAD) → push → close all 4.**
+  #133 APPROVE, #131/#132 APPROVE; #69 BLOCK (B1 silent-skip, B2 Coinbase USDC) FIXED `831dd3f` (price_unit accepts quote-form OR currency-form; reject units w/o base). **Awaiting #69 re-review → push f795bd1..HEAD → close all 4.**
 
 - **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129 + #130** —
   design APPROVED (review-202606191336 #125r/#129; #127/#128 confirmed 13:38; #130 folded in).
