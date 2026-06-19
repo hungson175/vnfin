@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `c6eb733`, full suite 2077 green,
-  watermark 2026-06-19T10:08:33Z. Only open issue is **#140 (enhancement: financial news)** —
-  Boss/product-scope feature, NOT a bug; parked. Steady-state otherwise.
+- **#141 (new bug, poller 17:35)** — VNDirect statement path doesn't type-check rows; a non-object
+  row leaks a raw AttributeError. Mirror the ratios-path guard (`isinstance(row, dict)` →
+  InvalidData) in `_build_statement_reports`. TDD → review → push → close. (#140 enhancement parked.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
