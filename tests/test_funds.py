@@ -696,26 +696,33 @@ def test_nav_history_sends_all_data_flag_and_id():
     assert "fromDate" in body and "toDate" in body  # both mandatory upstream
 
 
-def test_nav_history_date_window_passes_dates():
+def test_nav_history_uses_broad_request_body():
+    # #144: the provider mishandles a narrow window, so the request body always uses
+    # the WIDE/default window (fromDate=_DEFAULT_FROM, toDate=today); the caller's
+    # bounds are applied client-side, not forwarded to the server.
+    import re as _re
+    from vnfin.funds.fmarket import _DEFAULT_FROM
     get = _capture_get(_nav_history_payload())
     FmarketFundSource(http_get=get).nav_history(
         FAKE_ID_A, from_date=date(2024, 1, 1), to_date=date(2024, 6, 30)
     )
     body = get.calls[0]["json_body"]
-    assert body["fromDate"] == "2024-01-01"
-    assert body["toDate"] == "2024-06-30"
+    assert body["fromDate"] == _DEFAULT_FROM           # wide lower bound, not the caller's
+    assert _re.fullmatch(r"\d{4}-\d{2}-\d{2}", body["toDate"])  # today (wide upper), not 2024-06-30
+    assert body["toDate"] != "2024-06-30"
     assert body["isAllData"] == 1
 
 
 def test_nav_history_date_window_accepts_string_dates():
-    # YYYY-MM-DD strings are accepted and normalized to the request body.
+    # YYYY-MM-DD strings are accepted (validated) and applied client-side; the request
+    # body stays broad (#144).
+    from vnfin.funds.fmarket import _DEFAULT_FROM
     get = _capture_get(_nav_history_payload())
     FmarketFundSource(http_get=get).nav_history(
         FAKE_ID_A, from_date="2024-01-01", to_date="2024-06-30"
     )
     body = get.calls[0]["json_body"]
-    assert body["fromDate"] == "2024-01-01"
-    assert body["toDate"] == "2024-06-30"
+    assert body["fromDate"] == _DEFAULT_FROM
 
 
 def test_nav_history_from_date_filters_client_side():
@@ -1368,3 +1375,65 @@ def test_fmarket_fund_absent_code_falls_back_to_shortname():
     }
     funds = _src(_fund_list_payload(rows=[row])).list_funds()
     assert funds.funds[0].code == "TESTCO"
+
+
+# Issue #144 — broad-window fetch + client-side filter; out-of-window rows must not
+# fail the request, in-window duplicates still do.
+def _nav_row(navdate, nav=100.0, pid=None):
+    r = {"id": 1, "createdAt": 1700000000000, "nav": nav, "navDate": navdate}
+    if pid is not None:
+        r["productId"] = pid
+    return r
+
+
+def _window_aware_get(full_rows, narrow_rows):
+    """Mimic the upstream server: a NARROW fromDate returns a non-overlapping
+    inception slice; only the WIDE/default fromDate returns the full history."""
+    from vnfin.funds.fmarket import _DEFAULT_FROM
+
+    def _g(url, params=None, headers=None, json_body=None):
+        frm = (json_body or {}).get("fromDate")
+        rows = full_rows if frm == _DEFAULT_FROM else narrow_rows
+        return json.dumps({"status": 200, "code": 200, "message": "success", "data": rows})
+
+    return _g
+
+
+def test_nav_history_window_returns_in_range_rows_despite_server_narrow_quirk():
+    # #144 core repro: full history (broad body) has 2024 rows; a narrow body would
+    # return only pre-2024 rows. The fix sends the broad body, so the bounded 2024
+    # call returns the in-window rows instead of wrong EmptyData.
+    full = [_nav_row("2023-12-29"), _nav_row("2024-03-01"), _nav_row("2024-06-02"), _nav_row("2025-01-05")]
+    narrow = [_nav_row("2018-01-12"), _nav_row("2018-01-18")]  # non-overlapping
+    src = FmarketFundSource(http_get=_window_aware_get(full, narrow))
+    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+    got = [p.date for p in hist.points]
+    assert got == [date(2024, 3, 1), date(2024, 6, 2)]
+
+
+def test_nav_history_out_of_window_duplicate_not_fatal():
+    # a duplicate navDate OUTSIDE the caller window is skipped before the dup guard.
+    full = [_nav_row("2023-05-01"), _nav_row("2023-05-01"), _nav_row("2024-04-04")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+    assert [p.date for p in hist.points] == [date(2024, 4, 4)]
+
+
+def test_nav_history_in_window_duplicate_still_fatal():
+    full = [_nav_row("2024-04-04"), _nav_row("2024-04-04")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(InvalidData, match="duplicate navDate"):
+        src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+
+
+@pytest.mark.parametrize("bad", ["not-a-date", "2024-13-01", "20240101", 123, []])
+def test_nav_history_caller_date_validation_unchanged(bad):
+    src = FmarketFundSource(http_get=_window_aware_get([_nav_row("2024-04-04")], []))
+    with pytest.raises(InvalidData):
+        src.nav_history(FAKE_ID_A, from_date=bad)
+
+
+def test_nav_history_inverted_window_rejected():
+    src = FmarketFundSource(http_get=_window_aware_get([_nav_row("2024-04-04")], []))
+    with pytest.raises(InvalidData):
+        src.nav_history(FAKE_ID_A, date(2024, 12, 31), date(2024, 1, 1))

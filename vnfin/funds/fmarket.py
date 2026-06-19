@@ -182,13 +182,16 @@ class FmarketFundSource(HttpDataSource):
             raise InvalidData(
                 f"fmarket: from_date {lo.isoformat()} is after to_date {hi.isoformat()}"
             )
-        lo_str = lo.isoformat() if lo is not None else _DEFAULT_FROM
-        hi_str = hi.isoformat() if hi is not None else _today_ymd()
+        # Issue #144: the upstream server mishandles a NARROW window — a request with
+        # the caller's fromDate/toDate can return inception-anchored rows that do NOT
+        # overlap the requested range, so client-side filtering then drops everything
+        # (wrong EmptyData). Always request the WIDE/default window and apply the
+        # caller's bounds CLIENT-SIDE only, where the full history is reliably returned.
         body = {
             "isAllData": 1,
             "productId": fid,
-            "fromDate": lo_str,
-            "toDate": hi_str,
+            "fromDate": _DEFAULT_FROM,
+            "toDate": _today_ymd(),
         }
         parsed = self._post(_BASE_URL + _NAV_PATH, body, who="nav-history")
         rows = _require_array(parsed.get("data"), who="nav-history data")
@@ -197,12 +200,20 @@ class FmarketFundSource(HttpDataSource):
         seen_dates: set[date] = set()
         points: list[NavPoint] = []
         for r in rows:
-            # Issue #21 (reopen): a NAV row that EXPOSES a productId must identify
-            # the requested fund. Key-presence is the trigger (not truthiness), so a
-            # present ``productId: null`` does not bypass the guard; a present value
-            # must be a non-bool int equal to fid. A row that omits productId
-            # entirely is accepted (the request already scoped the fund).
-            if isinstance(r, dict) and "productId" in r:
+            # Issue #144: parse navDate FIRST and skip out-of-window rows BEFORE the
+            # productId / value / duplicate guards — the broad fetch legitimately
+            # brings extra rows outside the caller's window, and those must not fail
+            # the request (e.g. an out-of-window duplicate or odd productId). An
+            # in-window duplicate is still fatal (below).
+            d = self._nav_row_date(r)
+            if (lo is not None and d < lo) or (hi is not None and d > hi):
+                continue
+            # Issue #21 (reopen): an in-window NAV row that EXPOSES a productId must
+            # identify the requested fund. Key-presence is the trigger (not
+            # truthiness): a present ``productId: null`` does not bypass the guard; a
+            # present value must be a non-bool int equal to fid. A row that omits
+            # productId is accepted (the request already scoped the fund).
+            if "productId" in r:
                 row_pid = r["productId"]
                 if isinstance(row_pid, bool) or not isinstance(row_pid, int) or row_pid != fid:
                     raise InvalidData(
@@ -216,12 +227,6 @@ class FmarketFundSource(HttpDataSource):
             seen_dates.add(point.date)
             points.append(point)
         points.sort(key=lambda p: p.date)
-        # The server only reliably enforces toDate, and not even that near recent
-        # boundaries — so filter BOTH bounds client-side for an exact window.
-        if lo is not None:
-            points = [p for p in points if p.date >= lo]
-        if hi is not None:
-            points = [p for p in points if p.date <= hi]
         if not points:
             raise EmptyData(f"fmarket: no NAV history for product {product_id} in range")
         return NavHistory(
@@ -336,16 +341,25 @@ class FmarketFundSource(HttpDataSource):
         )
 
     @staticmethod
-    def _parse_nav_point(row) -> NavPoint:
+    def _nav_row_date(row) -> date:
+        """Issue #144: parse ONLY the navDate (row-object + date validity) so the
+        caller's window can be applied before the productId/value/duplicate guards.
+        A non-object row or malformed/missing navDate fails closed (row integrity is
+        independent of the window)."""
         if not isinstance(row, dict):
             raise InvalidData("fmarket: nav row is not an object")
         raw_date = row.get("navDate")
         if not raw_date:
             raise InvalidData("fmarket: nav row missing navDate")
         try:
-            d = validate_iso_date_string(raw_date, label="navDate")
+            return validate_iso_date_string(raw_date, label="navDate")
         except InvalidData as exc:
             raise InvalidData(f"fmarket: malformed navDate {raw_date!r}") from exc
+
+    @staticmethod
+    def _parse_nav_point(row) -> NavPoint:
+        d = FmarketFundSource._nav_row_date(row)
+        raw_date = row.get("navDate")
         nav = _as_float(row.get("nav"), f"nav on {raw_date}")
         # Issue #13: zero NAV is not a valid market observation.
         if nav <= 0:
