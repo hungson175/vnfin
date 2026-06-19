@@ -278,11 +278,23 @@ def test_btmc_same_timestamp_conflict_is_order_independent():
     assert len(out) == 1
     assert out[0].buy == pytest.approx(100_000_000.0)
 
-    # Older then newer -> newer snapshot wins (existing behavior preserved, deterministic).
-    out2 = _quotes(("10000000", "20000000", "17/06/2026 13:38"), b)
-    assert len(out2) == 1
-    assert out2[0].time.hour == 15
-    assert out2[0].buy == pytest.approx(110_000_000.0)
+    # Older/newer is order-independent: newer snapshot wins in BOTH row orders (the strict-older
+    # branch must ignore an older row that arrives after a newer one).
+    older = ("10000000", "20000000", "17/06/2026 13:38")
+    for first, second in ((older, b), (b, older)):
+        out2 = _quotes(first, second)
+        assert len(out2) == 1
+        assert out2[0].time.hour == 15
+        assert out2[0].buy == pytest.approx(110_000_000.0)
+
+    # Same product + same timestamp + same prices but conflicting karat is also inconsistent
+    # provider data -> InvalidData (the karat part of the identity must not regress silently).
+    karat_rows = [
+        ("VANG TESTCO", "24k", "10000000", "20000000", "4322", TS),
+        ("VANG TESTCO", "18k", "10000000", "20000000", "4322", TS),
+    ]
+    with pytest.raises(InvalidData):
+        BTMCGoldSource(http_get=_static_get(_btmc_json(rows=karat_rows))).get_quotes()
 
 
 def test_btmc_parses_dd_mm_yyyy_timestamp_as_vn_tz():
