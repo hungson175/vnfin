@@ -50,6 +50,8 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
   validation** migration. Do not fix now.
 - **#75** (parked, poller 19:10) — index wrapper canonicalization; fix in **Phase 4
   indices/security-id** migration with #30/#9. Do not fix now.
+- **#144** (parked, poller 19:45) — Fmarket NAV window issue; fix in a **separate Phase 4 funds
+  NAV/window batch** (NOT the closed #33/#34 identifier batch). Do not fix now.
 - **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — addressed by the Phase 2
   contract migration (`ec69a1e`); to be CLOSED in Phase 6 after Checkpoint C approves. WIP stash
   `git stash@{0}` superseded (reference only). Original handoff:
