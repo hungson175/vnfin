@@ -14,6 +14,12 @@ import math
 from dataclasses import replace
 from datetime import date, datetime
 
+from ._contracts import (
+    non_empty_reason,
+    result_type_reason,
+    row_object_and_aware_datetime_reason,
+    strictly_ascending_reason,
+)
 from .calendar import as_date, expected_latest_trading_day
 from .exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from .failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
@@ -213,10 +219,12 @@ def _validate_price_result(
     """Return a rejection reason or ``None`` if the price result is acceptable."""
     # Issue #125: a malformed (non-typed) result container must be recorded as a
     # rejected source attempt, not leak a raw AttributeError from len(hist.bars).
-    if not isinstance(hist, PriceHistory):
-        return f"unexpected result type {type(hist).__name__}"
-    if len(hist.bars) == 0:
-        return "empty result"
+    reason = result_type_reason(hist, PriceHistory)
+    if reason:
+        return reason
+    reason = non_empty_reason(hist.bars)
+    if reason:
+        return reason
 
     # Issue #127: reject present-malformed fetched_at_utc freshness metadata.
     reason = _fetched_at_utc_reason(hist.fetched_at_utc)
@@ -260,20 +268,22 @@ def _validate_price_result(
     # here, before the ascending-order compare and the window-coverage .date()
     # call, so a malformed key is a recorded rejected attempt rather than a raw
     # TypeError/AttributeError. ``utcoffset()`` is the robust aware check.
-    for bar in hist.bars:
-        # Issue #125 (reopen): reject a malformed inner row object before
-        # dereferencing .time, so a dict/None/other row is a recorded rejected
-        # attempt instead of a raw AttributeError.
-        if not isinstance(bar, PriceBar):
-            return f"malformed bar object {type(bar).__name__}"
-        t = bar.time
-        if not isinstance(t, datetime) or t.utcoffset() is None:
-            return f"malformed bar time {t!r}: expected a timezone-aware datetime"
+    # Issue #124/#125 (reopen): each bar must be a PriceBar whose .time key is a
+    # timezone-aware datetime (the documented PriceBar.time contract). Per-bar,
+    # before the ascending compare and the window-coverage .date() call, so a
+    # malformed row/key is a recorded rejected attempt, not a raw Type/AttributeError.
+    reason = row_object_and_aware_datetime_reason(
+        hist.bars, PriceBar, key=lambda b: b.time, noun="bar"
+    )
+    if reason:
+        return reason
 
     # Sorting (#85).
-    for i in range(len(hist.bars) - 1):
-        if not (hist.bars[i].time < hist.bars[i + 1].time):
-            return "bars are not strictly ascending by time"
+    reason = strictly_ascending_reason(
+        hist.bars, key=lambda b: b.time, msg="bars are not strictly ascending by time"
+    )
+    if reason:
+        return reason
 
     # Row-level financial invariants (#86).
     for bar in hist.bars:

@@ -32,6 +32,12 @@ from .binance import BinanceCryptoSource, _KNOWN_QUOTES as _BINANCE_QUOTES, _USD
 from .coinbase import CoinbaseCryptoSource, _KNOWN_QUOTES as _COINBASE_QUOTES
 from .models import CryptoBar, CryptoHistory
 
+from .._contracts import (
+    non_empty_reason,
+    result_type_reason,
+    row_object_and_aware_datetime_reason,
+    strictly_ascending_reason,
+)
 from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..models import Interval
@@ -169,10 +175,12 @@ def _validate_crypto_result(
     """Return a rejection reason or ``None`` if the crypto result is acceptable."""
     # Issue #125: a malformed (non-typed) result container must be recorded as a
     # rejected source attempt, not leak a raw AttributeError from len(hist.bars).
-    if not isinstance(hist, CryptoHistory):
-        return f"unexpected result type {type(hist).__name__}"
-    if len(hist.bars) == 0:
-        return "empty result"
+    reason = result_type_reason(hist, CryptoHistory)
+    if reason:
+        return reason
+    reason = non_empty_reason(hist.bars)
+    if reason:
+        return reason
 
     # Issue #127: reject present-malformed fetched_at_utc freshness metadata.
     reason = _fetched_at_utc_reason(hist.fetched_at_utc)
@@ -265,19 +273,22 @@ def _validate_crypto_result(
     # CryptoBar.time contract — candle open time, tz-aware UTC). A naive datetime
     # or non-datetime key is rejected before the ascending-order compare and the
     # window .date() call, so a malformed key is a recorded rejected attempt.
-    for bar in hist.bars:
-        # Issue #125 (reopen): reject a malformed inner row object before
-        # dereferencing .time.
-        if not isinstance(bar, CryptoBar):
-            return f"malformed bar object {type(bar).__name__}"
-        t = bar.time
-        if not isinstance(t, datetime) or t.utcoffset() is None:
-            return f"malformed bar time {t!r}: expected a timezone-aware datetime"
+    # Issue #124/#125 (reopen): each bar must be a CryptoBar whose .time key is a
+    # timezone-aware datetime (candle open time, tz-aware UTC). Per-bar, before the
+    # ascending compare and window .date() call, so a malformed row/key is a
+    # recorded rejected attempt rather than a raw Type/AttributeError.
+    reason = row_object_and_aware_datetime_reason(
+        hist.bars, CryptoBar, key=lambda b: b.time, noun="bar"
+    )
+    if reason:
+        return reason
 
     # Sorting (#85).
-    for i in range(len(hist.bars) - 1):
-        if not (hist.bars[i].time < hist.bars[i + 1].time):
-            return "bars are not strictly ascending by time"
+    reason = strictly_ascending_reason(
+        hist.bars, key=lambda b: b.time, msg="bars are not strictly ascending by time"
+    )
+    if reason:
+        return reason
 
     # Row-level financial invariants (#86).
     for bar in hist.bars:

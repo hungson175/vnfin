@@ -27,7 +27,11 @@ from .fields import (
 from .keys import canonical_enum_tag, canonical_provider_key
 from .results import non_empty_reason, result_type_reason
 from .rows import reject_duplicate, require_list, require_object
-from .timeseries import row_object_and_plain_date_reason, strictly_ascending_reason
+from .timeseries import (
+    row_object_and_aware_datetime_reason,
+    row_object_and_plain_date_reason,
+    strictly_ascending_reason,
+)
 
 __all__ = [
     "contract_error",
@@ -45,5 +49,6 @@ __all__ = [
     "result_type_reason",
     "non_empty_reason",
     "row_object_and_plain_date_reason",
+    "row_object_and_aware_datetime_reason",
     "strictly_ascending_reason",
 ]

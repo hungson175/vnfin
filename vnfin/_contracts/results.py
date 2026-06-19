@@ -15,15 +15,16 @@ from __future__ import annotations
 from typing import Optional
 
 
-def result_type_reason(result, expected_type) -> Optional[str]:
-    """Reject a result that is not an instance of ``expected_type``.
+def result_type_reason(result, expected_type, *, noun: str = "result") -> Optional[str]:
+    """Reject a value that is not an instance of ``expected_type``.
 
-    Matches the long-standing ``f"unexpected result type {type(...).__name__}"``
-    wording (#125) so a malformed container is a recorded rejected attempt, not a
-    raw ``AttributeError`` downstream.
+    Matches the long-standing ``f"unexpected {noun} type {type(...).__name__}"``
+    wording (#125) so a malformed container/row is a recorded rejected attempt, not
+    a raw ``AttributeError`` downstream. ``noun`` defaults to ``"result"`` (the
+    failover-container wording); pass e.g. ``"report"`` for a per-element check.
     """
     if not isinstance(result, expected_type):
-        return f"unexpected result type {type(result).__name__}"
+        return f"unexpected {noun} type {type(result).__name__}"
     return None
 
 

@@ -40,6 +40,32 @@ def row_object_and_plain_date_reason(
     return None
 
 
+def row_object_and_aware_datetime_reason(
+    rows: Sequence,
+    expected_type,
+    *,
+    key: Callable,
+    noun: str,
+    key_name: str = "time",
+) -> Optional[str]:
+    """Per row, reject a non-``expected_type`` object then a non-tz-aware key.
+
+    The key must be a timezone-AWARE ``datetime`` (``utcoffset() is not None``) —
+    the documented intraday-bar ``.time`` contract; a naive datetime or non-datetime
+    key is rejected. Single pass so object-before-key, row-by-row order is preserved.
+
+    Reasons: ``f"malformed {noun} object {type(row).__name__}"`` and
+    ``f"malformed {noun} {key_name} {t!r}: expected a timezone-aware datetime"``.
+    """
+    for row in rows:
+        if not isinstance(row, expected_type):
+            return f"malformed {noun} object {type(row).__name__}"
+        t = key(row)
+        if not isinstance(t, datetime) or t.utcoffset() is None:
+            return f"malformed {noun} {key_name} {t!r}: expected a timezone-aware datetime"
+    return None
+
+
 def strictly_ascending_reason(
     rows: Sequence, *, key: Callable, msg: str
 ) -> Optional[str]:

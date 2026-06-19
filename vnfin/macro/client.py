@@ -35,6 +35,7 @@ import math
 from dataclasses import replace
 from datetime import date, datetime
 
+from .._contracts import non_empty_reason, result_type_reason
 from ..exceptions import AllSourcesFailed, InvalidData, UnitMismatchError
 from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..validation import validate_country_iso3
@@ -238,10 +239,12 @@ class MacroClient:
             # Issue #125: a malformed (non-typed) result container must be a
             # recorded rejected attempt, not a raw AttributeError from
             # len(series.points).
-            if not isinstance(series, IndicatorSeries):
-                return f"unexpected result type {type(series).__name__}"
-            if len(series.points) == 0:
-                return "empty result"
+            reason = result_type_reason(series, IndicatorSeries)
+            if reason:
+                return reason
+            reason = non_empty_reason(series.points)
+            if reason:
+                return reason
 
             # Issue #127: reject present-malformed fetched_at_utc metadata.
             meta_reason = _fetched_at_utc_reason(series.fetched_at_utc)

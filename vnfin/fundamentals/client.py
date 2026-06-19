@@ -17,6 +17,7 @@ import math
 from datetime import date, datetime
 from numbers import Real
 
+from .._contracts import result_type_reason
 from ..exceptions import AllSourcesFailed, InvalidData, VnfinError
 from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..validation import validate_non_empty_string, validate_positive_int
@@ -175,8 +176,9 @@ def _validate_fundamental_result(
         return "empty result"
 
     for report in reports:
-        if not isinstance(report, FinancialReport):
-            return f"unexpected report type {type(report).__name__}"
+        reason = result_type_reason(report, FinancialReport, noun="report")
+        if reason:
+            return reason
 
         # Issue #129: fiscal_date must be a plain calendar date (same rule as
         # macro point keys / gold bar dates). ``datetime`` is rejected explicitly
