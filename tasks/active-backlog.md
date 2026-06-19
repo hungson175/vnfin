@@ -10,29 +10,35 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-19 ~10:00 +07_
+_Last synced: 2026-06-19 ~10:05 +07_
 
 ---
 
 ## Now (WIP — max 1–2)
 
 - **#113 + #114** strict provider-timestamp guards (Vietcombank `_as_of` / BTMC `_parse_dt`).
-  Committed `c76756a` (NOT pushed). Full suite 1559 passed, cov 94.12%. **Awaiting reviewer code
-  review** of c76756a → then push + close #113/#114 + advance watermark.
+  `c76756a` + BLOCK fix `797ccad` (NOT pushed). Full suite 1559 passed, cov 94.12%.
+  **Awaiting reviewer RE-review** of 797ccad → then push + close #113/#114 + advance watermark.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- _(none)_ — c76756a is in normal review, not blocked.
+- _(cleared)_ — reviewer BLOCK on c76756a (#114 stripped raw before regex, accepted
+  ` 17/06/2026 15:38`) **fixed in `797ccad`** (match `_BTMC_TS` on raw directly + whitespace
+  reject tests). Awaiting re-review.
 
-## Poller triage (newly triaged, design stage)
+## Poller triage (newly triaged)
 
-- **#116** BTMC weight parser mis-scales malformed explicit weight tokens. Design drafted
-  `/tmp/vnfin-design-116-117-202606190958.md`. Awaiting reviewer design convergence. Impl after
-  c76756a pushed.
-- **#117** BTMC same-product/same-timestamp rows order-dependent. Design drafted (same file).
-  Awaiting reviewer design convergence.
+- _(none pending design)_ — #116/#117 design **APPROVED (queued)** by reviewer
+  (review-202606191004-design-116-117-btmc.md). Implementation queued under Next; do NOT start
+  until #113/#114 (797ccad) is re-reviewed + pushed.
 
 ## Next (queued open bugs — fix ALL; group by domain to batch reviewer-approved stacks)
+
+BTMC (design APPROVED by reviewer — implement right after #113/#114 push, TDD red-first):
+- #116 BTMC weight parser: keep bare `g` unit but clean-boundary guard; tests prove VANG≠g,
+  `1000 G` works, `.5/-5/0 G` reject; leading-zero quantity policy. (review-202606191004-design)
+- #117 BTMC same-ts dedup: identical dup keep-first; conflicting same-ts → InvalidData;
+  older/newer deterministic.
 
 Failover identity/units/bounds/ordering guards:
 - #69 crypto failover currency vs value_unit mismatch
@@ -71,10 +77,8 @@ Source-adapter input/identity/units hardening:
 - #93 OpenErApi FX inconsistent USD self-rate anchor
 - #97 Fmarket list_funds stringifies malformed fund metadata/asset types
 - #104 DBnomics period dates contradict result frequency
-- #107 FRED observation parser non-YYYY-MM-DD dates
 - #108 World Bank/IMF non-canonical provider year keys
 - #109 Fmarket containers misclassify malformed falsy payloads as empty
-- #110 provider date parsers accept non-canonical YYYY-M-D
 - #111 VNDirect misclassifies malformed falsy data containers as empty
 
 ## Done today (trim periodically)
@@ -83,3 +87,4 @@ Source-adapter input/identity/units hardening:
 - Closed **#112** (29e942a), **#94** (ff159f5), **#14** (a8479fc) as fixed.
 - Closed external duplicate **PR #115** as superseded (code not run).
 - **#87** closed by reviewer as fixed (4db0c74 / a8479fc).
+- **#107 / #110** closed by reviewer/poller #59 as fixed (watermark 2026-06-19T03:01:44Z).

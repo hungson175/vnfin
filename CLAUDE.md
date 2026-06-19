@@ -35,6 +35,20 @@ Run the checklist in `docs/vnstock-blacklist.md` before every research task, and
 4. Be conservative on legal/licensing uncertainty and flag the risk.
 5. Use `tm-send` (never raw `tmux send-keys`) for cross-session agent messages. Every message uses the global prefix `{session}/{role} [HH:MM +07]:` and ends with `- reply via tm-send`.
 
+### Backlog discipline (MANDATORY — Boss directive 2026-06-19)
+
+**Git history is the project-progress tracker** (commit at every logical milestone) and
+**`tasks/active-backlog.md` is the active work queue.** This is mandatory for every agent working
+this repo, now and in future.
+
+1. When a reviewer review or poller task arrives **while you are mid-job**, **record it in
+   `tasks/active-backlog.md` first** — do **not** context-switch out of the current job.
+2. **Finish the current job** (to a committed, green state), then return to the backlog in
+   priority order (`Now` → `Review blockers` → `Poller triage` → `Next`).
+3. **Remove an item the moment it is done** (or move it to `Done today` with a commit/issue ref,
+   and trim that section periodically). Never leave stale tasks.
+4. Sections: `Now` (WIP, max 1–2) · `Review blockers` · `Poller triage` · `Next` · `Done today`.
+
 ### tm-send routing (hard rule — separate tmux sessions)
 
 `vnfin-oss` and `vnfin-oss-reviewer` are **different tmux sessions**. Bare `tm-send vnfin-oss-reviewer "..."` from this workspace detects the **current** session (`vnfin-oss`), fails to resolve that role, and **falls back to the first pane in `vnfin-oss`** — i.e. **you message yourself**. Never do that.
