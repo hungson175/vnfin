@@ -21,8 +21,10 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 
 from .._contracts import (
+    MISSING,
     canonical_fund_code,
     canonical_security_symbol,
+    optional_present,
     require_present,
 )
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
@@ -278,18 +280,20 @@ class FmarketFundSource(HttpDataSource):
     def _parse_fund(row) -> Fund:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: fund row is not an object")
-        code = row.get("code")
-        short = row.get("shortName")
-        if code is not None:
-            raw_code = code
-        elif short is not None:
-            raw_code = short
-        else:
-            raise InvalidData("fmarket: fund row missing code")
-        # Issue #33: fund code is a public fund identifier — a present blank or
-        # malformed non-blank shape must fail closed. canonical_fund_code normalizes
+        # Issue #33: fund code is a public fund identifier. Key-presence is the
+        # trigger: a PRESENT `code` (incl. null) must be a canonical fund code
+        # (null/blank/malformed-non-blank fail closed) — it must NOT fall back to
+        # shortName. Only a truly ABSENT `code` key may fall back to `shortName`
+        # (itself then required canonical). canonical_fund_code normalizes
         # (strip().upper()) then validates [A-Z][A-Z0-9]*.
-        code = canonical_fund_code(raw_code, "fmarket fund code")
+        code_val = optional_present(row, "code")
+        if code_val is not MISSING:
+            code = canonical_fund_code(code_val, "fmarket fund code")
+        else:
+            short = optional_present(row, "shortName")
+            if short is MISSING:
+                raise InvalidData("fmarket: fund row missing code")
+            code = canonical_fund_code(short, "fmarket fund shortName")
         fid = row.get("id")
         if fid is None:
             raise InvalidData("fmarket: fund row missing id")

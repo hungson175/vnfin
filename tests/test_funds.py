@@ -1348,3 +1348,23 @@ def test_fmarket_holdings_normalizes_padded_lower_stockcode():
     top = [{"stockCode": " fpt ", "netAssetPercent": 5.0, "type": "STOCK"}]
     holds = _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
     assert holds[0].stock_code == "FPT"
+
+
+def test_fmarket_fund_present_null_code_fails_closed_no_shortname_fallback():
+    # #33 B1: a PRESENT code:null must fail closed, NOT fall back to shortName.
+    row = {
+        "id": FAKE_ID_A, "code": None, "shortName": "TESTCO", "name": "X",
+        "nav": 100.0, "dataFundAssetType": {"code": "STOCK"}, "owner": {"name": "M"},
+    }
+    with pytest.raises(InvalidData):
+        _src(_fund_list_payload(rows=[row])).list_funds()
+
+
+def test_fmarket_fund_absent_code_falls_back_to_shortname():
+    # #33 B1: a truly ABSENT code key MAY fall back to a canonical shortName.
+    row = {
+        "id": FAKE_ID_A, "shortName": "TESTCO", "name": "X",
+        "nav": 100.0, "dataFundAssetType": {"code": "STOCK"}, "owner": {"name": "M"},
+    }
+    funds = _src(_fund_list_payload(rows=[row])).list_funds()
+    assert funds.funds[0].code == "TESTCO"
