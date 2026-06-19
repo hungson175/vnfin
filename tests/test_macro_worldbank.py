@@ -20,6 +20,7 @@ import pytest
 
 from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable
 from vnfin.macro import IndicatorSeries, WorldBankMacroSource
+from vnfin.macro.indicators import MacroIndicator
 
 
 # ---------------------------------------------------------------------------
@@ -634,6 +635,53 @@ def test_in_window_years_kept_when_bounds_supplied():
     res = _src(payload).get_indicator(COUNTRY, INDICATOR, 2025, 2025)
     assert len(res.points) == 1
     assert res.points[0][0].year == 2025
+
+
+# --- descriptive metadata typing (issue #101) ----------------------------
+
+@pytest.mark.parametrize(
+    "indicator_value,country_value,unit,match",
+    [
+        (["GDP"], "Vietnam", "fake unit", "indicator.value"),
+        ("Fake indicator", {"name": "Vietnam"}, "fake unit", "country.value"),
+        ("Fake indicator", "Vietnam", ["USD"], "unit metadata"),
+        (True, False, True, "indicator.value"),
+    ],
+)
+def test_malformed_descriptive_metadata_raises_invalid(
+    indicator_value, country_value, unit, match
+):
+    obs = {
+        "indicator": {"id": INDICATOR, "value": indicator_value},
+        "country": {"id": "ZZ", "value": country_value},
+        "countryiso3code": COUNTRY,
+        "date": "2024",
+        "value": 123.0,
+        "unit": unit,
+        "obs_status": "",
+        "decimal": 1,
+    }
+    payload = json.dumps([_meta(1), [obs]])
+    with pytest.raises(InvalidData, match=match):
+        _src(payload).get_indicator(COUNTRY, INDICATOR)
+
+
+def test_malformed_canonical_metadata_raises_invalid():
+    obs = {
+        "indicator": {"id": "NY.GDP.MKTP.KD.ZG", "value": ["GDP growth"]},
+        "country": {"id": "ZZ", "value": {"name": "Vietnam"}},
+        "countryiso3code": COUNTRY,
+        "date": "2024",
+        "value": 3.0,
+        "unit": "",
+        "obs_status": "",
+        "decimal": 1,
+    }
+    payload = json.dumps([_meta(1), [obs]])
+    with pytest.raises(InvalidData):
+        WorldBankMacroSource(http_get=_static(payload)).get_canonical_indicator(
+            COUNTRY, MacroIndicator.GDP_GROWTH
+        )
 
 
 

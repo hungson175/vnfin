@@ -7,6 +7,9 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **World Bank descriptive metadata** — reject present non-string
+  ``indicator.value``, ``country.value``, and ``unit`` fields instead of letting
+  malformed provider metadata enter typed ``IndicatorSeries``. ([#101](https://github.com/hungson175/vnfin/issues/101))
 - **FRED units metadata** — reject present non-string top-level ``units`` values instead
   of silently stamping an empty unit label. ([#102](https://github.com/hungson175/vnfin/issues/102))
 - **Index constituents data envelope** — validate ``data`` is a list before treating

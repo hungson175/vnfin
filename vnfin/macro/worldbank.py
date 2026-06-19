@@ -21,6 +21,7 @@ Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - non-JSON / wrong top-level shape    -> ``InvalidData``
 - provider ``message`` error envelope -> ``InvalidData``
 - malformed/garbage scalar / NaN date -> ``InvalidData``
+- present malformed descriptive metadata -> ``InvalidData``
 - observation outside request window -> skipped; none left -> ``EmptyData``
 - no usable points                    -> ``EmptyData``
 """
@@ -263,12 +264,22 @@ class WorldBankMacroSource(HttpDataSource):
 
             ind = obs.get("indicator") or {}
             if indicator_name is None and isinstance(ind, dict):
-                indicator_name = ind.get("value")
+                indicator_name = self._metadata_str(
+                    ind.get("value"), "indicator.value", code
+                )
             ctry = obs.get("country") or {}
             if country_name is None and isinstance(ctry, dict):
-                country_name = ctry.get("value")
-            if not unit and obs.get("unit"):
-                unit = obs.get("unit")
+                country_name = self._metadata_str(
+                    ctry.get("value"), "country.value", code
+                )
+            if not unit:
+                raw_unit = obs.get("unit")
+                if raw_unit is not None and raw_unit != "":
+                    if not isinstance(raw_unit, str):
+                        raise InvalidData(
+                            f"{self.NAME}: malformed unit metadata for {code}"
+                        )
+                    unit = raw_unit
 
             raw_value = obs.get("value")
             if raw_value is None:
@@ -294,6 +305,16 @@ class WorldBankMacroSource(HttpDataSource):
 
         points.sort(key=lambda p: p[0])
         return country_name, indicator_name, unit, points
+
+    @staticmethod
+    def _metadata_str(raw, field: str, code: str) -> str | None:
+        """Accept absent/blank metadata or a string; reject other present types."""
+        if raw is None or raw == "":
+            return None
+        if isinstance(raw, str):
+            stripped = raw.strip()
+            return stripped or None
+        raise InvalidData(f"{WorldBankMacroSource.NAME}: malformed {field} for {code}")
 
     @staticmethod
     def _contained_points(
