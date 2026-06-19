@@ -27,6 +27,13 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
+- **Next batch (REOPENED 16:55) — after current #44/#21 review lands** (do NOT touch HEAD while
+  reviewer is mid-review of d4ae617/3e470b6):
+  - **#21 add-on** — VNDirect `row.get("code") or ""` lets a PRESENT falsey/non-string code
+    bypass the identity check (treated as no-code). A present `code` must be a valid string.
+  - **#66** — WorldBank lacks a seen-guard for duplicate annual observation dates.
+  - **#26** — VNDirect ratios silently keep first on a duplicate `ratioCode` within one
+    reportDate (should reject the duplicate, like statements do).
 - **#140 — "financial news" FEATURE request** (enhancement label). NOT a bug → Boss/product-scope
   decision; parked (reviewer agrees, like #137). Not implementing autonomously.
 
