@@ -16,13 +16,11 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Gap fixes** — verification sweep complete (43→12 open). Remaining 12 are genuine gaps.
-  Classify each by writing a failing test first (red = code gap → fix; green = test-only gap →
-  add test). Test-gaps (guard present): #26 CafeF dup, #49 FRED inverted-window, #65 direct-source
-  caller-input, #68 fmarket case-insensitive dup. Code-gaps: #21 WorldBank/DBnomics identity,
-  #28 Vietcombank currency codes, #66 crypto/stooq dup-key, #108 WorldBank/IMF strict year,
-  #111 VNDirect type-before-truthiness, #119 CafeF Success bool, #120 fractional volume,
-  #121 VNDirect modelType coercion. (#119/#120/#121 newest — likely real code gaps.)
+- **Gap fixes — 8 left** (open 43→8). Code-gaps: #21 WorldBank/DBnomics identity, #28 Vietcombank
+  currency codes, #66 crypto/stooq dup-key, #108 WorldBank/IMF strict year. Test-only gaps (guard
+  present, add regression test; red→reclassify as code): #26 CafeF dup, #49 FRED inverted-window,
+  #65 direct-source caller-input, #68 fmarket case-insensitive dup.
+  Done so far: #111, #119, #121, #120 shipped+closed.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -60,3 +58,7 @@ _All other backlog items verified-fixed and closed during the 2026-06-19 sweep (
   closed with cited tests. Watermark 03:47:08Z.
 - **#15, #22, #32, #35, #37** + **#41, #67, #75, #80, #81, #93, #97, #104, #109** source-adapter
   cluster — VERIFIED already fixed + tested; closed with cited tests. Open 43→12.
+- **#111** VNDirect type-before-truthiness — pushed `481ccfd`, closed. APPROVE_WITH_NOTES.
+- **#119** CafeF Success bool — pushed `0b524a2`, closed. APPROVE.
+- **#121** VNDirect strict modelType — pushed `4e0c05f`+`d5b9e03`, closed. APPROVE (after whitespace BLOCK fix).
+- **#120** UDF fractional volume — pushed `ee710ac`, closed. APPROVE_WITH_NOTES. Open 12→8.
