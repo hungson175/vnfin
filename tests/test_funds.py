@@ -389,6 +389,14 @@ def test_nav_history_rejects_malformed_row_product_id(bad_pid):
         _src(payload).nav_history(FAKE_ID_A)
 
 
+def test_nav_history_rejects_present_null_row_product_id():
+    # #21 BLOCK: a present `productId: null` must NOT bypass the guard (key-presence
+    # is the trigger, not truthiness).
+    rows = [{"id": 1, "createdAt": 1700000000000, "nav": 10100.0, "navDate": "2024-01-02", "productId": None}]
+    with pytest.raises(InvalidData):
+        _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+
+
 def test_nav_history_accepts_matching_and_absent_row_product_id():
     rows = [
         {"id": 1, "createdAt": 1700000000000, "nav": 10100.0, "navDate": "2024-01-02", "productId": FAKE_ID_A},
@@ -409,8 +417,23 @@ def test_holdings_rejects_mismatched_detail_id():
         _src(_holdings_payload_with(id=9999)).holdings(FAKE_ID_A)
 
 
-@pytest.mark.parametrize("bad_code", [123, [], {}, "", "   "], ids=["int", "list", "dict", "blank", "ws"])
+def test_holdings_rejects_null_detail_id():
+    # #21 BLOCK: data.id null must not bypass the identity check.
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(id=None)).holdings(FAKE_ID_A)
+
+
+def test_holdings_rejects_missing_detail_id():
+    # #21 BLOCK: a detail document with no `id` cannot identify the fund -> reject.
+    base = json.loads(_holdings_payload())
+    base["data"].pop("id", None)
+    with pytest.raises(InvalidData):
+        _src(json.dumps(base)).holdings(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("bad_code", [123, [], {}, "", "   ", " TESTCO", "TESTCO "], ids=["int", "list", "dict", "blank", "ws", "lead_pad", "trail_pad"])
 def test_holdings_rejects_malformed_detail_code(bad_code):
+    # #21 BLOCK: code must be a non-empty CANONICAL string (padded values rejected).
     with pytest.raises(InvalidData):
         _src(_holdings_payload_with(code=bad_code)).holdings(FAKE_ID_A)
 
