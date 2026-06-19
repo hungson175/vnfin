@@ -267,6 +267,13 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         skipped_rows = 0
         code_mismatches = 0  # Issue #21: rows dropped for a wrong provider `code`
         for row in rows:
+            # Issue #141: a statement row must be an object before any .get(); a
+            # non-object row is malformed provider data, not a raw AttributeError.
+            # (Mirrors the ratios path guard.)
+            if not isinstance(row, dict):
+                raise InvalidData(
+                    f"{self.name}: statement row is not an object, got {type(row).__name__}"
+                )
             fd = row.get("fiscalDate")
             if not fd:
                 raise InvalidData(f"{self.name}: row missing fiscalDate")

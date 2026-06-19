@@ -1085,3 +1085,13 @@ def test_vndirect_ratio_distinct_codes_within_date_accepted():
         "TESTCO", StatementType.RATIOS, Period.ANNUAL
     )
     assert len(reports) == 1 and len(reports[0].items) == 2
+
+
+# Issue #141 — a non-object VNDirect statement row must raise InvalidData
+# (mirrors the ratios-path guard), not leak a raw AttributeError.
+@pytest.mark.parametrize("bad_row", ["a string", 123, None, [1, 2], 4.5], ids=["str", "int", "none", "list", "float"])
+def test_vndirect_statement_non_object_row_raises_invalid(bad_row):
+    with pytest.raises(InvalidData, match="statement row is not an object"):
+        _src(_stmt_envelope([bad_row])).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )

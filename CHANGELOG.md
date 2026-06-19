@@ -7,6 +7,10 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **VNDirect statement row type guard** — the VNDirect statement parser now rejects a non-object
+  row with ``InvalidData`` (``statement row is not an object``) before dereferencing it, mirroring
+  the ratios path, instead of leaking a raw ``AttributeError``.
+  ([#141](https://github.com/hungson175/vnfin/issues/141))
 - **WorldBank duplicate observation-date guard** — ``WorldBankMacroSource`` now rejects a
   duplicate observation date within one response (``InvalidData``) instead of silently keeping
   both ambiguous observations. ([#66](https://github.com/hungson175/vnfin/issues/66))
