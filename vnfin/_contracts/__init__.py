@@ -25,7 +25,9 @@ from .fields import (
     require_present,
 )
 from .keys import canonical_enum_tag, canonical_provider_key
+from .results import non_empty_reason, result_type_reason
 from .rows import reject_duplicate, require_list, require_object
+from .timeseries import row_object_and_plain_date_reason, strictly_ascending_reason
 
 __all__ = [
     "contract_error",
@@ -40,4 +42,8 @@ __all__ = [
     "require_object",
     "require_list",
     "reject_duplicate",
+    "result_type_reason",
+    "non_empty_reason",
+    "row_object_and_plain_date_reason",
+    "strictly_ascending_reason",
 ]

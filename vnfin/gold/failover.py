@@ -39,6 +39,12 @@ import math
 from dataclasses import replace
 from datetime import date, datetime, timedelta
 
+from .._contracts import (
+    non_empty_reason,
+    result_type_reason,
+    row_object_and_plain_date_reason,
+    strictly_ascending_reason,
+)
 from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..validation import validate_date_range
@@ -216,10 +222,12 @@ def _validate_gold_result(hist, chain_unit: str | None) -> str | None:
     # Issue #125: a malformed (non-typed) result container must be recorded as a
     # rejected source attempt, not leak a raw AttributeError from len(hist.bars)
     # (or from _coverage, which dereferences bar.date downstream).
-    if not isinstance(hist, GoldHistory):
-        return f"unexpected result type {type(hist).__name__}"
-    if len(hist.bars) == 0:
-        return "empty result"
+    reason = result_type_reason(hist, GoldHistory)
+    if reason:
+        return reason
+    reason = non_empty_reason(hist.bars)
+    if reason:
+        return reason
 
     # Issue #127: reject present-malformed fetched_at_utc freshness metadata.
     reason = _fetched_at_utc_reason(hist.fetched_at_utc)
@@ -243,25 +251,24 @@ def _validate_gold_result(hist, chain_unit: str | None) -> str | None:
     if hist.currency != "USD":
         return f"currency mismatch: returned {hist.currency!r} != 'USD'"
 
-    # Issue #124: each bar key must be a plain calendar ``date`` (the documented
-    # GoldBar.date contract — daily history, no intraday meaning). ``datetime`` is
-    # rejected explicitly because it subclasses ``date`` but carries intraday/tz
-    # meaning; non-date keys are rejected outright. Done before the ascending
-    # compare and before _coverage()'s ``b.date`` arithmetic so a malformed key is
-    # a recorded rejected attempt, not a raw TypeError.
-    for bar in hist.bars:
-        # Issue #125 (reopen): reject a malformed inner row object before
-        # dereferencing .date (also protects _coverage()'s b.date arithmetic).
-        if not isinstance(bar, GoldBar):
-            return f"malformed bar object {type(bar).__name__}"
-        d = bar.date
-        if not isinstance(d, date) or isinstance(d, datetime):
-            return f"malformed bar date {d!r}: expected a plain datetime.date"
+    # Issue #124/#125 (reopen): each bar must be a GoldBar whose key is a plain
+    # calendar ``date`` (the documented GoldBar.date contract — daily history, no
+    # intraday meaning). ``datetime`` is rejected explicitly (it subclasses ``date``
+    # but carries intraday/tz meaning). Done per-bar before the ascending compare
+    # and _coverage()'s ``b.date`` arithmetic so a malformed row/key is a recorded
+    # rejected attempt, not a raw AttributeError/TypeError.
+    reason = row_object_and_plain_date_reason(
+        hist.bars, GoldBar, key=lambda b: b.date, noun="bar"
+    )
+    if reason:
+        return reason
 
     # Sorting (#85).
-    for i in range(len(hist.bars) - 1):
-        if not (hist.bars[i].date < hist.bars[i + 1].date):
-            return "bars are not strictly ascending by date"
+    reason = strictly_ascending_reason(
+        hist.bars, key=lambda b: b.date, msg="bars are not strictly ascending by date"
+    )
+    if reason:
+        return reason
 
     # Row-level financial invariants (#86).
     for bar in hist.bars:
