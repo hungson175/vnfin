@@ -9,9 +9,11 @@ from vnfin.exceptions import InvalidData
 CTX = "test key"
 
 # Shared malformed-key matrix (mirrors the refactor plan's BAD_PROVIDER_KEYS).
+# Includes Checkpoint-B1 cases: negatives, decimal/punctuation/internal-space strings.
 BAD_PROVIDER_KEYS = [
     True, False, 11000.5, float("inf"), float("nan"),
     [11000], {"code": 11000}, None, "", "   ", "+11000", "-11000", "011000", " 11000 ",
+    -1, -1.0, "11000.5", "{}", "A B", "EPS.1", "1A", "_X", "A-B", "A.B",
 ]
 
 
@@ -27,8 +29,11 @@ def test_canonical_provider_key_rejects_malformed(bad):
         ("11000", "11000"),
         ("0", "0"),
         ("EPS", "EPS"),         # clean alpha key allowed by default
+        ("ROE1", "ROE1"),       # letter-start, then alphanumeric
+        ("GROSS_MARGIN", "GROSS_MARGIN"),  # underscore allowed
         (11000, "11000"),       # int -> decimal string
         (11000.0, "11000"),     # integral float -> integer string
+        (0, "0"),
     ],
 )
 def test_canonical_provider_key_accepts_canonical(value, expected):

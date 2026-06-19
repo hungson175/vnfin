@@ -9,10 +9,17 @@ centralize the canonicalization/deny policy that adapters previously duplicated.
 from __future__ import annotations
 
 import math
+import re
 from typing import Any, Iterable
 
 from .errors import contract_error
 from .fields import MISSING, require_non_empty_str
+
+#: A canonical non-numeric provider key: starts with a letter, then letters /
+#: digits / underscore (e.g. ``EPS``, ``ROE1``, ``GROSS_MARGIN``). This rejects
+#: decimals (``11000.5``), punctuation/containers-as-strings (``{}``), and
+#: internal whitespace (``A B``) that broad stringification used to let through.
+_ALPHA_KEY_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 
 
 def canonical_provider_key(
@@ -27,28 +34,32 @@ def canonical_provider_key(
 
     Accepts (subject to the ``allow_*`` flags):
 
-    * an ``int`` (never ``bool``) -> its decimal string;
-    * an integral, finite ``float`` (providers send e.g. ``11000.0``) -> integer
-      string; a fractional / non-finite float is rejected;
+    * a non-negative ``int`` (never ``bool``) -> its decimal string;
+    * a non-negative, integral, finite ``float`` (providers send e.g. ``11000.0``)
+      -> integer string; a fractional / non-finite / negative float is rejected;
     * a ``str`` -> only if non-empty, not whitespace-padded, not signed
-      (``+``/``-``), and (if all-digits) without leading zeros; clean digit keys
-      (``"11000"``, ``"0"``) and, when ``allow_alpha``, clean alpha keys
-      (``"EPS"``) pass.
+      (``+``/``-``); a digit string must have no leading zero (``"11000"``,
+      ``"0"``); a non-numeric string must match ``[A-Za-z][A-Za-z0-9_]*``
+      (``"EPS"``, ``"ROE1"``) — decimals, punctuation, and internal spaces reject.
 
-    ``bool``, containers, ``None``, and other types raise. This is the single
-    answer to "which provider key shapes are canonical".
+    ``bool``, negatives, containers, ``None``, and other types raise. This is the
+    single answer to "which provider key shapes are canonical".
     """
     if isinstance(value, bool):
         raise contract_error(ctx, f"key must not be a bool, got {value!r}")
     if isinstance(value, int):
         if not allow_int:
             raise contract_error(ctx, f"integer key not allowed, got {value!r}")
+        if value < 0:
+            raise contract_error(ctx, f"key must not be negative, got {value!r}")
         return str(value)
     if isinstance(value, float):
         if not allow_integral_float:
             raise contract_error(ctx, f"float key not allowed, got {value!r}")
         if not math.isfinite(value) or value != int(value):
             raise contract_error(ctx, f"key must be an integral number, got {value!r}")
+        if value < 0:
+            raise contract_error(ctx, f"key must not be negative, got {value!r}")
         return str(int(value))
     if isinstance(value, str):
         if not value or value != value.strip():
@@ -65,6 +76,10 @@ def canonical_provider_key(
             return value
         if not allow_alpha:
             raise contract_error(ctx, f"non-numeric key not allowed, got {value!r}")
+        if not _ALPHA_KEY_RE.fullmatch(value):
+            raise contract_error(
+                ctx, f"non-canonical key {value!r}: expected [A-Za-z][A-Za-z0-9_]*"
+            )
         return value
     raise contract_error(
         ctx, f"key must be a string or integral number, got {type(value).__name__}"
