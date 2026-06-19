@@ -30,7 +30,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
     BLOCK history: B1 (FX unwired+macro test gap) FIXED; B2 (strict scalar/frozenset-only) FIXED;
     B3 (fundamentals frozenset(raw) raised TypeError on unhashable source → total
     `_fundamental_provenance` helper) FIXED. ~+32 TDD cases, suite 1749 green, additive API.
-    **Awaiting reviewer RE-review (B3) → push 21c225f..bbec58e → close.**
+    B4 (string marker collision → tuple sentinel) FIXED `f6b96da`. **Awaiting RE-review (B4) → push 21c225f..f6b96da → close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
