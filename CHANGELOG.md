@@ -7,6 +7,12 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Fmarket envelope status/code integer guard** — the Fmarket application-envelope check no
+  longer accepts a fractional or boolean ``status``/``code``: ``int(200.9)`` previously truncated
+  to ``200`` and passed the 2xx gate, and a ``bool`` would coerce. A non-integral float, a
+  non-finite float, or a ``bool`` is now rejected as a malformed envelope (``InvalidData``);
+  integers, integral floats, and digit strings remain valid.
+  ([#41](https://github.com/hungson175/vnfin/issues/41))
 - **Macro unit-metadata relabel guard** — the macro failover result guard now rejects a present
   ``unit`` or ``value_unit`` that is not a string. Previously a falsey non-string (``[]``, ``{}``,
   ``0``, ``False``) was coerced to ``""`` by the placeholder handling and silently relabeled to

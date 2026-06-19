@@ -347,6 +347,29 @@ def test_list_funds_non_integer_envelope_status_raises_invalid():
         _src(payload).list_funds()
 
 
+@pytest.mark.parametrize("bad", [200.9, 200.5, 199.999, float("inf"), float("nan"), True, False], ids=["frac_2xx", "frac_half", "frac_near200", "inf", "nan", "true", "false"])
+def test_list_funds_fractional_or_bool_envelope_status_raises_invalid(bad):
+    # Issue #41 (reopen): int(200.9) silently truncates to 200; a fractional/bool
+    # application status must be rejected as a malformed envelope, not accepted.
+    payload = json.dumps({"status": bad, "code": 200, "data": {"rows": []}})
+    with pytest.raises(InvalidData):
+        _src(payload).list_funds()
+
+
+@pytest.mark.parametrize("bad", [200.9, 403.5, True], ids=["frac_2xx", "frac_4xx", "bool"])
+def test_list_funds_fractional_or_bool_envelope_code_raises_invalid(bad):
+    payload = json.dumps({"status": 200, "code": bad, "data": {"rows": []}})
+    with pytest.raises(InvalidData):
+        _src(payload).list_funds()
+
+
+def test_list_funds_integral_float_status_still_accepted():
+    # An integral float (e.g. 200.0) is not fractional -> the envelope guard must
+    # accept it (success proves it was not rejected as malformed).
+    funds = _src(_fund_list_payload(status=200.0, code=200.0)).list_funds()
+    assert len(funds) >= 1
+
+
 def test_list_funds_missing_envelope_status_and_code_raises_invalid():
     # Issue #41: an Fmarket response without `status` or `code` is not a valid envelope.
     payload = json.dumps({"message": "ok", "data": {"total": 0, "page": 1, "pageSize": 100, "rows": []}})

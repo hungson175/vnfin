@@ -391,6 +391,15 @@ class FmarketFundSource(HttpDataSource):
         for key, raw in (("status", status_raw), ("code", code_raw)):
             if raw is None:
                 continue
+            # Issue #41 (reopen): the application status/code is an integer. A bare
+            # int(raw) silently TRUNCATES a fractional float (int(200.9) -> 200),
+            # letting a malformed non-2xx-ish value pass as success, and bool would
+            # coerce (int(True) -> 1). Reject a bool or a non-integral float before
+            # coercion; integral floats, ints, and digit strings remain valid.
+            if isinstance(raw, bool) or (isinstance(raw, float) and not raw.is_integer()):
+                raise InvalidData(
+                    f"fmarket: non-integer {key} in {who} envelope: {raw!r}"
+                )
             try:
                 status = int(raw)
             except (TypeError, ValueError) as exc:
