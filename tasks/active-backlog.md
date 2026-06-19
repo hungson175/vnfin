@@ -16,13 +16,11 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#122 — Fundamental failover accepts malformed LineItem keys/values** (real OPEN bug,
-  reviewer-triaged poller 12:15, labelled `bug`). `FailoverFundamentalClient` validates report
-  identity/emptiness/value_unit but NOT `LineItem.item_code`/`value` shape. TDD: red-first
-  no-network tests where a primary source returns malformed line items (nan/inf/bool/str value,
-  blank/bool item_code, duplicate-conflicting code) → enforce strict line-item validation in the
-  failover result guard → malformed primary rejected + backup attempted → reviewer sign-off →
-  push master → close.
+- **#122 — Fundamental failover malformed LineItem guard** — IMPLEMENTED + committed `ca6f1ff`
+  (NOT pushed). Strict `_validate_line_item` in `vnfin/fundamentals/client.py` (item_code
+  non-empty str; name str/empty-ok; value finite non-bool; dup item_code rejected). +24 TDD
+  cases, suite 1660 green, client.py cov 95%, CHANGELOG updated, no public-API change.
+  **Awaiting reviewer code review → then push master → close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
