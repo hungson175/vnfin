@@ -16,10 +16,8 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#106 (REOPENED 15:20)** — `OpenErApiFXSource._as_of` truncates a fractional
+- **#106 (REOPENED)** — OpenER fractional timestamp truncation. FIXED + committed `9e22a89` (NOT pushed): _as_of accepts only int/integral-finite-float; fractional/non-finite -> now() fallback. +7 TDD cases, suite 1986 green. **Awaiting reviewer review -> push -> re-close.**
   `time_last_update_unix` (e.g. `1700000000.9`) via `int(ts)` into a falsely-precise as_of_utc.
-  TDD: fractional/malformed numeric timestamp must NOT truncate — prefer the existing
-  now()-fallback (optional-metadata path) over InvalidData. Reviewer review → push → re-close.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
