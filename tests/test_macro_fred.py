@@ -345,4 +345,3 @@ def test_in_window_observations_kept_when_bounds_supplied():
         "FAKESERIES", start=date(2025, 1, 1), end=date(2025, 12, 31)
     )
     assert res.points == ((date(2025, 6, 1), pytest.approx(1.0)),)
-
