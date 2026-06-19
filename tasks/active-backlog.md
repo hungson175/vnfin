@@ -16,9 +16,14 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `2117c51`, full suite 2032 green,
-  watermark 2026-06-19T08:59:46Z. Only open issue is **#140 (enhancement: financial news)** —
-  a Boss/product-scope feature, NOT a bug; parked pending Boss decision. Steady-state otherwise.
+- **Two small TDD fixes (REOPENED 16:00):**
+  - **#112** — GoldApi present-but-falsey `updatedAt` still falls back to now() instead of
+    rejecting present-malformed (None/absent fallback OK; present falsey/non-str → reject).
+  - **#21** — VNDirect: when EVERY returned statement row has a mismatched provider `code`,
+    `get_financials` returns an empty tuple (clean no-data) instead of treating it as malformed
+    response identity (InvalidData / source miss).
+  Scope via `./bin/gh-maintainer issue view 112` / `21`; TDD → review → push → re-close.
+  (#140 stays enhancement/product scope, not a bug.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
