@@ -16,9 +16,12 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `35ed92c`, full suite
-  1986 green, watermark 2026-06-19T08:26:22Z. Steady-state: record new poller/reviewer activity
-  here first, TDD + reviewer sign-off per fix. (Reviewer triaging poller 15:25 next.)
+- **Returned-provider-identity batch: #35 + #21** (REOPENED 15:25) — TDD batch, reviewer-gated.
+  - **#35** — CurrencyApi `_doc_date` treats a present falsey/non-string returned date as missing
+    and stamps the requested date (should reject present-malformed date, not relabel).
+  - **#21** — Fmarket NAV/detail returned identity (product/detail) mismatch + GoldApi symbol
+    identity mismatch still accepted (should reject + fail over).
+  Scope each via `./bin/gh-maintainer issue view 35` / `21`; design → TDD → review.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
