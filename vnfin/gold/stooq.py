@@ -90,10 +90,14 @@ class StooqGoldSource(GoldSource):
                 f"{self.name}: missing one of {required} columns in header {rows[0]!r}"
             ) from exc
         bars: list[GoldBar] = []
+        seen_dates: set = set()  # Issue #66: reject duplicate observation dates in one response
         for row in rows[1:]:
             if len(row) <= max(di, oi, hi, li, ci):
                 raise InvalidData(f"{self.name}: short CSV row {row!r}")
             d = self._parse_date(row[di].strip())
+            if d in seen_dates:
+                raise InvalidData(f"{self.name}: duplicate observation date {d.isoformat()}")
+            seen_dates.add(d)
             # Issue #53: validate the full OHLC row so a malformed high/low range
             # does not silently produce an untrustworthy close price.
             op = self._parse_price(row[oi].strip(), "Open")

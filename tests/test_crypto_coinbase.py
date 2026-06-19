@@ -95,6 +95,18 @@ def test_parses_candles():
     assert h.currency == "USD"
 
 
+def test_coinbase_duplicate_timestamp_in_page_raises_invalid():
+    # Issue #66: a duplicate candle time WITHIN one provider page is conflicting data and must
+    # raise InvalidData (cross-page overlap dedup is a separate, intentional path).
+    d = date(2026, 6, 15)
+    recs = [
+        (d, 90.0, 110.0, 100.0, 105.0, 12.345),
+        (d, 91.0, 111.0, 101.0, 106.0, 13.456),
+    ]
+    with pytest.raises(InvalidData):
+        src_with(_payload(recs)).get_klines("BTC-USD", Interval.D1, *WIDE)
+
+
 def test_ohlcv_values_and_order_mapping():
     """Coinbase order is [time, low, high, open, close, volume] — verify we map it
     correctly (NOT the Binance OHLC order)."""

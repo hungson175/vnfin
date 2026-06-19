@@ -244,8 +244,15 @@ class CoinbaseCryptoSource(HttpDataSource):
                 first_page = False
                 continue
             page_bars = self._build_bars(parsed)
+            # Issue #66: a duplicate timestamp WITHIN one provider page is conflicting data and
+            # must raise; cross-page overlap (sec already in seen_sec) is intentional pagination
+            # de-duplication and is kept.
+            page_seen: set = set()
             for b in page_bars:
                 sec = int(b.time.timestamp())
+                if sec in page_seen:
+                    raise InvalidData(f"{self.name}: duplicate timestamp {sec} within one page")
+                page_seen.add(sec)
                 if sec in seen_sec or not (lo_sec <= sec <= hi_sec):
                     continue
                 seen_sec.add(sec)

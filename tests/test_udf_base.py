@@ -218,6 +218,17 @@ def test_whole_float_volume_accepted(synth):
     assert hist.bars[0].volume == 1000
 
 
+def test_duplicate_observation_timestamp_raises_invalid(synth):
+    # Issue #66: two rows sharing one observation timestamp are conflicting provider data
+    # and must raise InvalidData, not be returned as an ambiguous duplicate-keyed series.
+    rows = [
+        ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000),
+        ("2024-01-02", 73.0, 74.0, 72.0, 73.5, 2000),
+    ]
+    with pytest.raises(InvalidData):
+        src_with(synth.bare(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
+
+
 def test_missing_array_raises_invalid(synth):
     payload = json.dumps(
         {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [72.5], "l": [71.8], "v": [1000]}

@@ -199,9 +199,16 @@ class BinanceCryptoSource(HttpDataSource):
                 break
             page_bars = self._build_bars(parsed)
             last_open_ms = None
+            # Issue #66: a duplicate timestamp WITHIN one provider page is conflicting data
+            # and must raise; cross-page overlap (ms already in seen_open_ms from a previous
+            # page) is intentional pagination de-duplication and is kept.
+            page_seen: set = set()
             for b in page_bars:
                 ms = int(b.time.timestamp() * 1000)
                 last_open_ms = ms
+                if ms in page_seen:
+                    raise InvalidData(f"{self.name}: duplicate timestamp {ms} within one page")
+                page_seen.add(ms)
                 if ms in seen_open_ms or not (lo_ms <= ms <= hi_ms):
                     continue
                 seen_open_ms.add(ms)

@@ -166,6 +166,7 @@ class UDFSource(HttpDataSource, PriceSource):
             v = [0] * n
 
         bars: list[PriceBar] = []
+        seen_times: set = set()  # Issue #66: reject duplicate timestamps within one response
         for i in range(n):
             try:
                 ts = parse_provider_int(t[i], label=f"timestamp at row {i}", source=self.name)
@@ -194,6 +195,11 @@ class UDFSource(HttpDataSource, PriceSource):
             vol = int(raw_vol)
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
                 raise InvalidData(f"{self.name}: OHLC invariant violated at {tm.date()}")
+            # Issue #66: a duplicate observation timestamp in one response is conflicting
+            # provider data; reject it instead of returning an ambiguous duplicate-keyed series.
+            if tm in seen_times:
+                raise InvalidData(f"{self.name}: duplicate observation timestamp {tm.isoformat()}")
+            seen_times.add(tm)
             bars.append(PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol))
 
         bars.sort(key=lambda b: b.time)

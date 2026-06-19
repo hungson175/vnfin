@@ -137,11 +137,17 @@ def test_intraday_resolutions_supported_and_mapped():
 
 
 def test_intraday_hourly_parses():
-    rows = [
-        ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 778_600),
-        ("2024-01-02", 72.3, 73.0, 72.1, 72.8, 841_200),
-    ]
-    s = VNDirectSource(http_get=lambda url, params, headers: _bare(rows=rows))
+    # Intraday hourly bars carry DISTINCT timestamps (07:00 then 08:00); a synthetic
+    # same-timestamp fixture would now be rejected as a duplicate key (#66).
+    base = int(datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc).timestamp())
+    payload = json.dumps(
+        {
+            "t": [base, base + 3600],
+            "o": [72.0, 72.3], "h": [72.5, 73.0], "l": [71.8, 72.1],
+            "c": [72.3, 72.8], "v": [778_600, 841_200], "s": "ok",
+        }
+    )
+    s = VNDirectSource(http_get=lambda url, params, headers: payload)
     h = s.get_history("FPT", Interval.H1, *WIDE)
     assert len(h) == 2
     assert h.interval is Interval.H1

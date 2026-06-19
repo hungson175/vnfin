@@ -40,6 +40,17 @@ def test_parses_valid_csv_into_gold_history():
     assert hist.bars[0] == GoldBar(date=date(2026, 6, 15), price=pytest.approx(3300.0))
 
 
+def test_duplicate_observation_date_raises_invalid():
+    # Issue #66: two CSV rows for the same date are conflicting provider data and must raise
+    # InvalidData, not be returned as an ambiguous duplicate-keyed series.
+    csv = _csv(
+        ("2026-06-15", "3200", "3500", "3000", "3300", "0"),
+        ("2026-06-15", "3201", "3501", "3001", "3301", "0"),
+    )
+    with pytest.raises(InvalidData):
+        _src(csv).get_history(date(2026, 6, 15), date(2026, 6, 15))
+
+
 # --------------------------------------------------------------------------- #
 # Issue #53: malformed OHLC rows must be rejected
 # --------------------------------------------------------------------------- #

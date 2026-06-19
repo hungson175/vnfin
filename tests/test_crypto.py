@@ -89,6 +89,18 @@ def test_parses_klines():
     assert h.currency == "USD"
 
 
+def test_binance_duplicate_timestamp_in_page_raises_invalid():
+    # Issue #66: a duplicate open time WITHIN one provider page is conflicting data and must
+    # raise InvalidData (cross-page overlap dedup is a separate, intentional path).
+    open_ms = _ms(date(2026, 6, 15))
+    rows = [
+        (open_ms, "100.00", "110.00", "90.00", "105.00", "12.345"),
+        (open_ms, "101.00", "111.00", "91.00", "106.00", "13.456"),
+    ]
+    with pytest.raises(InvalidData):
+        src_with(_payload(rows)).get_klines("BTCUSDT", Interval.D1, *WIDE)
+
+
 def test_ohlcv_values_and_types():
     h = src_with(_payload()).get_klines("BTCUSDT", Interval.D1, *WIDE)
     b = h.bars[0]
