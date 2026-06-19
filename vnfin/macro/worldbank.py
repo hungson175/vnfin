@@ -263,10 +263,15 @@ class WorldBankMacroSource(HttpDataSource):
             if not isinstance(obs, dict):
                 raise InvalidData(f"{self.NAME}: observation is not an object")
 
-            # Issue #21: the observation must belong to the requested country; a row whose
-            # countryiso3code names a different country must not be stamped as the request.
+            # Issue #21: the observation must belong to the requested country. The identity
+            # field must be a non-blank string equal to the request; a present-but-malformed,
+            # blank, or null countryiso3code must not be stamped as the requested identity.
             iso3 = obs.get("countryiso3code")
-            if isinstance(iso3, str) and iso3.strip() and iso3.strip().upper() != country:
+            if not isinstance(iso3, str) or not iso3.strip():
+                raise InvalidData(
+                    f"{self.NAME}: malformed observation countryiso3code {iso3!r} for {code}"
+                )
+            if iso3.strip().upper() != country:
                 raise InvalidData(
                     f"{self.NAME}: observation country {iso3!r} != requested {country!r}"
                 )

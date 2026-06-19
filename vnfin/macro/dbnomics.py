@@ -162,10 +162,13 @@ class DBnomicsSource(HttpDataSource):
         return doc
 
     def _build_points(self, doc, series_id, result_freq: Frequency):
-        # Issue #21: the returned doc must be the requested series; a series_code that names
-        # a different series must not be stamped with the requested indicator identity.
+        # Issue #21: the returned doc must be the requested series. The series_code must be a
+        # non-blank string equal to the requested series_id; a present-but-malformed, blank, or
+        # null series_code must not be stamped with the requested indicator identity.
         got_code = doc.get("series_code")
-        if isinstance(got_code, str) and got_code and got_code != series_id:
+        if not isinstance(got_code, str) or not got_code.strip():
+            raise InvalidData(f"{self.NAME}: malformed series_code {got_code!r}")
+        if got_code != series_id:
             raise InvalidData(
                 f"{self.NAME}: returned series_code {got_code!r} != requested {series_id!r}"
             )

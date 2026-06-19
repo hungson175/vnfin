@@ -577,6 +577,18 @@ def test_worldbank_observation_country_mismatch_raises_invalid():
         _src(rows_text).get_indicator(COUNTRY, INDICATOR, 2024, 2024)
 
 
+@pytest.mark.parametrize("bad_iso3", [123, [], {}, "", "   ", None])
+def test_worldbank_malformed_observation_country_raises_invalid(bad_iso3):
+    # Issue #21 (BLOCK): a present-but-malformed/blank/null countryiso3code must not be
+    # accepted and stamped as the requested identity.
+    rows_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", bad_iso3, 2024, 1.23)],
+    ])
+    with pytest.raises(InvalidData):
+        _src(rows_text).get_indicator(COUNTRY, INDICATOR, 2024, 2024)
+
+
 # --- Issue #46: year bounds must be integers, not floats/bools --------------------
 
 @pytest.mark.parametrize("bad_start", [2023.9, True, False, "not-a-year"])

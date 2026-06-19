@@ -101,6 +101,15 @@ def test_dbnomics_series_code_mismatch_raises_invalid():
         _src(payload).get_indicator(COUNTRY, MacroIndicator.CPI)
 
 
+@pytest.mark.parametrize("bad_code", [123, [], {}, "", "   ", None])
+def test_dbnomics_malformed_series_code_raises_invalid(bad_code):
+    # Issue #21 (BLOCK): a present-but-malformed/blank/null series_code must not be accepted
+    # and stamped with the requested indicator identity.
+    payload = dbn_success(series_code=bad_code)
+    with pytest.raises(InvalidData):
+        _src(payload).get_indicator(COUNTRY, MacroIndicator.CPI)
+
+
 def test_source_unit_for_indicator():
     s = _src(dbn_success())
     assert s.unit_for(MacroIndicator.CPI) == "index"
