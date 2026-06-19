@@ -27,9 +27,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **Bugs closed via the refactor (15):** #33 #34 #32 #48 #30 #75 #9 #93 #143 #144 #142 #44 #45 #26 #21.
 - **`open_bugs = []`.** Only open issues are **enhancements**: #140 (financial news) + #145 — both
   product decisions for Boss, NOT bugs.
-- **Optional remaining:** Phase 5 cleanup — `docs/architecture/provider-contracts.md` +
-  shared test factories; Phase-5 notes logged below (IMF message, validate_country_iso3
-  consistency, canonical_crypto_pair shape-only). Not required for correctness.
+- **Phase 5 cleanup: DONE** (`93eee64`, Checkpoint G APPROVE_WITH_NOTES review-202606192350) —
+  `docs/architecture/provider-contracts.md` + 3 polish notes applied (IMF type-specific message,
+  validate_country_iso3 ASCII `[A-Z]{3}`, canonical_crypto_pair shape-only docstring). The IMF/ISO3
+  polish intentionally hardens malformed-input behavior (not pure docs). `origin/master` `93eee64`,
+  suite 2591 green. **REFACTOR 100% COMPLETE.**
+- **Next (product decision — NOT bugs):** #145 source diagnostics (first), #140 financial news
+  (design-first, no raw scraping). Both await Boss greenlight; reviewer triage review-202606192340.
 
 ## Refactor done today (Phase 4 batches)
 
