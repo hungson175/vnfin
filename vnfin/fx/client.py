@@ -8,6 +8,7 @@ raises so failover moves on) — the two-layer guard described in ``docs/design/
 """
 from __future__ import annotations
 
+import math
 import re
 
 from ..exceptions import InvalidData
@@ -39,8 +40,10 @@ def _validate(result, req_base: str, req_quote: str) -> str | None:
         return f"quote {result.quote!r} != requested {req_quote!r}"
     if result.unit != f"{req_quote} per 1 {req_base}":
         return f"unit {result.unit!r} != '{req_quote} per 1 {req_base}'"
-    if not (result.rate > 0):
-        return f"non-positive rate {result.rate!r}"
+    if isinstance(result.rate, bool) or not isinstance(result.rate, (int, float)):
+        return f"malformed rate type {type(result.rate).__name__}"
+    if not math.isfinite(result.rate) or not (result.rate > 0):
+        return f"non-positive or non-finite rate {result.rate!r}"
     return None
 
 

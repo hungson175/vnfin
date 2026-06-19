@@ -223,7 +223,9 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             # common Quater=5 case; this guards rarer anomalies in quarterly pulls).
             try:
                 fiscal_date = self._fiscal_date(pobj, period)
-            except InvalidData:
+            except InvalidData as exc:
+                if "out-of-range Quater" not in str(exc):
+                    raise
                 skipped += 1
                 continue
             reports.append(
@@ -313,7 +315,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             code = it.get("Code")
             if code is None or str(code).strip() == "":
                 raise InvalidData(f"{self.name}: line item missing Code")
-            name = (it.get("Name") or str(code)).strip()
+            name = self._line_item_name(it, code)
             value = self._num(it.get("Value"))
             if value_unit == "VND":
                 # CafeF reports statement money in THOUSAND VND; normalize to raw VND
@@ -350,7 +352,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             code = it.get("Code")
             if code is None or str(code).strip() == "":
                 raise InvalidData(f"{self.name}: line item missing Code")
-            name = (it.get("Name") or str(code)).strip()
+            name = self._line_item_name(it, code)
             value = self._num(it.get("Value"))
             code_str = str(code).strip()
             if code_str in self._PER_SHARE_CODES:
@@ -380,11 +382,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         ``Quater``; we parse them defensively.
         """
         year = self._int(period_obj.get("Year"), field="Year")
-        quater = period_obj.get("Quater")
-        try:
-            q = int(quater)
-        except (TypeError, ValueError) as exc:
-            raise InvalidData(f"{self.name}: bad Quater {quater!r}") from exc
+        q = self._int(period_obj.get("Quater"), field="Quater")
         # Annual context: the fiscal date is the year-end no matter the Quater
         # marker (0, 5, ...). This is the fix for CafeF's older annual rows that
         # carry Quater=5 and previously aborted the whole annual response.
@@ -432,7 +430,19 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         return parse_provider_float(raw, label="Value", source="cafef")
 
     @staticmethod
+    def _line_item_name(it: dict, code) -> str:
+        raw = it.get("Name")
+        if raw is None or raw == "":
+            return str(code).strip()
+        if not isinstance(raw, str):
+            raise InvalidData(f"cafef: line item malformed Name")
+        stripped = raw.strip()
+        return stripped or str(code).strip()
+
+    @staticmethod
     def _int(raw, *, field) -> int:
+        if isinstance(raw, bool):
+            raise InvalidData(f"cafef: bad {field} {raw!r}")
         try:
             return int(raw)
         except (TypeError, ValueError) as exc:

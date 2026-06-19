@@ -754,3 +754,46 @@ def test_cafef_ratios_dimensionless_unscaled_per_share_monetary_scaled():
     assert reports[0].get("EPS") == pytest.approx(5_000_000.0)
     assert reports[0].get("BV") == pytest.approx(20_000_000.0)
     assert reports[0].get("PE") == pytest.approx(18.0)
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #94: malformed Name / Year metadata must not leak or coerce
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "items,statement",
+    [
+        ([{"Code": "REV", "Name": ["Revenue"], "Value": 1.0}], StatementType.INCOME),
+        ([{"Code": "REV", "Name": {"en": "Revenue"}, "Value": 1.0}], StatementType.INCOME),
+        ([{"Code": "PE", "Name": ["PE"], "Value": 10.0}], StatementType.RATIOS),
+    ],
+)
+def test_cafef_malformed_line_item_name_raises_invalid(items, statement):
+    periods = [
+        {
+            "Time": "2025",
+            "Year": 2025,
+            "Quater": 0,
+            "ReportType": "HK",
+            "Conten": "x",
+            "Value": items,
+        }
+    ]
+    with pytest.raises(InvalidData, match="Name"):
+        _src(_envelope(periods)).get_financials("TESTCO", statement, Period.ANNUAL)
+
+
+def test_cafef_bool_year_raises_invalid():
+    periods = [
+        {
+            "Time": "2025",
+            "Year": True,
+            "Quater": 0,
+            "ReportType": "HK",
+            "Conten": "x",
+            "Value": [{"Code": "REV", "Name": "Revenue", "Value": 1.0}],
+        }
+    ]
+    with pytest.raises(InvalidData, match="Year"):
+        _src(_envelope(periods)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )

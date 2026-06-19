@@ -252,6 +252,18 @@ def test_failover_rejects_non_positive_rate():
     assert c.get_rate("USD").source == "b"
 
 
+def test_failover_rejects_infinite_rate():
+    from math import inf
+
+    c = FailoverFXClient([_FakeFX("a", rate=inf), _FakeFX("b", rate=26000.0)])
+    assert c.get_rate("USD").source == "b"
+
+
+def test_failover_rejects_bool_rate():
+    c = FailoverFXClient([_FakeFX("a", rate=True), _FakeFX("b", rate=26000.0)])
+    assert c.get_rate("USD").source == "b"
+
+
 # --------------------------------------------------------------------------- #
 # real-source failover + facade
 # --------------------------------------------------------------------------- #
