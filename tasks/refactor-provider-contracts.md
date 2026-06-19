@@ -66,6 +66,41 @@ meaningful.
   new contracts; verify #44/#45/#21/#26 against contract tests; close with refactor commit refs;
   resume normal poller bug fixing.
 
+## Phase 3 design — typed-result contract extraction (responsibility map)
+
+**Behavior-preserving** decomposition of the giant `_validate_*_result()` functions into composable
+rules. Each rule returns a rejection **reason string** (recorded as a failover `SourceAttempt`
+reason) or `None`. **Reason text must stay byte-exact** (existing tests assert messages), so rules
+are **parameterized** (entity noun, key accessor, message) rather than hard-coded — and any drift is
+caught by the full suite. **Critical ordering rule:** where a validator checks several properties of
+the *same row in one loop* (e.g. gold checks bar-object then bar-date per bar), the extracted rule
+must keep that per-row order — do NOT split into separate all-rows passes (that changes which reason
+wins for a multi-malformed input).
+
+New files: `vnfin/_contracts/results.py` (result-level) + `vnfin/_contracts/timeseries.py` (row/key).
+
+Old → new map (proposed):
+
+| Old (per-domain, in `_validate_*_result`)                | New rule (parameterized)                                |
+|----------------------------------------------------------|---------------------------------------------------------|
+| `isinstance(result, T)` → "unexpected result type {n}"   | `results.result_type_reason(result, T)`                 |
+| `len(...) == 0` → "empty result" (domain msg)            | `results.non_empty_reason(seq, msg)`                    |
+| `_fetched_at_utc_reason` (#127)                          | `results.fetched_at_utc_reason` (move from failover.py) |
+| `_warnings_reason` (#128)                                | `results.warnings_reason` (move from failover.py)       |
+| per-row object + plain-date check (gold/macro)           | `timeseries.row_object_and_plain_date_reason(noun,key)` |
+| per-row object + tz-aware-datetime check (price/crypto)  | `timeseries.row_object_and_aware_dt_reason(noun,key)`   |
+| strictly-ascending-by-key (all domains, domain msg)      | `timeseries.strictly_ascending_reason(key, msg)`        |
+| duplicate-key (seen-set)                                 | reuse `_contracts.reject_duplicate`                     |
+
+Domain-specific rules stay as small per-validator wrappers (gold product/unit/currency; price OHLCV
++ adjustment; crypto quote-metadata; macro frequency/projection/identity; fundamentals report/line
+item). `provenance_of`/provenance check stays in `failover.py` (or moves behind the same API).
+
+**Increment order (one validator per commit, full suite green between):** gold (smallest, ~58 LoC)
+→ price → crypto → fundamentals → macro `_reject_reason`. Request **Checkpoint D** after the set
+(or after gold as an approach-proof if reviewer prefers). Handoff per checkpoint: commit/range,
+exact tests/gates, this old→new map, public-API byte-equality, no-new-bug-scope, no source drift.
+
 ## Candidate shared test matrices (Phase 1/2)
 
 ```
