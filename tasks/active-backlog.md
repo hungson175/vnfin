@@ -14,13 +14,21 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ---
 
-- **Fundamentals provider-shape hardening batch (REOPENED 17:55): #44 + #45 + #21 + #26** —
-  TDD-first, one combined review:
-  - **#44** — VNDirect `reportType` shape (present non-string/malformed must be caught).
-  - **#45** — CafeF `ReportType` shape.
-  - **#21** — CafeF `Symbol` present-identity shape.
-  - **#26** — VNDirect `itemCode` + CafeF `Code` key-shape.
-  Scope via `./bin/gh-maintainer issue view 44/45/21/26`. (#140 enhancement parked.)
+## ⏸️ PAUSED — Boss directive 2026-06-19 ~18:01: refactoring is first priority
+
+**Freeze all bug-fix implementation.** Log new bugs (Later bucket) only; do NOT fix, push, or
+close until the reviewer's refactor design/plan arrives. Hold at a safe checkpoint.
+
+- **Safe checkpoint:** code tree CLEAN at `5c05566` (last reviewed+pushed; 0 open bugs; suite
+  green). WIP for the #44/#45/#21/#26 batch is FROZEN in `git stash@{0}` (clearly marked).
+  Nothing pushed/closed. Handoff: `/tmp/vnfin-wip-handoff-44-45-21-26-202606191803.md`.
+
+## Later — frozen/queued bug batch (resume after refactor)
+
+- **Fundamentals provider-shape hardening batch: #44 + #45 + #21 + #26** (REOPENED 17:55) —
+  partial WIP in `stash@{0}` (#44 VNDirect reportType, #45 CafeF ReportType, #21 CafeF Symbol
+  key-presence done; #26 `canonical_item_code` helper added but NOT wired; NO tests yet). All four
+  issues remain OPEN. See handoff doc. (#140 enhancement also parked.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
