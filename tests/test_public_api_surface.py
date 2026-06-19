@@ -388,6 +388,26 @@ def test_sources_module_is_in_surface():
     assert "SSIiBoardSource" in live["modules"]["vnfin.sources"]["all"]
 
 
+def test_diagnostics_module_is_in_surface():
+    # #145: the additive public vnfin.diagnostics module must be captured by the
+    # surface snapshot (dataclasses + functions), not just the top-level name.
+    live = build_surface()
+    assert "vnfin.diagnostics" in live["modules"]
+    diag = live["modules"]["vnfin.diagnostics"]
+    for name in (
+        "SourceCapability",
+        "RequestDiagnostic",
+        "source_capabilities",
+        "explain_world_gold_history",
+        "explain_index_constituents",
+    ):
+        assert name in diag["all"], name
+        assert name in diag["members"], name
+    # the frozen dataclasses are captured as frozen
+    assert diag["members"]["SourceCapability"]["kind"] == "dataclass"
+    assert diag["members"]["SourceCapability"]["frozen"] is True
+
+
 def test_public_classes_capture_constructor():
     live = build_surface()
     # BTMCGoldSource takes a widget_key; its constructor must be in the surface

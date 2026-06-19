@@ -982,6 +982,178 @@
         }
       }
     },
+    "vnfin.diagnostics": {
+      "all": [
+        "SourceCapability",
+        "RequestDiagnostic",
+        "source_capabilities",
+        "explain_world_gold_history",
+        "explain_index_constituents"
+      ],
+      "members": {
+        "RequestDiagnostic": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "domain",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "endpoint",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "request",
+              "type": "dict"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "status",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "sources",
+              "type": "tuple[SourceCapability, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "notes",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "suggested_actions",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "SourceCapability": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "domain",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "endpoint",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "instruments",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "granularity",
+              "type": "str | None"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "coverage_start",
+              "type": "date | None"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "coverage_end",
+              "type": "date | None"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "is_default",
+              "type": "bool"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "is_opt_in",
+              "type": "bool"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "is_single_source",
+              "type": "bool"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "limitations",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "suggested_action",
+              "type": "str | None"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "explain_index_constituents": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "index"
+            }
+          ],
+          "returns": "RequestDiagnostic"
+        },
+        "explain_world_gold_history": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "start"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "end"
+            }
+          ],
+          "returns": "RequestDiagnostic"
+        },
+        "source_capabilities": {
+          "kind": "function",
+          "params": [],
+          "returns": "tuple[SourceCapability, ...]"
+        }
+      }
+    },
     "vnfin.exceptions": {
       "all": [
         "VnfinError",
