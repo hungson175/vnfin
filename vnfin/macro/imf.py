@@ -104,6 +104,14 @@ class IMFDataMapperSource(HttpDataSource):
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
 
+    def indicator_identity(self, country_iso3, indicator):
+        """Issue #78: expected returned identity (code, name) for ``indicator``,
+        mirroring :meth:`get_indicator` exactly (code = IMF concept code; name =
+        ``"{indicator} ({code})"``)."""
+        ind = normalize_indicator(indicator)
+        code, _unit = _IMF_MAP[ind]
+        return (code, f"{ind.value} ({code})")
+
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one IMF WEO indicator series for one country (annual)."""
         # Validate caller input before any network call or string operation.

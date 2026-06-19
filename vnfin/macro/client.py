@@ -80,9 +80,63 @@ def _fetch(source, country_iso3, indicator):
     canonical entry; IMF/DBnomics take the canonical indicator directly.
     """
     fn = getattr(source, "get_canonical_indicator", None)
-    if callable(fn):
-        return fn(country_iso3, indicator)
-    return source.get_indicator(country_iso3, indicator)
+    series = fn(country_iso3, indicator) if callable(fn) else source.get_indicator(country_iso3, indicator)
+    _validate_returned_identity(source, country_iso3, indicator, series)
+    return series
+
+
+def _validate_returned_identity(source, country_iso3, indicator, series) -> None:
+    """Issue #78: a returned series' public audit identity must match the
+    requested indicator.
+
+    A source may declare its expected identity via
+    ``indicator_identity(country_iso3, indicator) -> (code, name|None)`` (built-in
+    providers stamp provider-specific codes, so this is source-specific). When
+    declared, the returned ``indicator_code`` must equal ``code`` exactly, and the
+    ``indicator_name`` must equal ``name`` when ``name`` is not ``None`` (``None``
+    means name is provider-derived -> code-only here, with the non-empty-name guard
+    enforced by the result reject path). When NOT declared, the returned identity
+    must be the CANONICAL code+name for the requested indicator, so an arbitrary
+    wrong identity from a bare/custom source is rejected while a simple canonical
+    custom source still works.
+
+    Container/type validation stays with the reject guard; if the result is not an
+    ``IndicatorSeries`` this is a no-op (the reject guard rejects the bad type).
+    """
+    if not isinstance(series, IndicatorSeries):
+        return
+    ident = getattr(source, "indicator_identity", None)
+    if callable(ident):
+        try:
+            code, name = ident(country_iso3, indicator)
+        except (InvalidData, UnitMismatchError):
+            raise
+        except Exception:
+            code, name = None, None
+        if series.indicator_code != code:
+            raise InvalidData(
+                f"macro: source {series.source!r} returned indicator_code "
+                f"{series.indicator_code!r} != expected {code!r} for {getattr(indicator, 'value', indicator)}"
+            )
+        if name is not None and series.indicator_name != name:
+            raise InvalidData(
+                f"macro: source {series.source!r} returned indicator_name "
+                f"{series.indicator_name!r} != expected {name!r} for {getattr(indicator, 'value', indicator)}"
+            )
+        return
+    # Undeclared source: require canonical identity for the requested indicator.
+    want_code = canonical_indicator_code(indicator)
+    want_name = canonical_indicator_name(indicator)
+    if series.indicator_code != want_code:
+        raise InvalidData(
+            f"macro: source {series.source!r} returned indicator_code "
+            f"{series.indicator_code!r} != canonical {want_code!r} for {getattr(indicator, 'value', indicator)}"
+        )
+    if series.indicator_name != want_name:
+        raise InvalidData(
+            f"macro: source {series.source!r} returned indicator_name "
+            f"{series.indicator_name!r} != canonical {want_name!r} for {getattr(indicator, 'value', indicator)}"
+        )
 
 
 def _capable(source, country_iso3, indicator) -> bool:

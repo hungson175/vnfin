@@ -7,6 +7,14 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Macro returned-indicator-identity guard** — the macro failover boundary now validates that a
+  returned ``IndicatorSeries`` actually identifies the requested indicator. A source may declare
+  its expected identity via ``indicator_identity(country_iso3, indicator) -> (code, name | None)``
+  (built-in WB/IMF/DBnomics adapters declare their provider-specific codes); the returned
+  ``indicator_code`` must equal it exactly and ``indicator_name`` must match when a name is
+  declared. A source that does not declare an identity must return the canonical code+name, so an
+  arbitrary wrong identity (e.g. ``indicator_code="WRONG_INDICATOR"``) from a custom source is
+  rejected and the chain fails over. ([#78](https://github.com/hungson175/vnfin/issues/78))
 - **GoldApi present-falsey updatedAt guard** — ``GoldApiSource`` now only falls back to a
   tz-aware "now" when ``updatedAt`` is truly absent/``null``. A present but falsey/non-string
   value (``False``/``0``/``""``/``[]``/``{}``) is corrupted freshness metadata and is rejected via

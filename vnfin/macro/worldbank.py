@@ -115,6 +115,17 @@ class WorldBankMacroSource(HttpDataSource):
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
 
+    def indicator_identity(self, country_iso3, indicator):
+        """Issue #78: expected returned identity (code, name) for ``indicator``.
+
+        The stamped ``indicator_code`` is the WDI code (upper-cased, mirroring
+        :meth:`get_indicator`). ``indicator_name`` comes from the provider payload
+        (free-form), so the name is ``None`` (code-only validation).
+        """
+        ind = normalize_indicator(indicator)
+        code, _unit = _WB_MAP[ind]
+        return (code.strip().upper(), None)
+
     def get_canonical_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch a canonical :class:`MacroIndicator` (maps it to a WDI code).
 

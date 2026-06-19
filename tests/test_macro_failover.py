@@ -166,8 +166,10 @@ def test_reject_reason_refuses_to_relabel_a_drifted_unit():
         def get_indicator(self, country_iso3, indicator):
             return IndicatorSeries(
                 country=country_iso3.upper(),
-                indicator_code="DRIFT_GDP",
-                indicator_name="Drift GDP",
+                # Canonical identity so #78 identity validation passes and the test
+                # isolates the UNIT drift (the behavior under test).
+                indicator_code=canonical_indicator_code(MacroIndicator.GDP),
+                indicator_name=canonical_indicator_name(MacroIndicator.GDP),
                 points=((date(2022, 1, 1), 1000.0),),
                 source=self.name,
                 unit="national currency",  # drifted away from canonical at fetch time
@@ -864,14 +866,14 @@ class _DescMacroSource:
 def test_rejects_malformed_macro_indicator_code(bad):
     with pytest.raises(AllSourcesFailed) as ei:
         get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("bad", code=bad)])
-    assert "malformed indicator_code" in ei.value.attempts[0].reason
+    assert "indicator_code" in ei.value.attempts[0].reason
 
 
 @pytest.mark.parametrize("bad", [123, True, [], {}, "", None], ids=["int", "bool", "list", "dict", "blank", "none"])
 def test_rejects_malformed_macro_indicator_name(bad):
     with pytest.raises(AllSourcesFailed) as ei:
         get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("bad", label=bad)])
-    assert "malformed indicator_name" in ei.value.attempts[0].reason
+    assert "indicator_name" in ei.value.attempts[0].reason
 
 
 @pytest.mark.parametrize("bad", [123, True, [], {}], ids=["int", "bool", "list", "dict"])
@@ -962,3 +964,117 @@ def test_accepts_none_macro_value_unit():
     # value_unit is Optional[str]; None stays allowed.
     res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("ok", value_unit=None)])
     assert res.source == "ok"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #78 (reopen) — returned indicator identity must match the requested
+# indicator. Undeclared sources must return CANONICAL code+name; sources that
+# declare indicator_identity(country, indicator) are validated against it.
+# --------------------------------------------------------------------------- #
+def _series(*, code, name, source="s", unit=None, ind=MacroIndicator.GDP):
+    return IndicatorSeries(
+        country="ZZZ",
+        indicator_code=code,
+        indicator_name=name,
+        points=((date(2023, 1, 1), 42.0),),
+        source=source,
+        unit=unit if unit is not None else canonical_unit(ind),
+        currency=canonical_currency(ind),
+        fetched_at_utc=datetime.now(timezone.utc),
+    )
+
+
+class _UndeclaredSource:
+    """No indicator_identity -> must return canonical identity (else rejected)."""
+
+    def __init__(self, name, code, label):
+        self.name = name
+        self._code = code
+        self._label = label
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        return _series(code=self._code, name=self._label, source=self.name)
+
+
+def test_undeclared_source_arbitrary_wrong_code_rejected():
+    bad = _UndeclaredSource("bad", "WRONG_INDICATOR", canonical_indicator_name(MacroIndicator.GDP))
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[bad])
+    assert "indicator_code" in ei.value.attempts[0].reason
+
+
+def test_undeclared_source_arbitrary_wrong_name_rejected():
+    bad = _UndeclaredSource("bad", canonical_indicator_code(MacroIndicator.GDP), "Wrong indicator label")
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[bad])
+    assert "indicator_name" in ei.value.attempts[0].reason
+
+
+def test_undeclared_source_both_wrong_rejected_and_failsover():
+    bad = _UndeclaredSource("bad", "X", "Y")
+    good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[bad, good])
+    assert res.source == "good"
+
+
+def test_undeclared_source_canonical_identity_accepted():
+    ok = _UndeclaredSource(
+        "ok", canonical_indicator_code(MacroIndicator.GDP), canonical_indicator_name(MacroIndicator.GDP)
+    )
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[ok])
+    assert res.source == "ok"
+
+
+class _DeclaredSource:
+    """Declares indicator_identity -> validated against the declared (code, name)."""
+
+    def __init__(self, name, code, label, *, declared_code=None, declared_name=None):
+        self.name = name
+        self._code = code
+        self._label = label
+        self._declared = (declared_code, declared_name)
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def indicator_identity(self, country_iso3, indicator):
+        return self._declared
+
+    def get_indicator(self, country_iso3, indicator):
+        return _series(code=self._code, name=self._label, source=self.name)
+
+
+def test_declared_source_matching_provider_identity_accepted():
+    # Provider-specific (non-canonical) code/name accepted because they match the
+    # source's own declaration.
+    src = _DeclaredSource("wb", "NY.GDP.MKTP.CD", "Fake GDP", declared_code="NY.GDP.MKTP.CD", declared_name="Fake GDP")
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[src])
+    assert res.source == "wb" and res.indicator_code == "NY.GDP.MKTP.CD"
+
+
+def test_declared_source_code_mismatch_rejected():
+    src = _DeclaredSource("wb", "WRONG.CODE", "Fake GDP", declared_code="NY.GDP.MKTP.CD", declared_name="Fake GDP")
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[src])
+    assert "indicator_code" in ei.value.attempts[0].reason
+
+
+def test_declared_source_name_none_is_code_only_but_requires_nonempty_name():
+    # declared name None -> name is provider-derived; code validated, and a
+    # non-empty name is still required by the result guard.
+    ok = _DeclaredSource("wb", "NY.GDP.MKTP.CD", "Provider GDP name", declared_code="NY.GDP.MKTP.CD", declared_name=None)
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[ok])
+    assert res.source == "wb" and res.indicator_name == "Provider GDP name"
+
+    bad = _DeclaredSource("wb", "NY.GDP.MKTP.CD", "", declared_code="NY.GDP.MKTP.CD", declared_name=None)
+    with pytest.raises(AllSourcesFailed):
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[bad])

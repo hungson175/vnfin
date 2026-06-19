@@ -107,6 +107,16 @@ class DBnomicsSource(HttpDataSource):
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
 
+    def indicator_identity(self, country_iso3, indicator):
+        """Issue #78: expected returned identity (code, name) for ``indicator``,
+        mirroring :meth:`get_indicator`. The code is the country-specific IFS
+        series id ``"{freq}.{cc}.{concept}"`` (hence country_iso3 is required);
+        the name is ``"{indicator} ({concept})"``."""
+        ind = normalize_indicator(indicator)
+        freq, concept, _unit, _result_freq = _DBN_MAP[ind]
+        cc = _ISO3_TO_IFS_CC.get(self.normalize_country(country_iso3 or ""))
+        return (f"{freq}.{cc}.{concept}", f"{ind.value} ({concept})")
+
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one IMF/IFS series for one country via DBnomics."""
         ind = normalize_indicator(indicator)
