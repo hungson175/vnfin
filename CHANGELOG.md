@@ -7,6 +7,12 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Macro descriptive-metadata guard** — the macro failover result guard now requires
+  ``indicator_code`` and ``indicator_name`` to be non-empty **strings** (a truthy non-string such
+  as ``123`` previously passed the bare emptiness check and was accepted) and ``country_name``,
+  when present, to be a string. These feed ``IndicatorSeries`` and ``to_dataframe().attrs`` as
+  audit labels, so a malformed value is rejected as a failover attempt instead of surfacing as a
+  clean result. ([#134](https://github.com/hungson175/vnfin/issues/134))
 - **Price security-metadata guard** — the price failover result guard now rejects a returned
   ``PriceHistory`` whose ``exchange`` or ``provider_symbol`` is present but not a non-empty
   canonical string (containers, booleans, numbers, blank, or whitespace-padded values are

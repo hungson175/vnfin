@@ -823,3 +823,71 @@ def test_rejects_malformed_or_out_of_span_projection_year(bad_pfy):
 def test_accepts_valid_projection_year(pfy):
     res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_MetaMacroSource("ok", points=_SPAN, projection_from_year=pfy)])
     assert res.source == "ok"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #134 — macro descriptive metadata: indicator_code/name non-empty str,
+# country_name present => str. A truthy non-string (123) must be rejected.
+# --------------------------------------------------------------------------- #
+_DESC_UNSET = object()  # distinguishes "use canonical default" from explicit None
+
+
+class _DescMacroSource:
+    def __init__(self, name, *, code=_DESC_UNSET, label=_DESC_UNSET, country_name="United States"):
+        self.name = name
+        self._code = code
+        self._label = label
+        self._country_name = country_name
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return IndicatorSeries(
+            country=country_iso3.upper(),
+            indicator_code=canonical_indicator_code(ind) if self._code is _DESC_UNSET else self._code,
+            indicator_name=canonical_indicator_name(ind) if self._label is _DESC_UNSET else self._label,
+            country_name=self._country_name,
+            points=((date(2023, 1, 1), 42.0),),
+            source=self.name,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+@pytest.mark.parametrize("bad", [123, True, [], {}, "", None], ids=["int", "bool", "list", "dict", "blank", "none"])
+def test_rejects_malformed_macro_indicator_code(bad):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("bad", code=bad)])
+    assert "malformed indicator_code" in ei.value.attempts[0].reason
+
+
+@pytest.mark.parametrize("bad", [123, True, [], {}, "", None], ids=["int", "bool", "list", "dict", "blank", "none"])
+def test_rejects_malformed_macro_indicator_name(bad):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("bad", label=bad)])
+    assert "malformed indicator_name" in ei.value.attempts[0].reason
+
+
+@pytest.mark.parametrize("bad", [123, True, [], {}], ids=["int", "bool", "list", "dict"])
+def test_rejects_malformed_macro_country_name(bad):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("bad", country_name=bad)])
+    assert "malformed country_name" in ei.value.attempts[0].reason
+
+
+@pytest.mark.parametrize("cn", ["United States", None, ""], ids=["str", "none", "empty_str"])
+def test_accepts_valid_macro_country_name(cn):
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("ok", country_name=cn)])
+    assert res.source == "ok"
+
+
+def test_malformed_macro_descriptive_metadata_failsover_to_backup():
+    good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("bad", code=123), good])
+    assert res.source == "good"

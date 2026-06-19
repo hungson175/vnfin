@@ -225,11 +225,28 @@ class MacroClient:
                     f"currency {got_currency!r} but the canonical currency is {currency!r}"
                 )
 
-            # Issue #78 follow-up: returned series must answer the requested indicator.
-            if not series.indicator_code:
-                return f"indicator_code is empty for {indicator.value}"
-            if not series.indicator_name:
-                return f"indicator_name is empty for {indicator.value}"
+            # Issue #78 follow-up + #134: returned series must answer the requested
+            # indicator with well-typed descriptive metadata. indicator_code/name
+            # must be NON-EMPTY STRINGS — a truthy non-string (e.g. 123) previously
+            # passed the bare emptiness check and was accepted; country_name, when
+            # present, must be a string. These feed IndicatorSeries + to_dataframe()
+            # attrs as audit labels, so a malformed value is rejected as a failover
+            # attempt rather than surfaced as a clean result.
+            if not isinstance(series.indicator_code, str) or not series.indicator_code:
+                return (
+                    f"malformed indicator_code {series.indicator_code!r} for "
+                    f"{indicator.value}: expected a non-empty string"
+                )
+            if not isinstance(series.indicator_name, str) or not series.indicator_name:
+                return (
+                    f"malformed indicator_name {series.indicator_name!r} for "
+                    f"{indicator.value}: expected a non-empty string"
+                )
+            if series.country_name is not None and not isinstance(series.country_name, str):
+                return (
+                    f"malformed country_name {series.country_name!r} from source "
+                    f"{series.source!r}: expected a string"
+                )
             for other in MacroIndicator:
                 if other == indicator:
                     continue
