@@ -27,6 +27,12 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 - **Safe checkpoint:** code tree CLEAN at `5c05566` (last reviewed+pushed; 0 open bugs; suite
   green). Nothing pushed/closed.
 
+## Refactor done today (Phase 4 batches)
+
+- **Phase 4 batch 1 (Fmarket funds) — COMPLETE, pushed `49ac99a..1d9a5b6`; #33 + #34 CLOSED.**
+  Canonical security/fund identifier contract (`canonical_security_symbol`/`canonical_fund_code`);
+  present-null code fails closed; suite 2339 green. Checkpoint E PASS (review-202606191948).
+
 ## Paused bugs — after refactor
 
 - **#93** (parked, poller 18:20) — OpenER required VND anchor non-finite values should fail closed
@@ -40,9 +46,6 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
   migration. Do not fix now.
 - **#143 / #48** (parked, poller 18:45) — see review-202606191849; fix in the relevant Phase 4
   adapter migration. Do not fix now.
-- **#34** (parked, poller 18:50) — see review-202606191851; fix in **Phase 4 funds** adapter
-  migration. Do not fix now.
-- **#33** (parked, poller 18:55) — see review-202606191858; fix in **Phase 4 funds** migration.
 - **#9** (parked, poller 19:05) — see review-202606191908; fix in **Phase 4 identifier
   validation** migration. Do not fix now.
 - **#75** (parked, poller 19:10) — index wrapper canonicalization; fix in **Phase 4
