@@ -297,6 +297,43 @@ def test_btmc_same_timestamp_conflict_is_order_independent():
         BTMCGoldSource(http_get=_static_get(_btmc_json(rows=karat_rows))).get_quotes()
 
 
+def test_btmc_rejects_malformed_row_index():
+    # Issue #118: a present @row must be a canonical positive index. Malformed values must raise
+    # InvalidData rather than being str()'d into a field-lookup suffix. Fallback @n_N discovery
+    # stays only when @row is absent/empty, and the discovered suffix must also be canonical.
+    def _fields(suffix):
+        return {
+            f"@n_{suffix}": "VANG TESTCO",
+            f"@k_{suffix}": "24k",
+            f"@pb_{suffix}": "10000000",
+            f"@ps_{suffix}": "20000000",
+            f"@d_{suffix}": "17/06/2026 15:38",
+        }
+
+    def _quotes(row):
+        body = json.dumps({"DataList": {"Data": [row]}})
+        return BTMCGoldSource(http_get=_static_get(body)).get_quotes()
+
+    # Canonical @row accepted (string digits and plain int).
+    for idx in ("1", 1):
+        assert _quotes({"@row": idx, **_fields("1")})[0].product == "VANG TESTCO"
+
+    # Absent or empty @row -> fallback discovery off a canonical @n_N suffix.
+    assert _quotes(_fields("1"))[0].product == "VANG TESTCO"
+    assert _quotes({"@row": "", **_fields("1")})[0].product == "VANG TESTCO"
+
+    # Present-malformed @row -> InvalidData. Each crafts matching suffixed fields so only the
+    # index guard (not a missing-field error) can reject it.
+    for idx in (1.0, True, "01", " 1 ", "  ", "x", "0", "-1", -1, 0, [1], {"i": 1}):
+        row = {"@row": idx, **_fields(str(idx))}
+        with pytest.raises(InvalidData):
+            _quotes(row)
+
+    # Fallback path with a non-canonical @n_N suffix must also raise.
+    with pytest.raises(InvalidData):
+        _quotes(_fields("01"))
+
+
 def test_btmc_parses_dd_mm_yyyy_timestamp_as_vn_tz():
     s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
     q = next(q for q in s.get_quotes() if "TESTCO" in q.product)

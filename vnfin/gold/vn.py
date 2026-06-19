@@ -85,6 +85,10 @@ _WEIGHT_PATTERNS = (
 # does not match \bg\b (no boundary before the trailing g), so plain names stay per-chi.
 _WEIGHT_UNIT_RE = re.compile(r"\b(?:kg|gram|g|luong|chi)\b")
 
+# Issue #118: a BTMC row index is a canonical positive integer (no leading zero). Used to both
+# validate a present @row and to validate a suffix discovered from an @n_N key.
+_BTMC_ROW_IDX = re.compile(r"[1-9]\d*")
+
 
 def _is_silver(name: str) -> bool:
     accent_free = _strip_accents(name)
@@ -254,14 +258,30 @@ class BTMCGoldSource(_VNGoldSource):
         return tuple(latest.values())
 
     def _row_index(self, row: dict) -> str:
-        # Keys carry a per-row index suffix (@row + @n_N/@pb_N/...). Prefer @row;
-        # fall back to parsing it off an indexed key.
-        idx = row.get("@row")
-        if idx:
-            return str(idx)
+        # Keys carry a per-row index suffix (@row + @n_N/@pb_N/...). Prefer @row; fall back to
+        # discovering it off an indexed key only when @row is absent/empty.
+        raw = row.get("@row")
+        if raw is not None and raw != "":
+            # Issue #118: a present @row must be a canonical positive index, else it would be
+            # str()'d into a field-lookup suffix and select bogus fields. bool is checked before
+            # int because bool is an int subclass (True would otherwise pass as 1).
+            if isinstance(raw, bool):
+                raise InvalidData(f"{self.name}: malformed @row {raw!r}")
+            if isinstance(raw, int):
+                if raw <= 0:
+                    raise InvalidData(f"{self.name}: malformed @row {raw!r}")
+                return str(raw)
+            if isinstance(raw, str) and _BTMC_ROW_IDX.fullmatch(raw):
+                return raw
+            raise InvalidData(f"{self.name}: malformed @row {raw!r}")
+        # Absent/empty @row: discover the index off an @n_N key — but the discovered suffix must
+        # itself be a canonical index, not just any @n_-prefixed key.
         for k in row:
             if k.startswith("@n_"):
-                return k[len("@n_"):]
+                suffix = k[len("@n_"):]
+                if not _BTMC_ROW_IDX.fullmatch(suffix):
+                    raise InvalidData(f"{self.name}: malformed row index key {k!r}")
+                return suffix
         raise InvalidData(f"{self.name}: cannot determine row index")
 
     @staticmethod
