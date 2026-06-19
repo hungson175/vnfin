@@ -11,7 +11,7 @@ import pathlib
 
 import pytest
 
-from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable, UnitMismatchError
+from vnfin.exceptions import AllSourcesFailed, EmptyData, InvalidData, SourceUnavailable, UnitMismatchError
 from vnfin.fx import (
     FailoverFXClient,
     FXRate,
@@ -230,23 +230,27 @@ def test_vietcombank_malformed_xml_is_invalid():
 # --------------------------------------------------------------------------- #
 # failover client + unit guard
 # --------------------------------------------------------------------------- #
+_PROV_UNSET = object()
+
+
 class _FakeFX:
-    def __init__(self, name, *, unit="VND-per-foreign-unit", rate=25000.0, raises=None, bad_unit=False, claimed_source=None):
+    def __init__(self, name, *, unit="VND-per-foreign-unit", rate=25000.0, raises=None, bad_unit=False, claimed_source=_PROV_UNSET):
         self.name = name
         self.unit = unit
         self._rate = rate
         self._raises = raises
         self._bad_unit = bad_unit
-        # #126: stamp a different .source than .name to exercise the provenance guard.
+        # #126: stamp a different .source than .name (incl. None/non-str) to
+        # exercise the provenance guard. Unset -> stamp self.name (healthy).
         self._claimed_source = claimed_source
 
     def get_rate(self, base, quote="VND"):
         if self._raises is not None:
             raise self._raises
         u = "USD per 1 VND" if self._bad_unit else f"VND per 1 {base}"
+        src = self.name if self._claimed_source is _PROV_UNSET else self._claimed_source
         return FXRate(
-            base=base, quote=quote, rate=self._rate, unit=u, as_of_utc=_NOW,
-            source=self._claimed_source or self.name,
+            base=base, quote=quote, rate=self._rate, unit=u, as_of_utc=_NOW, source=src,
         )
 
 
@@ -298,6 +302,27 @@ def test_failover_fx_provenance_match_is_accepted():
     c = FailoverFXClient([_FakeFX("a", rate=26000.0)])
     r = c.get_rate("USD")
     assert r.source == "a"
+
+
+@pytest.mark.parametrize(
+    "bad_source",
+    [None, ["a"], ("a",), {"a"}, 123],
+    ids=["none", "list", "tuple", "set", "int"],
+)
+def test_rejects_malformed_or_missing_fx_provenance(bad_source):
+    # #126 B2: a single-result source must be a plain matching string. None,
+    # collections (even containing the right name), and non-strings are rejected.
+    c = FailoverFXClient(
+        [_FakeFX("a", claimed_source=bad_source), _FakeFX("b", rate=26000.0)]
+    )
+    r = c.get_rate("USD")
+    assert r.source == "b"
+
+
+def test_single_source_malformed_fx_provenance_raises():
+    c = FailoverFXClient([_FakeFX("a", claimed_source=None)])
+    with pytest.raises(AllSourcesFailed):
+        c.get_rate("USD")
 
 
 # --------------------------------------------------------------------------- #

@@ -643,3 +643,27 @@ def test_provenance_match_is_accepted():
     client = FailoverPriceClient([RawFakeSource("real", hist)])
     h = client.get_daily("FPT", *WIDE)
     assert h.source == "real"
+
+
+@pytest.mark.parametrize(
+    "bad_source",
+    [None, ["real"], ("real",), {"real"}, 123],
+    ids=["none", "list", "tuple", "set", "int"],
+)
+def test_rejects_malformed_or_missing_price_provenance(bad_source, synth):
+    # #126 B2: a single-result source must be a plain matching string. None,
+    # collections (even containing the right name), and non-strings are rejected.
+    t = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    bad = _history_with_bars(bad_source, "FPT", (PriceBar(t, 10, 11, 9, 10.5, 1000),))
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("real", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+
+
+def test_single_source_malformed_price_provenance_raises():
+    t = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    bad = _history_with_bars(None, "FPT", (PriceBar(t, 10, 11, 9, 10.5, 1000),))
+    client = FailoverPriceClient([RawFakeSource("real", bad)])
+    with pytest.raises(AllSourcesFailed):
+        client.get_daily("FPT", *WIDE)

@@ -76,28 +76,45 @@ def _provenance_mismatch(claimed, source_name) -> Optional[str]:
     """Return a rejection reason if a result's stamped provenance does not match
     the source that produced it, else ``None`` (#126).
 
-    ``claimed`` is the source value(s) extracted from the result: a single source
-    name, or an iterable of names for a composite result (e.g. a tuple of
-    reports). A ``None`` claim is treated as indeterminate (the container/identity
-    guards cover that case) and is not rejected here; any concrete value — or
-    composite member — that differs from ``source_name`` is a provenance
-    violation. ``str`` is treated as a single name, never iterated char-by-char.
+    Strict by design — a wired provenance check must be able to attribute the
+    result to the source that produced it, so it accepts only two shapes:
+
+    * a ``str`` claim (the normal single-result case) — accepted only if it equals
+      ``source_name``;
+    * a ``frozenset`` claim — the explicit COMPOSITE contract for multi-record
+      results (e.g. the fundamentals tuple-of-reports extractor) — accepted only
+      if it is non-empty and every member equals ``source_name``.
+
+    Everything else is malformed provenance and is rejected: ``None`` (missing
+    source), a bare ``list`` / ``set`` / ``tuple`` (a single-result source field
+    must be a plain string, not a collection), a number, etc. This prevents a
+    result with ``source=None`` or ``source=['actual']`` from being silently
+    accepted.
     """
-    if claimed is None:
-        return None
     if isinstance(claimed, str):
-        claimed_names = {claimed}
-    elif isinstance(claimed, (set, frozenset, list, tuple)):
-        claimed_names = set(claimed)
-    else:
-        claimed_names = {claimed}
-    mismatched = {c for c in claimed_names if c != source_name}
-    if mismatched:
-        return (
-            "provenance mismatch: result stamped source "
-            f"{sorted(repr(c) for c in mismatched)} but produced by source {source_name!r}"
-        )
-    return None
+        if claimed != source_name:
+            return (
+                f"provenance mismatch: result stamped source {claimed!r} "
+                f"but produced by source {source_name!r}"
+            )
+        return None
+    if isinstance(claimed, frozenset):
+        if not claimed:
+            return (
+                f"missing provenance: composite result carries no source "
+                f"but was produced by source {source_name!r}"
+            )
+        mismatched = {c for c in claimed if c != source_name}
+        if mismatched:
+            return (
+                "provenance mismatch: result stamped source "
+                f"{sorted(repr(c) for c in mismatched)} but produced by source {source_name!r}"
+            )
+        return None
+    return (
+        f"malformed provenance {claimed!r}: result produced by source {source_name!r} "
+        "must carry a matching string source"
+    )
 
 
 class FailoverClient:

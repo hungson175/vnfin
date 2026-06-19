@@ -528,3 +528,13 @@ def test_fundamental_provenance_match_is_accepted():
     client = FailoverFundamentalClient([primary])
     reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
     assert reports[0].source == "vndirect"
+
+
+def test_rejects_fundamental_report_with_none_source():
+    # #126 B2: a composite (report-tuple) result whose member source is None
+    # cannot be attributed -> rejected; backup with valid provenance is used.
+    primary = FakeSource("vndirect", result=(_report("TESTCO", None, 1.0),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
