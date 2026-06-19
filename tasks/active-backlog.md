@@ -14,11 +14,13 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ---
 
-## Now (WIP — max 1–2)
-
-- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `7df59e8`, full suite 2082 green,
-  watermark 2026-06-19T10:39:16Z. Only open issue is **#140 (enhancement: financial news)** —
-  Boss/product-scope feature, NOT a bug; parked. Steady-state otherwise.
+- **Fundamentals provider-shape hardening batch (REOPENED 17:55): #44 + #45 + #21 + #26** —
+  TDD-first, one combined review:
+  - **#44** — VNDirect `reportType` shape (present non-string/malformed must be caught).
+  - **#45** — CafeF `ReportType` shape.
+  - **#21** — CafeF `Symbol` present-identity shape.
+  - **#26** — VNDirect `itemCode` + CafeF `Code` key-shape.
+  Scope via `./bin/gh-maintainer issue view 44/45/21/26`. (#140 enhancement parked.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
