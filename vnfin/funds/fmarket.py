@@ -55,6 +55,15 @@ def _require_data_object(data, who: str) -> dict:
     return data
 
 
+def _require_array(value, who: str):
+    """Return ``value`` when it is a list; treat ``None`` as absent; reject other shapes."""
+    if value is None:
+        return None
+    if not isinstance(value, list):
+        raise InvalidData(f"fmarket: {who} is not an array")
+    return value
+
+
 def _optional_str(value, *, ctx: str) -> str:
     """Return a stripped string field, treating absent/blank as empty."""
     if value is None or value == "":
@@ -121,12 +130,23 @@ class FmarketFundSource(HttpDataSource):
         }
         parsed = self._post(_BASE_URL + _FILTER_PATH, body, who="filter")
         data = _require_data_object(parsed.get("data"), who="filter")
-        rows = data.get("rows")
-        if not rows:
+        rows = _require_array(data.get("rows"), who="filter rows")
+        if rows is None or len(rows) == 0:
             raise EmptyData("fmarket: no funds returned")
-        funds = tuple(self._parse_fund(r) for r in rows)
+        seen_codes: set[str] = set()
+        seen_ids: set[int] = set()
+        funds: list[Fund] = []
+        for r in rows:
+            fund = self._parse_fund(r)
+            if fund.code in seen_codes:
+                raise InvalidData(f"fmarket: duplicate fund code {fund.code} in response")
+            if fund.id in seen_ids:
+                raise InvalidData(f"fmarket: duplicate fund id {fund.id} in response")
+            seen_codes.add(fund.code)
+            seen_ids.add(fund.id)
+            funds.append(fund)
         return FundList(
-            funds=funds,
+            funds=tuple(funds),
             source=self.name,
             currency="VND",
             fetched_at_utc=datetime.now(timezone.utc),
@@ -160,12 +180,20 @@ class FmarketFundSource(HttpDataSource):
             "toDate": hi_str,
         }
         parsed = self._post(_BASE_URL + _NAV_PATH, body, who="nav-history")
-        rows = parsed.get("data")
-        if not rows:
+        rows = _require_array(parsed.get("data"), who="nav-history data")
+        if rows is None or len(rows) == 0:
             raise EmptyData(f"fmarket: no NAV history for product {product_id}")
-        points = sorted(
-            (self._parse_nav_point(r) for r in rows), key=lambda p: p.date
-        )
+        seen_dates: set[date] = set()
+        points: list[NavPoint] = []
+        for r in rows:
+            point = self._parse_nav_point(r)
+            if point.date in seen_dates:
+                raise InvalidData(
+                    f"fmarket: duplicate navDate {point.date.isoformat()} for product {product_id}"
+                )
+            seen_dates.add(point.date)
+            points.append(point)
+        points.sort(key=lambda p: p.date)
         # The server only reliably enforces toDate, and not even that near recent
         # boundaries — so filter BOTH bounds client-side for an exact window.
         if lo is not None:
@@ -189,8 +217,10 @@ class FmarketFundSource(HttpDataSource):
         url = f"{_BASE_URL}{_DETAIL_PATH}/{fid}"
         parsed = self._get(url, who="holdings")
         data = _require_data_object(parsed.get("data"), who="holdings")
-        rows = data.get("productTopHoldingList")
-        if not rows:
+        rows = _require_array(
+            data.get("productTopHoldingList"), who="holdings productTopHoldingList"
+        )
+        if rows is None or len(rows) == 0:
             raise EmptyData(f"fmarket: no holdings for product {product_id}")
         seen: set[str] = set()
         holdings = tuple(self._parse_holding(r, seen) for r in rows)
@@ -232,12 +262,16 @@ class FmarketFundSource(HttpDataSource):
         nav = _as_float(row.get("nav"), f"fund {code} nav")
         if nav <= 0:
             raise InvalidData(f"fmarket: non-positive nav for fund {code}")
-        owner = row.get("owner") or {}
-        if not isinstance(owner, dict):
+        owner = row.get("owner")
+        if owner is None:
+            owner = {}
+        elif not isinstance(owner, dict):
             raise InvalidData(f"fmarket: fund {code} owner is not an object")
         manager = _pick_manager(owner, fund_code=code)
-        asset = row.get("dataFundAssetType") or {}
-        if not isinstance(asset, dict):
+        asset = row.get("dataFundAssetType")
+        if asset is None:
+            asset = {}
+        elif not isinstance(asset, dict):
             raise InvalidData(
                 f"fmarket: fund {code} dataFundAssetType is not an object"
             )
@@ -267,7 +301,7 @@ class FmarketFundSource(HttpDataSource):
         if not raw_date:
             raise InvalidData("fmarket: nav row missing navDate")
         try:
-            d = datetime.strptime(str(raw_date), "%Y-%m-%d").date()
+            d = date.fromisoformat(str(raw_date))
         except (TypeError, ValueError) as exc:
             raise InvalidData(f"fmarket: malformed navDate {raw_date!r}") from exc
         nav = _as_float(row.get("nav"), f"nav on {raw_date}")
@@ -381,7 +415,7 @@ def _coerce_date(value, label) -> date:
     if isinstance(value, date):
         return value
     try:
-        return datetime.strptime(str(value), "%Y-%m-%d").date()
+        return date.fromisoformat(str(value))
     except (TypeError, ValueError) as exc:
         raise InvalidData(f"fmarket: malformed {label} {value!r}") from exc
 

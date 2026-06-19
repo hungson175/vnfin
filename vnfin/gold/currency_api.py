@@ -147,6 +147,6 @@ class CurrencyApiGoldSource(GoldSource):
         if not raw:
             return None
         try:
-            return datetime.strptime(str(raw), "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            return None
+            return date.fromisoformat(str(raw))
+        except (ValueError, TypeError) as exc:
+            raise InvalidData(f"{self.name}: malformed date {raw!r}") from exc

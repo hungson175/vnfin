@@ -31,6 +31,11 @@ All notable changes to `vnfin` are documented here. The format follows
   malformed provider metadata enter typed ``IndicatorSeries``. ([#101](https://github.com/hungson175/vnfin/issues/101))
 - **FRED units metadata** — reject present non-string top-level ``units`` values instead
   of silently stamping an empty unit label. ([#102](https://github.com/hungson175/vnfin/issues/102))
+- **FX failover UTC strictness** — `FailoverFXClient` now rejects timezone-aware `as_of_utc`
+  timestamps that are not exactly UTC (e.g. `+07:00`), not only naive datetimes.
+- **Macro failover result validation** — `MacroClient` now rejects a returned series whose
+  `indicator_code`/`indicator_name` match a different canonical indicator, points that are
+  not strictly ascending by date, or non-finite (NaN/inf) point values.
 - **Index constituents data envelope** — validate ``data`` is a list before treating
   falsy containers as empty membership; malformed SUCCESS payloads raise
   ``InvalidData`` instead of ``EmptyData``. ([#103](https://github.com/hungson175/vnfin/issues/103))

@@ -366,12 +366,21 @@ def test_auto_falls_back_to_other_template_when_first_is_empty():
     """
     queries = []
 
+    def _vcb_corp_income():
+        # Fallback corporate rows must carry the requested ticker so identity
+        # validation accepts them.
+        rows = [
+            _stmt_row("VCB", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+            _stmt_row("VCB", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        ]
+        return _stmt_envelope(rows, total=200)
+
     def _g(url, params, headers):
         queries.append(params["q"])
         # First (bank, modelType:102) probe -> empty; corporate probe -> data.
         if "modelType:102" in params["q"]:
             return _stmt_envelope([], total=0)
-        return corp_income_two_periods()
+        return _vcb_corp_income()
 
     src = VNDirectFundamentalSource(http_get=_g)
     reports = src.get_financials("VCB", StatementType.INCOME, Period.ANNUAL)  # AUTO
@@ -813,3 +822,108 @@ def test_item_name_unknown_code_falls_back():
     from vnfin.fundamentals.itemcodes import item_name
 
     assert item_name("99999") == "item_99999"
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #21: VNDirect must validate row identity (code) before
+# stamping the requested symbol. Mismatched rows are skipped and surfaced in
+# warnings; if no rows remain the result is empty.
+# --------------------------------------------------------------------------- #
+def test_vndirect_statement_skips_row_with_mismatched_code():
+    rows = [
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("OTHER", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    assert len(reports) == 1
+    assert len(reports[0].items) == 1
+    assert reports[0].items[0].item_code == "11000"
+    assert any("OTHER" in w or "code" in w for w in reports[0].warnings)
+
+
+def test_vndirect_statement_empty_after_code_skip_returns_empty_tuple():
+    rows = [
+        _stmt_row("OTHER", 11000, 1.0, "2025-12-31", "ANNUAL", 1),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    assert reports == ()
+
+
+def test_vndirect_ratio_skips_row_with_mismatched_code():
+    rows = [
+        _ratio_row("TESTCO", "PE", 10.0, "2025-12-31", "Tỷ lệ PE"),
+        _ratio_row("OTHER", "PB", 2.0, "2025-12-31", "Tỷ lệ PB"),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.ANNUAL
+    )
+    assert len(reports) == 1
+    assert len(reports[0].items) == 1
+    assert reports[0].items[0].item_code == "PE"
+
+
+def test_vndirect_ratio_empty_after_code_skip_returns_empty_tuple():
+    rows = [
+        _ratio_row("OTHER", "PE", 10.0, "2025-12-31", "PE"),
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.ANNUAL
+    )
+    assert reports == ()
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #70: per-source line-item value_unit guard
+# --------------------------------------------------------------------------- #
+def test_vndirect_rejects_invalid_line_item_value_unit():
+    with pytest.raises(InvalidData):
+        VNDirectFundamentalSource._validate_value_unit("USD")
+
+
+@pytest.mark.parametrize(
+    "unit",
+    ["VND", "vnd_per_share", "ratio", None],
+)
+def test_vndirect_accepts_allowed_line_item_value_units(unit):
+    VNDirectFundamentalSource._validate_value_unit(unit)
+
+
+def test_vndirect_statement_and_ratio_line_units_are_allowed():
+    allowed = {"VND", "vnd_per_share", "ratio", None}
+    stmt_reports = _src(corp_income_two_periods()).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    for li in stmt_reports[0].items:
+        assert li.value_unit in allowed
+    ratio_reports = _src(ratios_two_dates()).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.QUARTER
+    )
+    for li in ratio_reports[0].items:
+        assert li.value_unit in allowed
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #110: VNDirect must reject non-zero-padded dates
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_vndirect_statement_rejects_non_zero_padded_fiscal_date(bad_date):
+    rows = [_stmt_row("TESTCO", 11000, 1.0, bad_date, "ANNUAL", 1)]
+    with pytest.raises(InvalidData, match="bad date"):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_vndirect_ratio_rejects_non_zero_padded_report_date(bad_date):
+    rows = [_ratio_row("TESTCO", "PE", 10.0, bad_date)]
+    with pytest.raises(InvalidData, match="bad date"):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.RATIOS, Period.QUARTER
+        )

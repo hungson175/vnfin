@@ -16,11 +16,13 @@ intraday time).
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import date as date_type
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+from ..exceptions import InvalidData
 from ..models import SourceAttempt
 from ..timeseries import TimeSeriesResult
 
@@ -57,6 +59,21 @@ class GoldQuote:
     def mid(self) -> float:
         """Midpoint of the buy/sell spread."""
         return (self.buy + self.sell) / 2.0
+
+    def __post_init__(self):
+        # Issue #15: hard-reject corrupted prices at the model boundary so no adapter
+        # can accidentally emit a non-finite, non-positive, or negative-spread quote.
+        for label, value in (("buy", self.buy), ("sell", self.sell)):
+            if not isinstance(value, (int, float)):
+                raise InvalidData(f"GoldQuote.{label} must be numeric, got {value!r}")
+            if not math.isfinite(value):
+                raise InvalidData(f"GoldQuote.{label} must be finite, got {value!r}")
+            if value <= 0:
+                raise InvalidData(f"GoldQuote.{label} must be positive, got {value!r}")
+        if self.sell < self.buy:
+            raise InvalidData(
+                f"GoldQuote spread is negative: sell {self.sell} < buy {self.buy}"
+            )
 
 
 @dataclass(frozen=True)

@@ -59,6 +59,11 @@ _STATEMENT_TYPE = {
 # Quarter -> (month, day) of the Vietnamese fiscal quarter-end.
 _QUARTER_END = {1: (3, 31), 2: (6, 30), 3: (9, 30), 4: (12, 31)}
 
+#: Allowed per-line units emitted by this source. Statement money is VND;
+#: ratios are dimensionless or per-share VND. Anything else is a contract
+#: violation and raises InvalidData (see issue #70).
+_ALLOWED_LINE_UNITS = frozenset({"VND", "vnd_per_share", "ratio", None})
+
 
 class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     """Backup fundamental reports from CafeF AJAX handlers (statements + ratios)."""
@@ -144,6 +149,31 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
     def _fetch_json(self, url, params):
         return self._request_json(url, params=params, headers=self._headers())
 
+    def _validate_response_identity(self, parsed, psym: str) -> None:
+        """Reject a response whose exposed ticker does not match the request.
+
+        CafeF payloads do not always expose the ticker, so we only enforce this
+        when a top-level ``Symbol`` (or ``Data.Symbol``) field is present.
+        """
+        for key in ("Symbol",):
+            raw = parsed.get(key) if isinstance(parsed, dict) else None
+            if raw is None and isinstance(parsed, dict):
+                data = parsed.get("Data")
+                if isinstance(data, dict):
+                    raw = data.get(key)
+            if raw is not None:
+                response_symbol = str(raw).strip().upper()
+                if response_symbol and response_symbol != psym:
+                    raise InvalidData(
+                        f"{self.name}: response ticker {raw!r} does not match {psym!r}"
+                    )
+
+    @staticmethod
+    def _validate_value_unit(unit) -> None:
+        """Reject line-item units that are not allowed in a VND chain."""
+        if unit not in _ALLOWED_LINE_UNITS:
+            raise InvalidData(f"cafef: value_unit {unit!r} is not allowed")
+
     @staticmethod
     def _report_type(period: Period) -> str:
         return "QUY" if period is Period.QUARTER else "NAM"
@@ -199,6 +229,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             "Sort": "DESC",
         }
         parsed = self._fetch_json(self.BASE_URL + self.FINANCE_REPORT_PATH, params)
+        self._validate_response_identity(parsed, psym)
         periods = self._periods(parsed)
 
         expected_tags = self._row_period_tags(period)
@@ -263,6 +294,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             "Sort": "DESC",
         }
         parsed = self._fetch_json(self.BASE_URL + self.RATIOS_PATH, params)
+        self._validate_response_identity(parsed, psym)
         periods = self._periods(parsed)
 
         fetched = datetime.now(timezone.utc)
@@ -308,13 +340,21 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         raw_items = period_obj.get("Value")
         if not isinstance(raw_items, list):
             raise InvalidData(f"{self.name}: period 'Value' is not a list")
+        if len(raw_items) == 0:
+            raise EmptyData(f"{self.name}: period has empty Value array")
+        self._validate_value_unit(value_unit)
         items: list[LineItem] = []
+        seen: set[str] = set()
         for it in raw_items:
             if not isinstance(it, dict):
                 raise InvalidData(f"{self.name}: line item is not an object")
             code = it.get("Code")
             if code is None or str(code).strip() == "":
                 raise InvalidData(f"{self.name}: line item missing Code")
+            code_str = str(code).strip()
+            if code_str in seen:
+                raise InvalidData(f"{self.name}: duplicate Code {code_str} in period")
+            seen.add(code_str)
             name = self._line_item_name(it, code)
             value = self._num(it.get("Value"))
             if value_unit == "VND":
@@ -324,7 +364,7 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
                 value *= self._VND_SCALE
             items.append(
                 LineItem(
-                    item_code=str(code).strip(),
+                    item_code=code_str,
                     name=name,
                     value=value,
                     value_unit=value_unit,
@@ -345,22 +385,29 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         raw_items = period_obj.get("Value")
         if not isinstance(raw_items, list):
             raise InvalidData(f"{self.name}: period 'Value' is not a list")
+        if len(raw_items) == 0:
+            raise EmptyData(f"{self.name}: ratio period has empty Value array")
         items: list[LineItem] = []
+        seen: set[str] = set()
         for it in raw_items:
             if not isinstance(it, dict):
                 raise InvalidData(f"{self.name}: line item is not an object")
             code = it.get("Code")
             if code is None or str(code).strip() == "":
                 raise InvalidData(f"{self.name}: line item missing Code")
+            code_str = str(code).strip()
+            if code_str in seen:
+                raise InvalidData(f"{self.name}: duplicate Code {code_str} in period")
+            seen.add(code_str)
             name = self._line_item_name(it, code)
             value = self._num(it.get("Value"))
-            code_str = str(code).strip()
             if code_str in self._PER_SHARE_CODES:
                 # Per-share monetary value: thousand VND/share -> raw VND/share.
                 value *= self._VND_SCALE
                 unit = "vnd_per_share"
             else:
                 unit = "ratio"
+            self._validate_value_unit(unit)
             items.append(
                 LineItem(
                     item_code=code_str,

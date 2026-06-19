@@ -360,6 +360,59 @@ def test_list_funds_missing_envelope_but_with_data_raises_invalid():
         _src(payload).list_funds()
 
 
+def test_list_funds_duplicate_code_raises_invalid():
+    # Issue #68: duplicate normalized public fund codes within one response must
+    # raise InvalidData instead of silently returning ambiguous data.
+    rows = [
+        {
+            "id": FAKE_ID_A,
+            "code": "TESTCO",
+            "shortName": "TESTCO",
+            "name": "X",
+            "nav": 100.0,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        },
+        {
+            "id": FAKE_ID_B,
+            "code": "TESTCO",
+            "shortName": "TESTCO",
+            "name": "Y",
+            "nav": 200.0,
+            "dataFundAssetType": {"code": "BOND"},
+            "owner": {"name": "N"},
+        },
+    ]
+    with pytest.raises(InvalidData, match="duplicate fund code"):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
+def test_list_funds_duplicate_id_raises_invalid():
+    # Issue #68: duplicate provider ids within one response must raise InvalidData.
+    rows = [
+        {
+            "id": FAKE_ID_A,
+            "code": "TESTCO",
+            "shortName": "TESTCO",
+            "name": "X",
+            "nav": 100.0,
+            "dataFundAssetType": {"code": "STOCK"},
+            "owner": {"name": "M"},
+        },
+        {
+            "id": FAKE_ID_A,
+            "code": "ZZZBOND",
+            "shortName": "ZZZBOND",
+            "name": "Y",
+            "nav": 200.0,
+            "dataFundAssetType": {"code": "BOND"},
+            "owner": {"name": "N"},
+        },
+    ]
+    with pytest.raises(InvalidData, match="duplicate fund id"):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
 def test_list_funds_invalid_page_size_rejected():
     # Issue #18: invalid page_size must raise InvalidData before reaching provider.
     for bad in (-1, 0, "x", 10000):
@@ -600,6 +653,18 @@ def test_nav_history_missing_envelope_status_and_code_raises_invalid():
     payload = json.dumps({"message": "ok", "data": [{"navDate": "2024-01-02", "nav": 100.0, "productId": FAKE_ID_A}]})
     with pytest.raises(InvalidData):
         _src(payload).nav_history(FAKE_ID_A)
+
+
+def test_nav_history_duplicate_nav_date_raises_invalid():
+    # Issue #66 (Fmarket part): duplicate navDate values within one response must
+    # raise InvalidData because the series would otherwise contain ambiguous observations.
+    rows = [
+        {"navDate": "2024-01-02", "nav": 10100.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-01-03", "nav": 10200.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-01-02", "nav": 10300.0, "productId": FAKE_ID_A},
+    ]
+    with pytest.raises(InvalidData, match="duplicate navDate"):
+        _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
 
 
 def test_nav_history_malformed_nav_raises_invalid():
@@ -955,6 +1020,18 @@ def test_holdings_transport_error_wrapped():
 
 
 # ---------------------------------------------------------------------------
+# envelope validation regressions
+# ---------------------------------------------------------------------------
+
+
+def test_unwrap_missing_status_and_code_raises_invalid():
+    # Issue #41: a response missing both `status` and `code` is not a valid Fmarket
+    # application envelope and must raise InvalidData regardless of payload content.
+    with pytest.raises(InvalidData, match="missing status/code envelope"):
+        FmarketFundSource._unwrap({"message": "ok", "data": {}}, who="regression")
+
+
+# ---------------------------------------------------------------------------
 # model immutability / contract
 # ---------------------------------------------------------------------------
 
@@ -969,3 +1046,150 @@ def test_fund_list_carries_fetched_at_utc():
     funds = _src(_fund_list_payload()).list_funds()
     # fetched_at must be tz-aware UTC
     assert funds.fetched_at_utc.tzinfo is timezone.utc or funds.fetched_at_utc.utcoffset() is not None
+
+
+# ---------------------------------------------------------------------------
+# Issue #97: present non-dict owner / dataFundAssetType must raise InvalidData
+# ---------------------------------------------------------------------------
+
+
+def _valid_fund_row():
+    return {
+        "id": FAKE_ID_A,
+        "code": "TESTCO",
+        "shortName": "TESTCO",
+        "name": "FAKE FUND",
+        "nav": 100.0,
+        "dataFundAssetType": {"code": "STOCK"},
+        "owner": {"name": "FAKE MANAGER"},
+    }
+
+
+@pytest.mark.parametrize("owner", ["", [], False, 0])
+def test_parse_fund_present_non_dict_owner_raises_invalid(owner):
+    row = _valid_fund_row()
+    row["owner"] = owner
+    with pytest.raises(InvalidData, match="owner is not an object"):
+        FmarketFundSource._parse_fund(row)
+
+
+@pytest.mark.parametrize("asset", ["", [], False, 0])
+def test_parse_fund_present_non_dict_asset_type_raises_invalid(asset):
+    row = _valid_fund_row()
+    row["dataFundAssetType"] = asset
+    with pytest.raises(InvalidData, match="dataFundAssetType is not an object"):
+        FmarketFundSource._parse_fund(row)
+
+
+@pytest.mark.parametrize("owner", [None, {}])
+@pytest.mark.parametrize("asset", [None, {}])
+def test_parse_fund_absent_or_empty_owner_and_asset_allowed(owner, asset):
+    row = _valid_fund_row()
+    row["owner"] = owner
+    row["dataFundAssetType"] = asset
+    fund = FmarketFundSource._parse_fund(row)
+    assert fund.manager == ""
+    assert fund.asset_type == ""
+
+
+# ---------------------------------------------------------------------------
+# Issue #109: present non-list primary array fields must raise InvalidData
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("rows", [{}, "", False, 0])
+def test_list_funds_present_non_list_rows_raises_invalid(rows):
+    payload = json.dumps(
+        {"status": 200, "code": 200, "message": "success", "data": {"rows": rows}}
+    )
+    with pytest.raises(InvalidData, match="rows is not an array"):
+        _src(payload).list_funds()
+
+
+def test_list_funds_absent_rows_raises_empty():
+    payload = json.dumps(
+        {"status": 200, "code": 200, "message": "success", "data": {}}
+    )
+    with pytest.raises(EmptyData):
+        _src(payload).list_funds()
+
+
+@pytest.mark.parametrize("data", [{}, "", False, 0])
+def test_nav_history_present_non_list_data_raises_invalid(data):
+    payload = json.dumps(
+        {"status": 200, "code": 200, "message": "success", "data": data}
+    )
+    with pytest.raises(InvalidData, match="nav-history data is not an array"):
+        _src(payload).nav_history(FAKE_ID_A)
+
+
+def test_nav_history_absent_data_raises_empty():
+    payload = json.dumps({"status": 200, "code": 200, "message": "success"})
+    with pytest.raises(EmptyData):
+        _src(payload).nav_history(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("top", [{}, "", False, 0])
+def test_holdings_present_non_list_top_holding_raises_invalid(top):
+    payload = json.dumps(
+        {
+            "status": 200,
+            "code": 200,
+            "message": "success",
+            "data": {
+                "id": FAKE_ID_A,
+                "code": "TESTCO",
+                "shortName": "TESTCO",
+                "nav": FAKE_NAV_A,
+                "productTopHoldingList": top,
+                "productAssetHoldingList": [],
+                "productIndustriesHoldingList": [],
+            },
+        }
+    )
+    with pytest.raises(InvalidData, match="productTopHoldingList is not an array"):
+        _src(payload).holdings(FAKE_ID_A)
+
+
+def test_holdings_absent_top_holding_raises_empty():
+    payload = json.dumps(
+        {
+            "status": 200,
+            "code": 200,
+            "message": "success",
+            "data": {
+                "id": FAKE_ID_A,
+                "code": "TESTCO",
+                "shortName": "TESTCO",
+                "nav": FAKE_NAV_A,
+                "productAssetHoldingList": [],
+                "productIndustriesHoldingList": [],
+            },
+        }
+    )
+    with pytest.raises(EmptyData):
+        _src(payload).holdings(FAKE_ID_A)
+
+
+# ---------------------------------------------------------------------------
+# Issue #110: YYYY-MM-DD paths must reject non-zero-padded month/day
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_nav_history_rejects_non_zero_padded_caller_from_date(bad_date):
+    with pytest.raises(InvalidData, match="malformed"):
+        _src(_nav_history_payload()).nav_history(FAKE_ID_A, from_date=bad_date)
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_nav_history_rejects_non_zero_padded_caller_to_date(bad_date):
+    with pytest.raises(InvalidData, match="malformed"):
+        _src(_nav_history_payload()).nav_history(FAKE_ID_A, to_date=bad_date)
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_parse_nav_point_rejects_non_zero_padded_nav_date(bad_date):
+    row = {"navDate": bad_date, "nav": 100.0, "productId": FAKE_ID_A}
+    with pytest.raises(InvalidData, match="malformed navDate"):
+        FmarketFundSource._parse_nav_point(row)

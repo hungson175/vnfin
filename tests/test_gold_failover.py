@@ -211,6 +211,17 @@ def test_stooq_transport_error_wrapped():
         s.get_history(date(2026, 6, 15), date(2026, 6, 17))
 
 
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_stooq_csv_rejects_non_zero_padded_date(bad_date):
+    csv = (
+        "Date,Open,High,Low,Close,Volume\n"
+        f"{bad_date},4020.0,4090.0,4015.0,4080.0,0\n"
+    )
+    s = StooqGoldSource(http_get=_static_get(csv))
+    with pytest.raises(InvalidData, match="bad date"):
+        s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+
+
 def test_stooq_spot_quote_from_last_bar():
     # backup also satisfies the spot path (last EOD close), USD/oz
     s = StooqGoldSource(http_get=_static_get(_STOOQ_CSV))
@@ -481,3 +492,91 @@ def test_b11_custom_min_coverage_accepts_lower_completeness():
     assert len(hist.bars) == 1
     # still below warn threshold -> partial_coverage warning present
     assert any("partial_coverage" in w for w in hist.warnings)
+
+
+# --- Batch-1 result guards --------------------------------------------------
+
+
+class _RawGoldSource(GoldSource):
+    name = "raw"
+    unit = "USD/oz"
+    provides_history = True
+
+    def __init__(self, history):
+        self._history = history
+
+    def get_history(self, start, end):
+        return self._history
+
+    def get_quotes(self, product=None):
+        raise NotImplementedError
+
+
+def _gold_history(bars, **kwargs):
+    defaults = dict(
+        product="XAU",
+        unit="USD/oz",
+        currency="USD",
+        source="raw",
+        value_unit="USD/oz",
+    )
+    defaults.update(kwargs)
+    return GoldHistory(bars=bars, **defaults)
+
+
+def _assert_gold_rejected(history, expected_substring):
+    client = FailoverGoldClient([_RawGoldSource(history)], min_coverage=0.0)
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_history(date(2024, 1, 2), date(2024, 1, 2))
+    assert expected_substring in ei.value.attempts[0].reason
+
+
+def test_rejects_invalid_date_range_before_source_call():
+    client = FailoverGoldClient([_RawGoldSource(_gold_history(bars=()))], min_coverage=0.0)
+    with pytest.raises(InvalidData):
+        client.get_history(date(2024, 1, 3), date(2024, 1, 1))
+
+
+def test_rejects_non_date_bounds_before_source_call():
+    client = FailoverGoldClient([_RawGoldSource(_gold_history(bars=()))], min_coverage=0.0)
+    with pytest.raises(InvalidData):
+        client.get_history("bad", date(2024, 1, 1))
+
+
+def test_rejects_returned_product_mismatch():
+    bad = _gold_history(
+        bars=(GoldBar(date(2024, 1, 2), 2000.0),),
+        product="XAU/VND",
+    )
+    _assert_gold_rejected(bad, "product mismatch")
+
+
+def test_rejects_returned_unit_mismatch():
+    bad = _gold_history(
+        bars=(GoldBar(date(2024, 1, 2), 2000.0),),
+        unit="VND/luong",
+        value_unit="VND/luong",
+    )
+    _assert_gold_rejected(bad, "unit mismatch")
+
+
+def test_rejects_returned_currency_mismatch():
+    bad = _gold_history(
+        bars=(GoldBar(date(2024, 1, 2), 2000.0),),
+        currency="VND",
+    )
+    _assert_gold_rejected(bad, "currency mismatch")
+
+
+def test_rejects_unsorted_bars():
+    bars = (
+        GoldBar(date(2024, 1, 3), 2000.0),
+        GoldBar(date(2024, 1, 1), 1900.0),
+    )
+    bad = _gold_history(bars=bars)
+    _assert_gold_rejected(bad, "not strictly ascending")
+
+
+def test_rejects_negative_gold_price():
+    bad = _gold_history(bars=(GoldBar(date(2024, 1, 2), -1.0),))
+    _assert_gold_rejected(bad, "price must be positive")

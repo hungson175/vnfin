@@ -108,7 +108,7 @@ class StooqGoldSource(GoldSource):
 
     def _parse_date(self, raw: str) -> date:
         try:
-            return datetime.strptime(raw, "%Y-%m-%d").date()
+            return date.fromisoformat(raw)
         except (ValueError, TypeError) as exc:
             raise InvalidData(f"{self.name}: bad date {raw!r}") from exc
 

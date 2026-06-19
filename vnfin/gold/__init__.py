@@ -109,14 +109,22 @@ def default_world_gold_client(
     return FailoverGoldClient(sources, max_attempts=max_attempts)
 
 
+def _normalize_provider(provider, valid_names):
+    """Issue #80: validate a gold factory selector before dispatch."""
+    if not isinstance(provider, str) or not provider.strip():
+        raise ValueError(f"gold provider must be a non-empty string, got {provider!r}")
+    return provider.strip().lower()
+
+
 def vn(provider: str = "btmc", *, http_get=None, timeout: float = 25.0) -> GoldSource:
     """VN domestic gold spot source (canonical **VND/lượng**).
 
     ``provider`` is ``"btmc"`` (Bảo Tín Minh Châu, default) or ``"pnj"``. Use
     ``.get_quotes()`` for current spot quotes. VN domestic sources are spot-only.
     """
+    key = _normalize_provider(provider, _VN_PROVIDERS)
     try:
-        cls = _VN_PROVIDERS[provider.strip().lower()]
+        cls = _VN_PROVIDERS[key]
     except KeyError as exc:
         valid = ", ".join(sorted(_VN_PROVIDERS))
         raise ValueError(f"unknown VN gold provider {provider!r}; expected one of: {valid}") from exc
@@ -130,8 +138,9 @@ def world(provider: str = "currency_api", *, http_get=None, timeout: float = 25.
     or ``"gold_api"`` (Gold-API, spot only). Use ``.get_quotes()`` for spot; sources
     where ``provides_history`` is True also expose ``.get_history(start, end)``.
     """
+    key = _normalize_provider(provider, _WORLD_PROVIDERS)
     try:
-        cls = _WORLD_PROVIDERS[provider.strip().lower()]
+        cls = _WORLD_PROVIDERS[key]
     except KeyError as exc:
         valid = ", ".join(sorted(_WORLD_PROVIDERS))
         raise ValueError(
@@ -147,6 +156,8 @@ def source(provider: str = "btmc", *, http_get=None, timeout: float = 25.0) -> G
     (``"currency_api"``, ``"gold_api"``; USD/oz) providers — there is no single
     cross-unit default, so the provider is explicit (default ``"btmc"``).
     """
+    if not isinstance(provider, str) or not provider.strip():
+        raise ValueError(f"gold provider must be a non-empty string, got {provider!r}")
     key = provider.strip().lower()
     if key in _VN_PROVIDERS:
         return vn(key, http_get=http_get, timeout=timeout)

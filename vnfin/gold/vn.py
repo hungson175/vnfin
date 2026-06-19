@@ -190,8 +190,9 @@ class BTMCGoldSource(_VNGoldSource):
                 continue
             buy = self._price(row.get(f"@pb_{idx}"), self.name)
             sell = self._price(row.get(f"@ps_{idx}"), self.name)
-            # Buy-only partner/raw rows quote sell == 0; skip rather than emit a 0 price.
-            if sell == 0 or buy == 0:
+            # Issue #15: buy-only partner/raw rows quote sell == 0; skip them rather
+            # than emit a 0-price quote. Any other non-positive price is also unusable.
+            if sell <= 0 or buy <= 0:
                 continue
             # Issue #15: a negative spread (sell < buy) is corrupted data; skip the row.
             if sell < buy:
@@ -275,15 +276,28 @@ class PNJGoldSource(_VNGoldSource):
         now = datetime.now(timezone.utc)
         # PNJ has no timestamp in its body; stamp the fetch time as the quote time.
         quotes: list[GoldQuote] = []
+        seen: set[str] = set()
         for row in rows:
             if not isinstance(row, dict):
                 raise InvalidData(f"{self.name}: row is not an object")
             code = row.get("masp")
             name = row.get("tensp") or code
-            if not name:
-                raise InvalidData(f"{self.name}: row missing product name")
+            # Issue #67: the product key (masp, or tensp as a fallback) must be a
+            # non-empty string before any quote is built.
+            product: str | None = None
+            if isinstance(code, str) and code.strip():
+                product = code.strip()
+            elif isinstance(name, str) and name.strip():
+                product = name.strip()
+            if product is None:
+                raise InvalidData(f"{self.name}: row missing product key")
+            # Issue #67: detect duplicate normalized product keys within one response.
+            norm = product.lower()
+            if norm in seen:
+                raise InvalidData(f"{self.name}: duplicate product key {product!r}")
+            seen.add(norm)
             # Defensive: PNJ is a gold feed, but exclude any silver row should one appear.
-            if _is_silver(str(name)):
+            if _is_silver(product):
                 continue
             raw_buy = row.get("giamua")
             raw_sell = row.get("giaban")
@@ -297,10 +311,13 @@ class PNJGoldSource(_VNGoldSource):
             # Issue #15: a negative spread (sell < buy) is corrupted data; skip the row.
             if sell < buy:
                 continue
+            # Issue #15: non-positive prices are unusable; skip zero-price rows.
+            if sell <= 0 or buy <= 0:
+                continue
             quotes.append(
                 GoldQuote(
                     time=now,
-                    product=code or name,
+                    product=product,
                     buy=buy,
                     sell=sell,
                     unit=_VND_PER_LUONG,

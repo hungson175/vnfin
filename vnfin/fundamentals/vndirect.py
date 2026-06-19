@@ -52,6 +52,11 @@ _BANK_MODEL = {
     StatementType.CASHFLOW: 103,
 }
 
+#: Allowed per-line units emitted by this source. Statement money is VND;
+#: ratios are dimensionless or per-share VND. Anything else is a contract
+#: violation and raises InvalidData (see issue #70).
+_ALLOWED_LINE_UNITS = frozenset({"VND", "vnd_per_share", "ratio", None})
+
 
 class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
     """Fundamental reports from VNDirect api-finfo (statements + ratios)."""
@@ -250,8 +255,15 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             if row_model is not None and row_model != model_type:
                 skipped_rows += 1
                 continue
+            # Issue #21: validate provider-exposed identity before stamping the
+            # requested symbol onto the typed result.
+            row_code = str(row.get("code") or "").strip().upper()
+            if row_code and row_code != psym:
+                skipped_rows += 1
+                continue
             code = self._item_code_str(row.get("itemCode"))
             value = self._num(row.get("numericValue"))
+            self._validate_value_unit("VND")
             li = LineItem(
                 item_code=code,
                 name=item_name(code, is_bank=is_bank),
@@ -283,7 +295,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             )
             for fd in order
         ]
-        reports = self._with_skip_warning(reports, skipped_rows)
+        reports = self._with_skip_warning(reports, skipped_rows, note_suffix="/code")
         # newest first by fiscal_date (defensive; API already sorts desc)
         reports.sort(key=lambda r: r.fiscal_date, reverse=True)
         return tuple(reports[:limit])
@@ -297,6 +309,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         order: list[str] = []
         buckets: dict[str, list[LineItem]] = {}
         seen: dict[str, set] = {}
+        skipped_rows = 0
         for row in rows:
             if not isinstance(row, dict):
                 raise InvalidData(
@@ -305,6 +318,12 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             rd = row.get("reportDate")
             if not rd:
                 raise InvalidData(f"{self.name}: ratio row missing reportDate")
+            # Issue #21: validate provider-exposed identity before stamping the
+            # requested symbol onto the typed result.
+            row_code = str(row.get("code") or "").strip().upper()
+            if row_code and row_code != psym:
+                skipped_rows += 1
+                continue
             # Issue #62: ratioCode and itemName must be strings; non-string values
             # leak raw TypeError/AttributeError and must be caught here.
             ratio_code = row.get("ratioCode")
@@ -328,6 +347,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
                 unit = "vnd_per_share"
             else:
                 unit = "ratio"
+            self._validate_value_unit(unit)
             buckets[rd].append(
                 LineItem(
                     item_code=ratio_code,
@@ -359,6 +379,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             )
             for rd in order
         ]
+        reports = self._with_skip_warning(reports, skipped_rows, note_suffix="/code")
         reports.sort(key=lambda r: r.fiscal_date, reverse=True)
         return tuple(reports[:limit])
 
@@ -371,12 +392,18 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         return max(50, min(1000, limit * 80))
 
     @staticmethod
-    def _with_skip_warning(reports: list, skipped: int) -> list:
+    def _with_skip_warning(reports: list, skipped: int, *, note_suffix: str = "") -> list:
         """Surface skipped (contract-violating) rows on every returned report."""
         if not skipped:
             return reports
-        note = f"skipped {skipped} row(s) with mismatched reportType/modelType"
+        note = f"skipped {skipped} row(s) with mismatched reportType/modelType{note_suffix}"
         return [dataclasses.replace(r, warnings=tuple(r.warnings) + (note,)) for r in reports]
+
+    @staticmethod
+    def _validate_value_unit(unit) -> None:
+        """Reject line-item units that are not allowed in a VND chain."""
+        if unit not in _ALLOWED_LINE_UNITS:
+            raise InvalidData(f"vndirect: value_unit {unit!r} is not allowed")
 
     @staticmethod
     def _item_code_str(raw) -> str:
@@ -400,7 +427,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
     @staticmethod
     def _parse_date(raw) -> date:
         try:
-            return datetime.strptime(str(raw), "%Y-%m-%d").date()
+            return date.fromisoformat(str(raw))
         except (TypeError, ValueError) as exc:
             raise InvalidData(f"vndirect: bad date {raw!r}") from exc
 

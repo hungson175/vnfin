@@ -732,6 +732,44 @@ def test_period_unknown_rejected_for_statements():
         src.get_financials("TESTCO", StatementType.INCOME, Period.UNKNOWN)
 
 
+def test_statement_period_with_empty_value_array_raises_empty():
+    """Issue: a period object with an empty Value array must not produce a
+    zero-item FinancialReport when called directly (failover-safe)."""
+    periods = [
+        {
+            "Time": "2025",
+            "Year": 2025,
+            "Quater": 0,
+            "ReportType": "HK",
+            "Conten": "x",
+            "Value": [],
+        }
+    ]
+    with pytest.raises(EmptyData):
+        _src(_envelope(periods)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )
+
+
+def test_ratio_period_with_empty_value_array_raises_empty():
+    """Issue: a ratio period object with an empty Value array must not produce
+    a zero-item FinancialReport when called directly (failover-safe)."""
+    periods = [
+        {
+            "Time": "2025",
+            "Year": 2025,
+            "Quater": 0,
+            "ReportType": "HK",
+            "Conten": "x",
+            "Value": [],
+        }
+    ]
+    with pytest.raises(EmptyData):
+        _src(_envelope(periods)).get_financials(
+            "TESTCO", StatementType.RATIOS, Period.ANNUAL
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Regression — issue #3: CafeF reports thousand-VND; adapter must emit raw VND.
 # --------------------------------------------------------------------------- #
@@ -797,3 +835,96 @@ def test_cafef_bool_year_raises_invalid():
         _src(_envelope(periods)).get_financials(
             "TESTCO", StatementType.INCOME, Period.ANNUAL
         )
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #26: CafeF statement/ratio periods must reject duplicate
+# line-item Code values within a single period.
+# --------------------------------------------------------------------------- #
+def test_cafef_duplicate_statement_line_item_code_raises_invalid():
+    periods = [
+        _period(
+            "2025",
+            2025,
+            0,
+            [
+                ("REV", "Revenue", 100_000),
+                ("REV", "Revenue dup", 200_000),
+            ],
+        )
+    ]
+    with pytest.raises(InvalidData, match="duplicate"):
+        _src(_envelope(periods)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL
+        )
+
+
+def test_cafef_duplicate_ratio_line_item_code_raises_invalid():
+    periods = [
+        _period(
+            "2025",
+            2025,
+            0,
+            [
+                ("ROA", "ROA", 10.0),
+                ("ROA", "ROA dup", 11.0),
+            ],
+        )
+    ]
+    with pytest.raises(InvalidData, match="duplicate"):
+        _src(_envelope(periods)).get_financials(
+            "TESTCO", StatementType.RATIOS, Period.ANNUAL
+        )
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #21: CafeF should validate response identity where the
+# payload exposes it (ticker / ReportType). ReportType filtering is already
+# covered above; this guards a mismatched response-level ticker field.
+# --------------------------------------------------------------------------- #
+def test_cafef_response_symbol_mismatch_raises_invalid():
+    payload = json.dumps(
+        {
+            "Data": {
+                "Count": 1,
+                "Value": [
+                    _period("2025", 2025, 0, [("REV", "Revenue", 100_000)])
+                ],
+            },
+            "Message": None,
+            "Success": True,
+            "Symbol": "OTHER",
+        }
+    )
+    with pytest.raises(InvalidData, match="OTHER"):
+        _src(payload).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #70: per-source line-item value_unit guard
+# --------------------------------------------------------------------------- #
+def test_cafef_rejects_invalid_line_item_value_unit():
+    with pytest.raises(InvalidData):
+        CafeFFundamentalSource._validate_value_unit("USD")
+
+
+@pytest.mark.parametrize(
+    "unit",
+    ["VND", "vnd_per_share", "ratio", None],
+)
+def test_cafef_accepts_allowed_line_item_value_units(unit):
+    CafeFFundamentalSource._validate_value_unit(unit)
+
+
+def test_cafef_statement_and_ratio_line_units_are_allowed():
+    allowed = {"VND", "vnd_per_share", "ratio", None}
+    stmt_reports = _src(corp_income_two_years()).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL
+    )
+    for li in stmt_reports[0].items:
+        assert li.value_unit in allowed
+    ratio_reports = _src(ratios_two_years()).get_financials(
+        "TESTCO", StatementType.RATIOS, Period.ANNUAL
+    )
+    for li in ratio_reports[0].items:
+        assert li.value_unit in allowed

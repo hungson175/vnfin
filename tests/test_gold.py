@@ -742,3 +742,214 @@ def test_stooq_reversed_date_range_raises_invalid():
     s = StooqGoldSource(http_get=_static_get(csv))
     with pytest.raises(InvalidData):
         s.get_history(date(2026, 6, 17), date(2026, 6, 15))
+
+
+# --- Issue #80: gold factory selectors reject malformed input ----------------
+
+
+@pytest.mark.parametrize("bad", [None, 123, "", "   "])
+def test_vn_factory_rejects_malformed_provider(bad):
+    from vnfin.gold import vn
+
+    with pytest.raises(ValueError):
+        vn(bad)
+
+
+@pytest.mark.parametrize("bad", [None, 123, "", "   "])
+def test_world_factory_rejects_malformed_provider(bad):
+    from vnfin.gold import world
+
+    with pytest.raises(ValueError):
+        world(bad)
+
+
+@pytest.mark.parametrize("bad", [None, 123, "", "   ", "unknown"])
+def test_source_factory_rejects_malformed_or_unknown_provider(bad):
+    from vnfin.gold import source
+
+    with pytest.raises(ValueError):
+        source(bad)
+
+
+def test_vn_factory_unknown_provider_lists_valid():
+    from vnfin.gold import vn
+
+    with pytest.raises(ValueError, match="btmc|pnj"):
+        vn("weird")
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #15: GoldQuote hard-rejects invalid spreads/prices       #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "buy,sell",
+    [
+        (2.0, 1.0),  # negative spread
+        (0.0, 1.0),
+        (1.0, 0.0),
+        (-1.0, 1.0),
+        (1.0, -1.0),
+    ],
+)
+def test_goldquote_rejects_non_positive_or_negative_spread(buy, sell):
+    with pytest.raises(InvalidData):
+        GoldQuote(
+            time=datetime(2026, 6, 17, tzinfo=timezone.utc),
+            product="X",
+            buy=buy,
+            sell=sell,
+            unit="USD/oz",
+            currency="USD",
+            source="test",
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+@pytest.mark.parametrize(
+    "buy,sell",
+    [
+        (float("nan"), 1.0),
+        (1.0, float("nan")),
+        (float("inf"), 1.0),
+        (1.0, float("inf")),
+    ],
+)
+def test_goldquote_rejects_non_finite_prices(buy, sell):
+    with pytest.raises(InvalidData):
+        GoldQuote(
+            time=datetime(2026, 6, 17, tzinfo=timezone.utc),
+            product="X",
+            buy=buy,
+            sell=sell,
+            unit="USD/oz",
+            currency="USD",
+            source="test",
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+# Regression — issue #15: adapters must not emit rows with invalid prices/spreads
+
+
+def test_btmc_skips_zero_priced_rows():
+    rows = [
+        ("VÀNG MIẾNG ZERO (Vàng ZERO)", "24k", "0", "0", "4322", "17/06/2026 15:38"),
+    ]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=rows)))
+    with pytest.raises(EmptyData):
+        s.get_quotes()
+
+
+def test_btmc_rejects_non_finite_price():
+    bad = [("VÀNG MIẾNG BAD", "24k", "NaN", "20000000", "4322", "17/06/2026 15:38")]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=bad)))
+    with pytest.raises(InvalidData):
+        s.get_quotes()
+
+
+def test_pnj_skips_zero_priced_rows():
+    rows = [("ZERO", "Vàng miếng ZERO 999.9", 0, 0)]
+    s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
+    with pytest.raises(EmptyData):
+        s.get_quotes()
+
+
+def test_pnj_rejects_non_finite_price():
+    bad = [("BAD", "Vàng miếng BAD 999.9", float("nan"), 10000)]
+    s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=bad)))
+    with pytest.raises(InvalidData):
+        s.get_quotes()
+
+
+# --------------------------------------------------------------------------- #
+# Regression — issue #67: PNJ product keys must be non-empty, unique strings   #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "masp,tensp",
+    [
+        (None, None),
+        ("", ""),
+        ("   ", "   "),
+        (123, None),
+        (None, 456),
+    ],
+    ids=[
+        "both_none",
+        "both_empty",
+        "both_whitespace",
+        "masp_int_no_fallback",
+        "fallback_int",
+    ],
+)
+def test_pnj_rejects_missing_or_non_string_product_key(masp, tensp):
+    rows = [(masp, tensp, 20000, 10000)]
+    s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
+    with pytest.raises(InvalidData, match="product key"):
+        s.get_quotes()
+
+
+def test_pnj_rejects_duplicate_normalized_product_keys():
+    rows = [
+        ("TESTCO", "Vàng miếng TESTCO 999.9", 20000, 10000),
+        ("testco", "Nhẫn TESTCO 999.9", 19000, 9000),
+    ]
+    s = PNJGoldSource(http_get=_static_get(_pnj_json(rows=rows)))
+    with pytest.raises(InvalidData, match="duplicate product key"):
+        s.get_quotes()
+
+
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# Regression — issue #110: currency-api must reject malformed document dates
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_currencyapi_doc_date_rejects_non_zero_padded_dates(bad_date):
+    s = CurrencyApiGoldSource(http_get=_static_get("{}"))
+    with pytest.raises(InvalidData, match="malformed date"):
+        s._doc_date({"date": bad_date})
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_currencyapi_get_quote_rejects_malformed_doc_date(bad_date):
+    s = CurrencyApiGoldSource(http_get=_static_get(_currency_usd_json(d=bad_date)))
+    with pytest.raises(InvalidData, match="malformed date"):
+        s.get_quote()
+
+
+@pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
+def test_currencyapi_history_rejects_malformed_doc_date(bad_date):
+    def _g(url, params=None, headers=None):
+        return _currency_usd_json(d=bad_date)
+
+    s = CurrencyApiGoldSource(http_get=_g)
+    with pytest.raises(InvalidData, match="malformed date"):
+        s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+
+
+# Regression — issue #35: currency-api history document date identity          #
+# --------------------------------------------------------------------------- #
+
+
+def test_currencyapi_history_rejects_mismatched_document_date_among_valid_dates():
+    # One document in the middle of the range carries the wrong date -> integrity error.
+    by_date = {
+        "2026-06-15": _currency_usd_json(d="2026-06-15", usd_xau=0.000231),
+        "2026-06-16": _currency_usd_json(d="2026-06-15", usd_xau=0.0002312),
+        "2026-06-17": _currency_usd_json(d="2026-06-17", usd_xau=0.0002313114),
+    }
+
+    def _g(url, params=None, headers=None):
+        for d, body in by_date.items():
+            if d in url:
+                return body
+        raise FileNotFoundError("404")
+
+    s = CurrencyApiGoldSource(http_get=_g)
+    with pytest.raises(InvalidData, match="document date"):
+        s.get_history(date(2026, 6, 15), date(2026, 6, 17))

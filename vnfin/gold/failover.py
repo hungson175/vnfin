@@ -35,12 +35,14 @@ single ``USD/oz`` chain, so a VN domestic (VND/lượng) source can never be mix
 """
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 from datetime import date, datetime, timedelta
 
-from ..exceptions import AllSourcesFailed, UnsupportedInterval
+from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
 from ..failover import FailoverClient
-from .models import GoldHistory
+from ..validation import validate_date_range
+from .models import GoldBar, GoldHistory
 
 
 def _gold_unit(source):
@@ -107,6 +109,7 @@ class FailoverGoldClient:
         # current request range here before delegating to ``run`` (each call is
         # self-contained; the client is not designed for concurrent reuse).
         self._request_range: tuple = (None, None)
+        self._chain_unit = _gold_unit(next((s for s in sources if _gold_unit(s) is not None), None))
         self._engine = FailoverClient(
             sources,
             operation=lambda src, start, end: src.get_history(start, end),
@@ -149,6 +152,8 @@ class FailoverGoldClient:
         return self._engine.unit
 
     def get_history(self, start: date, end: date) -> GoldHistory:
+        # Issue #76: validate request dates before any source call.
+        validate_date_range(start, end, name="gold history")
         self._request_range = (start, end)
         return self._engine.run(start, end)
 
@@ -168,8 +173,9 @@ class FailoverGoldClient:
         return (covered, expected)
 
     def _reject_reason(self, hist, *args, **kwargs) -> str | None:
-        if hist is None or len(hist.bars) == 0:
-            return "empty result"
+        reason = _validate_gold_result(hist, self._chain_unit)
+        if reason:
+            return reason
         covered, expected = self._coverage(hist)
         if expected <= 0:
             # No weekday sessions expected in the window: nothing to be incomplete
@@ -201,3 +207,43 @@ class FailoverGoldClient:
                 f"days ({frac:.0%} < {self.warn_coverage:.0%}); series may be gappy",
             )
         return ()
+
+
+def _validate_gold_result(hist, chain_unit: str | None) -> str | None:
+    """Return a rejection reason or ``None`` if the world-gold result is acceptable."""
+    if hist is None or len(hist.bars) == 0:
+        return "empty result"
+
+    # Identity / product (#74, #82).
+    if hist.product not in ("XAU", "XAU/USD"):
+        return f"product mismatch: returned {hist.product!r} is not world gold XAU/USD"
+
+    # Unit metadata checks (#74).
+    if chain_unit is not None:
+        if hist.unit != chain_unit:
+            return f"unit mismatch: returned {hist.unit!r} != chain unit {chain_unit!r}"
+        if hist.value_unit != chain_unit:
+            return f"value_unit mismatch: returned {hist.value_unit!r} != chain unit {chain_unit!r}"
+    if hist.currency != "USD":
+        return f"currency mismatch: returned {hist.currency!r} != 'USD'"
+
+    # Sorting (#85).
+    for i in range(len(hist.bars) - 1):
+        if not (hist.bars[i].date < hist.bars[i + 1].date):
+            return "bars are not strictly ascending by date"
+
+    # Row-level financial invariants (#86).
+    for bar in hist.bars:
+        reason = _validate_gold_bar(bar)
+        if reason:
+            return reason
+    return None
+
+
+def _validate_gold_bar(bar: GoldBar) -> str | None:
+    """Return a rejection reason if ``bar`` has an impossible price (#86)."""
+    if isinstance(bar.price, bool) or not isinstance(bar.price, (int, float)):
+        return f"bar {bar.date}: price has malformed type {type(bar.price).__name__}"
+    if not math.isfinite(bar.price) or bar.price <= 0:
+        return f"bar {bar.date}: price must be positive and finite, got {bar.price!r}"
+    return None
