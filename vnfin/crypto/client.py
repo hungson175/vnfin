@@ -166,7 +166,11 @@ def _validate_crypto_result(
     end,
 ) -> str | None:
     """Return a rejection reason or ``None`` if the crypto result is acceptable."""
-    if hist is None or len(hist.bars) == 0:
+    # Issue #125: a malformed (non-typed) result container must be recorded as a
+    # rejected source attempt, not leak a raw AttributeError from len(hist.bars).
+    if not isinstance(hist, CryptoHistory):
+        return f"unexpected result type {type(hist).__name__}"
+    if len(hist.bars) == 0:
         return "empty result"
 
     # Identity checks (#82). Crypto sources may return their provider-specific

@@ -212,7 +212,12 @@ class FailoverGoldClient:
 
 def _validate_gold_result(hist, chain_unit: str | None) -> str | None:
     """Return a rejection reason or ``None`` if the world-gold result is acceptable."""
-    if hist is None or len(hist.bars) == 0:
+    # Issue #125: a malformed (non-typed) result container must be recorded as a
+    # rejected source attempt, not leak a raw AttributeError from len(hist.bars)
+    # (or from _coverage, which dereferences bar.date downstream).
+    if not isinstance(hist, GoldHistory):
+        return f"unexpected result type {type(hist).__name__}"
+    if len(hist.bars) == 0:
         return "empty result"
 
     # Identity / product (#74, #82).

@@ -598,3 +598,27 @@ def test_rejects_unsorted_bars():
 def test_rejects_negative_gold_price():
     bad = _gold_history(bars=(GoldBar(date(2024, 1, 2), -1.0),))
     _assert_gold_rejected(bad, "price must be positive")
+
+
+# --------------------------------------------------------------------------- #
+# Issue #125 — malformed (non-typed) gold result container -> rejected attempt
+# (must be caught before _coverage dereferences bar.date).
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad",
+    [{}, None, [], 42, "history", object()],
+    ids=["dict", "none", "list", "int", "str", "object"],
+)
+def test_rejects_malformed_gold_result_container(bad):
+    _assert_gold_rejected(bad, "unexpected result type")
+
+
+def test_malformed_gold_container_failsover_to_backup():
+    good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), source="good")
+    client = FailoverGoldClient(
+        [_RawGoldSource({}), _RawGoldSource(good)], min_coverage=0.0
+    )
+    out = client.get_history(date(2024, 1, 2), date(2024, 1, 2))
+    assert out.source == "good"
+    assert out.attempts[0].ok is False
+    assert "unexpected result type" in out.attempts[0].reason

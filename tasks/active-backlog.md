@@ -16,12 +16,16 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#123–#126 failover returned-object guard cluster** — DESIGN sent to reviewer
-  (/tmp/vnfin-123-126-design-202606191247.md). Awaiting design convergence before coding.
-  Planned order: **#125** container type-check (foundational) → **#123** macro point-key type
-  → **#124** price/crypto/gold bar-key type → **#126** provenance mismatch (engine-generic
-  `provenance_of` guard, reject not restamp — pending reviewer's option A/B call). Each its own
-  TDD commit + reviewer gate.
+- **#123–#126 failover returned-object guard cluster** — design APPROVE_WITH_NOTES
+  (review-202606191252-consolidated). Order: #125 → #123/#124 → #126 (engine-level provenance
+  guard + result-source extractor for fundamentals tuple; reject not restamp; gold datetime keys
+  rejected).
+  - **#125 container type-check — IMPLEMENTED, committed (awaiting reviewer code review).**
+    price/crypto/gold/macro guards now `isinstance` the container first → "unexpected result
+    type <T>" rejection. +28 TDD cases, suite 1691 green, CHANGELOG updated.
+  - #123 macro point-key type — NEXT.
+  - #124 price/crypto/gold bar-key type — after #123.
+  - #126 provenance mismatch — last.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -29,7 +33,8 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- _(none pending — #123–#126 scoped into the Now cluster above)_
+- **#127** — labelled `bug`/queued by reviewer poller 12:50 (last_seen 2026-06-19T05:52:49Z).
+  Not yet scoped. Triage + TDD after the #123–#126 cluster lands. `./bin/gh-maintainer issue view 127`.
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 

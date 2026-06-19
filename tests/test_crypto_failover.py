@@ -591,3 +591,23 @@ def test_rejects_economically_impossible_bars(bar_factory, expected_substring):
     t = datetime(2024, 1, 2, tzinfo=UTC)
     bad = _crypto_history(bars=(bar_factory(t),))
     _assert_rejected_reason(bad, expected_substring)
+
+
+# --------------------------------------------------------------------------- #
+# Issue #125 — malformed (non-typed) crypto result container -> rejected attempt
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad",
+    [{}, None, [], 42, "history", object()],
+    ids=["dict", "none", "list", "int", "str", "object"],
+)
+def test_rejects_malformed_crypto_result_container(bad):
+    _assert_rejected_reason(bad, "unexpected result type")
+
+
+def test_malformed_crypto_container_failsover_to_backup():
+    good = _crypto_history(bars=(CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),), source="good")
+    client = FailoverCryptoClient([_RawCryptoSource({}), _RawCryptoSource(good)])
+    out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    # The malformed primary must be rejected (not raise raw) and the backup used.
+    assert out.source == "good"

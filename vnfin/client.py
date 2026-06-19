@@ -210,7 +210,11 @@ def _validate_price_result(
     end,
 ) -> str | None:
     """Return a rejection reason or ``None`` if the price result is acceptable."""
-    if hist is None or len(hist.bars) == 0:
+    # Issue #125: a malformed (non-typed) result container must be recorded as a
+    # rejected source attempt, not leak a raw AttributeError from len(hist.bars).
+    if not isinstance(hist, PriceHistory):
+        return f"unexpected result type {type(hist).__name__}"
+    if len(hist.bars) == 0:
         return "empty result"
 
     # Identity checks (#82).

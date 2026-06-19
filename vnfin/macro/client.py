@@ -178,7 +178,12 @@ class MacroClient:
         currency = canonical_currency(indicator)
 
         def _reject_reason(series, country, i) -> str | None:
-            if series is None or len(series.points) == 0:
+            # Issue #125: a malformed (non-typed) result container must be a
+            # recorded rejected attempt, not a raw AttributeError from
+            # len(series.points).
+            if not isinstance(series, IndicatorSeries):
+                return f"unexpected result type {type(series).__name__}"
+            if len(series.points) == 0:
                 return "empty result"
 
             # Issue #78: reject returned identity that contradicts the request.

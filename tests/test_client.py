@@ -558,3 +558,31 @@ def test_rejects_economically_impossible_bars(synth, bar_factory, expected_subst
     h = client.get_daily("FPT", *WIDE)
     assert h.source == "good"
     assert expected_substring in h.attempts[0].reason
+
+
+# --------------------------------------------------------------------------- #
+# Issue #125 — malformed (non-typed) result containers must be recorded as a
+# rejected source attempt (failover continues / clean AllSourcesFailed), never
+# leak a raw AttributeError from the result guard.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad",
+    [{}, None, [], 42, "history", object()],
+    ids=["dict", "none", "list", "int", "str", "object"],
+)
+def test_rejects_malformed_result_container_and_failsover(bad, synth):
+    s1 = RawFakeSource("s1", bad)
+    s2 = FakeSource("s2", synth.make_history("s2", 2))
+    client = FailoverPriceClient([s1, s2])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "s2"
+    assert s1.calls == 1 and s2.calls == 1
+    assert h.attempts[0].ok is False
+    assert "unexpected result type" in h.attempts[0].reason
+
+
+def test_all_malformed_containers_raise_clean_failure():
+    client = FailoverPriceClient([RawFakeSource("s1", {}), RawFakeSource("s2", None)])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_daily("FPT", *WIDE)
+    assert all("unexpected result type" in a.reason for a in ei.value.attempts)

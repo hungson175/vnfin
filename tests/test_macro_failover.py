@@ -468,3 +468,50 @@ def test_rejects_non_finite_point_values():
     with pytest.raises(AllSourcesFailed) as ei:
         get_indicator("VNM", MacroIndicator.GDP_GROWTH, sources=[src])
     assert "finite" in ei.value.attempts[0].reason
+
+
+# --------------------------------------------------------------------------- #
+# Issue #125 — malformed (non-typed) macro result container -> rejected attempt,
+# not a raw AttributeError from len(series.points).
+# --------------------------------------------------------------------------- #
+class _MalformedMacroSource:
+    """Declares the canonical unit (survives the pre-filter) but returns a
+    non-IndicatorSeries object from get_indicator."""
+
+    def __init__(self, name, bad):
+        self.name = name
+        self._bad = bad
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        return self._bad
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [{}, None, [], 42, "series", object()],
+    ids=["dict", "none", "list", "int", "str", "object"],
+)
+def test_rejects_malformed_macro_result_container(bad):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator(
+            "ZZZ", MacroIndicator.GDP, sources=[_MalformedMacroSource("bad", bad)]
+        )
+    assert "unexpected result type" in ei.value.attempts[0].reason
+
+
+def test_malformed_macro_container_failsover_to_backup():
+    good = FakeMacroSource(
+        "good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)}
+    )
+    res = get_indicator(
+        "ZZZ",
+        MacroIndicator.GDP,
+        sources=[_MalformedMacroSource("bad", {}), good],
+    )
+    assert res.source == "good"

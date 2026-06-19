@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Failover malformed result-container guard** — the price, crypto, gold, and macro failover
+  result guards now type-check the returned container (``PriceHistory`` / ``CryptoHistory`` /
+  ``GoldHistory`` / ``IndicatorSeries``) before reading ``.bars`` / ``.points``. A source
+  returning a malformed non-typed result (e.g. a plain ``dict`` or ``None``) is now recorded as
+  a rejected source attempt — and the chain fails over to the next source or raises a clean
+  ``AllSourcesFailed`` — instead of leaking a raw ``AttributeError`` to the caller.
+  ([#125](https://github.com/hungson175/vnfin/issues/125))
 - **Fundamental failover line-item guard** — the fundamentals failover result guard now
   validates returned ``LineItem`` fields before accepting a source result: ``item_code`` must
   be a non-empty string, ``name`` must be a string (empty allowed), ``value`` must be a finite
