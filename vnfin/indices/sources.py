@@ -180,14 +180,15 @@ class IndexConstituentsSource(HttpDataSource):
             if sym in seen:
                 raise InvalidData(f"{self.name}: duplicate member symbol {sym}")
             seen.add(sym)
-            exch = row.get("exchange")
-            name_en = row.get("companyNameEn") or row.get("companyNameVi")
+            exchange = self._optional_member_str(row, "exchange", i, "exchange")
+            company_name = self._member_company_name(row, i)
+            isin = self._optional_member_str(row, "isin", i, "isin")
             members.append(
                 IndexMember(
                     symbol=sym,
-                    exchange=exch.strip().upper() if isinstance(exch, str) else None,
-                    company_name=name_en.strip() if isinstance(name_en, str) else None,
-                    isin=row.get("isin") if isinstance(row.get("isin"), str) else None,
+                    exchange=exchange.upper() if exchange else None,
+                    company_name=company_name,
+                    isin=isin,
                     weight=None,  # not exposed by this endpoint — never fabricated
                 )
             )
@@ -201,3 +202,34 @@ class IndexConstituentsSource(HttpDataSource):
             as_of=None,
             warnings=("weights_not_available: SSI group endpoint exposes membership only",),
         )
+
+    @staticmethod
+    def _optional_member_str(row: dict, key: str, member_i: int, field_name: str) -> str | None:
+        if key not in row:
+            return None
+        raw = row.get(key)
+        if raw is None or raw == "":
+            return None
+        if not isinstance(raw, str):
+            raise InvalidData(
+                f"{IndexConstituentsSource.NAME}: member {member_i} malformed {field_name}"
+            )
+        stripped = raw.strip()
+        return stripped or None
+
+    @classmethod
+    def _member_company_name(cls, row: dict, member_i: int) -> str | None:
+        for key in ("companyNameEn", "companyNameVi"):
+            if key not in row:
+                continue
+            raw = row.get(key)
+            if raw is None or raw == "":
+                continue
+            if not isinstance(raw, str):
+                raise InvalidData(
+                    f"{cls.NAME}: member {member_i} malformed {key}"
+                )
+            stripped = raw.strip()
+            if stripped:
+                return stripped
+        return None

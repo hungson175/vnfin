@@ -418,6 +418,23 @@ def test_constituents_malformed_data_container_raises_invalid(data):
         IndexConstituentsSource(http_get=_get(payload)).get_constituents("VN30")
 
 
+def _constituents_member_payload(row: dict) -> str:
+    return json.dumps({"code": "SUCCESS", "data": [row]})
+
+
+@pytest.mark.parametrize(
+    "row,match",
+    [
+        ({"stockSymbol": "FAKE1", "exchange": ["HOSE"], "companyNameEn": "Fake Co", "isin": "VN000FAKE"}, "exchange"),
+        ({"stockSymbol": "FAKE1", "exchange": "HOSE", "companyNameEn": {"name": "Fake Co"}, "isin": "VN000FAKE"}, "companyNameEn"),
+        ({"stockSymbol": "FAKE1", "exchange": "HOSE", "companyNameEn": "Fake Co", "isin": True}, "isin"),
+    ],
+)
+def test_constituents_malformed_member_metadata_raises_invalid(row, match):
+    with pytest.raises(InvalidData, match=match):
+        IndexConstituentsSource(http_get=_get(_constituents_member_payload(row))).get_constituents("VN30")
+
+
 def test_constituents_error_code_raises_invalid():
     payload = json.dumps({"code": "ERROR", "message": "bad group", "data": None})
     with pytest.raises(InvalidData):

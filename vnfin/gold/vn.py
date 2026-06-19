@@ -177,7 +177,12 @@ class BTMCGoldSource(_VNGoldSource):
             if not isinstance(row, dict):
                 raise InvalidData(f"{self.name}: row is not an object")
             idx = self._row_index(row)
-            name = row.get(f"@n_{idx}")
+            name_raw = row.get(f"@n_{idx}")
+            if name_raw is None or name_raw == "":
+                raise InvalidData(f"{self.name}: row {idx} missing name")
+            if not isinstance(name_raw, str):
+                raise InvalidData(f"{self.name}: row {idx} malformed product name")
+            name = name_raw.strip()
             if not name:
                 raise InvalidData(f"{self.name}: row {idx} missing name")
             # Exclude silver (BẠC) — only gold normalizes to the VND/lượng gold quote.
@@ -195,7 +200,7 @@ class BTMCGoldSource(_VNGoldSource):
             luong = _weight_in_luong(name)
             buy /= luong
             sell /= luong
-            karat = row.get(f"@k_{idx}") or None
+            karat = self._optional_karat(row.get(f"@k_{idx}"), idx)
             tm = self._parse_dt(row.get(f"@d_{idx}"))
             quote = GoldQuote(
                 time=tm,
@@ -225,6 +230,15 @@ class BTMCGoldSource(_VNGoldSource):
             if k.startswith("@n_"):
                 return k[len("@n_"):]
         raise InvalidData(f"{self.name}: cannot determine row index")
+
+    @staticmethod
+    def _optional_karat(raw, row_idx: str) -> str | None:
+        if raw is None or raw == "":
+            return None
+        if not isinstance(raw, str):
+            raise InvalidData(f"btmc: row {row_idx} malformed karat")
+        stripped = raw.strip()
+        return stripped or None
 
     def _parse_dt(self, raw):
         if not raw:

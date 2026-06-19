@@ -267,6 +267,30 @@ def test_btmc_malformed_price_raises_invalid():
         s.get_quotes()
 
 
+@pytest.mark.parametrize(
+    "name",
+    [["BAD"], {"name": "BAD"}, 123, True],
+    ids=["list", "dict", "int", "bool"],
+)
+def test_btmc_malformed_product_name_raises_invalid(name):
+    rows = [(name, "24k", "10000000", "20000000", "4322", "17/06/2026 15:38")]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=rows)))
+    with pytest.raises(InvalidData, match="product name"):
+        s.get_quotes()
+
+
+@pytest.mark.parametrize(
+    "karat",
+    [["24k"], {"k": "24k"}, 24, True],
+    ids=["list", "dict", "int", "bool"],
+)
+def test_btmc_malformed_karat_raises_invalid(karat):
+    rows = [("VÀNG MIẾNG TESTCO (Vàng TESTCO)", karat, "10000000", "20000000", "4322", "17/06/2026 15:38")]
+    s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=rows)))
+    with pytest.raises(InvalidData, match="karat"):
+        s.get_quotes()
+
+
 def test_btmc_negative_price_raises_invalid():
     bad = [("VÀNG MIẾNG TESTCO", "24k", "-5", "20000000", "4322", "17/06/2026 15:38")]
     s = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=bad)))
