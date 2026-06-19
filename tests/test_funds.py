@@ -370,6 +370,12 @@ def test_list_funds_integral_float_status_still_accepted():
     assert len(funds) >= 1
 
 
+def test_list_funds_digit_string_status_accepted():
+    # Digit-string status/code (e.g. "200") remains valid via int() coercion.
+    funds = _src(_fund_list_payload(status="200", code="200")).list_funds()
+    assert len(funds) >= 1
+
+
 def test_list_funds_missing_envelope_status_and_code_raises_invalid():
     # Issue #41: an Fmarket response without `status` or `code` is not a valid envelope.
     payload = json.dumps({"message": "ok", "data": {"total": 0, "page": 1, "pageSize": 100, "rows": []}})
