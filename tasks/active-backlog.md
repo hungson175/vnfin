@@ -29,6 +29,11 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Refactor done today (Phase 4 batches)
 
+- **🎉 PHASE 4 COMPLETE** — all 6 adapter batches pushed/reviewed; bugs closed via refactor:
+  #33/#34/#32/#48/#30/#75/#9/#93/#143/#144. Remaining open = the 5 Phase-6 close-loop issues only.
+- **Phase 4 batch 6 (funds NAV/window #144) — COMPLETE, pushed `caeef2e..ec4a2bf`; #144 CLOSED.**
+  Broad-window fetch + client-side filter; navDate-first out-of-window skip. Suite 2579 green.
+  Checkpoint E APPROVE_WITH_NOTES (review-202606192338).
 - **Phase 4 batch 5 (gold #143) — COMPLETE, pushed `33033cf..734aa9f`; #143 CLOSED.** PNJ excludes
   silver by masp+tensp (via `_is_silver`) before dedup/price; all-silver → EmptyData; non-string
   tensp → InvalidData. Suite 2570 green. Checkpoint E APPROVE_WITH_NOTES (review-202606192324).
