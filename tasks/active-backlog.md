@@ -16,13 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Two small TDD fixes (REOPENED 16:00)** — IMPLEMENTED + committed (NOT pushed):
-  - **#112** `e14de5e` — GoldApi `_parse_iso` raw-is-None-only now() fallback; present
-    falsey/non-str updatedAt → InvalidData.
-  - **#21** `9750858` — VNDirect raises InvalidData when result empty AND rows dropped for code
-    mismatch (all-wrong-code = wrong-identity, not no-data); mixed still returns valid rows.
-  +12 TDD cases, suite 2039 green. **Awaiting combined review → push → re-close.**
-  (#140 stays enhancement/product scope, not a bug.)
+- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `ded0b97`, full suite 2039 green,
+  watermark 2026-06-19T09:14:42Z. Only open issue is **#140 (enhancement: financial news)** —
+  Boss/product-scope feature, NOT a bug; parked. Steady-state otherwise.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -50,6 +46,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#112 + #21 (reopen) — COMPLETE, pushed `50eb27b..ded0b97`, closed.** #112 `e14de5e` GoldApi
+  present-falsey updatedAt → InvalidData (raw-is-None-only fallback); #21 `9750858` VNDirect
+  all-code-mismatch → InvalidData (wrong-identity, not no-data). APPROVE_WITH_NOTES. Suite 2039 green.
 - **Schema/FX batch (#87 + #28) (reopen) — COMPLETE, pushed `2356fa4..2117c51`, closed.**
   - **#87** `454fe42` — health check_schema rejects JSON bool on numeric (int,float) paths
     (unless bool explicitly allowed). APPROVE_WITH_NOTES.
