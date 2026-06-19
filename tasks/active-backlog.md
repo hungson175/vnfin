@@ -32,8 +32,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   validate_country_iso3 ASCII `[A-Z]{3}`, canonical_crypto_pair shape-only docstring). The IMF/ISO3
   polish intentionally hardens malformed-input behavior (not pure docs). `origin/master` `93eee64`,
   suite 2591 green. **REFACTOR 100% COMPLETE.**
-- **Next (product decision — NOT bugs):** #145 source diagnostics (first), #140 financial news
-  (design-first, no raw scraping). Both await Boss greenlight; reviewer triage review-202606192340.
+- **#145 source diagnostics: DONE** (Boss-authored feature; pushed `ae799dc..c55c286`, CLOSED;
+  reviewer review-202606200003). Additive offline `vnfin.diagnostics` (source_capabilities +
+  explain_world_gold_history + explain_index_constituents) + world-gold pre-coverage fail-fast.
+  Suite 2607 green; public-API additive (surface snapshot + regression test).
+- **Only open issue: #140 financial news (enhancement)** — design-first, **no raw scraping**;
+  product/licensing/source-design call for Boss. NOT started. Reviewer triage review-202606192340.
 
 ## Refactor done today (Phase 4 batches)
 
