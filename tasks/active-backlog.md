@@ -16,13 +16,13 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Failover-guard cluster verification** (#69,#72,#73,#74,#83,#85,#86). FINDING (Explore map
-  2026-06-19): these guards appear ALREADY PRESENT in code (added in earlier batch commits
-  ab727ef/d78b245-era) but have NO dedicated regression tests and the issues are still open.
-  Approach: write a regression test encoding each reporter's reproduction (TDD-characterization).
-  Test PASSES → guard works → close issue with the now-committed test. Test FAILS → real gap →
-  fix it. Same likely applies to the source-adapter cluster — verify before re-implementing.
-  Starting with FX group (#72 bid/ask, #83 as_of_utc) in `vnfin/fx/client.py`.
+- **Gap fixes** — verification sweep complete (43→12 open). Remaining 12 are genuine gaps.
+  Classify each by writing a failing test first (red = code gap → fix; green = test-only gap →
+  add test). Test-gaps (guard present): #26 CafeF dup, #49 FRED inverted-window, #65 direct-source
+  caller-input, #68 fmarket case-insensitive dup. Code-gaps: #21 WorldBank/DBnomics identity,
+  #28 Vietcombank currency codes, #66 crypto/stooq dup-key, #108 WorldBank/IMF strict year,
+  #111 VNDirect type-before-truthiness, #119 CafeF Success bool, #120 fractional volume,
+  #121 VNDirect modelType coercion. (#119/#120/#121 newest — likely real code gaps.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -32,41 +32,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 - _(none pending)_
 
-## Next (queued open bugs — fix ALL; group by domain to batch reviewer-approved stacks)
+## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
-Failover identity/units/bounds/ordering guards (VERIFY-before-reimplement — many already guarded):
-- #70 fundamental failover currency-unit disagreement (VND chain)
-- #71 macro client relabels conflicting value_unit/currency
-- #76 world-gold failover history date bounds
-- #77 crypto failover interval/date bounds
-- #78 macro failover country/indicator identity contradicts request
-- #79 fundamental failover malformed requests / wrong-identity reports
-- #82 price/crypto/gold failover returned identity contradicts request
-
-Source-adapter input/identity/units hardening:
-- #15 domestic gold negative buy/sell spreads
-- #21 adapters don't validate response identity before stamping identifiers
-- #22 response cache key collisions when secret params redacted
-- #26 fundamental statements accept duplicate line-item codes
-- #28 FX get_rates malformed currency codes from provider rows
-- #32 macro country input not validated as ISO3
-- #35 currency-api gold history document date identity
-- #37 HttpDataSource invalid retry/cache options leak TypeError
-- #41 Fmarket missing application-status envelope
-- #49 FRED forwards invalid date bounds to provider
-- #65 direct price source classes leak raw errors for malformed caller inputs
-- #66 time-series sources accept duplicate observation keys
-- #67 PNJ duplicate/non-string product keys
-- #68 Fmarket duplicate fund codes / provider IDs
-- #75 index constituents malformed selectors leak raw errors
-- #80 gold factory selectors leak raw AttributeError for non-string input
-- #81 fundamentals return reports with no line items
-- #93 OpenErApi FX inconsistent USD self-rate anchor
-- #97 Fmarket list_funds stringifies malformed fund metadata/asset types
-- #104 DBnomics period dates contradict result frequency
-- #108 World Bank/IMF non-canonical provider year keys
-- #109 Fmarket containers misclassify malformed falsy payloads as empty
-- #111 VNDirect misclassifies malformed falsy data containers as empty
+_All other backlog items verified-fixed and closed during the 2026-06-19 sweep (43→12 open)._
 
 ## Done today (trim periodically)
 
@@ -88,3 +56,7 @@ Source-adapter input/identity/units hardening:
 - **#72, #83, #69, #73, #74, #85, #86** failover-guard cluster — VERIFIED already fixed + tested
   on master (guard + passing regression tests cited per issue); closed, no code change needed.
   Watermark 03:43:17Z. Reporters had filed against older commits.
+- **#70, #71, #76, #77, #78, #79, #82** failover remaining — VERIFIED already fixed + tested;
+  closed with cited tests. Watermark 03:47:08Z.
+- **#15, #22, #32, #35, #37** + **#41, #67, #75, #80, #81, #93, #97, #104, #109** source-adapter
+  cluster — VERIFIED already fixed + tested; closed with cited tests. Open 43→12.
