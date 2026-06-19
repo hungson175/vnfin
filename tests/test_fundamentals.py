@@ -253,8 +253,12 @@ def test_bank_uses_modelType_10x_in_params():
 
 
 def test_corporate_uses_modelType_single_digit_in_params():
+    # Verifies only the REQUEST query params. The income fixture's rows are all
+    # skipped for the BALANCE/QUARTER request, which (#44) raises after the query
+    # is already captured.
     src, captured = _capturing_src(corp_income_two_periods())
-    src.get_financials("TESTCO", StatementType.BALANCE, Period.QUARTER)
+    with pytest.raises(InvalidData):
+        src.get_financials("TESTCO", StatementType.BALANCE, Period.QUARTER)
     q = captured["params"]["q"]
     assert "modelType:2" in q  # balance sheet corporate
     assert "reportType:QUARTER" in q
@@ -262,13 +266,15 @@ def test_corporate_uses_modelType_single_digit_in_params():
 
 def test_cashflow_corporate_modelType_3():
     src, captured = _capturing_src(corp_income_two_periods())
-    src.get_financials("TESTCO", StatementType.CASHFLOW, Period.ANNUAL)
+    with pytest.raises(InvalidData):  # income fixture all-skipped for CASHFLOW (#44)
+        src.get_financials("TESTCO", StatementType.CASHFLOW, Period.ANNUAL)
     assert "modelType:3" in captured["params"]["q"]
 
 
 def test_cashflow_bank_modelType_103():
     src, captured = _capturing_src(bank_income_one_period())
-    src.get_financials("ZZBANK", StatementType.CASHFLOW, Period.ANNUAL, is_bank=True)
+    with pytest.raises(InvalidData):  # bank income fixture all-skipped for CASHFLOW (#44)
+        src.get_financials("ZZBANK", StatementType.CASHFLOW, Period.ANNUAL, is_bank=True)
     assert "modelType:103" in captured["params"]["q"]
 
 
@@ -984,3 +990,40 @@ def test_vndirect_ratio_rejects_non_zero_padded_report_date(bad_date):
         _src(_stmt_envelope(rows)).get_financials(
             "TESTCO", StatementType.RATIOS, Period.QUARTER
         )
+
+
+# --------------------------------------------------------------------------- #
+# Issue #44 (reopen) — a non-empty VNDirect response whose rows are ALL skipped
+# for reportType/modelType mismatch must raise (template/cadence contract miss),
+# not return a clean empty tuple. Mixed valid+skipped still returns valid+warning.
+# --------------------------------------------------------------------------- #
+def test_vndirect_all_reporttype_skipped_raises_invalid():
+    rows = [
+        _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "QUARTER", 1),  # wrong reportType
+    ]
+    with pytest.raises(InvalidData, match="reportType/modelType"):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+def test_vndirect_all_modeltype_skipped_raises_invalid():
+    rows = [
+        _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "ANNUAL", 2),  # wrong modelType (2!=1)
+    ]
+    with pytest.raises(InvalidData, match="reportType/modelType"):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+def test_vndirect_mixed_valid_and_skipped_returns_valid_with_warning():
+    rows = [
+        _stmt_row("TESTCO", 11000, 5.0, "2025-12-31", "ANNUAL", 1),    # valid
+        _stmt_row("TESTCO", 22000, 9.0, "2025-12-31", "QUARTER", 1),   # skipped (reportType)
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+    )
+    assert len(reports) == 1
+    assert any("skipped" in w for w in reports[0].warnings)

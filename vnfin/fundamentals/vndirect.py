@@ -313,6 +313,19 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
                 f"{self.name}: all {code_mismatches} statement rows have a provider code "
                 f"!= requested {psym}; refusing to return wrong-identity data"
             )
+        # Issue #44 (reopen): a non-empty provider response whose rows are ALL
+        # skipped because their reportType/modelType contradicts the requested
+        # statement contract is a template/cadence mismatch, not clean no-data.
+        # Raise rather than return () so it cannot read as a successful empty.
+        # (A mix of valid + skipped rows still returns the valid reports with a
+        # skip warning; the auto-probe falls through on an EMPTY provider response
+        # via _fetch_statement_rows -> EmptyData, which is a different path.)
+        if not buckets and skipped_rows > 0:
+            raise InvalidData(
+                f"{self.name}: all {skipped_rows} statement rows skipped "
+                f"(reportType/modelType mismatch); response does not match the "
+                f"requested {statement.value}/{period.value} contract"
+            )
 
         fetched = datetime.now(timezone.utc)
         reports = [
