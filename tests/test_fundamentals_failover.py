@@ -411,8 +411,20 @@ def test_rejects_malformed_line_item_value(bad_value):
 
 @pytest.mark.parametrize(
     "bad_code",
-    ["", "   ", None, True, False, 11000, 11000.0, ["11000"]],
-    ids=["blank", "whitespace", "none", "bool_true", "bool_false", "int", "float", "list"],
+    ["", "   ", " 11000", "11000 ", " 11000 ", None, True, False, 11000, 11000.0, ["11000"]],
+    ids=[
+        "blank",
+        "whitespace",
+        "leading_space",
+        "trailing_space",
+        "both_spaces",
+        "none",
+        "bool_true",
+        "bool_false",
+        "int",
+        "float",
+        "list",
+    ],
 )
 def test_rejects_malformed_line_item_code(bad_code):
     _assert_fundamental_rejected(

@@ -215,16 +215,19 @@ def _validate_fundamental_result(
 def _validate_line_item(item, fiscal_date) -> str | None:
     """Return a rejection reason for a malformed returned ``LineItem`` (#122).
 
-    ``item_code`` must be a non-empty string; ``name`` must be a string (an empty
-    name is allowed — some provider codes have no human label); ``value`` must be
-    a finite real number that is not a ``bool``. ``bool`` is rejected explicitly
-    because it is an ``int`` subclass and would otherwise pass the numeric check.
+    ``item_code`` must be a canonical non-empty string with no surrounding
+    whitespace (``FinancialReport.get()`` does exact key matching, so a padded key
+    like ``' 11000'`` is a malformed downstream identifier); ``name`` must be a
+    string (an empty name is allowed — some provider codes have no human label);
+    ``value`` must be a finite real number that is not a ``bool``. ``bool`` is
+    rejected explicitly because it is an ``int`` subclass and would otherwise pass
+    the numeric check.
     """
     code = item.item_code
-    if not isinstance(code, str) or not code.strip():
+    if not isinstance(code, str) or not code.strip() or code != code.strip():
         return (
             f"malformed item_code {code!r} in report {fiscal_date}: "
-            "expected a non-empty string"
+            "expected a canonical non-empty string with no surrounding whitespace"
         )
     if not isinstance(item.name, str):
         return (

@@ -19,8 +19,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 - **#122 — Fundamental failover malformed LineItem guard** — IMPLEMENTED + committed `ca6f1ff`
   (NOT pushed). Strict `_validate_line_item` in `vnfin/fundamentals/client.py` (item_code
   non-empty str; name str/empty-ok; value finite non-bool; dup item_code rejected). +24 TDD
-  cases, suite 1660 green, client.py cov 95%, CHANGELOG updated, no public-API change.
-  **Awaiting reviewer code review → then push master → close.**
+  cases, suite green, client.py cov 95%, CHANGELOG updated, no public-API change.
+  Reviewer BLOCK B1 (review-202606191241): padded `item_code` (`' 11000'`) accepted — FIXED,
+  added `code != code.strip()` reject + leading/trailing/both-space tests (suite 1663 green).
+  **Awaiting reviewer RE-review → then push master → close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -28,7 +30,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- _(none pending)_
+- **#123, #124, #125, #126** — labelled `bug`/queued by reviewer poller 12:20 (last_seen
+  2026-06-19T05:41:31Z). Not yet scoped. #125 = broader fundamentals result item/container
+  type-safety (adjacent to #122 but distinct; do NOT broaden #122 for it). Triage + TDD each
+  in priority order after #122 lands. Get details via `./bin/gh-maintainer issue view <n>`.
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
