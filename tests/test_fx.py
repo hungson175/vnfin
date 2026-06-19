@@ -292,6 +292,15 @@ def test_open_er_api_as_of_falls_back_to_now_without_timestamp():
     assert r.as_of_utc.tzinfo is not None  # tz-aware fallback, no crash
 
 
+def test_open_er_api_bool_timestamp_does_not_become_epoch():
+    payload = (
+        '{"result":"success","base_code":"USD","time_last_update_unix":true,'
+        '"rates":{"USD":1,"VND":25000.0,"EUR":0.9}}'
+    )
+    rates = OpenErApiFXSource(http_get=_http(payload), cache_ttl=0.01).get_rates()
+    assert rates[0].as_of_utc.year >= 2024
+
+
 def test_open_er_api_all_zero_rates_is_empty():
     payload = '{"result":"success","base_code":"USD","rates":{"USD":1,"VND":0}}'
     with pytest.raises(InvalidData):

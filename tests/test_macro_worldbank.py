@@ -684,6 +684,30 @@ def test_malformed_canonical_metadata_raises_invalid():
         )
 
 
+@pytest.mark.parametrize(
+    "field,bad_container",
+    [
+        ("indicator", ["GDP"]),
+        ("country", ["Vietnam"]),
+    ],
+)
+def test_malformed_metadata_container_raises_invalid(field, bad_container):
+    obs = {
+        "indicator": {"id": INDICATOR, "value": INDICATOR_NAME},
+        "country": {"id": "ZZ", "value": COUNTRY_NAME},
+        "countryiso3code": COUNTRY,
+        "date": "2024",
+        "value": 123.0,
+        "unit": "",
+        "obs_status": "",
+        "decimal": 1,
+    }
+    obs[field] = bad_container
+    payload = json.dumps([_meta(1), [obs]])
+    with pytest.raises(InvalidData, match=f"malformed {field} metadata"):
+        _src(payload).get_indicator(COUNTRY, INDICATOR)
+
+
 
 # ---------------------------------------------------------------------------
 # IndicatorSeries model conveniences

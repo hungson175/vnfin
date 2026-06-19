@@ -24,3 +24,17 @@ def test_parse_provider_float_rejects_none_and_non_finite():
         parse_provider_float("not-a-number", label="x", source="probe")
     with pytest.raises(InvalidData):
         parse_provider_float(float("inf"), label="x", source="probe")
+
+
+def test_parse_provider_int_accepts_numeric_scalars():
+    from vnfin.coerce import parse_provider_int
+
+    assert parse_provider_int("1700000000", label="t", source="probe") == 1700000000
+    assert parse_provider_int(1700000000.0, label="t", source="probe") == 1700000000
+
+
+def test_parse_provider_int_rejects_bool():
+    from vnfin.coerce import parse_provider_int
+
+    with pytest.raises(InvalidData, match="bool is not numeric"):
+        parse_provider_int(True, label="t", source="probe")

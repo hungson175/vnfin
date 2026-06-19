@@ -155,3 +155,13 @@ def test_bool_ohlc_raises_invalid():
     rows = [("2024-01-02", True, True, True, True, True)]
     with pytest.raises(InvalidData, match="bool is not numeric"):
         _src(_envelope(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_bool_timestamp_raises_invalid():
+    rows = [("1970-01-01", 70.0, 72.0, 69.5, 71.0, 1000)]
+    payload = json.loads(_envelope(rows=rows))
+    payload["data"]["t"] = [True]
+    with pytest.raises(InvalidData, match="bool is not numeric"):
+        _src(json.dumps(payload)).get_history(
+            "FPT", Interval.D1, date(1970, 1, 1), date(1970, 1, 1)
+        )

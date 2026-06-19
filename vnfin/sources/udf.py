@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 from datetime import date, datetime, time, timezone
 
-from ..coerce import parse_provider_float
+from ..coerce import parse_provider_float, parse_provider_int
 from ..exceptions import EmptyData, InvalidData, UnsupportedInterval
 from ..models import AdjustmentPolicy, Interval, PriceBar, PriceHistory
 from ..transport import DEFAULT_UA, HttpDataSource
@@ -159,7 +159,8 @@ class UDFSource(HttpDataSource, PriceSource):
         bars: list[PriceBar] = []
         for i in range(n):
             try:
-                tm = datetime.fromtimestamp(int(t[i]), tz=timezone.utc).astimezone(VN_TZ)
+                ts = parse_provider_int(t[i], label=f"timestamp at row {i}", source=self.name)
+                tm = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(VN_TZ)
                 op = parse_provider_float(o[i], label=f"open at row {i}", source=self.name) * self.PRICE_SCALE
                 hp = parse_provider_float(h[i], label=f"high at row {i}", source=self.name) * self.PRICE_SCALE
                 lp = parse_provider_float(l[i], label=f"low at row {i}", source=self.name) * self.PRICE_SCALE

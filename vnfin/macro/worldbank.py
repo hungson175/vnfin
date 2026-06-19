@@ -262,13 +262,13 @@ class WorldBankMacroSource(HttpDataSource):
             if not isinstance(obs, dict):
                 raise InvalidData(f"{self.NAME}: observation is not an object")
 
-            ind = obs.get("indicator") or {}
-            if indicator_name is None and isinstance(ind, dict):
+            ind = self._metadata_container(obs, "indicator", code)
+            if indicator_name is None and ind is not None:
                 indicator_name = self._metadata_str(
                     ind.get("value"), "indicator.value", code
                 )
-            ctry = obs.get("country") or {}
-            if country_name is None and isinstance(ctry, dict):
+            ctry = self._metadata_container(obs, "country", code)
+            if country_name is None and ctry is not None:
                 country_name = self._metadata_str(
                     ctry.get("value"), "country.value", code
                 )
@@ -305,6 +305,19 @@ class WorldBankMacroSource(HttpDataSource):
 
         points.sort(key=lambda p: p[0])
         return country_name, indicator_name, unit, points
+
+    @staticmethod
+    def _metadata_container(obs: dict, key: str, code: str) -> dict | None:
+        if key not in obs:
+            return None
+        raw = obs.get(key)
+        if raw is None:
+            return None
+        if not isinstance(raw, dict):
+            raise InvalidData(
+                f"{WorldBankMacroSource.NAME}: malformed {key} metadata for {code}"
+            )
+        return raw
 
     @staticmethod
     def _metadata_str(raw, field: str, code: str) -> str | None:

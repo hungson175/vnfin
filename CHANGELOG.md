@@ -7,6 +7,16 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Provider timestamp coercion** — shared ``parse_provider_int()`` rejects JSON booleans
+  before epoch timestamp conversion in UDF, Binance, and Coinbase paths; OpenER bool
+  timestamps fall back to now instead of epoch. ([#106](https://github.com/hungson175/vnfin/issues/106))
+- **World Bank metadata containers** — reject present non-object ``indicator`` and
+  ``country`` observation containers, not just malformed ``value`` fields. ([#101](https://github.com/hungson175/vnfin/issues/101))
+- **CafeF fiscal/display metadata** — reject non-string line-item ``Name`` values and
+  boolean ``Year``/``Quater`` before integer coercion instead of leaking
+  ``AttributeError`` or year-1 reports. ([#94](https://github.com/hungson175/vnfin/issues/94))
+- **FX failover rate guard** — reject infinite and boolean main rates in the
+  request-aware result guard, matching direct source validation. ([#88](https://github.com/hungson175/vnfin/issues/88))
 - **Index member metadata** — reject present non-string ``exchange``, company name,
   and ``isin`` fields instead of silently erasing malformed provider metadata.
   ([#100](https://github.com/hungson175/vnfin/issues/100))

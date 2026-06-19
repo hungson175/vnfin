@@ -247,6 +247,13 @@ def test_garbage_timestamp_raises_invalid():
         src_with(json.dumps([bad])).get_klines("BTCUSDT", Interval.D1, *WIDE)
 
 
+def test_bool_timestamp_raises_invalid():
+    bad = _kline(_GOOD)
+    bad[0] = True
+    with pytest.raises(InvalidData, match="bool is not numeric"):
+        src_with(json.dumps([bad])).get_klines("BTCUSDT", Interval.D1, *WIDE)
+
+
 def test_nan_price_raises_invalid():
     # bare NaN parsed by json.loads -> non-finite guard
     open_ms = _ms(date(2026, 6, 15))

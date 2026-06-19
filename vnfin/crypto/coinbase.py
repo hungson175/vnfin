@@ -45,7 +45,7 @@ import math
 import re
 from datetime import date, datetime, time, timezone
 
-from ..coerce import parse_provider_float
+from ..coerce import parse_provider_float, parse_provider_int
 from ..exceptions import EmptyData, InvalidData, UnsupportedInterval
 from ..models import Interval
 from ..transport import DEFAULT_UA, HttpDataSource
@@ -306,7 +306,7 @@ class CoinbaseCryptoSource(HttpDataSource):
             if not isinstance(row, (list, tuple)) or len(row) < _MIN_FIELDS:
                 raise InvalidData(f"{self.name}: malformed candle row {i}")
             try:
-                sec = int(row[_TIME])
+                sec = parse_provider_int(row[_TIME], label=f"time at row {i}", source=self.name)
                 tm = datetime.fromtimestamp(sec, tz=timezone.utc)
                 lp = parse_provider_float(row[_LOW], label=f"low at row {i}", source=self.name)
                 hp = parse_provider_float(row[_HIGH], label=f"high at row {i}", source=self.name)

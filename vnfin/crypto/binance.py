@@ -35,7 +35,7 @@ import math
 import re
 from datetime import date, datetime, time, timezone
 
-from ..coerce import parse_provider_float
+from ..coerce import parse_provider_float, parse_provider_int
 from ..exceptions import (
     EmptyData,
     InvalidData,
@@ -265,7 +265,7 @@ class BinanceCryptoSource(HttpDataSource):
             if not isinstance(row, (list, tuple)) or len(row) < _MIN_FIELDS:
                 raise InvalidData(f"{self.name}: malformed kline row {i}")
             try:
-                ms = int(row[_OPEN_TIME])
+                ms = parse_provider_int(row[_OPEN_TIME], label=f"open time at row {i}", source=self.name)
                 tm = datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc)
                 op = parse_provider_float(row[_OPEN], label=f"open at row {i}", source=self.name)
                 hp = parse_provider_float(row[_HIGH], label=f"high at row {i}", source=self.name)

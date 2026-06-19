@@ -80,6 +80,8 @@ class OpenErApiFXSource(FXSource):
     @staticmethod
     def _as_of(payload: dict) -> datetime:
         ts = payload.get("time_last_update_unix")
+        if isinstance(ts, bool):
+            return datetime.now(timezone.utc)
         if isinstance(ts, (int, float)) and ts > 0:
             try:
                 return datetime.fromtimestamp(int(ts), tz=timezone.utc)
