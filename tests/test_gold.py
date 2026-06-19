@@ -245,6 +245,10 @@ def test_btmc_rejects_noncanonical_timestamp():
         "not-a-date",
         "99/99/2026 99:99",  # right shape, impossible values -> strptime still rejects
         "",                  # missing/blank @d_N
+        " 17/06/2026 15:38",   # leading space -> not the exact contracted shape
+        "17/06/2026 15:38 ",   # trailing space
+        "\t17/06/2026 15:38",  # leading tab
+        "17/06/2026 15:38\n",  # trailing newline
     ):
         src = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=_row(bad))))
         with pytest.raises(InvalidData):

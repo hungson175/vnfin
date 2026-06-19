@@ -251,14 +251,14 @@ class BTMCGoldSource(_VNGoldSource):
     def _parse_dt(self, raw):
         if not raw:
             raise InvalidData(f"{self.name}: missing timestamp")
-        # Issue #114: @d_N is contracted as DD/MM/YYYY HH:MM. strptime is padding-lenient
-        # (accepts 1/1/2026 9:00), so guard the exact canonical shape before parsing so a
-        # corrupted or schema-shifted timestamp is flagged at the boundary, not normalized.
-        stripped = raw.strip() if isinstance(raw, str) else raw
-        if not isinstance(stripped, str) or not _BTMC_TS.fullmatch(stripped):
+        # Issue #114: @d_N is contracted as EXACTLY DD/MM/YYYY HH:MM. strptime is
+        # padding-lenient (accepts 1/1/2026 9:00) and .strip() would mask surrounding
+        # whitespace, so match the raw value directly: any padding drift or leading/
+        # trailing whitespace is flagged at the boundary instead of normalized.
+        if not isinstance(raw, str) or not _BTMC_TS.fullmatch(raw):
             raise InvalidData(f"{self.name}: bad timestamp {raw!r}")
         try:
-            naive = datetime.strptime(stripped, "%d/%m/%Y %H:%M")
+            naive = datetime.strptime(raw, "%d/%m/%Y %H:%M")
         except ValueError as exc:
             raise InvalidData(f"{self.name}: bad timestamp {raw!r}") from exc
         return naive.replace(tzinfo=VN_TZ)
