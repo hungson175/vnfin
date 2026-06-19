@@ -7,6 +7,9 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **DBnomics period/frequency validation** — reject `period_start_day` values that contradict
+  the declared observation frequency (annual must be Jan 1; monthly must be month-start).
+  ([#104](https://github.com/hungson175/vnfin/issues/104))
 - **VN trading calendar** — add missing 2025-05-02 and 2026-08-31 official market closures so
   `expected_latest_trading_day()` no longer treats National Day / Labor Day bridge sessions as
   trading days. ([#92](https://github.com/hungson175/vnfin/issues/92))

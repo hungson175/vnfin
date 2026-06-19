@@ -230,3 +230,20 @@ def test_cpi_zero_value_raises_invalid():
         ).get_indicator(COUNTRY, MacroIndicator.CPI)
 
 
+# --- period_start_day vs frequency contract (issue #104) -------------------
+
+def test_annual_gdp_non_jan_1_raises_invalid():
+    with pytest.raises(InvalidData, match="period"):
+        _src(dbn_success(periods=["2024-02-01"], values=[123.0])).get_indicator(
+            COUNTRY, MacroIndicator.GDP
+        )
+
+
+def test_monthly_cpi_non_month_start_raises_invalid():
+    with pytest.raises(InvalidData, match="period"):
+        _src(
+            dbn_success(
+                series_code="M.ZZ.PCPI_IX", periods=["2024-01-15"], values=[123.0]
+            )
+        ).get_indicator(COUNTRY, MacroIndicator.CPI)
+

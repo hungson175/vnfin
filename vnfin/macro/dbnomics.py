@@ -29,6 +29,7 @@ Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - non-JSON / wrong shape / mismatched -> ``InvalidData``
 - unsupported indicator / unknown ISO3-> ``InvalidData``
 - malformed scalar / bad period       -> ``InvalidData``
+- period date contradicts frequency   -> ``InvalidData``
 - no docs / all-null                  -> ``EmptyData``
 """
 from __future__ import annotations
@@ -121,7 +122,7 @@ class DBnomicsSource(HttpDataSource):
         data = self._request_json(url, params={"observations": 1}, headers=self._headers())
 
         doc = self._extract_doc(data)
-        points = self._build_points(doc, series_id)
+        points = self._build_points(doc, series_id, result_freq)
         if not points:
             raise EmptyData(f"{self.NAME}: no observations for {series_id}")
         # Level indicators (GDP, CPI) must be strictly positive; percent/rate
@@ -160,7 +161,7 @@ class DBnomicsSource(HttpDataSource):
             raise InvalidData(f"{self.NAME}: doc is not an object")
         return doc
 
-    def _build_points(self, doc, series_id):
+    def _build_points(self, doc, series_id, result_freq: Frequency):
         periods = doc.get("period_start_day")
         values = doc.get("value")
         if not isinstance(periods, list) or not isinstance(values, list):
@@ -177,14 +178,25 @@ class DBnomicsSource(HttpDataSource):
                 continue  # missing observation -> skip
             try:
                 d = self._parse_period_day(period)
+                self._validate_period_boundary(d, result_freq)
                 value = parse_provider_float(raw, label=f"observation at {period}", source=self.NAME)
             except (TypeError, ValueError) as exc:
-                raise InvalidData(f"{self.NAME}: malformed observation for {series_id}") from exc
+                raise InvalidData(
+                    f"{self.NAME}: malformed observation for {series_id}: {exc}"
+                ) from exc
             if not math.isfinite(value):
                 raise InvalidData(f"{self.NAME}: non-finite value for {series_id} at {period}")
             points.append((d, value))
         points.sort(key=lambda p: p[0])
         return points
+
+    @staticmethod
+    def _validate_period_boundary(d: date, freq: Frequency) -> None:
+        """Ensure ``period_start_day`` matches the declared observation frequency."""
+        if freq == Frequency.ANNUAL and (d.month != 1 or d.day != 1):
+            raise ValueError(f"annual period must be Jan 1, got {d.isoformat()}")
+        if freq == Frequency.MONTHLY and d.day != 1:
+            raise ValueError(f"monthly period must be month-start, got {d.isoformat()}")
 
     @staticmethod
     def _parse_period_day(period) -> date:
