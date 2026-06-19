@@ -26,6 +26,8 @@ from .fields import (
 )
 from .keys import (
     canonical_country_iso3,
+    canonical_crypto_asset,
+    canonical_crypto_pair,
     canonical_enum_tag,
     canonical_fund_code,
     canonical_provider_key,
@@ -52,6 +54,8 @@ __all__ = [
     "canonical_security_symbol",
     "canonical_fund_code",
     "canonical_country_iso3",
+    "canonical_crypto_asset",
+    "canonical_crypto_pair",
     "require_object",
     "require_list",
     "reject_duplicate",

@@ -776,3 +776,15 @@ def test_open_er_integral_timestamp_is_precise(ts):
     src = OpenErApiFXSource(http_get=_http(_open_er_payload(ts)))
     r = src.get_rate("USD")
     assert r.as_of_utc == _TRUNCATED
+
+
+# Issue #93 — a non-finite required VND anchor must fail closed as InvalidData,
+# not silently make every leg unusable and degrade to EmptyData.
+@pytest.mark.parametrize("bad_anchor", [float("inf"), float("nan"), float("-inf")])
+def test_open_er_api_nonfinite_vnd_anchor_raises_invaliddata(bad_anchor):
+    import json as _json
+    payload = _json.loads(_OPEN_ER)
+    payload["rates"]["VND"] = bad_anchor
+    src = OpenErApiFXSource(http_get=_http(_json.dumps(payload)))
+    with pytest.raises(InvalidData):
+        src.get_rates()

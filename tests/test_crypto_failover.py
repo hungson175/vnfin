@@ -796,3 +796,51 @@ def test_accepts_binance_quote_form_price_unit():
     good = _crypto_history(bars=(_good_bar(),), quote_asset="USDT", price_unit="USDT per BTC")
     client = FailoverCryptoClient([_RawCryptoSource(good)])
     assert client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3)).source == "raw"
+
+
+def test_crypto_malformed_pair_fails_closed_zero_calls():
+    # #9 crypto: malformed pair fails closed BEFORE the failover engine (zero calls),
+    # raising InvalidData, never AllSourcesFailed.
+    from vnfin.exceptions import InvalidData
+
+    class CountingCrypto:
+        unit = "USD"
+
+        def __init__(self):
+            self.name = "c"
+            self.calls = 0
+
+        def supports(self, interval):
+            return True
+
+        def get_klines(self, symbol, interval, start, end):
+            self.calls += 1
+            raise AssertionError("source must not be called for a malformed pair")
+
+    c = CountingCrypto()
+    client = FailoverCryptoClient([c])
+    for bad in ["BTC/USD", "BTC USDT", "BTC\nUSDT", "BTC-", "-USD", "BTC--USD", "", "   ", "B"]:
+        with pytest.raises(InvalidData):
+            client.get_klines(bad, Interval.D1, date(2025, 1, 1), date(2025, 1, 3))
+    assert c.calls == 0
+
+
+def test_crypto_pair_normalizes_padded_lower():
+    class _GoodCrypto:
+        unit = "USD"
+        name = "good"
+
+        def supports(self, interval):
+            return True
+
+        def get_klines(self, symbol, interval, start, end):
+            return CryptoHistory(
+                symbol=symbol, interval=interval, source=self.name,
+                currency="USD", value_unit="USD",
+                bars=(CryptoBar(datetime(2025, 1, 2, tzinfo=UTC), 1.0, 1.0, 1.0, 1.0, 1.0),),
+            )
+
+    h = FailoverCryptoClient([_GoodCrypto()]).get_klines(
+        "  btcusdt  ", Interval.D1, date(2025, 1, 1), date(2025, 1, 3)
+    )
+    assert h.source == "good" and h.symbol == "BTCUSDT"

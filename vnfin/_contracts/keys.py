@@ -24,6 +24,15 @@ _ALPHA_KEY_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 #: A canonical ISO3 country code: exactly three ASCII letters (after upper-normalize).
 _ISO3_RE = re.compile(r"[A-Z]{3}")
 
+#: Crypto identifiers (distinct from security tickers — pairs use hyphens/concatenation,
+#: never the security [A-Z][A-Z0-9]* grammar). A single asset token (BTC, ETH, USDT).
+_CRYPTO_ASSET_RE = re.compile(r"[A-Z0-9]{2,15}")
+#: A crypto trading pair, v0.2: concatenated (``BTCUSDT``) or hyphenated (``BTC-USD``)
+#: only — slash (``BTC/USD``), internal whitespace/control, and leading/trailing/double
+#: hyphens are rejected. ``fullmatch`` (never ``match``+``$``) closes the trailing-newline
+#: hole. Two alternatives joined so each leg is bounded.
+_CRYPTO_PAIR_RE = re.compile(r"[A-Z0-9]{4,}|[A-Z0-9]{2,}-[A-Z0-9]{2,}")
+
 #: A canonical security/fund identifier: letter-start then uppercase alphanumerics,
 #: no dot/hyphen/slash/punctuation/internal-space and not digit-first (#34/#33/#30/#9).
 #: Validated AFTER ``strip().upper()`` so padded/lower public inputs normalize (live
@@ -116,6 +125,44 @@ def _canonical_identifier(value, ctx: str, *, pattern=_SECURITY_ID_RE) -> str:
             ctx, f"non-canonical identifier {value!r}: expected [A-Z][A-Z0-9]*"
         )
     return norm
+
+
+def canonical_crypto_asset(value, ctx: str) -> str:
+    """Return a canonical crypto asset token (e.g. ``BTC``/``USDT``), or ``InvalidData``.
+
+    ``strip().upper()`` then ``fullmatch`` ``[A-Z0-9]{2,15}`` — non-string, blank,
+    internal whitespace/control, and punctuation fail closed. Distinct from the
+    security-ticker grammar (crypto tokens may be digit-led / all-digit-ish).
+    """
+    if not isinstance(value, str):
+        raise contract_error(ctx, f"crypto asset must be a string, got {type(value).__name__}")
+    s = value.strip().upper()
+    if not _CRYPTO_ASSET_RE.fullmatch(s):
+        raise contract_error(
+            ctx, f"malformed crypto asset {value!r}: expected [A-Z0-9]{{2,15}}"
+        )
+    return s
+
+
+def canonical_crypto_pair(value, ctx: str) -> str:
+    """Return a canonical crypto trading pair, or raise ``InvalidData`` (#9 crypto).
+
+    ``strip().upper()`` then ``fullmatch`` against the v0.2 grammar: concatenated
+    (``BTCUSDT``) or hyphenated (``BTC-USD``) only. Slash (``BTC/USD``), internal
+    whitespace / control / newline, leading/trailing/double hyphens, blank, and
+    non-string all fail closed. ``fullmatch`` (not ``match``+``$``) means a trailing
+    newline inside the body cannot sneak through.
+    """
+    if not isinstance(value, str):
+        raise contract_error(ctx, f"crypto pair must be a string, got {type(value).__name__}")
+    s = value.strip().upper()
+    if not _CRYPTO_PAIR_RE.fullmatch(s):
+        raise contract_error(
+            ctx,
+            f"malformed crypto pair {value!r}: expected concatenated (BTCUSDT) or "
+            f"hyphenated (BTC-USD) form",
+        )
+    return s
 
 
 def canonical_country_iso3(value, ctx: str) -> str:

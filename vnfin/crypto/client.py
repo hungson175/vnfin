@@ -33,6 +33,7 @@ from .coinbase import CoinbaseCryptoSource, _KNOWN_QUOTES as _COINBASE_QUOTES
 from .models import CryptoBar, CryptoHistory
 
 from .._contracts import (
+    canonical_crypto_pair,
     non_empty_reason,
     result_type_reason,
     row_object_and_aware_datetime_reason,
@@ -65,8 +66,11 @@ _KNOWN_QUOTES = tuple(
 
 
 def _normalize_crypto_symbol(symbol: str) -> str:
-    """Issue #9: reject empty/malformed symbols before the failover engine runs."""
-    return validate_non_empty_string(symbol, "crypto symbol")
+    """Issue #9 (crypto): a crypto symbol is a canonical trading PAIR, not a security
+    ticker. Reject malformed shapes (slash, internal whitespace/control/newline,
+    leading/trailing/double hyphen, non-string, blank) before the failover engine
+    runs; accept concatenated (BTCUSDT) or hyphenated (BTC-USD), normalized upper."""
+    return canonical_crypto_pair(symbol, "crypto symbol")
 
 
 def _base_asset(symbol: str) -> str | None:

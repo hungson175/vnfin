@@ -43,7 +43,16 @@ class OpenErApiFXSource(FXSource):
         if not isinstance(rates, dict):
             raise InvalidData(f"{self.name}: missing rates object")
         vnd_per_usd = rates.get(self.QUOTE)
-        if isinstance(vnd_per_usd, bool) or not isinstance(vnd_per_usd, (int, float)) or vnd_per_usd <= 0:
+        # Issue #93: the required VND anchor must be a finite positive number. A
+        # non-finite (inf/nan) anchor is malformed and must fail closed as
+        # InvalidData here, not silently make every leg unusable and degrade to
+        # EmptyData (mirrors the USD self-rate finiteness check below).
+        if (
+            isinstance(vnd_per_usd, bool)
+            or not isinstance(vnd_per_usd, (int, float))
+            or not math.isfinite(vnd_per_usd)
+            or vnd_per_usd <= 0
+        ):
             raise InvalidData(f"{self.name}: missing/invalid {self.QUOTE} anchor")
         usd_self = rates.get("USD")
         if (

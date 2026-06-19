@@ -134,3 +134,47 @@ def test_canonical_security_symbol_normalizes(value, expected):
 def test_canonical_security_symbol_rejects(bad):
     with pytest.raises(InvalidData):
         canonical_security_symbol(bad, "symbol")
+
+
+# Phase 4 crypto/FX — canonical crypto asset + pair (#9 crypto). Distinct grammar.
+from vnfin._contracts import canonical_crypto_asset, canonical_crypto_pair
+
+
+@pytest.mark.parametrize("value,expected", [("btc", "BTC"), (" eth ", "ETH"), ("usdt", "USDT"), ("VND1", "VND1")])
+def test_canonical_crypto_asset_normalizes(value, expected):
+    assert canonical_crypto_asset(value, "asset") == expected
+
+
+@pytest.mark.parametrize("bad", [None, 123, b"BTC", "", " ", "B", "BT C", "BT-C", "BT/C", "BT.C", "B\nTC", "x" * 16])
+def test_canonical_crypto_asset_rejects(bad):
+    with pytest.raises(InvalidData):
+        canonical_crypto_asset(bad, "asset")
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [("btcusdt", "BTCUSDT"), ("BTC-USD", "BTC-USD"), (" eth-usd ", "ETH-USD"), ("ethbtc", "ETHBTC")],
+)
+def test_canonical_crypto_pair_accepts(value, expected):
+    assert canonical_crypto_pair(value, "pair") == expected
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        None, 123, b"BTCUSDT", "", "   ",
+        "BTC/USD",          # slash rejected in v0.2
+        "BTC USDT",         # internal space
+        "BTC\tUSDT",        # internal tab
+        "BTC\nUSDT",        # internal newline
+        "BTC-USD\nDROP",    # fullmatch hole: trailing junk after newline must reject
+        "BTC-",             # trailing hyphen
+        "-USD",             # leading hyphen
+        "BTC--USD",         # double hyphen
+        "BTC.USD",          # punctuation
+        "ABC",              # too short for concatenated (needs >= 4)
+    ],
+)
+def test_canonical_crypto_pair_rejects(bad):
+    with pytest.raises(InvalidData):
+        canonical_crypto_pair(bad, "pair")
