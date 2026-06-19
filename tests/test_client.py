@@ -720,3 +720,28 @@ def test_accepts_none_price_fetched_at_utc():
     hist = _history_with_bars("real", "FPT", bars, fetched_at_utc=None)
     client = FailoverPriceClient([RawFakeSource("real", hist)])
     assert client.get_daily("FPT", *WIDE).source == "real"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #128 — warnings must be tuple[str, ...]; None/list/str/non-str rejected.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad_warnings",
+    [None, ["w"], "w", (1,), (None,), ("ok", 2)],
+    ids=["none", "list", "str", "int_member", "none_member", "mixed_member"],
+)
+def test_rejects_malformed_price_warnings(bad_warnings, synth):
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    bad = _history_with_bars("real", "FPT", bars, warnings=bad_warnings)
+    good = FakeSource("good", synth.make_history("good", 2))
+    client = FailoverPriceClient([RawFakeSource("real", bad), good])
+    h = client.get_daily("FPT", *WIDE)
+    assert h.source == "good"
+    assert "warnings" in h.attempts[0].reason
+
+
+def test_accepts_valid_price_warnings():
+    bars = (PriceBar(datetime(2024, 1, 2, tzinfo=timezone.utc), 10, 11, 9, 10.5, 1000),)
+    hist = _history_with_bars("real", "FPT", bars, warnings=("a soft note",))
+    client = FailoverPriceClient([RawFakeSource("real", hist)])
+    assert client.get_daily("FPT", *WIDE).source == "real"

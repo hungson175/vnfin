@@ -36,7 +36,7 @@ from dataclasses import replace
 from datetime import date, datetime
 
 from ..exceptions import AllSourcesFailed, InvalidData, UnitMismatchError
-from ..failover import FailoverClient, _fetched_at_utc_reason
+from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..validation import validate_country_iso3
 from .dbnomics import DBnomicsSource
 from .imf import IMFDataMapperSource
@@ -190,6 +190,10 @@ class MacroClient:
 
             # Issue #127: reject present-malformed fetched_at_utc metadata.
             meta_reason = _fetched_at_utc_reason(series.fetched_at_utc)
+            if meta_reason:
+                return meta_reason
+            # Issue #128: reject malformed warnings (must be tuple[str, ...]).
+            meta_reason = _warnings_reason(series.warnings)
             if meta_reason:
                 return meta_reason
 

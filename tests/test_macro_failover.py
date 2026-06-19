@@ -694,3 +694,41 @@ def test_rejects_malformed_macro_fetched_at_utc(bad_ts):
 def test_accepts_none_macro_fetched_at_utc():
     res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_TsMacroSource("ok", None)])
     assert res.source == "ok"
+
+
+# Issue #128 — macro warnings must be tuple[str, ...].
+class _WarnMacroSource:
+    def __init__(self, name, warnings):
+        self.name = name
+        self._warnings = warnings
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return IndicatorSeries(
+            country=country_iso3.upper(),
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=((date(2023, 1, 1), 42.0),),
+            source=self.name,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            fetched_at_utc=datetime.now(timezone.utc),
+            warnings=self._warnings,
+        )
+
+
+@pytest.mark.parametrize(
+    "bad_warnings",
+    [None, ["w"], "w", (1,), (None,)],
+    ids=["none", "list", "str", "int_member", "none_member"],
+)
+def test_rejects_malformed_macro_warnings(bad_warnings):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_WarnMacroSource("bad", bad_warnings)])
+    assert "warnings" in ei.value.attempts[0].reason

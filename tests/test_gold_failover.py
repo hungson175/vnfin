@@ -704,3 +704,14 @@ def test_accepts_none_gold_fetched_at_utc():
     good = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), fetched_at_utc=None)
     client = FailoverGoldClient([_RawGoldSource(good)], min_coverage=0.0)
     assert client.get_history(date(2024, 1, 2), date(2024, 1, 2)).source == "raw"
+
+
+# Issue #128 — gold warnings must be tuple[str, ...].
+@pytest.mark.parametrize(
+    "bad_warnings",
+    [None, ["w"], "w", (1,), (None,)],
+    ids=["none", "list", "str", "int_member", "none_member"],
+)
+def test_rejects_malformed_gold_warnings(bad_warnings):
+    bad = _gold_history(bars=(GoldBar(date(2024, 1, 2), 2000.0),), warnings=bad_warnings)
+    _assert_gold_rejected(bad, "warnings")

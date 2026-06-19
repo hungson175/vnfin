@@ -696,3 +696,32 @@ def test_accepts_none_fundamental_fetched_at_utc():
     primary = FakeSource("vndirect", result=(_report_with_ts(None),))
     client = FailoverFundamentalClient([primary])
     assert client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)[0].source == "vndirect"
+
+
+# Issue #128 — fundamentals warnings must be tuple[str, ...] (per report).
+def _report_with_warnings(warnings):
+    return FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency="VND",
+        warnings=warnings,
+    )
+
+
+@pytest.mark.parametrize(
+    "bad_warnings",
+    [None, ["w"], "w", (1,), (None,)],
+    ids=["none", "list", "str", "int_member", "none_member"],
+)
+def test_rejects_malformed_fundamental_warnings(bad_warnings):
+    _assert_fundamental_rejected(lambda: _report_with_warnings(bad_warnings), "warnings")
+
+
+def test_accepts_valid_fundamental_warnings():
+    primary = FakeSource("vndirect", result=(_report_with_warnings(("a note",)),))
+    client = FailoverFundamentalClient([primary])
+    assert client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)[0].source == "vndirect"

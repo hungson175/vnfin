@@ -18,7 +18,7 @@ from datetime import date, datetime
 from numbers import Real
 
 from ..exceptions import AllSourcesFailed, InvalidData, VnfinError
-from ..failover import FailoverClient, _fetched_at_utc_reason
+from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..validation import validate_non_empty_string, validate_positive_int
 from .base import AUTO, FundamentalSource, resolve_is_bank
 from .cafef import CafeFFundamentalSource
@@ -184,6 +184,10 @@ def _validate_fundamental_result(
 
         # Issue #127: reject present-malformed fetched_at_utc metadata (per report).
         reason = _fetched_at_utc_reason(report.fetched_at_utc)
+        if reason:
+            return reason
+        # Issue #128: reject malformed warnings (must be tuple[str, ...]) per report.
+        reason = _warnings_reason(report.warnings)
         if reason:
             return reason
 

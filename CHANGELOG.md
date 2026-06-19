@@ -7,6 +7,12 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Failover warnings metadata guard** — the price, crypto, gold, macro, and fundamentals
+  failover result guards now reject a malformed ``warnings`` field: it must be a ``tuple`` whose
+  members are all strings (the public ``tuple[str, ...]`` contract). A ``None`` (which previously
+  crashed finalization via ``tuple(hist.warnings)``), a list, a bare string, or a tuple with a
+  non-string member is rejected as a failover attempt. For fundamentals the check is per
+  ``FinancialReport``. ([#128](https://github.com/hungson175/vnfin/issues/128))
 - **Failover fetched_at_utc freshness guard** — the price, crypto, gold, macro, and fundamentals
   failover result guards now reject a present-but-malformed ``fetched_at_utc``: a value must be a
   timezone-aware ``datetime`` at UTC offset (naive datetimes, non-UTC datetimes, strings, and

@@ -40,7 +40,7 @@ from dataclasses import replace
 from datetime import date, datetime, timedelta
 
 from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
-from ..failover import FailoverClient, _fetched_at_utc_reason
+from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from ..validation import validate_date_range
 from .models import GoldBar, GoldHistory
 
@@ -223,6 +223,10 @@ def _validate_gold_result(hist, chain_unit: str | None) -> str | None:
 
     # Issue #127: reject present-malformed fetched_at_utc freshness metadata.
     reason = _fetched_at_utc_reason(hist.fetched_at_utc)
+    if reason:
+        return reason
+    # Issue #128: reject malformed warnings (must be tuple[str, ...]).
+    reason = _warnings_reason(hist.warnings)
     if reason:
         return reason
 

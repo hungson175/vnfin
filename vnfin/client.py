@@ -16,7 +16,7 @@ from datetime import date, datetime
 
 from .calendar import as_date, expected_latest_trading_day
 from .exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
-from .failover import FailoverClient, _fetched_at_utc_reason
+from .failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from .models import AdjustmentPolicy, Interval, PriceBar, PriceHistory
 from .validation import validate_date_range, validate_non_empty_string
 
@@ -220,6 +220,10 @@ def _validate_price_result(
 
     # Issue #127: reject present-malformed fetched_at_utc freshness metadata.
     reason = _fetched_at_utc_reason(hist.fetched_at_utc)
+    if reason:
+        return reason
+    # Issue #128: reject malformed warnings (must be tuple[str, ...]).
+    reason = _warnings_reason(hist.warnings)
     if reason:
         return reason
 

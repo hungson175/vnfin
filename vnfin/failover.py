@@ -56,6 +56,23 @@ def _fetched_at_utc_reason(value) -> Optional[str]:
     return None
 
 
+def _warnings_reason(warnings) -> Optional[str]:
+    """Return a rejection reason for a malformed ``warnings`` value (#128).
+
+    The public contract is ``warnings: tuple[str, ...]`` (default ``()``). A
+    non-tuple (``None`` — which would also crash ``tuple(...)`` in finalize — a
+    bare string, a list, etc.) or a tuple with any non-string member is malformed
+    diagnostic metadata and is rejected so a corrupt source cannot block a healthy
+    backup. A healthy source always passes (empty tuple or a tuple of strings).
+    """
+    if not isinstance(warnings, tuple):
+        return f"malformed warnings {warnings!r}: expected a tuple of strings"
+    for w in warnings:
+        if not isinstance(w, str):
+            return f"malformed warnings member {w!r}: expected a string"
+    return None
+
+
 def _always_capable(source, *args, **kwargs) -> bool:
     return True
 

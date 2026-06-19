@@ -703,3 +703,14 @@ def test_accepts_none_crypto_fetched_at_utc():
     bars = (CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),)
     client = FailoverCryptoClient([_RawCryptoSource(_crypto_history(bars=bars, fetched_at_utc=None))])
     assert client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3)).source == "raw"
+
+
+# Issue #128 — crypto warnings must be tuple[str, ...].
+@pytest.mark.parametrize(
+    "bad_warnings",
+    [None, ["w"], "w", (1,), (None,)],
+    ids=["none", "list", "str", "int_member", "none_member"],
+)
+def test_rejects_malformed_crypto_warnings(bad_warnings):
+    bars = (CryptoBar(datetime(2024, 1, 2, tzinfo=UTC), 1, 1, 1, 1, 1),)
+    _assert_rejected_reason(_crypto_history(bars=bars, warnings=bad_warnings), "warnings")
