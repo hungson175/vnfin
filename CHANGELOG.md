@@ -7,6 +7,16 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **GoldApi present-falsey updatedAt guard** — ``GoldApiSource`` now only falls back to a
+  tz-aware "now" when ``updatedAt`` is truly absent/``null``. A present but falsey/non-string
+  value (``False``/``0``/``""``/``[]``/``{}``) is corrupted freshness metadata and is rejected via
+  the strict ISO-8601 check instead of being silently relabeled with the current time.
+  ([#112](https://github.com/hungson175/vnfin/issues/112))
+- **VNDirect all-mismatched-code response guard** — when *every* returned statement (or ratio)
+  row carries a provider ``code`` that contradicts the requested symbol,
+  ``VNDirectFundamentalSource`` now raises ``InvalidData`` (wrong-identity payload) instead of
+  returning an empty tuple that reads as legitimate no-data.
+  ([#21](https://github.com/hungson175/vnfin/issues/21))
 - **Health raw-schema boolean guard** — ``vnfin._health.check_schema`` now rejects a JSON boolean
   for a numeric ``(int, float)`` schema path (``bool`` is an ``int`` subclass, so it previously
   passed). A boolean is accepted only when ``bool`` is explicitly in the declared types, so
