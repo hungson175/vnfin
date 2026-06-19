@@ -100,8 +100,16 @@ def check_schema(data: Any, spec: SchemaSpec) -> tuple[bool, list[str]]:
         except (KeyError, IndexError, TypeError):
             problems.append(f"missing path: {path}")
             continue
-        if types is not None and not isinstance(val, types):
-            problems.append(f"wrong type at {path}: got {type(val).__name__}")
+        if types is not None:
+            type_tuple = types if isinstance(types, tuple) else (types,)
+            # Issue #87: bool is an int subclass, so isinstance(True, (int, float))
+            # is True. A numeric raw-schema path must reject JSON booleans unless
+            # bool is explicitly allowed, otherwise provider drift from 26000.0 to
+            # `true` would be marked schema-ok.
+            if isinstance(val, bool) and bool not in type_tuple:
+                problems.append(f"wrong type at {path}: got bool")
+            elif not isinstance(val, type_tuple):
+                problems.append(f"wrong type at {path}: got {type(val).__name__}")
     return (not problems, problems)
 
 

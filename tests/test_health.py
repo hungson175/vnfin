@@ -68,6 +68,29 @@ def test_check_schema_list_index_path():
     assert ok and problems == []
 
 
+@pytest.mark.parametrize("bool_val", [True, False], ids=["true", "false"])
+def test_check_schema_rejects_bool_for_numeric_path(bool_val):
+    # Issue #87 (reopen): bool is an int subclass, so a numeric (int, float) path
+    # must reject JSON booleans — otherwise provider drift from 26000.0 to `true`
+    # would be marked schema-ok.
+    spec = SchemaSpec(required=(("rates.VND", (int, float)),))
+    ok, problems = check_schema({"rates": {"VND": bool_val}}, spec)
+    assert not ok and any("rates.VND" in p and "bool" in p for p in problems)
+
+
+def test_check_schema_accepts_bool_when_bool_explicitly_allowed():
+    # If a path explicitly allows bool, a bool value is fine.
+    spec = SchemaSpec(required=(("flag", (bool,)),))
+    ok, problems = check_schema({"flag": True}, spec)
+    assert ok and problems == []
+
+
+def test_check_schema_numeric_path_still_accepts_int_and_float():
+    spec = SchemaSpec(required=(("a", (int, float)), ("b", (int, float))))
+    ok, problems = check_schema({"a": 5, "b": 2.5}, spec)
+    assert ok and problems == []
+
+
 def test_check_schema_list_index_out_of_range_reports():
     spec = SchemaSpec(required=(("data.0.close", (int, float)),))
     ok, problems = check_schema({"data": []}, spec)
