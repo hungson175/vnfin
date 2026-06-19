@@ -387,6 +387,23 @@ def test_list_funds_duplicate_code_raises_invalid():
         _src(_fund_list_payload(rows=rows)).list_funds()
 
 
+def test_list_funds_case_insensitive_duplicate_code_raises_invalid():
+    # Issue #68: codes that normalize to the same value (case-insensitive + surrounding
+    # whitespace) must be treated as duplicates, e.g. "TESTCO" vs " testco ".
+    rows = [
+        {
+            "id": FAKE_ID_A, "code": "TESTCO", "shortName": "TESTCO", "name": "X",
+            "nav": 100.0, "dataFundAssetType": {"code": "STOCK"}, "owner": {"name": "M"},
+        },
+        {
+            "id": FAKE_ID_B, "code": " testco ", "shortName": " testco ", "name": "Y",
+            "nav": 200.0, "dataFundAssetType": {"code": "BOND"}, "owner": {"name": "N"},
+        },
+    ]
+    with pytest.raises(InvalidData, match="duplicate fund code"):
+        _src(_fund_list_payload(rows=rows)).list_funds()
+
+
 def test_list_funds_duplicate_id_raises_invalid():
     # Issue #68: duplicate provider ids within one response must raise InvalidData.
     rows = [

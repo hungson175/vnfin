@@ -139,11 +139,14 @@ class FmarketFundSource(HttpDataSource):
         funds: list[Fund] = []
         for r in rows:
             fund = self._parse_fund(r)
-            if fund.code in seen_codes:
+            # Issue #68: dedupe on the case-insensitive code so "TESTCO" and " testco "
+            # collide (fund.code is already stripped in _parse_fund).
+            code_key = fund.code.casefold()
+            if code_key in seen_codes:
                 raise InvalidData(f"fmarket: duplicate fund code {fund.code} in response")
             if fund.id in seen_ids:
                 raise InvalidData(f"fmarket: duplicate fund id {fund.id} in response")
-            seen_codes.add(fund.code)
+            seen_codes.add(code_key)
             seen_ids.add(fund.id)
             funds.append(fund)
         return FundList(
