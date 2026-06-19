@@ -316,6 +316,31 @@ def test_vietcombank_as_of_falls_back_without_datetime():
     assert r.as_of_utc.tzinfo is not None
 
 
+def test_vietcombank_present_malformed_datetime_raises():
+    # Issue #113: a present, non-blank but malformed <DateTime> must raise InvalidData
+    # rather than silently stamping the rate with now() (which hides freshness corruption).
+    # Missing/blank <DateTime> keeps the fallback (covered by the test above).
+    def _xml(dt_text):
+        return (
+            f"<ExrateList><DateTime>{dt_text}</DateTime>"
+            '<Exrate CurrencyCode="USD" Buy="24,900.00" '
+            'Transfer="25,000.00" Sell="25,200.00"/></ExrateList>'
+        )
+
+    # Valid VCB local shape (non-zero-padded month/hour, matches the live fixture) is accepted.
+    ok = VietcombankFXSource(http_get=_http(_xml("6/18/2026 3:53:15 PM"))).get_rate("USD")
+    assert ok.as_of_utc == dt.datetime(2026, 6, 18, 8, 53, 15, tzinfo=dt.timezone.utc)
+
+    for bad in (
+        "not-a-date",
+        "2026-06-17T10:00:00Z",   # ISO, not the VCB local shape
+        "2026-W25-3",
+        "6/18/2026 25:00:00",     # right shape, impossible hour -> strptime rejects
+    ):
+        with pytest.raises(InvalidData):
+            VietcombankFXSource(http_get=_http(_xml(bad))).get_rate("USD")
+
+
 def test_open_er_api_transport_error_propagates_as_source_error():
     src = OpenErApiFXSource(http_get=_raise(SourceUnavailable("boom")))
     with pytest.raises(SourceUnavailable):

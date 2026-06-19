@@ -225,6 +225,32 @@ def test_btmc_parses_dd_mm_yyyy_timestamp_as_vn_tz():
     assert (q.time.hour, q.time.minute) == (15, 38)
 
 
+def test_btmc_rejects_noncanonical_timestamp():
+    # Issue #114: @d_N is contracted as DD/MM/YYYY HH:MM. Non-canonical padding or a
+    # different timestamp shape must raise stable InvalidData at the parser boundary
+    # instead of being normalized into a plausible GoldQuote.time.
+    def _row(ts):
+        return [("VÀNG TESTCO", "24k", "10000000", "20000000", "4322", ts)]
+
+    ok = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=_row("17/06/2026 15:38"))))
+    q = ok.get_quotes()[0]
+    assert q.time.isoformat() == "2026-06-17T15:38:00+07:00"
+
+    for bad in (
+        "1/1/2026 9:00",
+        "01/1/2026 09:00",
+        "1/01/2026 09:00",
+        "17/06/2026 5:08",
+        "2026-06-17T15:38:00",
+        "not-a-date",
+        "99/99/2026 99:99",  # right shape, impossible values -> strptime still rejects
+        "",                  # missing/blank @d_N
+    ):
+        src = BTMCGoldSource(http_get=_static_get(_btmc_json(rows=_row(bad))))
+        with pytest.raises(InvalidData):
+            src.get_quotes()
+
+
 def test_btmc_get_quote_by_product_substring():
     s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
     q = s.get_quote("testco")  # case-insensitive substring

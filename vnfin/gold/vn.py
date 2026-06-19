@@ -39,6 +39,10 @@ _VND_PER_LUONG = "VND/luong"
 _CHI_PER_LUONG = 10.0
 _GRAMS_PER_LUONG = 37.5
 
+# Issue #114: BTMC @d_N timestamps are contracted as exactly DD/MM/YYYY HH:MM
+# (zero-padded). Guard the shape before strptime, which is otherwise padding-lenient.
+_BTMC_TS = re.compile(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}$")
+
 # BTMC public web-widget token — publicly shipped in BTMC's site widget; accepted
 # for OSS distribution by explicit project decision; override via constructor
 # ``widget_key=`` or env ``VNFIN_BTMC_WIDGET_KEY``.
@@ -247,9 +251,15 @@ class BTMCGoldSource(_VNGoldSource):
     def _parse_dt(self, raw):
         if not raw:
             raise InvalidData(f"{self.name}: missing timestamp")
+        # Issue #114: @d_N is contracted as DD/MM/YYYY HH:MM. strptime is padding-lenient
+        # (accepts 1/1/2026 9:00), so guard the exact canonical shape before parsing so a
+        # corrupted or schema-shifted timestamp is flagged at the boundary, not normalized.
+        stripped = raw.strip() if isinstance(raw, str) else raw
+        if not isinstance(stripped, str) or not _BTMC_TS.fullmatch(stripped):
+            raise InvalidData(f"{self.name}: bad timestamp {raw!r}")
         try:
-            naive = datetime.strptime(raw.strip(), "%d/%m/%Y %H:%M")
-        except (ValueError, TypeError, AttributeError) as exc:
+            naive = datetime.strptime(stripped, "%d/%m/%Y %H:%M")
+        except ValueError as exc:
             raise InvalidData(f"{self.name}: bad timestamp {raw!r}") from exc
         return naive.replace(tzinfo=VN_TZ)
 
