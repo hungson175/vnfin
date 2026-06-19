@@ -32,6 +32,24 @@ __all__ = [
 
 _ISO4217 = re.compile(r"[A-Za-z]{3}")
 _STRICT_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_CANONICAL_INT = re.compile(r"0|[1-9]\d*")
+
+
+def parse_canonical_int(value, label: str = "value") -> int:
+    """Return an int from an ``int`` or a canonical base-10 string.
+
+    Issue #108: provider integer keys (e.g. observation years) must be canonical —
+    a plain ``int`` (not ``bool``) or a string matching ``0`` / ``[1-9]\\d*`` exactly.
+    Signed (``"+2024"``), leading-zero (``"02024"``), fractional, whitespace-padded, or
+    non-digit strings raise :class:`InvalidData`. Range checks remain the caller's job.
+    """
+    if isinstance(value, bool):
+        raise InvalidData(f"{label} must be a canonical integer, got {value!r}")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and _CANONICAL_INT.fullmatch(value):
+        return int(value)
+    raise InvalidData(f"{label} must be a canonical integer, got {value!r}")
 
 
 def validate_non_empty_string(value, name: str = "symbol") -> str:

@@ -46,6 +46,7 @@ from datetime import date, datetime, timezone
 from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
+from ..validation import parse_canonical_int
 from .indicators import Frequency, MacroIndicator, normalize_indicator, validate_indicator_values
 from .models import IndicatorSeries
 
@@ -183,8 +184,10 @@ class IMFDataMapperSource(HttpDataSource):
         for year_str, raw in obs.items():
             if raw is None:
                 continue  # missing year -> skip
+            # Issue #108: the observation year key must be a canonical integer; "+2024"
+            # and "02024" are malformed provider keys, not year 2024.
+            year = parse_canonical_int(year_str, label=f"observation year for {code}")
             try:
-                year = int(str(year_str).strip())
                 value = parse_provider_float(raw, label=f"observation for {code}", source=self.NAME)
             except (TypeError, ValueError) as exc:
                 raise InvalidData(f"{self.NAME}: malformed observation for {code}") from exc

@@ -34,6 +34,7 @@ from datetime import date, datetime, timezone
 from ..coerce import parse_provider_float
 from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
+from ..validation import parse_canonical_int
 
 from .indicators import (
     Frequency,
@@ -285,8 +286,10 @@ class WorldBankMacroSource(HttpDataSource):
             if raw_value is None:
                 continue  # missing observation for this year — skip, not an error
 
+            # Issue #108: the observation year must be a canonical integer key; "+2024"
+            # and "02024" are malformed provider keys, not year 2024.
+            year = parse_canonical_int(obs.get("date"), label=f"observation year for {code}")
             try:
-                year = int(str(obs.get("date")).strip())
                 value = parse_provider_float(
                     raw_value, label=f"observation for {code}", source=self.NAME
                 )

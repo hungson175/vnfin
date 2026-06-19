@@ -135,6 +135,15 @@ def test_valid_boundary_year_9999_accepted():
     assert res.points[0][0].year == 9999
 
 
+@pytest.mark.parametrize("bad_year", ["+2024", "02024", " 2024", "2024 ", "2024.0"])
+def test_noncanonical_year_key_raises_invalid(bad_year):
+    # Issue #108: non-canonical year keys (signed, leading-zero, whitespace, fractional)
+    # are malformed provider observation keys, not year 2024.
+    payload = imf_success(obs={bad_year: 1.23})
+    with pytest.raises(InvalidData):
+        _src(payload).get_indicator(COUNTRY, MacroIndicator.GDP_GROWTH)
+
+
 # --- Issue #61 follow-up: country input validation before network -------------
 
 @pytest.mark.parametrize("bad_country", [123, True, b"vnm", "VN/M", "V N", "VN", "USAA"])

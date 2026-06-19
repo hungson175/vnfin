@@ -554,6 +554,18 @@ def test_boundary_year_9999_accepted():
     assert res.points[0][0].year == 9999
 
 
+@pytest.mark.parametrize("bad_year", ["+2024", "02024", " 2024", "2024 ", "2024.0"])
+def test_noncanonical_observation_year_raises_invalid(bad_year):
+    # Issue #108: non-canonical observation date keys (signed, leading-zero, whitespace,
+    # fractional) are malformed provider keys, not year 2024.
+    rows_text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, bad_year, 1.23)],
+    ])
+    with pytest.raises(InvalidData):
+        _src(rows_text).get_indicator(COUNTRY, INDICATOR, 2024, 2024)
+
+
 # --- Issue #46: year bounds must be integers, not floats/bools --------------------
 
 @pytest.mark.parametrize("bad_start", [2023.9, True, False, "not-a-year"])
