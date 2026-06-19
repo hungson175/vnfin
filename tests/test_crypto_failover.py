@@ -758,3 +758,41 @@ def test_malformed_crypto_quote_metadata_failsover_to_backup():
     client = FailoverCryptoClient([_RawCryptoSource(bad), _RawCryptoSource(good, name="good")])
     out = client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
     assert out.source == "good"
+
+
+# Issue #69 B1/B2 follow-up:
+def test_rejects_unit_metadata_without_base_asset():
+    # B1: a present price_unit/volume_unit with no base_asset is inconsistent.
+    _assert_rejected_reason(
+        _crypto_history(bars=(_good_bar(),), base_asset=None, price_unit="USDT per BTC"),
+        "without a base_asset",
+    )
+    _assert_rejected_reason(
+        _crypto_history(bars=(_good_bar(),), base_asset=None, volume_unit="BTC", price_unit=None),
+        "without a base_asset",
+    )
+
+
+def test_accepts_coinbase_usdc_currency_form_price_unit():
+    # B2: Coinbase emits price_unit using the normalized currency ("USD per ETH")
+    # while quote_asset is the literal product leg ("USDC"). Must be accepted.
+    good = _crypto_history(
+        bars=(_good_bar(),),
+        symbol="ETHUSDC",
+        base_asset="ETH",
+        quote_asset="USDC",
+        currency="USD",
+        value_unit="USD",
+        price_unit="USD per ETH",
+        volume_unit="ETH",
+    )
+    client = FailoverCryptoClient([_RawCryptoSource(good)])
+    out = client.get_klines("ETHUSDC", Interval.D1, date(2024, 1, 1), date(2024, 1, 3))
+    assert out.source == "raw" and out.price_unit == "USD per ETH"
+
+
+def test_accepts_binance_quote_form_price_unit():
+    # Binance emits the literal quote_asset form ("USDT per BTC").
+    good = _crypto_history(bars=(_good_bar(),), quote_asset="USDT", price_unit="USDT per BTC")
+    client = FailoverCryptoClient([_RawCryptoSource(good)])
+    assert client.get_klines("BTCUSDT", Interval.D1, date(2024, 1, 1), date(2024, 1, 3)).source == "raw"

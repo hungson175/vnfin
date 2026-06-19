@@ -228,19 +228,33 @@ def _validate_crypto_result(
                 f"quote_asset mismatch: {qa!r} is not a USD-equivalent quote "
                 f"for a {chain_unit} chain"
             )
+    # The human price/volume unit strings are quote-per-base / base. Validating
+    # them requires the base leg, so a present unit string with NO base_asset is
+    # itself inconsistent (B1: do not silently skip). When base is present the
+    # price_unit may legitimately name EITHER the literal quote_asset (Binance,
+    # "USDT per BTC") OR the normalized currency (Coinbase USDC product, "USD per
+    # ETH") — accept both forms (B2), reject anything else.
+    if (hist.price_unit is not None or hist.volume_unit is not None) and not (
+        isinstance(ba, str) and ba
+    ):
+        return "malformed unit metadata: price_unit/volume_unit present without a base_asset"
     if hist.price_unit is not None:
         pu = hist.price_unit
-        if not isinstance(pu, str):
-            return f"malformed price_unit {pu!r}: expected a string"
-        if isinstance(qa, str) and isinstance(ba, str):
-            expected = f"{qa} per {ba}"
-            if pu != expected:
-                return f"price_unit mismatch: {pu!r} != expected {expected!r}"
+        if not isinstance(pu, str) or not pu:
+            return f"malformed price_unit {pu!r}: expected a non-empty string"
+        allowed = set()
+        cur = hist.currency
+        if isinstance(cur, str) and cur:
+            allowed.add(f"{cur} per {ba}")
+        if isinstance(qa, str) and qa:
+            allowed.add(f"{qa} per {ba}")
+        if pu not in allowed:
+            return f"price_unit mismatch: {pu!r} not in {sorted(allowed)}"
     if hist.volume_unit is not None:
         vu = hist.volume_unit
         if not isinstance(vu, str):
             return f"malformed volume_unit {vu!r}: expected a string"
-        if isinstance(ba, str) and vu != ba:
+        if vu != ba:
             return f"volume_unit mismatch: {vu!r} != base asset {ba!r}"
     if hist.provider_symbol is not None:
         ps = hist.provider_symbol
