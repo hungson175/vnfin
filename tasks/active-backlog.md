@@ -16,9 +16,8 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#134 — Macro failover descriptive metadata type guard** (new, reviewer poller 14:22).
+- **#135 — Macro falsey unit-metadata relabel** — IMPLEMENTED + committed `24d6a94` (NOT pushed): reject present non-string unit/value_unit (falsey [] /{} /0/False no longer relabeled). +12 TDD cases, suite 1965 green. **Awaiting reviewer review → push → close.**
   `indicator_code`/`indicator_name`/`country_name` type/shape validation in the macro result
-  guard. IMPLEMENTED + committed `69afb38` (NOT pushed): indicator_code/name non-empty str, country_name present⇒str. +20 TDD cases, suite 1953 green. **Awaiting reviewer review → push → close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
