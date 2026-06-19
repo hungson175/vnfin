@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **DBnomics period/duplicate parser hardening** — ``DBnomicsSource`` now requires each
+  ``period_start_day`` to be a canonical ``YYYY-MM-DD`` *string* (no ``str()``/``strip()``
+  coercion): compact (``20240101``), ISO week-date (``2024-W01-1``), whitespace-padded,
+  non-zero-padded, and non-string period keys raise ``InvalidData``. It also rejects a duplicate
+  canonical ``period_start_day`` within one response instead of returning ambiguous duplicate
+  observation keys. ([#104](https://github.com/hungson175/vnfin/issues/104),
+  [#66](https://github.com/hungson175/vnfin/issues/66))
 - **Fmarket & GoldApi returned-identity guards** — provider responses are now checked against the
   requested identity before their data is trusted: ``FmarketFundSource.nav_history`` rejects a NAV
   row whose present ``productId`` is not the requested fund id (non-bool int equal to the request);

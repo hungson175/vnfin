@@ -35,6 +35,7 @@ Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 from __future__ import annotations
 
 import math
+import re
 from datetime import date, datetime, timezone
 
 from ..coerce import parse_provider_float
@@ -42,6 +43,9 @@ from ..exceptions import EmptyData, InvalidData
 from ..transport import DEFAULT_UA, HttpDataSource
 from .indicators import Frequency, MacroIndicator, normalize_indicator, validate_indicator_values
 from .models import IndicatorSeries
+
+# Issue #104: canonical YYYY-MM-DD grammar for period_start_day (no strip/coerce).
+_ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Canonical indicator -> (IFS frequency code, IFS concept code, unit DBnomics
 # emits, result frequency). GDP NGDP_XDC is annual national currency (the actual
@@ -183,6 +187,7 @@ class DBnomicsSource(HttpDataSource):
             )
 
         points: list[tuple[date, float]] = []
+        seen: set[date] = set()
         for period, raw in zip(periods, values):
             if raw is None or (isinstance(raw, str) and raw.strip().upper() in ("NA", "")):
                 continue  # missing observation -> skip
@@ -196,6 +201,13 @@ class DBnomicsSource(HttpDataSource):
                 ) from exc
             if not math.isfinite(value):
                 raise InvalidData(f"{self.NAME}: non-finite value for {series_id} at {period}")
+            # Issue #66: a duplicate canonical period_start_day in one response is an
+            # ambiguous observation key, not data to silently keep both of.
+            if d in seen:
+                raise InvalidData(
+                    f"{self.NAME}: duplicate period_start_day {d.isoformat()} for {series_id}"
+                )
+            seen.add(d)
             points.append((d, value))
         points.sort(key=lambda p: p[0])
         return points
@@ -210,14 +222,20 @@ class DBnomicsSource(HttpDataSource):
 
     @staticmethod
     def _parse_period_day(period) -> date:
-        """Parse an ISO ``YYYY-MM-DD`` period-start day into a ``date``.
+        """Parse a canonical ``YYYY-MM-DD`` period-start day into a ``date``.
 
-        Raises ``ValueError`` (caught upstream -> ``InvalidData``) on anything
-        that is not a strict ISO calendar date.
+        Issue #104: ``period_start_day`` must be an actual provider STRING matching
+        ``YYYY-MM-DD`` exactly — no ``str()``/``strip()`` coercion. A non-string, a
+        compact date (``20240101``), an ISO week-date (``2024-W01-1``), or a
+        whitespace-padded value is rejected with ``ValueError`` (caught upstream ->
+        ``InvalidData``).
         """
-        s = str(period).strip()
-        # ``date.fromisoformat`` is strict and rejects garbage; exactly what we want.
-        return date.fromisoformat(s)
+        if not isinstance(period, str) or not _ISO_DATE_RE.fullmatch(period):
+            raise ValueError(
+                f"period_start_day must be a canonical YYYY-MM-DD string, got {period!r}"
+            )
+        # date.fromisoformat still rejects an impossible calendar date (e.g. month 13).
+        return date.fromisoformat(period)
 
     def _headers(self) -> dict:
         return {"User-Agent": DEFAULT_UA, "Accept": "application/json"}

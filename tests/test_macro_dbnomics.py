@@ -264,3 +264,45 @@ def test_monthly_cpi_non_month_start_raises_invalid():
             )
         ).get_indicator(COUNTRY, MacroIndicator.CPI)
 
+
+
+# --------------------------------------------------------------------------- #
+# Issue #104 — period_start_day must be a canonical YYYY-MM-DD string (no coerce);
+# Issue #66 — duplicate canonical period_start_day in one response must reject.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "bad_period",
+    ["20240101", "2024-W01-1", " 2024-01-01 ", "2024-1-1", "2024/01/01", "2024-01-01T00:00:00"],
+    ids=["compact", "iso_week", "padded", "non_zero_pad", "slashes", "datetime"],
+)
+def test_dbnomics_rejects_noncanonical_period_start_day(bad_period):
+    payload = dbn_success(periods=[bad_period], values=[123.0])
+    with pytest.raises(InvalidData):
+        _src(payload).get_indicator(COUNTRY, MacroIndicator.GDP)
+
+
+def test_dbnomics_rejects_nonstring_period_start_day():
+    # A non-string period_start_day (built inline; the helper assumes strings).
+    doc = {
+        "@frequency": "annual",
+        "series_code": "A.ZZ.NGDP_XDC",
+        "period": ["2024"],
+        "period_start_day": [20240101],
+        "value": [123.0],
+    }
+    payload = json.dumps({"series": {"docs": [doc], "num_found": 1}})
+    with pytest.raises(InvalidData):
+        _src(payload).get_indicator(COUNTRY, MacroIndicator.GDP)
+
+
+def test_dbnomics_rejects_duplicate_period_start_day():
+    payload = dbn_success(periods=["2024-01-01", "2024-01-01"], values=[100.0, 200.0])
+    with pytest.raises(InvalidData, match="duplicate period_start_day"):
+        _src(payload).get_indicator(COUNTRY, MacroIndicator.GDP)
+
+
+def test_dbnomics_canonical_distinct_dates_accepted():
+    res = _src(
+        dbn_success(periods=["2021-01-01", "2022-01-01"], values=[100.0, 200.0])
+    ).get_indicator(COUNTRY, MacroIndicator.GDP)
+    assert [p[0] for p in res.points] == [date(2021, 1, 1), date(2022, 1, 1)]
