@@ -498,6 +498,16 @@ def test_cafef_missing_success_raises_invalid():
         _src(json.dumps(env)).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
+def test_cafef_duplicate_item_code_in_period_raises_invalid():
+    # Issue #26: duplicate line-item codes within one period are schema drift and must
+    # raise InvalidData rather than silently collapsing to one line item.
+    env = _envelope(
+        [_period("2025", 2025, 0, [("DTT", "Doanh thu", "1000"), ("DTT", "Doanh thu", "2000")])]
+    )
+    with pytest.raises(InvalidData):
+        _src(env).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
 def test_non_json_raises_invalid():
     with pytest.raises(InvalidData):
         _src("<html>503</html>").get_financials(

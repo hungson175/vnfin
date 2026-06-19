@@ -246,6 +246,21 @@ def test_date_bounds_validated_before_request():
         assert captured["n"] == 0, f"http_get called for bad end={bad!r}"
 
 
+def test_inverted_date_window_raises_before_request():
+    # Issue #49: a valid but inverted window (start > end) must raise InvalidData before any
+    # provider call, not be forwarded to FRED.
+    captured = {"n": 0}
+
+    def _g(url, params, headers):
+        captured["n"] += 1
+        return fred_success()
+
+    src = FREDMacroSource(api_key="k", http_get=_g)
+    with pytest.raises(InvalidData):
+        src.get_series("GDPC1", start=date(2025, 1, 1), end=date(2024, 1, 1))
+    assert captured["n"] == 0
+
+
 def test_valid_date_bounds_accepted():
     captured = {"params": None}
 

@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from vnfin.exceptions import EmptyData, UnsupportedInterval
+from vnfin.exceptions import EmptyData, InvalidData, UnsupportedInterval
 from vnfin.models import AdjustmentPolicy, Interval
 from vnfin.sources.vps import VPSSource
 
@@ -137,3 +137,19 @@ def test_unsupported_interval_raises():
     assert not VPSSource().supports(Interval.W1)
     with pytest.raises(UnsupportedInterval):
         _src(_bare()).get_history("FPT", Interval.W1, *WIDE)
+
+
+# --- Issue #65: direct source classes validate caller inputs (no raw TypeError) ---
+@pytest.mark.parametrize("bad_symbol", [None, "", "   ", 123, []])
+def test_get_history_rejects_malformed_symbol(bad_symbol):
+    # The direct source class (not just the failover facade) must reject malformed caller
+    # input with stable InvalidData before any fetch — validation runs before http_get.
+    src = VPSSource(http_get=lambda *a, **k: _bare())
+    with pytest.raises(InvalidData):
+        src.get_history(bad_symbol, Interval.D1, *WIDE)
+
+
+def test_get_history_rejects_inverted_date_range():
+    src = VPSSource(http_get=lambda *a, **k: _bare())
+    with pytest.raises(InvalidData):
+        src.get_history("FPT", Interval.D1, date(2024, 1, 31), date(2024, 1, 1))
