@@ -47,14 +47,20 @@ def _fundamental_provenance(reports) -> frozenset:
 
     Returns the ``frozenset`` of stamped report sources for the engine's
     provenance guard. A non-string source (including an unhashable ``list`` /
-    ``set``) is mapped to a hashable, never-matching marker string so building
-    the ``frozenset`` cannot raise a raw ``TypeError`` and the guard rejects the
-    malformed provenance cleanly instead of leaking the exception to the caller.
+    ``set``) is mapped to a hashable ``tuple`` sentinel so building the
+    ``frozenset`` cannot raise a raw ``TypeError``. The sentinel is deliberately a
+    ``tuple`` — never a ``str`` — so it can **never** collide with a (string)
+    producing ``source.name``; the guard therefore always rejects a malformed
+    report source cleanly instead of leaking the exception or, worse, accepting
+    it on a string-marker collision.
     """
     names = set()
     for r in reports:
         src = getattr(r, "source", None)
-        names.add(src if isinstance(src, str) else f"<non-string source: {type(src).__name__}>")
+        if isinstance(src, str):
+            names.add(src)
+        else:
+            names.add(("__invalid_non_string_source__", type(src).__name__))
     return frozenset(names)
 
 

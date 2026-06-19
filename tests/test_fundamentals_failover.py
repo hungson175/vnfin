@@ -572,3 +572,22 @@ def test_valid_fundamental_tuple_all_sources_match_is_accepted():
     client = FailoverFundamentalClient([primary])
     reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
     assert {r.source for r in reports} == {"vndirect"}
+
+
+def test_fundamental_invalid_source_marker_cannot_collide_with_source_name():
+    # #126 B4: even if a (pathological) producing source is named exactly like the
+    # old string marker, a malformed list report.source must NOT be accepted. The
+    # invalid-source sentinel is a tuple, which can never equal a string name.
+    colliding = "<non-string source: list>"
+    primary = FakeSource(colliding, result=(_report("TESTCO", ["vndirect"], 1.0),))
+    backup = FakeSource("cafef", result=(_report("TESTCO", "cafef", 22.0),))
+    client = FailoverFundamentalClient([primary, backup])
+    reports = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert reports[0].source == "cafef"
+
+    # And with no backup it must raise cleanly, never accept the malformed result.
+    solo = FailoverFundamentalClient(
+        [FakeSource(colliding, result=(_report("TESTCO", ["vndirect"], 1.0),))]
+    )
+    with pytest.raises(AllSourcesFailed):
+        solo.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
