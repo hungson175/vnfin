@@ -237,8 +237,18 @@ class BTMCGoldSource(_VNGoldSource):
                 karat=karat,
             )
             prev = latest.get(name)
-            if prev is None or quote.time >= prev.time:
+            if prev is None or quote.time > prev.time:
                 latest[name] = quote
+            elif quote.time == prev.time:
+                # Issue #117: product + timestamp is the identity of a spot observation. Two rows
+                # sharing that identity must agree; identical duplicates are deduped (keep first),
+                # but conflicting prices/metadata are internally inconsistent provider data and
+                # must raise rather than letting provider row order silently pick a winner.
+                if (quote.buy, quote.sell, quote.karat) != (prev.buy, prev.sell, prev.karat):
+                    raise InvalidData(
+                        f"{self.name}: conflicting rows for {name!r} at {quote.time.isoformat()}"
+                    )
+            # else quote.time < prev.time: older snapshot, ignore.
         if not latest:
             raise EmptyData(f"{self.name}: no gold quotes after filtering silver/buy-only rows")
         return tuple(latest.values())

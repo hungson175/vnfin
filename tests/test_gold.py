@@ -252,6 +252,39 @@ def test_btmc_weight_token_strictness():
             _buy(bad)
 
 
+def test_btmc_same_timestamp_conflict_is_order_independent():
+    # Issue #117: two rows with the same product identity and same @d_N timestamp but different
+    # prices must raise InvalidData regardless of provider row order — not silently take the last
+    # row. Identical same-ts duplicates dedupe; older→newer keeps the newer snapshot.
+    def _rows(a, b):
+        return [
+            ("VANG TESTCO", "24k", a[0], a[1], "4322", a[2]),
+            ("VANG TESTCO", "24k", b[0], b[1], "4322", b[2]),
+        ]
+
+    def _quotes(a, b):
+        return BTMCGoldSource(http_get=_static_get(_btmc_json(rows=_rows(a, b)))).get_quotes()
+
+    TS = "17/06/2026 15:38"
+    # Conflicting prices at the same timestamp -> raise in BOTH orders (order-independent).
+    a = ("10000000", "20000000", TS)
+    b = ("11000000", "21000000", TS)
+    for first, second in ((a, b), (b, a)):
+        with pytest.raises(InvalidData):
+            _quotes(first, second)
+
+    # Identical duplicate at the same timestamp -> dedupe to a single quote (keep-first).
+    out = _quotes(a, a)
+    assert len(out) == 1
+    assert out[0].buy == pytest.approx(100_000_000.0)
+
+    # Older then newer -> newer snapshot wins (existing behavior preserved, deterministic).
+    out2 = _quotes(("10000000", "20000000", "17/06/2026 13:38"), b)
+    assert len(out2) == 1
+    assert out2[0].time.hour == 15
+    assert out2[0].buy == pytest.approx(110_000_000.0)
+
+
 def test_btmc_parses_dd_mm_yyyy_timestamp_as_vn_tz():
     s = BTMCGoldSource(http_get=_static_get(_btmc_json()))
     q = next(q for q in s.get_quotes() if "TESTCO" in q.product)
