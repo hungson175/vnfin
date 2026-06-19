@@ -34,21 +34,14 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Next (queued open bugs — fix ALL; group by domain to batch reviewer-approved stacks)
 
-Failover identity/units/bounds/ordering guards:
-- #69 crypto failover currency vs value_unit mismatch
+Failover identity/units/bounds/ordering guards (VERIFY-before-reimplement — many already guarded):
 - #70 fundamental failover currency-unit disagreement (VND chain)
 - #71 macro client relabels conflicting value_unit/currency
-- #72 FX failover invalid bid/ask metadata
-- #73 price failover unit/adjustment metadata contradicts chain
-- #74 world-gold failover unit metadata contradicts USD/oz chain
 - #76 world-gold failover history date bounds
 - #77 crypto failover interval/date bounds
 - #78 macro failover country/indicator identity contradicts request
 - #79 fundamental failover malformed requests / wrong-identity reports
 - #82 price/crypto/gold failover returned identity contradicts request
-- #83 FX failover invalid as_of_utc timestamps
-- #85 price/crypto/gold failover unsorted histories
-- #86 failover accepts economically impossible observations
 
 Source-adapter input/identity/units hardening:
 - #15 domestic gold negative buy/sell spreads
@@ -92,3 +85,6 @@ Source-adapter input/identity/units hardening:
   APPROVE (re-review inline after BLOCK on missing regression tests). Watermark 03:33:22Z.
 - **#118** BTMC `@row` index validation — pushed `22bb20c..d97ef89`, closed (d97ef89). Reviewer
   APPROVE_WITH_NOTES (review-202606191038). Watermark 03:39:55Z. BTMC cluster complete.
+- **#72, #83, #69, #73, #74, #85, #86** failover-guard cluster — VERIFIED already fixed + tested
+  on master (guard + passing regression tests cited per issue); closed, no code change needed.
+  Watermark 03:43:17Z. Reporters had filed against older commits.
