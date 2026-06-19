@@ -21,6 +21,13 @@ from .fields import MISSING, require_non_empty_str
 #: internal whitespace (``A B``) that broad stringification used to let through.
 _ALPHA_KEY_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 
+#: A canonical security/fund identifier: letter-start then uppercase alphanumerics,
+#: no dot/hyphen/slash/punctuation/internal-space and not digit-first (#34/#33/#30/#9).
+#: Validated AFTER ``strip().upper()`` so padded/lower public inputs normalize (live
+#: Fmarket codes e.g. ``VCBFBCF``/``VFMVF1``/``RVPF24`` and index/security examples
+#: ``VN30``/``E1VFVN30``/``FUEVFVND`` all match).
+_SECURITY_ID_RE = re.compile(r"[A-Z][A-Z0-9]*")
+
 
 def canonical_provider_key(
     value: Any,
@@ -84,6 +91,42 @@ def canonical_provider_key(
     raise contract_error(
         ctx, f"key must be a string or integral number, got {type(value).__name__}"
     )
+
+
+def _canonical_identifier(value, ctx: str, *, pattern=_SECURITY_ID_RE) -> str:
+    """Shared core for security/fund identifiers: ``strip().upper()`` then validate.
+
+    Normalizes first (so padded/lower public input like ``"  vcbf "`` -> ``"VCBF"``
+    stays friendly and dedup runs on the normalized form), then requires a non-empty
+    string matching ``pattern``. ``None``/containers/bool/number and shapes with
+    internal space / punctuation / digit-first fail closed.
+    """
+    if not isinstance(value, str):
+        raise contract_error(
+            ctx, f"expected a string identifier, got {type(value).__name__}"
+        )
+    norm = value.strip().upper()
+    if not norm:
+        raise contract_error(ctx, f"expected a non-empty identifier, got {value!r}")
+    if not pattern.fullmatch(norm):
+        raise contract_error(
+            ctx, f"non-canonical identifier {value!r}: expected [A-Z][A-Z0-9]*"
+        )
+    return norm
+
+
+def canonical_security_symbol(value, ctx: str) -> str:
+    """Canonical security ticker (#30/#9): see :func:`_canonical_identifier`."""
+    return _canonical_identifier(value, ctx)
+
+
+def canonical_fund_code(value, ctx: str) -> str:
+    """Canonical Fmarket fund code (#33/#34): see :func:`_canonical_identifier`.
+
+    Separate wrapper from :func:`canonical_security_symbol` so the fund-code and
+    security-ticker grammars can diverge later without touching call sites.
+    """
+    return _canonical_identifier(value, ctx)
 
 
 def canonical_enum_tag(

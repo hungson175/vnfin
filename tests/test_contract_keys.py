@@ -76,3 +76,31 @@ def test_canonical_enum_tag_present_malformed_raises(bad):
 def test_canonical_enum_tag_present_valid_but_unknown_raises():
     with pytest.raises(InvalidData, match="not one of"):
         canonical_enum_tag("MONTHLY", ANNUAL_QUARTER, CTX, missing_ok=True)
+
+
+# Phase 4 — canonical security/fund identifier (#34/#33/#30/#9).
+from vnfin._contracts import canonical_fund_code, canonical_security_symbol
+
+
+@pytest.mark.parametrize("fn", [canonical_security_symbol, canonical_fund_code])
+class TestCanonicalIdentifier:
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("VCBFBCF", "VCBFBCF"), ("VFMVF1", "VFMVF1"), ("RVPF24", "RVPF24"),
+            ("VN30", "VN30"), ("E1VFVN30", "E1VFVN30"), ("FUEVFVND", "FUEVFVND"),
+            ("  vcbf ", "VCBF"),   # strip().upper() normalization
+            ("fpt", "FPT"),
+        ],
+    )
+    def test_accepts_and_normalizes(self, fn, value, expected):
+        assert fn(value, "ctx") == expected
+
+    @pytest.mark.parametrize(
+        "bad",
+        [None, "", "   ", [], {}, True, False, 123, 1.5,
+         "A B", "A.B", "A-B", "A/B", "1ABC", "+ABC", "AB\nC", "AB%"],
+    )
+    def test_rejects_malformed(self, fn, bad):
+        with pytest.raises(InvalidData):
+            fn(bad, "ctx")

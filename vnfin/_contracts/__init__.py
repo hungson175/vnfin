@@ -24,7 +24,12 @@ from .fields import (
     require_non_empty_str,
     require_present,
 )
-from .keys import canonical_enum_tag, canonical_provider_key
+from .keys import (
+    canonical_enum_tag,
+    canonical_fund_code,
+    canonical_provider_key,
+    canonical_security_symbol,
+)
 from .results import non_empty_reason, result_type_reason
 from .rows import reject_duplicate, require_list, require_object
 from .timeseries import (
@@ -43,6 +48,8 @@ __all__ = [
     "optional_present_non_empty_str",
     "canonical_provider_key",
     "canonical_enum_tag",
+    "canonical_security_symbol",
+    "canonical_fund_code",
     "require_object",
     "require_list",
     "reject_duplicate",

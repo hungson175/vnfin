@@ -20,6 +20,11 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
+from .._contracts import (
+    canonical_fund_code,
+    canonical_security_symbol,
+    require_present,
+)
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable
 from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import validate_iso_date_string
@@ -276,18 +281,15 @@ class FmarketFundSource(HttpDataSource):
         code = row.get("code")
         short = row.get("shortName")
         if code is not None:
-            if not isinstance(code, str):
-                raise InvalidData("fmarket: fund row code is not a string")
             raw_code = code
         elif short is not None:
-            if not isinstance(short, str):
-                raise InvalidData("fmarket: fund row shortName is not a string")
             raw_code = short
         else:
             raise InvalidData("fmarket: fund row missing code")
-        code = raw_code.strip()
-        if not code:
-            raise InvalidData("fmarket: fund row missing code")
+        # Issue #33: fund code is a public fund identifier — a present blank or
+        # malformed non-blank shape must fail closed. canonical_fund_code normalizes
+        # (strip().upper()) then validates [A-Z][A-Z0-9]*.
+        code = canonical_fund_code(raw_code, "fmarket fund code")
         fid = row.get("id")
         if fid is None:
             raise InvalidData("fmarket: fund row missing id")
@@ -350,12 +352,14 @@ class FmarketFundSource(HttpDataSource):
     def _parse_holding(row, seen_codes=None) -> FundHolding:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: holding row is not an object")
-        raw_code = row.get("stockCode")
-        if not raw_code or not isinstance(raw_code, str):
-            raise InvalidData("fmarket: holding row missing stockCode")
-        stock_code = raw_code.strip().upper()
-        if not stock_code:
-            raise InvalidData("fmarket: holding row has blank stockCode")
+        # Issue #34: stockCode is a public security identifier — a present blank or
+        # malformed non-blank shape (internal space / punctuation / digit-first) must
+        # fail closed, not just be stripped/uppercased. canonical_security_symbol
+        # normalizes (strip().upper()) then validates [A-Z][A-Z0-9]*.
+        stock_code = canonical_security_symbol(
+            require_present(row, "stockCode", "fmarket holding stockCode"),
+            "fmarket holding stockCode",
+        )
         if seen_codes is not None:
             if stock_code in seen_codes:
                 raise InvalidData(f"fmarket: duplicate holding stock code {stock_code}")

@@ -1312,3 +1312,39 @@ def test_parse_nav_point_rejects_non_zero_padded_nav_date(bad_date):
     row = {"navDate": bad_date, "nav": 100.0, "productId": FAKE_ID_A}
     with pytest.raises(InvalidData, match="malformed navDate"):
         FmarketFundSource._parse_nav_point(row)
+
+
+# Phase 4 funds migration — canonical security/fund identifier contract.
+@pytest.mark.parametrize("bad_code", ["VCB F", "A.B", "A-B", "A/B", "1ABC", "AB%", "AB\nC"])
+def test_fmarket_fund_list_rejects_malformed_nonblank_code(bad_code):
+    # #33: a present non-blank but non-canonical fund code must fail closed.
+    row = {
+        "id": FAKE_ID_A, "code": bad_code, "shortName": bad_code, "name": "X",
+        "nav": 100.0, "dataFundAssetType": {"code": "STOCK"}, "owner": {"name": "M"},
+    }
+    with pytest.raises(InvalidData):
+        _src(_fund_list_payload(rows=[row])).list_funds()
+
+
+def test_fmarket_fund_list_normalizes_padded_lower_code():
+    # reviewer tweak: strip().upper() normalization keeps friendly public input.
+    row = {
+        "id": FAKE_ID_A, "code": "  testco ", "shortName": "TESTCO", "name": "X",
+        "nav": 100.0, "dataFundAssetType": {"code": "STOCK"}, "owner": {"name": "M"},
+    }
+    funds = _src(_fund_list_payload(rows=[row])).list_funds()
+    assert funds.funds[0].code == "TESTCO"
+
+
+@pytest.mark.parametrize("bad_code", ["FA KE", "A.B", "A-B", "A/B", "1ABC", "AB%"])
+def test_fmarket_holdings_rejects_malformed_nonblank_stockcode(bad_code):
+    # #34: a present non-blank but non-canonical holding stockCode must fail closed.
+    top = [{"stockCode": bad_code, "netAssetPercent": 5.0, "type": "STOCK"}]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+def test_fmarket_holdings_normalizes_padded_lower_stockcode():
+    top = [{"stockCode": " fpt ", "netAssetPercent": 5.0, "type": "STOCK"}]
+    holds = _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+    assert holds[0].stock_code == "FPT"
