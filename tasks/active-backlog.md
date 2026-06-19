@@ -16,9 +16,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#41 (REOPENED 14:50)** — `_unwrap` still does `int(raw)` on status/code, so a fractional
-  status/code (e.g. `200.9`) is silently truncated/accepted. TDD: reject fractional status/code
-  → reviewer review → push → close. Locate `_unwrap`; reviewer confirmed via static review.
+- **#41 (REOPENED)** — `_unwrap` fractional/bool status/code. FIXED + committed `32a4587` (NOT pushed): reject bool / non-integral / non-finite float before int(); ints/integral-float/digit-str valid. +12 TDD cases, suite 1978 green. **Awaiting reviewer review → push → close.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
