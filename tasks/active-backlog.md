@@ -23,7 +23,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
   - **#21** `0fedd05` — Fmarket nav row productId == fid; holdings detail id == fid + code
     non-empty canonical str; GoldApi present payload symbol == requested (case-insensitive),
     product = requested symbol.
-  **Awaiting ONE combined reviewer review (35ed92c..HEAD) → push → re-close #35 + #21.**
+  Gold part (#35 + #21 GoldApi) APPROVED. #21 funds BLOCK (present-null nav pid / missing-null holdings id / padded code) FIXED `78d3d3b`. Suite 2017 green. **Awaiting funds RE-review → push 35ed92c..HEAD → re-close #35/#21.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
