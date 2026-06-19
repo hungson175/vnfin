@@ -396,6 +396,23 @@ def test_auto_raises_empty_when_both_templates_empty():
         src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)  # AUTO
 
 
+@pytest.mark.parametrize("bad_data", [{}, "", False, 0, "not-a-list", {"row": []}])
+def test_vndirect_present_non_list_data_raises_invalid(bad_data):
+    # Issue #111: only an actual empty list (data=[]) is clean no-data. A present non-list
+    # container is provider schema drift and must raise InvalidData consistently, independent
+    # of truthiness (the old guard checked truthiness before type, so {}/""/false/0 wrongly
+    # raised EmptyData).
+    text = json.dumps({"data": bad_data})
+    with pytest.raises(InvalidData):
+        _src(text).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+def test_vndirect_empty_list_data_raises_empty_not_invalid():
+    text = json.dumps({"data": []})
+    with pytest.raises(EmptyData):
+        _src(text).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
 def test_period_unknown_rejected_for_statements():
     # Issue #10: Period.UNKNOWN is only meaningful for ratios; statements must
     # reject it before touching the network.

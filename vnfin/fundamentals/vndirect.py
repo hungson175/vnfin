@@ -206,10 +206,13 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         if not isinstance(parsed, dict) or "data" not in parsed:
             raise EmptyData(f"{self.name}: no data envelope")
         data = parsed.get("data")
-        if not data:
-            raise EmptyData(f"{self.name}: empty data array")
+        # Issue #111: validate type BEFORE truthiness. Only an actual empty list is clean
+        # no-data; a present non-list container ({}, "", False, 0, "str", {...}) is schema
+        # drift and must raise InvalidData regardless of truthiness.
         if not isinstance(data, list):
             raise InvalidData(f"{self.name}: data is not a list")
+        if not data:
+            raise EmptyData(f"{self.name}: empty data array")
         return data
 
     # --- statements (LONG/tall numeric-itemCode rows -> pivot per fiscalDate) #
