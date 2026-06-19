@@ -32,7 +32,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- _(none pending — #125-reopen/#127/#128/#129/#130 all scoped + implemented in the Now batch)_
+- **#131 / #132** — macro metadata boundary validation: `projection_from_year` and `frequency`.
+  Queued by reviewer poller 13:50 (last_seen 2026-06-19T06:50:49Z). Current batch is FROZEN
+  (in review) → handle as a **macro-metadata mini-batch immediately after** it lands. Scope via
+  `./bin/gh-maintainer issue view 131` / `132`.
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
