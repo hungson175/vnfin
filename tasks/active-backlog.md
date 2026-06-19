@@ -36,8 +36,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   reviewer review-202606200003). Additive offline `vnfin.diagnostics` (source_capabilities +
   explain_world_gold_history + explain_index_constituents) + world-gold pre-coverage fail-fast.
   Suite 2607 green; public-API additive (surface snapshot + regression test).
-- **Only open issue: #140 financial news (enhancement)** — design-first, **no raw scraping**;
-  product/licensing/source-design call for Boss. NOT started. Reviewer triage review-202606192340.
+- **#140 financial news: DONE** (Boss-approved-in-issue; pushed `ca293d6..efdf2d3`, CLOSED;
+  reviewer review-202606200026). BYOK `vnfin.news` over Alpha Vantage NEWS_SENTIMENT — daily
+  headline metadata only, no scraping/full-text/real-time. Suite 2667 green; public-API additive.
+- **✅ 0 OPEN ISSUES.** All bugs fixed, full contract refactor (Phases 0–6) shipped, and both
+  enhancements delivered (#145 diagnostics, #140 news). origin/master `efdf2d3`. Steady-state.
 
 ## Refactor done today (Phase 4 batches)
 
