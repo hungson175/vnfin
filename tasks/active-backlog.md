@@ -16,13 +16,12 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#122 — Fundamental failover malformed LineItem guard** — IMPLEMENTED + committed `ca6f1ff`
-  (NOT pushed). Strict `_validate_line_item` in `vnfin/fundamentals/client.py` (item_code
-  non-empty str; name str/empty-ok; value finite non-bool; dup item_code rejected). +24 TDD
-  cases, suite green, client.py cov 95%, CHANGELOG updated, no public-API change.
-  Reviewer BLOCK B1 (review-202606191241): padded `item_code` (`' 11000'`) accepted — FIXED,
-  added `code != code.strip()` reject + leading/trailing/both-space tests (suite 1663 green).
-  **Awaiting reviewer RE-review → then push master → close.**
+- **#123–#126 failover returned-object guard cluster** — DESIGN sent to reviewer
+  (/tmp/vnfin-123-126-design-202606191247.md). Awaiting design convergence before coding.
+  Planned order: **#125** container type-check (foundational) → **#123** macro point-key type
+  → **#124** price/crypto/gold bar-key type → **#126** provenance mismatch (engine-generic
+  `provenance_of` guard, reject not restamp — pending reviewer's option A/B call). Each its own
+  TDD commit + reviewer gate.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -30,10 +29,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- **#123, #124, #125, #126** — labelled `bug`/queued by reviewer poller 12:20 (last_seen
-  2026-06-19T05:41:31Z). Not yet scoped. #125 = broader fundamentals result item/container
-  type-safety (adjacent to #122 but distinct; do NOT broaden #122 for it). Triage + TDD each
-  in priority order after #122 lands. Get details via `./bin/gh-maintainer issue view <n>`.
+- _(none pending — #123–#126 scoped into the Now cluster above)_
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
@@ -41,6 +37,9 @@ _All other backlog items verified-fixed and closed during the 2026-06-19 sweep (
 
 ## Done today (trim periodically)
 
+- **#122** fundamentals failover malformed-LineItem guard — pushed `d7a2190..c2a6be0`, closed.
+  Strict `_validate_line_item` (canonical item_code, str name, finite non-bool value, dup-code
+  reject) + B1 padded-code fix. Reviewer APPROVE (review-202606191245). Suite 1663 green.
 - Pushed reviewed seven-commit stack `6f4a8da..a8479fc` to origin/master.
 - Closed **#112** (29e942a), **#94** (ff159f5), **#14** (a8479fc) as fixed.
 - Closed external duplicate **PR #115** as superseded (code not run).
