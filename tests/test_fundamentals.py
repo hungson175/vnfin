@@ -1027,3 +1027,37 @@ def test_vndirect_mixed_valid_and_skipped_returns_valid_with_warning():
     )
     assert len(reports) == 1
     assert any("skipped" in w for w in reports[0].warnings)
+
+
+# --------------------------------------------------------------------------- #
+# Issue #21 (16:55 add-on) — a PRESENT falsey/non-string/blank `code` must not
+# bypass the identity check (the old `row.get("code") or ""` collapsed them to
+# "" and accepted the row as the requested symbol).
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("bad_code", [0, False, "", "   ", None, [], {}], ids=["zero", "false", "blank", "ws", "null", "list", "dict"])
+def test_vndirect_statement_present_falsey_code_does_not_bypass(bad_code):
+    rows = [_stmt_row(bad_code, 11000, 1.0, "2025-12-31", "ANNUAL", 1)]
+    with pytest.raises(InvalidData):  # all rows have a non-matching code -> wrong-identity
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+def test_vndirect_mixed_valid_and_falsey_code_returns_valid_with_warning():
+    rows = [
+        _stmt_row("TESTCO", 11000, 5.0, "2025-12-31", "ANNUAL", 1),  # valid
+        _stmt_row(0, 22000, 9.0, "2025-12-31", "ANNUAL", 1),         # present falsey code -> dropped
+    ]
+    reports = _src(_stmt_envelope(rows)).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+    )
+    assert len(reports) == 1 and any("skipped" in w for w in reports[0].warnings)
+
+
+@pytest.mark.parametrize("bad_code", [0, False, "", None, []], ids=["zero", "false", "blank", "null", "list"])
+def test_vndirect_ratio_present_falsey_code_does_not_bypass(bad_code):
+    rows = [_ratio_row(bad_code, "PE", 10.0, "2025-12-31", "PE")]
+    with pytest.raises(InvalidData):
+        _src(_stmt_envelope(rows)).get_financials(
+            "TESTCO", StatementType.RATIOS, Period.ANNUAL
+        )

@@ -280,13 +280,22 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             if row_model is not None and row_model != model_type:
                 skipped_rows += 1
                 continue
-            # Issue #21: validate provider-exposed identity before stamping the
-            # requested symbol onto the typed result.
-            row_code = str(row.get("code") or "").strip().upper()
-            if row_code and row_code != psym:
-                skipped_rows += 1
-                code_mismatches += 1
-                continue
+            # Issue #21 (+16:55 add-on): validate provider-exposed identity before
+            # stamping the requested symbol. Key-presence is the trigger (not
+            # truthiness): a PRESENT code that is null/falsey/non-string/blank or a
+            # different symbol must NOT bypass the check (the old `or ""` collapsed
+            # all of those to "" and accepted the row). An absent `code` key keeps
+            # the legacy no-identity behavior.
+            if "code" in row:
+                raw_code = row["code"]
+                if (
+                    not isinstance(raw_code, str)
+                    or not raw_code.strip()
+                    or raw_code.strip().upper() != psym
+                ):
+                    skipped_rows += 1
+                    code_mismatches += 1
+                    continue
             code = self._item_code_str(row.get("itemCode"))
             value = self._num(row.get("numericValue"))
             self._validate_value_unit("VND")
@@ -368,13 +377,19 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             rd = row.get("reportDate")
             if not rd:
                 raise InvalidData(f"{self.name}: ratio row missing reportDate")
-            # Issue #21: validate provider-exposed identity before stamping the
-            # requested symbol onto the typed result.
-            row_code = str(row.get("code") or "").strip().upper()
-            if row_code and row_code != psym:
-                skipped_rows += 1
-                code_mismatches += 1
-                continue
+            # Issue #21 (+16:55 add-on): present code (null/falsey/non-string/blank
+            # or wrong symbol) must not bypass the identity check; absent key keeps
+            # the legacy behavior.
+            if "code" in row:
+                raw_code = row["code"]
+                if (
+                    not isinstance(raw_code, str)
+                    or not raw_code.strip()
+                    or raw_code.strip().upper() != psym
+                ):
+                    skipped_rows += 1
+                    code_mismatches += 1
+                    continue
             # Issue #62: ratioCode and itemName must be strings; non-string values
             # leak raw TypeError/AttributeError and must be caught here.
             ratio_code = row.get("ratioCode")
