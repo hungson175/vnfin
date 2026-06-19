@@ -18,7 +18,8 @@
         "crypto",
         "macro",
         "fx",
-        "exceptions"
+        "exceptions",
+        "diagnostics"
       ],
       "members": {
         "AdjustmentPolicy": {
@@ -98,6 +99,12 @@
                 "has_default": true,
                 "kind": "KEYWORD_ONLY",
                 "name": "finalize"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "KEYWORD_ONLY",
+                "name": "provenance_of"
               }
             ],
             "returns": null
@@ -413,6 +420,9 @@
             }
           ],
           "returns": "client.FailoverPriceClient"
+        },
+        "diagnostics": {
+          "kind": "module"
         },
         "exceptions": {
           "kind": "module"
@@ -4427,6 +4437,8 @@
         "Frequency",
         "canonical_unit",
         "canonical_currency",
+        "canonical_indicator_code",
+        "canonical_indicator_name",
         "eligible_sources",
         "normalize_indicator",
         "WorldBankMacroSource",
@@ -4506,6 +4518,29 @@
                 }
               ],
               "returns": "IndicatorSeries"
+            },
+            "indicator_identity": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": null
             },
             "name": {
               "property": true
@@ -4700,6 +4735,29 @@
                 }
               ],
               "returns": "IndicatorSeries"
+            },
+            "indicator_identity": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": null
             },
             "name": {
               "property": true
@@ -5040,6 +5098,29 @@
               ],
               "returns": "IndicatorSeries"
             },
+            "indicator_identity": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": null
+            },
             "name": {
               "property": true
             },
@@ -5101,6 +5182,30 @@
             }
           ],
           "returns": "Optional[str]"
+        },
+        "canonical_indicator_code": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "indicator"
+            }
+          ],
+          "returns": "str"
+        },
+        "canonical_indicator_name": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "indicator"
+            }
+          ],
+          "returns": "str"
         },
         "canonical_unit": {
           "kind": "function",
@@ -5248,6 +5353,12 @@
               "has_default": false,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "indicator"
+            },
+            {
+              "default_repr": "True",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "_invalid_to_valueerror"
             }
           ],
           "returns": "MacroIndicator"

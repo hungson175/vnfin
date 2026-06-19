@@ -31,6 +31,7 @@ Focused answers for common operational tasks:
 - **[Use caching and retries](how-to/cache-retry.md)** — reuse clients, opt-in transport cache/retry.
 - **[Use FRED BYOK](how-to/byok-fred.md)** — optional macro key without changing no-key defaults.
 - **[Run live tests](how-to/live-tests.md)** — real network checks, environment guard, diagnostics.
+- **[Explain source coverage](how-to/source-diagnostics.md)** — offline `vnfin.diagnostics` preflight for coverage gaps / single-source legs.
 
 ## Reference
 

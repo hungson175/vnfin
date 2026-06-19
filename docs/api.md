@@ -105,6 +105,26 @@ so there is no single cross-unit default. `vnfin.gold.vn(...)`, `vnfin.gold.worl
 and `vnfin.gold.source(provider=...)` make the choice explicit. Unknown provider names
 raise `ValueError`.
 
+## `vnfin.diagnostics` — source-coverage preflight (offline)
+
+`vnfin.diagnostics` is an additive, **offline** namespace for explaining source coverage
+and source-limit gaps (issue #145) — metadata/preflight only, never a network call and
+never fabricated data:
+
+- `vnfin.diagnostics.source_capabilities() -> tuple[SourceCapability, ...]` — known,
+  conservative coverage metadata for the source-limited legs (world-gold history,
+  index constituents).
+- `vnfin.diagnostics.explain_world_gold_history(start, end) -> RequestDiagnostic` —
+  classify a window as `coverage_gap` / `partial_coverage` / `ok` vs the default
+  source's known coverage start (the live `vnfin.gold.world(...)` history call also
+  fails fast with `EmptyData` for an entirely-pre-coverage window).
+- `vnfin.diagnostics.explain_index_constituents(index) -> RequestDiagnostic` — canonicalize
+  the selector and report the `single_source` (membership-only, no-weights) limitation.
+
+`SourceCapability` and `RequestDiagnostic` are frozen dataclasses. This is preflight
+metadata, not a live health monitor (use `scripts/healthcheck.py` for live checks). See
+[how-to/source-diagnostics.md](how-to/source-diagnostics.md).
+
 ## Stability and backwards compatibility
 
 This facade is **additive**. Every previously documented import still works unchanged,

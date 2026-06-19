@@ -847,19 +847,19 @@ def test_currencyapi_history_all_missing_raises_empty():
 # --------------------------------------------------------------------------- #
 def test_currencyapi_history_rejects_mismatched_document_date():
     # Document says 2024-01-03 but we requested 2024-01-01 -> data integrity error.
-    payload = json.dumps({"date": "2024-01-03", "usd": {"xau": 0.0005}})
+    payload = json.dumps({"date": "2024-06-05", "usd": {"xau": 0.0005}})
     s = CurrencyApiGoldSource(http_get=lambda *a: payload)
     with pytest.raises(InvalidData):
-        s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+        s.get_history(date(2024, 6, 3), date(2024, 6, 3))
 
 
 def test_currencyapi_history_uses_requested_date_when_doc_date_missing():
     # Document omits date -> fall back to the requested loop date.
     payload = json.dumps({"usd": {"xau": 0.0005}})
     s = CurrencyApiGoldSource(http_get=lambda *a: payload)
-    hist = s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+    hist = s.get_history(date(2024, 6, 3), date(2024, 6, 3))
     assert len(hist) == 1
-    assert hist.bars[0].date == date(2024, 1, 1)
+    assert hist.bars[0].date == date(2024, 6, 3)
     assert hist.bars[0].price == pytest.approx(2000.0)
 
 
@@ -1170,7 +1170,7 @@ def test_currencyapi_history_rejects_malformed_doc_date(bad_date):
 
     s = CurrencyApiGoldSource(http_get=_g)
     with pytest.raises(InvalidData, match="malformed date"):
-        s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+        s.get_history(date(2024, 6, 3), date(2024, 6, 3))
 
 
 @pytest.mark.parametrize("bad", [False, 0, "", [], {}], ids=["false", "zero", "blank", "list", "dict"])
@@ -1179,7 +1179,7 @@ def test_currencyapi_history_rejects_present_falsey_doc_date(bad):
     # identity and must raise, not be silently relabeled with the requested date.
     s = CurrencyApiGoldSource(http_get=_static_get(_currency_usd_json(d=bad)))
     with pytest.raises(InvalidData, match="malformed date"):
-        s.get_history(date(2024, 1, 1), date(2024, 1, 1))
+        s.get_history(date(2024, 6, 3), date(2024, 6, 3))
 
 
 def test_currencyapi_history_absent_doc_date_falls_back_to_requested():
@@ -1188,8 +1188,8 @@ def test_currencyapi_history_absent_doc_date_falls_back_to_requested():
         return json.dumps({"usd": {"eur": 0.86, "vnd": 26000.0, "xau": 0.000231}})
 
     s = CurrencyApiGoldSource(http_get=_g)
-    hist = s.get_history(date(2024, 1, 1), date(2024, 1, 1))
-    assert hist.bars[0].date == date(2024, 1, 1)
+    hist = s.get_history(date(2024, 6, 3), date(2024, 6, 3))
+    assert hist.bars[0].date == date(2024, 6, 3)
 
 
 # Regression — issue #35: currency-api history document date identity          #

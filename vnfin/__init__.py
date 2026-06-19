@@ -21,6 +21,7 @@ and/or ``source(...)``; all existing submodule imports keep working unchanged.
 """
 from . import (
     crypto,
+    diagnostics,
     exceptions,
     fundamentals,
     funds,
@@ -60,6 +61,7 @@ __all__ = [
     "macro",
     "fx",
     "exceptions",
+    "diagnostics",
 ]
 __version__ = "0.2.0"
 

@@ -31,6 +31,10 @@ _USD_PER_OZ = "USD/oz"
 _CDN = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{tag}/v1/currencies/usd.json"
 # Safety cap so a pathological range can't fan out into thousands of requests.
 _MAX_DAYS = 1100
+# Issue #145: conservative known lower bound of this source's daily XAU/USD coverage
+# (~2024-03 per docs/research/2026-06-18-gold-world.md). A window entirely before this
+# has no known data, so a per-day fan-out would be ~all-404 — fail fast instead.
+COVERAGE_START = date(2024, 3, 2)
 
 
 class CurrencyApiGoldSource(GoldSource):
@@ -88,6 +92,13 @@ class CurrencyApiGoldSource(GoldSource):
 
     def get_history(self, start: date, end: date) -> GoldHistory:
         lo, hi = self._range(start, end)
+        # Issue #145: a window entirely before the known coverage start would 404 on
+        # every day — fail fast (no network fan-out) instead of looping to EmptyData.
+        if hi < COVERAGE_START:
+            raise EmptyData(
+                f"{self.name}: requested window {lo}..{hi} is entirely before known "
+                f"coverage start {COVERAGE_START.isoformat()}"
+            )
         now = datetime.now(timezone.utc)
         bars: list[GoldBar] = []
         d = lo
