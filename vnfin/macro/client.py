@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import replace
+from datetime import date, datetime
 
 from ..exceptions import AllSourcesFailed, InvalidData, UnitMismatchError
 from ..failover import FailoverClient
@@ -232,6 +233,19 @@ class MacroClient:
                         f"indicator_name mismatch: source {series.source!r} returned "
                         f"{series.indicator_name!r} (canonical name for {other.value}) "
                         f"but requested {indicator.value}"
+                    )
+
+            # Issue #123: each point key must be a plain calendar ``date``, the
+            # documented IndicatorSeries contract. ``datetime`` is rejected
+            # explicitly because it subclasses ``date`` but carries intraday/tz
+            # meaning a macro observation must not have; ``str``/``int``/``None``
+            # are rejected outright. Done before the ascending-order check so a
+            # malformed key cannot leak a raw TypeError from the ``<=`` compare.
+            for d, _v in series.points:
+                if not isinstance(d, date) or isinstance(d, datetime):
+                    return (
+                        f"malformed point date {d!r} from source {series.source!r}: "
+                        "expected a plain datetime.date"
                     )
 
             # Issue #95: points must be strictly ascending by date.

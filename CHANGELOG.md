@@ -7,6 +7,12 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Macro point-key type guard** — the macro failover result guard now rejects an
+  ``IndicatorSeries`` whose ``points`` keys are not plain ``datetime.date`` values. ``datetime``
+  keys (which subclass ``date`` but carry intraday/timezone meaning), as well as ``str`` /
+  ``int`` / ``None`` keys, are rejected before the ascending-order comparison so a malformed key
+  is a recorded rejected attempt instead of a leaked ``TypeError``.
+  ([#123](https://github.com/hungson175/vnfin/issues/123))
 - **Failover malformed result-container guard** — the price, crypto, gold, and macro failover
   result guards now type-check the returned container (``PriceHistory`` / ``CryptoHistory`` /
   ``GoldHistory`` / ``IndicatorSeries``) before reading ``.bars`` / ``.points``. A source

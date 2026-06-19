@@ -515,3 +515,70 @@ def test_malformed_macro_container_failsover_to_backup():
         sources=[_MalformedMacroSource("bad", {}), good],
     )
     assert res.source == "good"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #123 — IndicatorSeries.points keys must be plain datetime.date. A source
+# returning str/int/None/datetime keys must be rejected, not accepted or leaked
+# as a raw TypeError from the ascending-order compare.
+# --------------------------------------------------------------------------- #
+class _PointsMacroSource:
+    """Returns a well-formed IndicatorSeries except for caller-supplied points."""
+
+    def __init__(self, name, points):
+        self.name = name
+        self._points = points
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return IndicatorSeries(
+            country=country_iso3.upper(),
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=tuple(self._points),
+            source=self.name,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+@pytest.mark.parametrize(
+    "points",
+    [
+        [("2024-01-01", 1.0)],
+        [(datetime(2024, 1, 1, tzinfo=timezone.utc), 1.0)],
+        [(datetime(2024, 1, 1), 1.0)],
+        [(20240101, 1.0)],
+        [(None, 1.0)],
+        [(date(2023, 1, 1), 1.0), ("2024-01-01", 2.0)],
+    ],
+    ids=["str", "aware_datetime", "naive_datetime", "int", "none", "mixed"],
+)
+def test_rejects_malformed_macro_point_date(points):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_PointsMacroSource("bad", points)])
+    assert "malformed point date" in ei.value.attempts[0].reason
+
+
+def test_malformed_macro_point_date_failsover_to_backup():
+    good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
+    res = get_indicator(
+        "ZZZ",
+        MacroIndicator.GDP,
+        sources=[_PointsMacroSource("bad", [("2024-01-01", 1.0)]), good],
+    )
+    assert res.source == "good"
+
+
+def test_accepts_plain_date_macro_points():
+    src = _PointsMacroSource("ok", [(date(2022, 1, 1), 1.0), (date(2023, 1, 1), 2.0)])
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[src])
+    assert res.source == "ok"
+    assert [p[0] for p in res.points] == [date(2022, 1, 1), date(2023, 1, 1)]
