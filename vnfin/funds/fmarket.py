@@ -190,6 +190,18 @@ class FmarketFundSource(HttpDataSource):
         seen_dates: set[date] = set()
         points: list[NavPoint] = []
         for r in rows:
+            # Issue #21 (reopen): a NAV row that exposes a productId must identify
+            # the requested fund. A present productId must be a non-bool int equal
+            # to fid; a mismatched/malformed value is a provider/cache identity
+            # error, not data to stamp as the requested product.
+            if isinstance(r, dict):
+                row_pid = r.get("productId")
+                if row_pid is not None and (
+                    isinstance(row_pid, bool) or not isinstance(row_pid, int) or row_pid != fid
+                ):
+                    raise InvalidData(
+                        f"fmarket: nav row productId {row_pid!r} != requested {fid}"
+                    )
             point = self._parse_nav_point(r)
             if point.date in seen_dates:
                 raise InvalidData(
@@ -221,6 +233,25 @@ class FmarketFundSource(HttpDataSource):
         url = f"{_BASE_URL}{_DETAIL_PATH}/{fid}"
         parsed = self._get(url, who="holdings")
         data = _require_data_object(parsed.get("data"), who="holdings")
+        # Issue #21 (reopen): validate the returned detail identity before trusting
+        # its holdings. A present `id` must be a non-bool int equal to fid (a
+        # mismatch is a wrong-fund detail document). `code` has no requested
+        # counterpart to compare, but a present value must still be a non-empty
+        # canonical string so a corrupt identity shape is not silently accepted.
+        detail_id = data.get("id")
+        if detail_id is not None and (
+            isinstance(detail_id, bool) or not isinstance(detail_id, int) or detail_id != fid
+        ):
+            raise InvalidData(
+                f"fmarket: holdings detail id {detail_id!r} != requested {fid}"
+            )
+        detail_code = data.get("code")
+        if detail_code is not None and (
+            not isinstance(detail_code, str) or not detail_code.strip()
+        ):
+            raise InvalidData(
+                f"fmarket: holdings detail code {detail_code!r} is not a non-empty string"
+            )
         rows = _require_array(
             data.get("productTopHoldingList"), who="holdings productTopHoldingList"
         )

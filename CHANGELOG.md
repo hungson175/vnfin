@@ -7,6 +7,14 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Fmarket & GoldApi returned-identity guards** — provider responses are now checked against the
+  requested identity before their data is trusted: ``FmarketFundSource.nav_history`` rejects a NAV
+  row whose present ``productId`` is not the requested fund id (non-bool int equal to the request);
+  ``FmarketFundSource.holdings`` rejects a detail document whose present ``id`` is not the requested
+  fund id (and requires a present ``code`` to be a non-empty canonical string); and
+  ``GoldApiSource`` rejects a payload whose present ``symbol`` does not match the requested
+  commodity (case-insensitive) and always returns the validated requested symbol as the product
+  rather than the trusted payload value. ([#21](https://github.com/hungson175/vnfin/issues/21))
 - **CurrencyApi document-date identity guard** — ``CurrencyApiGoldSource._doc_date`` now only
   falls back to the requested loop date when the provider ``date`` is truly absent/``null``. A
   *present* but malformed value — a falsey non-string (``False``/``0``/``[]``/``{}``) or a

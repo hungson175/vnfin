@@ -370,6 +370,56 @@ def test_list_funds_integral_float_status_still_accepted():
     assert len(funds) >= 1
 
 
+def _nav_rows(product_id):
+    return [{"id": 1, "createdAt": 1700000000000, "nav": 10100.0, "navDate": "2024-01-02", "productId": product_id}]
+
+
+def test_nav_history_rejects_mismatched_row_product_id():
+    # Issue #21 (reopen): a NAV row whose productId is not the requested fund is a
+    # provider/cache identity error, not data to stamp as the requested product.
+    payload = _nav_history_payload(rows=_nav_rows(9999))
+    with pytest.raises(InvalidData):
+        _src(payload).nav_history(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("bad_pid", [True, float(FAKE_ID_A), str(FAKE_ID_A)], ids=["bool", "float", "str"])
+def test_nav_history_rejects_malformed_row_product_id(bad_pid):
+    payload = _nav_history_payload(rows=_nav_rows(bad_pid))
+    with pytest.raises(InvalidData):
+        _src(payload).nav_history(FAKE_ID_A)
+
+
+def test_nav_history_accepts_matching_and_absent_row_product_id():
+    rows = [
+        {"id": 1, "createdAt": 1700000000000, "nav": 10100.0, "navDate": "2024-01-02", "productId": FAKE_ID_A},
+        {"id": 2, "createdAt": None, "nav": 10000.0, "navDate": "2024-01-01"},  # productId absent
+    ]
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    assert hist.product_id == FAKE_ID_A and len(hist.points) == 2
+
+
+def _holdings_payload_with(**data_overrides):
+    base = json.loads(_holdings_payload())
+    base["data"].update(data_overrides)
+    return json.dumps(base)
+
+
+def test_holdings_rejects_mismatched_detail_id():
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(id=9999)).holdings(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("bad_code", [123, [], {}, "", "   "], ids=["int", "list", "dict", "blank", "ws"])
+def test_holdings_rejects_malformed_detail_code(bad_code):
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(code=bad_code)).holdings(FAKE_ID_A)
+
+
+def test_holdings_accepts_matching_detail_identity():
+    holdings = _src(_holdings_payload()).holdings(FAKE_ID_A)
+    assert len(holdings) >= 1
+
+
 def test_list_funds_digit_string_status_accepted():
     # Digit-string status/code (e.g. "200") remains valid via int() coercion.
     funds = _src(_fund_list_payload(status="200", code="200")).list_funds()

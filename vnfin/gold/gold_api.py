@@ -80,10 +80,20 @@ class GoldApiSource(GoldSource):
             raise InvalidData(f"{self.name}: expected USD currency, got {currency!r}")
 
         tm = self._parse_iso(parsed.get("updatedAt"))
-        symbol = parsed.get("symbol") or self.symbol
+        # Issue #21 (reopen): a present provider `symbol` must identify the
+        # requested commodity. Previously a payload symbol="XAG" was trusted for an
+        # XAU request and returned as the product. A present symbol must be a
+        # canonical string equal (case-insensitively) to the requested symbol;
+        # otherwise reject. The returned product is always the validated request.
+        payload_symbol = parsed.get("symbol")
+        if payload_symbol is not None:
+            if not isinstance(payload_symbol, str) or payload_symbol.strip().upper() != self.symbol:
+                raise InvalidData(
+                    f"{self.name}: returned symbol {payload_symbol!r} != requested {self.symbol!r}"
+                )
         return GoldQuote(
             time=tm,
-            product=symbol,
+            product=self.symbol,
             buy=price,
             sell=price,
             unit=_USD_PER_OZ,

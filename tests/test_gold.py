@@ -628,6 +628,39 @@ def test_goldapi_silver_symbol():
     assert q.sell == pytest.approx(71.48)
 
 
+# --------------------------------------------------------------------------- #
+# Issue #21 (reopen) — gold-api returned symbol identity must match the request #
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "req,payload",
+    [("XAU", "XAG"), ("XAG", "XAU")],
+    ids=["xau_req_xag_payload", "xag_req_xau_payload"],
+)
+def test_goldapi_rejects_mismatched_payload_symbol(req, payload):
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(symbol=payload)), symbol=req)
+    with pytest.raises(InvalidData, match="returned symbol"):
+        s.get_quote()
+
+
+@pytest.mark.parametrize("bad", [123, [], {}, ""], ids=["int", "list", "dict", "blank"])
+def test_goldapi_rejects_nonstring_payload_symbol(bad):
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(symbol=bad)), symbol="XAU")
+    with pytest.raises(InvalidData, match="returned symbol"):
+        s.get_quote()
+
+
+def test_goldapi_uses_requested_symbol_as_product_case_insensitive():
+    # A present lowercase payload symbol matches case-insensitively; product is the
+    # validated requested symbol, never the trusted payload value.
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(symbol="xau")), symbol="XAU")
+    assert s.get_quote().product == "XAU"
+
+
+def test_goldapi_absent_payload_symbol_uses_requested():
+    s = GoldApiSource(http_get=_static_get(_goldapi_json(symbol=None)), symbol="XAU")
+    assert s.get_quote().product == "XAU"
+
+
 def test_goldapi_missing_price_raises_invalid():
     s = GoldApiSource(http_get=_static_get(json.dumps({"symbol": "XAU"})))
     with pytest.raises(InvalidData):
