@@ -16,18 +16,15 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129** — combined
-  design sent (/tmp/vnfin-125r-127-128-design-202606191331.md). Awaiting reviewer convergence.
-  Order (4 TDD commits, 1 combined review):
-  1. **#125-inner** — per-domain row/item object type checks before deref (PriceBar/CryptoBar/
-     GoldBar isinstance; macro point must be 2-elem tuple/list; fundamentals item isinstance
-     LineItem). Foundational.
-  2. **#127** — `fetched_at_utc` must be tz-aware UTC when present (None ok). Shared helper
-     `_validate_result_metadata` mirroring FX `as_of_utc`.
-  3. **#128** — `warnings` must be `tuple[str,...]` (None currently crashes finalize). Same helper.
-  4. **#129** — fundamentals `fiscal_date` must be plain date (reject datetime/str/None/int/list).
-  FX out of #127/#128 (FXRate has no such fields). Each red-first, all-domain regressions,
-  full suite + gates green before push.
+- **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129 + #130** —
+  design APPROVED (review-202606191336 #125r/#129; #127/#128 confirmed 13:38; #130 folded in).
+  ALL IMPLEMENTED + committed (NOT pushed), full suite 1866 green, gates pass, no public-API change:
+  - **#125-inner** `7199a4f` — per-domain row/item object type checks before deref.
+  - **#129** `ae71706` — fundamentals `fiscal_date` must be plain date.
+  - **#127** `9e3e61f` — `fetched_at_utc` tz-aware UTC when present (shared `_fetched_at_utc_reason`).
+  - **#128** `1898a51` — `warnings` must be `tuple[str,...]` (shared `_warnings_reason`).
+  - **#130** `046f1ba` — fundamentals report `is_bank`/`model_type`/`provider_symbol` metadata.
+  **Awaiting ONE combined reviewer code review (f6b96da..HEAD) → push → close all 5.**
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -35,7 +32,7 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Poller triage (newly triaged)
 
-- _(none pending — #125-reopen/#127/#128/#129 scoped into the Now batch above)_
+- _(none pending — #125-reopen/#127/#128/#129/#130 all scoped + implemented in the Now batch)_
 
 ## Next (the only remaining open bugs — all 12 are in the Now gap-fix queue above)
 
