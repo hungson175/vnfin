@@ -796,3 +796,28 @@ def test_fred_without_key_raises_catchable_source_error(monkeypatch):
     s = FREDMacroSource()  # no key -> BYOK skip, not a hard crash
     with pytest.raises(SourceUnavailable):
         s.get_series("FAKESERIES")
+
+
+# --------------------------------------------------------------------------- #
+# Issue #21 (reopen) — WorldBank must validate the observation indicator.id
+# against the requested WDI code (not just countryiso3code).
+# --------------------------------------------------------------------------- #
+def test_wb_rejects_mismatched_observation_indicator_id():
+    rows = [_obs("ZZ", COUNTRY, 2023, 1.1, code="NY.OTHER.CODE")]
+    payload = json.dumps([_meta(1), rows])
+    with pytest.raises(InvalidData, match="indicator.id"):
+        _src(payload).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
+
+
+@pytest.mark.parametrize("bad_id", ["", "   ", None, 123, []], ids=["blank", "ws", "null", "int", "list"])
+def test_wb_rejects_malformed_observation_indicator_id(bad_id):
+    rows = [_obs("ZZ", COUNTRY, 2023, 1.1, code=bad_id)]
+    payload = json.dumps([_meta(1), rows])
+    with pytest.raises(InvalidData):
+        _src(payload).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
+
+
+def test_wb_accepts_matching_observation_indicator_id():
+    # default _obs uses code=INDICATOR -> matches the requested WDI code.
+    res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
+    assert res.indicator_code == INDICATOR.strip().upper()

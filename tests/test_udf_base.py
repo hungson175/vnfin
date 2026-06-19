@@ -336,3 +336,31 @@ def test_zero_volume_is_allowed(synth):
     )
     h = src_with(payload).get_history("FPT", Interval.D1, *WIDE)
     assert h.bars[0].volume == 0
+
+
+# --- Issue #21 (reopen): a PRESENT blank/null symbol must not bypass the guard
+@pytest.mark.parametrize("bad_sym", ["", "   ", None], ids=["blank", "whitespace", "null"])
+def test_udf_present_blank_or_null_symbol_raises_invalid(synth, bad_sym):
+    payload = json.dumps(
+        {
+            "symbol": bad_sym,
+            "s": "ok",
+            "t": [synth.ts("2024-01-02")],
+            "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": [1000],
+        }
+    )
+    with pytest.raises(InvalidData):
+        src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+
+
+def test_udf_absent_symbol_key_is_accepted(synth):
+    # No 'symbol' key at all -> legacy absent-is-ok behaviour preserved.
+    payload = json.dumps(
+        {
+            "s": "ok",
+            "t": [synth.ts("2024-01-02")],
+            "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": [1000],
+        }
+    )
+    h = src_with(payload).get_history("FPT", Interval.D1, *WIDE)
+    assert h.symbol == "FPT"

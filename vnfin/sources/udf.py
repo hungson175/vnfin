@@ -96,11 +96,20 @@ class UDFSource(HttpDataSource, PriceSource):
         # Issue #21: when the provider echoes the requested symbol in the response,
         # validate it matches what we asked for before stamping identifiers onto the
         # result. Accept either the provider alias or the canonical caller symbol.
-        resp_symbol = data.get("symbol")
-        if resp_symbol is not None:
-            resp_sym_norm = str(resp_symbol).strip().upper()
+        # Issue #21 (reopen): key-presence is the trigger (not truthiness). A
+        # PRESENT but blank/null/non-string symbol must NOT be treated as an absent
+        # field and stamped as the requested ticker; only a truly missing key keeps
+        # the legacy absent-is-ok behavior.
+        if "symbol" in data:
+            resp_symbol = data["symbol"]
+            if not isinstance(resp_symbol, str) or not resp_symbol.strip():
+                raise InvalidData(
+                    f"{self.name}: present response symbol {resp_symbol!r} must be a "
+                    f"non-empty string identifying the requested {symbol!r}"
+                )
+            resp_sym_norm = resp_symbol.strip().upper()
             canonical = symbol.strip().upper()
-            if resp_sym_norm and resp_sym_norm not in (psym, canonical):
+            if resp_sym_norm not in (psym, canonical):
                 raise InvalidData(
                     f"{self.name}: response symbol {resp_symbol!r} does not match "
                     f"requested {canonical!r} (provider alias {psym!r})"

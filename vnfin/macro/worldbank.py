@@ -288,6 +288,21 @@ class WorldBankMacroSource(HttpDataSource):
                 )
 
             ind = self._metadata_container(obs, "indicator", code)
+            if ind is not None:
+                # Issue #21 (reopen): the observation must identify the requested
+                # WDI indicator. A present indicator.id must be a non-blank string
+                # equal (canonical-normalized) to the requested code; a mismatched
+                # or malformed id is a provider/cache/routing error, not data to
+                # stamp as the requested indicator.
+                ind_id = ind.get("id")
+                if not isinstance(ind_id, str) or not ind_id.strip():
+                    raise InvalidData(
+                        f"{self.NAME}: malformed observation indicator.id {ind_id!r} for {code}"
+                    )
+                if ind_id.strip().upper() != code:
+                    raise InvalidData(
+                        f"{self.NAME}: observation indicator.id {ind_id!r} != requested {code!r}"
+                    )
             if indicator_name is None and ind is not None:
                 indicator_name = self._metadata_str(
                     ind.get("value"), "indicator.value", code
