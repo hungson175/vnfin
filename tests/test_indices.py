@@ -551,3 +551,71 @@ def test_index_client_constituents_rejects_malformed_index_selector(bad_index):
     c = IndexClient(http_get=_get(_constituents_payload()))
     with pytest.raises(InvalidData):
         c.constituents(bad_index)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 4 #75/#30/#9 — security/index identifier contract on selectors + members.
+# --------------------------------------------------------------------------- #
+_BAD_SELECTORS = [None, 123, b"VN30", "", "   ", "VN 30", "VN/30", "VN\n30", "1VN", "VN$"]
+
+
+@pytest.mark.parametrize("bad", _BAD_SELECTORS)
+def test_constituents_source_malformed_selector_zero_http(bad):
+    # #75: reject before URL construction -> http_get (which would assert) never runs.
+    s = IndexConstituentsSource(http_get=_raising(AssertionError("HTTP called for invalid selector")))
+    with pytest.raises(InvalidData):
+        s.get_constituents(bad)
+
+
+@pytest.mark.parametrize("bad", _BAD_SELECTORS)
+def test_constituents_client_malformed_selector_zero_http(bad):
+    with pytest.raises(InvalidData):
+        IndexClient(http_get=_raising(AssertionError("HTTP called"))).constituents(bad)
+
+
+@pytest.mark.parametrize("bad", _BAD_SELECTORS)
+def test_constituents_facade_malformed_selector_zero_http(bad):
+    with pytest.raises(InvalidData):
+        index_constituents(bad, http_get=_raising(AssertionError("HTTP called")))
+
+
+@pytest.mark.parametrize("bad", _BAD_SELECTORS[:8])
+def test_index_history_malformed_selector_zero_http(bad):
+    with pytest.raises(InvalidData):
+        IndexClient(http_get=_raising(AssertionError("HTTP called"))).index_history(bad)
+
+
+def test_constituents_selector_normalizes_source_client_facade():
+    p = _constituents_payload()
+    assert IndexConstituentsSource(http_get=_get(p)).get_constituents("  vn30  ").index == "VN30"
+    assert IndexClient(http_get=_get(p)).constituents("  vn30  ").index == "VN30"
+    assert index_constituents("vn30", http_get=_get(p)).index == "VN30"
+
+
+def test_constituents_hnxindex_alias_keeps_public_identity_and_provider_group():
+    res = IndexConstituentsSource(http_get=_get(_constituents_payload())).get_constituents("hnxindex")
+    assert res.index == "HNXINDEX"  # canonical public identity, not provider group
+    assert res.provider_group == "HNXIndex"  # case-sensitive provider group preserved
+
+
+def test_constituent_stocksymbol_normalizes_padded_lower():
+    res = IndexConstituentsSource(
+        http_get=_get(_constituents_payload(members=[(" fake1 ", "hose")]))
+    ).get_constituents("VN30")
+    assert res.symbols == ("FAKE1",)
+
+
+@pytest.mark.parametrize("bad_sym", ["FA KE", "FA/KE", "FA.KE", "FA\nKE", "1FAKE", "FAKE$", 123, None])
+def test_constituent_malformed_stocksymbol_rejected(bad_sym):
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(
+            http_get=_get(_constituents_member_payload({"stockSymbol": bad_sym, "exchange": "hose"}))
+        ).get_constituents("VN30")
+
+
+def test_constituent_duplicate_after_canonicalization_rejected():
+    # "fake1" and "FAKE1" canonicalize to the same symbol -> duplicate rejected.
+    with pytest.raises(InvalidData):
+        IndexConstituentsSource(
+            http_get=_get(_constituents_payload(members=[("fake1", "hose"), ("FAKE1", "hose")]))
+        ).get_constituents("VN30")

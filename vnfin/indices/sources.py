@@ -37,6 +37,7 @@ from ..sources.ssi import SSIiBoardSource
 from ..sources.vndirect import VNDirectSource
 from ..sources.vps import VPSSource
 from ..transport import DEFAULT_UA, HttpDataSource
+from .._contracts import canonical_security_symbol, reject_duplicate, require_present
 from ..validation import validate_non_empty_string
 from .models import IndexConstituents, IndexMember
 
@@ -144,8 +145,10 @@ class IndexConstituentsSource(HttpDataSource):
         return _GROUP_ALIASES.get(canon, canon)
 
     def get_constituents(self, index: str) -> IndexConstituents:
-        # Issue #75: reject malformed index selectors before URL construction.
-        index = validate_non_empty_string(index, "index")
+        # Issue #75: the index selector is a canonical security/index identifier —
+        # reject non-string/bytes/blank/whitespace/punctuation/internal-space before
+        # any URL construction; normalize padded/lowercase (e.g. " vn30 " -> "VN30").
+        index = canonical_security_symbol(index, "index")
         group = self.normalize_group(index)
         url = f"{self.BASE_URL}{self.GROUP_PATH}/{group}"
         headers = {"User-Agent": DEFAULT_UA, "Accept": "application/json"}
@@ -173,16 +176,15 @@ class IndexConstituentsSource(HttpDataSource):
         for i, row in enumerate(data):
             if not isinstance(row, dict):
                 raise InvalidData(f"{self.name}: member {i} is not an object")
-            sym = row.get("stockSymbol")
-            if not sym or not isinstance(sym, str):
-                raise InvalidData(f"{self.name}: member {i} missing stockSymbol")
-            sym = sym.strip().upper()
-            # Issue #30: reject empty/whitespace-only normalized symbols and duplicates.
-            if not sym:
-                raise InvalidData(f"{self.name}: member {i} has empty stockSymbol")
-            if sym in seen:
-                raise InvalidData(f"{self.name}: duplicate member symbol {sym}")
-            seen.add(sym)
+            # Issue #30: stockSymbol is a public security identifier — a malformed
+            # non-blank shape (internal space/slash/punctuation/newline/digit-first)
+            # must fail closed, not just be stripped/uppercased. Canonicalize then
+            # dedup on the canonical form ("fake1" and "FAKE1" collide).
+            sym = canonical_security_symbol(
+                require_present(row, "stockSymbol", f"{self.name} member {i} stockSymbol"),
+                f"{self.name} member {i} stockSymbol",
+            )
+            reject_duplicate(sym, seen, f"{self.name} member {i} symbol")
             exchange = self._optional_member_str(row, "exchange", i, "exchange")
             company_name = self._member_company_name(row, i)
             isin = self._optional_member_str(row, "isin", i, "isin")

@@ -785,3 +785,22 @@ def test_accepts_none_price_security_metadata():
     hist = _history_with_bars("real", "FPT", bars, exchange=None, provider_symbol=None)
     client = FailoverPriceClient([RawFakeSource("real", hist)])
     assert client.get_daily("FPT", *WIDE).source == "real"
+
+
+# Phase 4 #9 — price symbols are canonical security identifiers; malformed caller
+# input fails closed BEFORE the failover engine (zero source calls).
+@pytest.mark.parametrize("bad", ["F PT", "F\tPT", "F\nPT", "F/PT", "FAKE$", b"FPT", "1ABC", "", "   "])
+def test_price_malformed_symbol_fails_closed_zero_calls(synth, bad):
+    from vnfin.exceptions import InvalidData
+    s1 = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s1])
+    with pytest.raises(InvalidData):
+        client.get_daily(bad, *WIDE)
+    assert s1.calls == 0  # validation precedes any source/HTTP call
+
+
+def test_price_symbol_normalizes_padded_lower(synth):
+    s1 = FakeSource("s1", synth.make_history("s1", 2))
+    client = FailoverPriceClient([s1])
+    h = client.get_daily("  fpt  ", *WIDE)
+    assert h.source == "s1"  # " fpt " normalized to FPT, source reached

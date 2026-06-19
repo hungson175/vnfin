@@ -119,3 +119,18 @@ def test_canonical_country_iso3_accepts_and_normalizes(value, expected):
 def test_canonical_country_iso3_rejects(bad):
     with pytest.raises(InvalidData):
         canonical_country_iso3(bad, "ctx")
+
+
+# Phase 4 security/index — canonical_security_symbol explicit reviewer matrix.
+@pytest.mark.parametrize("value,expected", [(" fpt ", "FPT"), ("  vn30  ", "VN30")])
+def test_canonical_security_symbol_normalizes(value, expected):
+    assert canonical_security_symbol(value, "symbol") == expected
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [None, b"VN30", 123, "", "   ", "F PT", "F\tPT", "F\nPT", "F/PT", "FAKE$", "1ABC"],
+)
+def test_canonical_security_symbol_rejects(bad):
+    with pytest.raises(InvalidData):
+        canonical_security_symbol(bad, "symbol")

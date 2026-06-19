@@ -15,6 +15,7 @@ from dataclasses import replace
 from datetime import date, datetime
 
 from ._contracts import (
+    canonical_security_symbol,
     non_empty_reason,
     result_type_reason,
     row_object_and_aware_datetime_reason,
@@ -130,10 +131,11 @@ class FailoverPriceClient:
         return self._engine.max_attempts
 
     def get_history(self, symbol, interval: Interval = Interval.D1, start=None, end=None) -> PriceHistory:
-        # Issue #9: reject empty/malformed symbols before the failover engine runs.
-        # Issue #97: normalize to uppercase so identity checks are case-insensitive
-        # and match real sources that canonicalize symbols.
-        symbol = validate_non_empty_string(symbol, "symbol").upper()
+        # Issue #9/#97: a price symbol is a canonical security identifier — reject
+        # malformed shapes (internal space/control/slash/punctuation/digit-first,
+        # bytes, non-string) before the failover engine runs, and normalize to
+        # uppercase so identity checks match the sources' canonical form.
+        symbol = canonical_security_symbol(symbol, "symbol")
         validate_date_range(start, end, name="price history")
         # Issue #23: validate the interval is an Interval enum before the failover
         # engine's capability probe / no_capable_factory touches it. This prevents

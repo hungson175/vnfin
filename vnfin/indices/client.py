@@ -17,6 +17,7 @@ from typing import Optional, Union
 from ..client import FailoverPriceClient
 from ..exceptions import InvalidData, VnfinError
 from ..models import Interval, PriceHistory
+from .._contracts import canonical_security_symbol
 from ..validation import validate_date_range, validate_non_empty_string
 from .models import IndexConstituents
 from .sources import (
@@ -36,8 +37,10 @@ def default_index_sources(http_get=None, timeout: float = 25.0):
 
 
 def _validate_index_selector(value, name: str = "index") -> str:
-    """Issue #75: reject malformed index selectors before any URL/provider call."""
-    return validate_non_empty_string(value, name)
+    """Issue #75/#9: an index selector is a canonical security/index identifier —
+    reject non-string/bytes/blank/whitespace/punctuation/internal-space before any
+    URL/provider call; normalize padded/lowercase (e.g. " vn30 " -> "VN30")."""
+    return canonical_security_symbol(value, name)
 
 
 class IndexClient:
@@ -75,10 +78,10 @@ class IndexClient:
         or passing ``start > end``, raises a stable :class:`~vnfin.exceptions.VnfinError`
         BEFORE any source/failover call — never a raw ``TypeError``/``ValueError``.
         """
-        # Issue #9: reject empty/malformed symbols before the failover engine runs.
-        # Issue #97: normalize to uppercase so failover identity checks are
-        # case-insensitive and match the canonical symbols returned by sources.
-        symbol = validate_non_empty_string(symbol, "symbol").upper()
+        # Issue #9/#97: the index-history selector is a canonical security/index
+        # identifier — reject malformed shapes before the failover engine runs and
+        # normalize to uppercase so identity checks match the sources' canonical form.
+        symbol = canonical_security_symbol(symbol, "symbol")
         validate_date_range(start, end, name="index_history")
         return self._client.get_history(symbol, interval, start, end)
 
