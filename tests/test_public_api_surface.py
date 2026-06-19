@@ -408,6 +408,18 @@ def test_diagnostics_module_is_in_surface():
     assert diag["members"]["SourceCapability"]["frozen"] is True
 
 
+def test_news_module_is_in_surface():
+    # #140: the additive public vnfin.news module must be captured (dataclasses + funcs).
+    live = build_surface()
+    assert "vnfin.news" in live["modules"]
+    news = live["modules"]["vnfin.news"]
+    for name in ("NewsItem", "NewsResult", "AlphaVantageNewsSource", "source", "search"):
+        assert name in news["all"], name
+        assert name in news["members"], name
+    assert news["members"]["NewsItem"]["kind"] == "dataclass"
+    assert news["members"]["NewsItem"]["frozen"] is True
+
+
 def test_public_classes_capture_constructor():
     live = build_surface()
     # BTMCGoldSource takes a widget_key; its constructor must be in the surface

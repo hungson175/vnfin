@@ -29,6 +29,7 @@ from . import (
     gold,
     indices,
     macro,
+    news,
     prices,
 )
 from .client import FailoverPriceClient
@@ -62,6 +63,7 @@ __all__ = [
     "fx",
     "exceptions",
     "diagnostics",
+    "news",
 ]
 __version__ = "0.2.0"
 

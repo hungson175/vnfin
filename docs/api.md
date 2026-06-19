@@ -125,6 +125,24 @@ never fabricated data:
 metadata, not a live health monitor (use `scripts/healthcheck.py` for live checks). See
 [how-to/source-diagnostics.md](how-to/source-diagnostics.md).
 
+## `vnfin.news` — daily financial-news headlines (BYOK)
+
+`vnfin.news` is an additive domain namespace for **daily/historical headline metadata**
+(issue #140) via Alpha Vantage's official `NEWS_SENTIMENT` API — **bring-your-own-key**,
+metadata only, **no raw scraping / full text / real-time**:
+
+- `vnfin.news.search(*, tickers=None, topics=None, start=None, end=None, sort="latest",
+  limit=50, provider="alpha_vantage", api_key=None, ...) -> NewsResult` — one-shot search
+  (requires at least one of `tickers`/`topics`).
+- `vnfin.news.source(provider="alpha_vantage", *, api_key=None, ...)` — construct a source
+  (v1 supports only `alpha_vantage`).
+- `NewsItem` / `NewsResult` are frozen dataclasses; `AlphaVantageNewsSource` is the adapter.
+
+The API key comes from `api_key=` or the `ALPHAVANTAGE_API_KEY` env var (no no-key default;
+a missing key raises `SourceUnavailable`, with the key redacted from all errors). Results
+are links + provider metadata/sentiment only — never article bodies. See
+[design/news-sources.md](design/news-sources.md) and [how-to/news.md](how-to/news.md).
+
 ## Stability and backwards compatibility
 
 This facade is **additive**. Every previously documented import still works unchanged,

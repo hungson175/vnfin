@@ -32,6 +32,7 @@ Focused answers for common operational tasks:
 - **[Use FRED BYOK](how-to/byok-fred.md)** — optional macro key without changing no-key defaults.
 - **[Run live tests](how-to/live-tests.md)** — real network checks, environment guard, diagnostics.
 - **[Explain source coverage](how-to/source-diagnostics.md)** — offline `vnfin.diagnostics` preflight for coverage gaps / single-source legs.
+- **[Get financial-news headlines](how-to/news.md)** — BYOK `vnfin.news` daily headline metadata (Alpha Vantage, no scraping).
 
 ## Reference
 

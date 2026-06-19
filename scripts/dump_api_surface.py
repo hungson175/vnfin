@@ -44,6 +44,7 @@ DOMAIN_MODULES = [
     "vnfin.fx",
     "vnfin.sources",
     "vnfin.diagnostics",
+    "vnfin.news",
 ]
 
 # Field names whose *default value* is part of the result's semantic contract.

@@ -19,7 +19,8 @@
         "macro",
         "fx",
         "exceptions",
-        "diagnostics"
+        "diagnostics",
+        "news"
       ],
       "members": {
         "AdjustmentPolicy": {
@@ -443,6 +444,9 @@
           "kind": "module"
         },
         "macro": {
+          "kind": "module"
+        },
+        "news": {
           "kind": "module"
         },
         "prices": {
@@ -5552,6 +5556,299 @@
             }
           ],
           "returns": "WorldBankMacroSource"
+        }
+      }
+    },
+    "vnfin.news": {
+      "all": [
+        "NewsItem",
+        "NewsResult",
+        "AlphaVantageNewsSource",
+        "source",
+        "search"
+      ],
+      "members": {
+        "AlphaVantageNewsSource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "api_key"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "name": {
+              "property": true
+            },
+            "search": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": "None",
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "tickers"
+                },
+                {
+                  "default_repr": "None",
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "topics"
+                },
+                {
+                  "default_repr": "None",
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "start"
+                },
+                {
+                  "default_repr": "None",
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "end"
+                },
+                {
+                  "default_repr": "'latest'",
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "sort"
+                },
+                {
+                  "default_repr": "50",
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
+                  "name": "limit"
+                }
+              ],
+              "returns": "NewsResult"
+            }
+          }
+        },
+        "NewsItem": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "title",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "url",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "published_at_utc",
+              "type": "datetime"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "tickers",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "topics",
+              "type": "tuple[str, ...]"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "summary",
+              "type": "str | None"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "provider_id",
+              "type": "str | None"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "overall_sentiment_score",
+              "type": "float | None"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "overall_sentiment_label",
+              "type": "str | None"
+            },
+            {
+              "default_repr": "'alpha_vantage'",
+              "has_default": true,
+              "name": "source_adapter",
+              "type": "str"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "NewsResult": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "items",
+              "type": "tuple[NewsItem, ...]"
+            },
+            {
+              "default_repr": "'alpha_vantage'",
+              "has_default": true,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "datetime | None"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "search": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "tickers"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "topics"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "start"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "end"
+            },
+            {
+              "default_repr": "'latest'",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "sort"
+            },
+            {
+              "default_repr": "50",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "limit"
+            },
+            {
+              "default_repr": "'alpha_vantage'",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "provider"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "api_key"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "default_repr": "25.0",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "NewsResult"
+        },
+        "source": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": "'alpha_vantage'",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "provider"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "api_key"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "default_repr": "25.0",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": null
         }
       }
     },
