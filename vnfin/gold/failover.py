@@ -94,10 +94,8 @@ class FailoverGoldClient:
         min_coverage: float = 0.5,
         warn_coverage: float = 0.9,
     ):
-        if not 0.0 <= min_coverage <= 1.0:
-            raise ValueError(f"min_coverage must be in [0, 1], got {min_coverage!r}")
-        if not 0.0 <= warn_coverage <= 1.0:
-            raise ValueError(f"warn_coverage must be in [0, 1], got {warn_coverage!r}")
+        min_coverage = self._coverage_threshold(min_coverage, "min_coverage")
+        warn_coverage = self._coverage_threshold(warn_coverage, "warn_coverage")
         if warn_coverage < min_coverage:
             raise ValueError(
                 f"warn_coverage ({warn_coverage!r}) must be >= min_coverage ({min_coverage!r})"
@@ -124,6 +122,19 @@ class FailoverGoldClient:
             ),
             finalize=self._finalize,
         )
+
+    @staticmethod
+    def _coverage_threshold(value, name: str) -> float:
+        if isinstance(value, bool):
+            raise ValueError(f"{name} must be a numeric threshold in [0, 1], got bool")
+        if not isinstance(value, (int, float)):
+            raise ValueError(
+                f"{name} must be a numeric threshold in [0, 1], got {type(value).__name__}"
+            )
+        threshold = float(value)
+        if not 0.0 <= threshold <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1], got {value!r}")
+        return threshold
 
     @property
     def sources(self):

@@ -466,7 +466,10 @@ def test_b11_coverage_threshold_validation():
     with pytest.raises(ValueError):
         # warn must be >= min
         FailoverGoldClient(src, min_coverage=0.8, warn_coverage=0.5)
-
+    with pytest.raises(ValueError, match="bool"):
+        FailoverGoldClient(src, min_coverage=False, warn_coverage=False)
+    with pytest.raises(ValueError, match="str"):
+        FailoverGoldClient(src, min_coverage="0.5")
 
 def test_b11_custom_min_coverage_accepts_lower_completeness():
     # With min_coverage lowered to 0.1, a 1/10 primary is now ACCEPTED (10% >= 10%).

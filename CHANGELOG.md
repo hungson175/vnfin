@@ -13,6 +13,9 @@ All notable changes to `vnfin` are documented here. The format follows
 - **BTMC product/karat metadata** — validate ``@n_<row>`` and ``@k_<row>`` types
   before normalization so malformed rows raise ``InvalidData`` instead of leaking
   raw ``TypeError`` or typed non-string ``GoldQuote.karat``. ([#98](https://github.com/hungson175/vnfin/issues/98))
+- **Gold failover coverage thresholds** — reject boolean and non-numeric
+  ``min_coverage`` / ``warn_coverage`` values so ``False`` cannot silently disable
+  the sparse-history guard. ([#96](https://github.com/hungson175/vnfin/issues/96))
 - **World Bank descriptive metadata** — reject present non-string
   ``indicator.value``, ``country.value``, and ``unit`` fields instead of letting
   malformed provider metadata enter typed ``IndicatorSeries``. ([#101](https://github.com/hungson175/vnfin/issues/101))
