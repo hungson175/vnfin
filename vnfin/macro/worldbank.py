@@ -21,6 +21,7 @@ Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - non-JSON / wrong top-level shape    -> ``InvalidData``
 - provider ``message`` error envelope -> ``InvalidData``
 - malformed/garbage scalar / NaN date -> ``InvalidData``
+- observation outside request window -> skipped; none left -> ``EmptyData``
 - no usable points                    -> ``EmptyData``
 """
 from __future__ import annotations
@@ -164,14 +165,16 @@ class WorldBankMacroSource(HttpDataSource):
             raise InvalidData(f"{self.NAME}: empty indicator code")
         url = f"{self.BASE_URL}/country/{country}/indicator/{code}"
         params = {"format": "json", "per_page": self._per_page}
+        window_lo: int | None = None
+        window_hi: int | None = None
         if start_year is not None or end_year is not None:
-            lo = self._coerce_year(start_year, "start_year") if start_year is not None else self._coerce_year(end_year, "end_year")
-            hi = self._coerce_year(end_year, "end_year") if end_year is not None else self._coerce_year(start_year, "start_year")
-            if lo > hi:
+            window_lo = self._coerce_year(start_year, "start_year") if start_year is not None else self._coerce_year(end_year, "end_year")
+            window_hi = self._coerce_year(end_year, "end_year") if end_year is not None else self._coerce_year(start_year, "start_year")
+            if window_lo > window_hi:
                 raise InvalidData(
-                    f"{self.NAME}: start_year {lo} is after end_year {hi}"
+                    f"{self.NAME}: start_year {window_lo} is after end_year {window_hi}"
                 )
-            params["date"] = f"{lo}:{hi}"
+            params["date"] = f"{window_lo}:{window_hi}"
 
         text = self._request_text(url, params=params, headers=self._headers())
 
@@ -179,9 +182,10 @@ class WorldBankMacroSource(HttpDataSource):
         meta, observations = parsed
 
         country_name, indicator_name, unit, points = self._build_points(observations, code)
+        points = self._contained_points(points, window_lo, window_hi)
         if not points:
             raise EmptyData(
-                f"{self.NAME}: no observations for {country}/{code}"
+                f"{self.NAME}: no observations in requested window for {country}/{code}"
                 + (f" {params['date']}" if "date" in params else "")
             )
 
@@ -290,6 +294,25 @@ class WorldBankMacroSource(HttpDataSource):
 
         points.sort(key=lambda p: p[0])
         return country_name, indicator_name, unit, points
+
+    @staticmethod
+    def _contained_points(
+        points: list[tuple[date, float]],
+        window_lo: int | None,
+        window_hi: int | None,
+    ) -> list[tuple[date, float]]:
+        """Keep only observations inside the caller's optional year window."""
+        if window_lo is None and window_hi is None:
+            return points
+        kept: list[tuple[date, float]] = []
+        for d, value in points:
+            year = d.year
+            if window_lo is not None and year < window_lo:
+                continue
+            if window_hi is not None and year > window_hi:
+                continue
+            kept.append((d, value))
+        return kept
 
     @staticmethod
     def _coerce_year(value, label: str) -> int:

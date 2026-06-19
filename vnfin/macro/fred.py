@@ -27,6 +27,7 @@ Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - transport/network error            -> ``SourceUnavailable``
 - non-JSON / missing observations key -> ``InvalidData``
 - malformed scalar / bad date        -> ``InvalidData``
+- observation outside request window -> skipped; none left -> ``EmptyData``
 - empty / all-missing                 -> ``EmptyData``
 """
 from __future__ import annotations
@@ -112,10 +113,12 @@ class FREDMacroSource(HttpDataSource):
 
         url = f"{self.BASE_URL}/series/observations"
         params = {"series_id": sid, "api_key": self._api_key, "file_type": "json"}
-        if start is not None:
-            params["observation_start"] = self._as_iso(start, "start")
-        if end is not None:
-            params["observation_end"] = self._as_iso(end, "end")
+        window_start = self._as_date(start, "start") if start is not None else None
+        window_end = self._as_date(end, "end") if end is not None else None
+        if window_start is not None:
+            params["observation_start"] = window_start.isoformat()
+        if window_end is not None:
+            params["observation_end"] = window_end.isoformat()
 
         data = self._request_json(url, params=params, headers=self._headers())
 
@@ -130,8 +133,11 @@ class FREDMacroSource(HttpDataSource):
             )
 
         units, points = self._build_points(data, sid)
+        points = self._contained_points(points, window_start, window_end)
         if not points:
-            raise EmptyData(f"{self.NAME}: no observations for {sid}")
+            raise EmptyData(
+                f"{self.NAME}: no observations in requested window for {sid}"
+            )
 
         return IndicatorSeries(
             country="",  # FRED series are not inherently country-keyed
@@ -179,6 +185,29 @@ class FREDMacroSource(HttpDataSource):
             points.append((d, value))
         points.sort(key=lambda p: p[0])
         return units, points
+
+    @staticmethod
+    def _contained_points(
+        points: list[tuple[date, float]],
+        window_start: date | None,
+        window_end: date | None,
+    ) -> list[tuple[date, float]]:
+        """Keep only observations inside the caller's optional date window."""
+        if window_start is None and window_end is None:
+            return points
+        kept: list[tuple[date, float]] = []
+        for d, value in points:
+            if window_start is not None and d < window_start:
+                continue
+            if window_end is not None and d > window_end:
+                continue
+            kept.append((d, value))
+        return kept
+
+    @staticmethod
+    def _as_date(d, label: str) -> date:
+        iso = FREDMacroSource._as_iso(d, label)
+        return date.fromisoformat(iso)
 
     @staticmethod
     def _as_iso(d, label: str) -> str:

@@ -621,6 +621,22 @@ def test_out_of_range_request_end_year_raises_invalid_before_network(bad_year):
     assert called["n"] == 0
 
 
+# --- response containment (issue #105) -------------------------------------
+
+def test_out_of_window_year_raises_empty():
+    payload = wb_success(rows=[(2030, 1.0)])
+    with pytest.raises(EmptyData, match="window"):
+        _src(payload).get_indicator(COUNTRY, INDICATOR, 2025, 2025)
+
+
+def test_in_window_years_kept_when_bounds_supplied():
+    payload = wb_success(rows=[(2025, 1.0), (2030, 9.0)])
+    res = _src(payload).get_indicator(COUNTRY, INDICATOR, 2025, 2025)
+    assert len(res.points) == 1
+    assert res.points[0][0].year == 2025
+
+
+
 # ---------------------------------------------------------------------------
 # IndicatorSeries model conveniences
 # ---------------------------------------------------------------------------

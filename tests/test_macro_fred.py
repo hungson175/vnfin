@@ -325,3 +325,24 @@ def test_duplicate_observation_dates_out_of_order_raise_invalid():
     with pytest.raises(InvalidData) as exc_info:
         _src(payload).get_series("FAKESERIES")
     assert "2024-01-01" in str(exc_info.value)
+
+
+# --- response containment (issue #105) -------------------------------------
+
+def test_out_of_window_observation_raises_empty():
+    payload = fred_success(obs=[("2030-01-01", "1.0")])
+    with pytest.raises(EmptyData, match="window"):
+        _src(payload).get_series(
+            "FAKESERIES", start=date(2025, 1, 1), end=date(2025, 12, 31)
+        )
+
+
+def test_in_window_observations_kept_when_bounds_supplied():
+    payload = fred_success(
+        obs=[("2025-06-01", "1.0"), ("2030-01-01", "9.0")]
+    )
+    res = _src(payload).get_series(
+        "FAKESERIES", start=date(2025, 1, 1), end=date(2025, 12, 31)
+    )
+    assert res.points == ((date(2025, 6, 1), pytest.approx(1.0)),)
+

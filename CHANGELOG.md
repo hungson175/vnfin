@@ -7,6 +7,9 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Macro response containment** — FRED and World Bank adapters drop observations
+  outside the requested date/year window and raise ``EmptyData`` when no in-window
+  points remain. ([#105](https://github.com/hungson175/vnfin/issues/105))
 - **DBnomics period/frequency validation** — reject `period_start_day` values that contradict
   the declared observation frequency (annual must be Jan 1; monthly must be month-start).
   ([#104](https://github.com/hungson175/vnfin/issues/104))
