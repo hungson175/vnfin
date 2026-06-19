@@ -16,13 +16,12 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Two small TDD fixes (REOPENED 16:00):**
-  - **#112** — GoldApi present-but-falsey `updatedAt` still falls back to now() instead of
-    rejecting present-malformed (None/absent fallback OK; present falsey/non-str → reject).
-  - **#21** — VNDirect: when EVERY returned statement row has a mismatched provider `code`,
-    `get_financials` returns an empty tuple (clean no-data) instead of treating it as malformed
-    response identity (InvalidData / source miss).
-  Scope via `./bin/gh-maintainer issue view 112` / `21`; TDD → review → push → re-close.
+- **Two small TDD fixes (REOPENED 16:00)** — IMPLEMENTED + committed (NOT pushed):
+  - **#112** `e14de5e` — GoldApi `_parse_iso` raw-is-None-only now() fallback; present
+    falsey/non-str updatedAt → InvalidData.
+  - **#21** `9750858` — VNDirect raises InvalidData when result empty AND rows dropped for code
+    mismatch (all-wrong-code = wrong-identity, not no-data); mixed still returns valid rows.
+  +12 TDD cases, suite 2039 green. **Awaiting combined review → push → re-close.**
   (#140 stays enhancement/product scope, not a bug.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
