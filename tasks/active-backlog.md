@@ -29,6 +29,13 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Refactor done today (Phase 4 batches)
 
+- **Phase 4 batch 4 (crypto/FX boundary) — COMPLETE, pushed `b4db48d..8b57ece`; #9 + #93 CLOSED.**
+  `canonical_crypto_asset`/`canonical_crypto_pair` (v0.2: BTCUSDT/BTC-USD; slash rejected; fullmatch)
+  + longest-known-quote validation at the crypto boundary (zero-call); Binance/Coinbase
+  normalize_symbol space-only strip + `_ASSET_RE` fullmatch; OpenER VND-anchor finiteness (#93).
+  Suite 2566 green. Checkpoint E APPROVE_WITH_NOTES (review-202606192316, 3 rounds).
+  Phase-5 note: `canonical_crypto_pair` is shape-only — future call sites must use
+  `_normalize_crypto_symbol` or add known-quote validation.
 - **Phase 4 batch 3 (security/index identifiers) — COMPLETE, pushed `4fb350f..e13da8f`; #30 + #75
   CLOSED; #9 price+index subset commented (kept OPEN for crypto).** `canonical_security_symbol`
   on price symbols, index_history/constituents selectors, and constituent stockSymbol; raw-caller
@@ -45,11 +52,7 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
 
 ## Paused bugs — after refactor
 
-- **#9** (crypto residual only) — price+index subsets fixed in batch 3 (e13da8f); crypto pair
-  symbols (BTC-USD, BTC/USD) need a separate `canonical_crypto_pair` grammar → **crypto/FX batch**.
-- **#93** (parked, poller 18:20) — OpenER required VND anchor non-finite values should fail closed
-  as InvalidData, not EmptyData. Fix in **Phase 4 FX** adapter migration.
-- **#143** (parked, poller 18:45) — fix in **Phase 4 gold** adapter migration.
+- **#143** (parked, poller 18:45) — fix in **Phase 4 gold** adapter migration (NEXT batch).
 - **#142** (parked, poller 18:35) — fundamentals residual; Phase 6 fundamentals close-loop.
 - **#144** (parked, poller 19:45) — Fmarket NAV window issue; **separate Phase 4 funds NAV/window
   batch** (NOT the closed #33/#34 identifier batch). Do not fix now.
