@@ -7,6 +7,11 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Macro unit-metadata relabel guard** — the macro failover result guard now rejects a present
+  ``unit`` or ``value_unit`` that is not a string. Previously a falsey non-string (``[]``, ``{}``,
+  ``0``, ``False``) was coerced to ``""`` by the placeholder handling and silently relabeled to
+  the canonical unit instead of failing over; an empty *string* remains a legitimate placeholder.
+  ([#135](https://github.com/hungson175/vnfin/issues/135))
 - **Macro descriptive-metadata guard** — the macro failover result guard now requires
   ``indicator_code`` and ``indicator_name`` to be non-empty **strings** (a truthy non-string such
   as ``123`` previously passed the bare emptiness check and was accepted) and ``country_name``,

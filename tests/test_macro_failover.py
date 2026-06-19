@@ -891,3 +891,60 @@ def test_malformed_macro_descriptive_metadata_failsover_to_backup():
     good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
     res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_DescMacroSource("bad", code=123), good])
     assert res.source == "good"
+
+
+# --------------------------------------------------------------------------- #
+# Issue #135 — a present unit/value_unit must be a string; a falsey non-string
+# ([] / {} / 0 / False) must be rejected, not silently relabeled to canonical.
+# --------------------------------------------------------------------------- #
+class _UnitMacroSource:
+    def __init__(self, name, *, unit=_DESC_UNSET, value_unit=None):
+        self.name = name
+        self._unit = unit
+        self._value_unit = value_unit
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def supports(self, indicator):
+        return True
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return IndicatorSeries(
+            country=country_iso3.upper(),
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=((date(2023, 1, 1), 42.0),),
+            source=self.name,
+            unit=canonical_unit(ind) if self._unit is _DESC_UNSET else self._unit,
+            value_unit=self._value_unit,
+            currency=canonical_currency(ind),
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+@pytest.mark.parametrize("bad", [[], {}, 0, False, 123], ids=["list", "dict", "zero", "false", "int"])
+def test_rejects_falsey_nonstring_macro_unit(bad):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("bad", unit=bad)])
+    assert "malformed unit" in ei.value.attempts[0].reason
+
+
+@pytest.mark.parametrize("bad", [[], {}, 0, False, 123], ids=["list", "dict", "zero", "false", "int"])
+def test_rejects_falsey_nonstring_macro_value_unit(bad):
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("bad", value_unit=bad)])
+    assert "malformed value_unit" in ei.value.attempts[0].reason
+
+
+def test_accepts_empty_string_macro_unit_placeholder():
+    # An empty-string unit is a legitimate placeholder and is relabeled to canonical.
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("ok", unit="")])
+    assert res.source == "ok" and res.unit == canonical_unit(MacroIndicator.GDP)
+
+
+def test_falsey_nonstring_macro_unit_failsover_to_backup():
+    good = FakeMacroSource("good", {MacroIndicator.GDP: canonical_unit(MacroIndicator.GDP)})
+    res = get_indicator("ZZZ", MacroIndicator.GDP, sources=[_UnitMacroSource("bad", unit=[]), good])
+    assert res.source == "good"

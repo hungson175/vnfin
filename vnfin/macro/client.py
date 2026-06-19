@@ -205,6 +205,22 @@ class MacroClient:
                     f"country {series.country!r} but requested {country!r}"
                 )
 
+            # Issue #135: a present unit/value_unit must be a STRING. The `or ""`
+            # placeholder handling below would otherwise coerce a falsey non-string
+            # (``[]``/``{}``/``0``/``False``) to "" and silently relabel it as the
+            # canonical unit instead of rejecting the corrupt result. (An empty
+            # string is a legitimate placeholder and is left to the relabel path.)
+            if series.unit is not None and not isinstance(series.unit, str):
+                return (
+                    f"malformed unit {series.unit!r} from source {series.source!r}: "
+                    "expected a string"
+                )
+            if series.value_unit is not None and not isinstance(series.value_unit, str):
+                return (
+                    f"malformed value_unit {series.value_unit!r} from source "
+                    f"{series.source!r}: expected a string"
+                )
+
             # Issue #71: reject conflicting explicit unit/currency metadata.
             got_unit = series.unit or ""
             if got_unit and got_unit != unit:
