@@ -16,10 +16,16 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Returned-metadata mini-batch #69/#131/#132/#133** — combined design sent
-  (/tmp/vnfin-mini-batch-69-131-132-133-design-202606191402.md). Awaiting reviewer convergence
-  (5 open questions). Then 4 TDD commits + 1 combined review. See Poller-triage section for
-  per-issue invariants.
+- **Returned-metadata mini-batch #69/#131/#132/#133** — design APPROVE_WITH_NOTES
+  (review-202606191405). ALL IMPLEMENTED + committed (NOT pushed), suite 1930 green, gates pass,
+  no public-API change:
+  - **#69** `33007c6` — crypto quote-metadata consistency (USD-equiv quote_asset, price_unit==
+    "{quote} per {base}", volume_unit==base, provider_symbol non-empty canonical). Also fixed the
+    inconsistent failover fixture default price_unit.
+  - **#131+#132** `4548dcc` — macro frequency (Frequency enum + date/freq consistency) and
+    projection_from_year (None or int year within span).
+  - **#133** `1e5bf85` — price exchange/provider_symbol non-empty canonical str.
+  **Awaiting ONE combined reviewer review (f795bd1..HEAD) → push → close all 4.**
 
 - **Failover metadata/inner-row boundary batch: #125-reopen + #127 + #128 + #129 + #130** —
   design APPROVED (review-202606191336 #125r/#129; #127/#128 confirmed 13:38; #130 folded in).
