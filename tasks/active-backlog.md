@@ -16,14 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Returned-provider-identity batch: #35 + #21** (REOPENED 15:25) — design APPROVED (reviewer
-  15:31). IMPLEMENTED + committed (NOT pushed), suite 2012 green, gates pass, no public-API change:
-  - **#35** `42872ad` — CurrencyApi `_doc_date`: `if raw is None` only; present falsey/non-string
-    date → InvalidData (no relabel).
-  - **#21** `0fedd05` — Fmarket nav row productId == fid; holdings detail id == fid + code
-    non-empty canonical str; GoldApi present payload symbol == requested (case-insensitive),
-    product = requested symbol.
-  Gold part (#35 + #21 GoldApi) APPROVED. #21 funds BLOCK (present-null nav pid / missing-null holdings id / padded code) FIXED `78d3d3b`. Suite 2017 green. **Awaiting funds RE-review → push 35ed92c..HEAD → re-close #35/#21.**
+- **✅ NONE — all GitHub issues closed (open_count 0).** origin/master `082526e`, full suite
+  2017 green, watermark 2026-06-19T08:43:47Z. Steady-state: record new poller/reviewer activity
+  here first, TDD + reviewer sign-off per fix. (Reviewer triaging poller 15:40 next.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -49,6 +44,12 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **Returned-provider-identity batch (reopen) — COMPLETE, pushed `9cb8aff..082526e`, closed.**
+  - **#35** `42872ad` — CurrencyApi `_doc_date`: present falsey/non-string date → InvalidData
+    (raw-is-None-only fallback). APPROVE.
+  - **#21** `0fedd05`+`78d3d3b` — Fmarket nav row productId (key-presence, present-null rejects);
+    holdings detail id required==fid + code non-empty canonical; GoldApi payload symbol ==
+    requested. APPROVE after funds BLOCK (present-null/missing-id/padded-code). Suite 2017 green.
 - **#106 (reopen)** OpenER fractional `time_last_update_unix` truncation — `9e22a89`, pushed
   `faf3810..35ed92c`, closed. `_as_of` accepts only int/integral-finite-float; fractional/
   non-finite → tz-aware now() fallback. APPROVE. Suite 1986 green.
