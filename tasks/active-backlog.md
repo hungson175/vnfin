@@ -42,6 +42,9 @@ fix/push/close until the contract-refactor foundation (Phase 1–2) lands.
   adapter migration. Do not fix now.
 - **#34** (parked, poller 18:50) — see review-202606191851; fix in **Phase 4 funds** adapter
   migration. Do not fix now.
+- **#33** (parked, poller 18:55) — see review-202606191858; fix in **Phase 4 funds** migration.
+- **#9** (parked, poller 19:05) — see review-202606191908; fix in **Phase 4 identifier
+  validation** migration. Do not fix now.
 - **#44 / #45 / #21 / #26 fundamentals provider-shape hardening** — addressed by the Phase 2
   contract migration (`ec69a1e`); to be CLOSED in Phase 6 after Checkpoint C approves. WIP stash
   `git stash@{0}` superseded (reference only). Original handoff:
