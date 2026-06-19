@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#66 + #26 batch (REOPENED 16:55)** — IMPLEMENTED + committed (NOT pushed): #66 `266d7c0`
-  (WorldBank seen-date guard); #26 `d238e68` (VNDirect ratios reject duplicate ratioCode).
-  +4 TDD cases, suite 2077 green. **Awaiting reviewer review → push → re-close.**
+- **✅ ALL BUGS CLOSED (open_bug_count 0).** origin/master `c6eb733`, full suite 2077 green,
+  watermark 2026-06-19T10:08:33Z. Only open issue is **#140 (enhancement: financial news)** —
+  Boss/product-scope feature, NOT a bug; parked. Steady-state otherwise.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -45,6 +45,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Done today (trim periodically)
 
+- **#66 + #26 batch (reopen) — COMPLETE, pushed `7915596..c6eb733`, closed.** #66 `266d7c0`
+  (WorldBank duplicate observation-date guard); #26 `d238e68` (VNDirect ratios reject duplicate
+  ratioCode within a reportDate). APPROVE_WITH_NOTES. Suite 2077 green.
 - **#44 + #21 batch (reopen) — COMPLETE, pushed `6a73dac..7915596`, closed.** #44 `d4ae617`
   (VNDirect all reportType/modelType-skip → InvalidData); #21 `3e470b6`+`7915596` (WB
   indicator.id; UDF present blank/null symbol; VNDirect present falsey/non-str code add-on).
