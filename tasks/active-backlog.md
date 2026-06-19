@@ -16,8 +16,10 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **#117** BTMC same-product/same-timestamp dedup — IMPLEMENTING (design APPROVED). identical
-  same-ts dup keep-first; conflicting same-ts → InvalidData; older/newer deterministic.
+- **#118** BTMC `_row_index` malformed `@row` — IMPLEMENTING (design APPROVED, notes folded).
+  Canonical positive index (str `[1-9]\d*` or positive int, not bool); None/"" → fallback;
+  whitespace-only → raise; reject `1.0/True/'01'/' 1 '/[1]/{}/0/-1`; validate fallback `@n_N`
+  suffix canonical.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -28,13 +30,6 @@ _Last synced: 2026-06-19 ~10:12 +07_
 - _(none pending)_
 
 ## Next (queued open bugs — fix ALL; group by domain to batch reviewer-approved stacks)
-
-BTMC (remaining):
-- #118 BTMC `_row_index` — design APPROVED (review-202606191030). Finalized rules:
-  present `@row` must be canonical positive index (str `[1-9]\d*` or positive `int`, NOT bool);
-  reject `1.0/True/'01'/' 1 '/[1]/{}/0/-1`; **None or "" → fallback**; **whitespace-only → raise**;
-  fallback `@n_N` discovery must also **validate the discovered suffix is canonical** (else raise),
-  with tests. Implement after #117 push (same file).
 
 Failover identity/units/bounds/ordering guards:
 - #69 crypto failover currency vs value_unit mismatch
@@ -90,3 +85,5 @@ Source-adapter input/identity/units hardening:
   APPROVE_WITH_NOTES (review-202606191021). Watermark 2026-06-19T03:21:45Z.
   Future-hardening note (non-blocking): `_QTY` left boundary allows a digit glued to a letter
   (`ABC5 LUONG`); out of #116 scope, revisit if such names ever appear.
+- **#117** BTMC same-ts dedup — pushed `d384006..22bb20c`, closed (5050468, 2366ff6). Reviewer
+  APPROVE (re-review inline after BLOCK on missing regression tests). Watermark 03:33:22Z.
