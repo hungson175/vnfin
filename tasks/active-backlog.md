@@ -16,9 +16,9 @@ _Last synced: 2026-06-19 ~10:12 +07_
 
 ## Now (WIP — max 1–2)
 
-- **Gap fixes — 4 code-gaps left** (open 43→4): #21 WorldBank/DBnomics response identity,
-  #28 Vietcombank get_rates currency-code normalization, #66 crypto/stooq dup observation keys,
-  #108 WorldBank/IMF non-canonical year keys (+2024/02024). TDD red-first each.
+- **✅ NONE — all GitHub issues closed (open count 0).** The 43-issue sweep is complete
+  (reviewer-confirmed). Maintainer is in steady-state: handle new poller/reviewer activity as
+  it arrives, record here first, TDD + reviewer sign-off per fix.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -63,3 +63,15 @@ _All other backlog items verified-fixed and closed during the 2026-06-19 sweep (
 - **#68** fmarket case-insensitive code dedup — pushed `ab706b2`, closed. APPROVE.
 - **#26, #49, #65** test-only gaps (guards already present) — regression tests added in `f2fb711`,
   pushed, closed. APPROVE. Open 8→4.
+- **#28** Vietcombank get_rates ISO-4217 code skip — `defae64`, closed. APPROVE.
+- **#108** WB/IMF canonical year keys — `45601f1`, closed. APPROVE.
+- **#21** WB/DBnomics response-identity (incl. malformed/blank BLOCK fix) — `e053153`+`e72a10a`,
+  closed. APPROVE (after BLOCK fix).
+- **#66** time-series duplicate observation keys (UDF/Stooq per-response; Binance/Coinbase
+  per-page, pagination dedupe preserved) — `5ee2f71`, closed. APPROVE/GO.
+
+## 🎉 Milestone: 43-issue backlog fully cleared (2026-06-19)
+
+Open count 43 → 0 in one session. ~21 were verified already-fixed (closed with cited passing
+tests, reviewer-validated); the rest were real TDD fixes (BTMC cluster #113/#114/#116/#117/#118;
+then #111/#119/#121/#120/#68/#28/#108/#21/#66), each reviewer-approved and pushed to master.
