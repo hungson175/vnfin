@@ -1082,3 +1082,42 @@ def test_cafef_statement_malformed_code_rejected(bad_code):
     p = _period("2025", 2025, 0, [(bad_code, "x", 1)])
     with pytest.raises(InvalidData):
         _src(_envelope([p])).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+# Checkpoint C re-fix — CafeF ReportType enum contract (statements + ratio).
+@pytest.mark.parametrize("bad_rt", ["UNKNOWN", " HK ", "hk ", " NAM"], ids=["unknown", "padded", "trail", "lead"])
+def test_cafef_statement_unknown_or_padded_reporttype_rejected(bad_rt):
+    # #45 B1: present padded/unknown ReportType fails closed (not skipped/stripped).
+    p = _period("2025", 2025, 0, [("DTTBHCCDV", "x", 1)], report_type=bad_rt)
+    with pytest.raises(InvalidData):
+        _src(_envelope([p])).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+@pytest.mark.parametrize("bad_rt", ["UNKNOWN", " HK ", None, "", "   ", True, []], ids=["unknown", "padded", "null", "blank", "ws", "bool", "list"])
+def test_cafef_ratio_unknown_or_padded_or_malformed_reporttype_rejected(bad_rt):
+    # #45 B2: ratio path enforces the enum contract (padded/unknown/malformed reject).
+    p = _period("2025", 2025, 0, [("EPS", "EPS", 1.0)], report_type=bad_rt)
+    with pytest.raises(InvalidData):
+        _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+
+
+@pytest.mark.parametrize("req,tag", [(Period.ANNUAL, "H"), (Period.QUARTER, "HK")])
+def test_cafef_ratio_accepts_any_valid_cadence_tag(req, tag):
+    # #45 B2 (documented exception): ratios are cadence-agnostic — a valid union tag
+    # of either cadence is accepted and emitted as Period.UNKNOWN; only padded/unknown
+    # tags reject (covered above).
+    p = _period("2025", 2025, 0, [("EPS", "EPS", 1.0)], report_type=tag)
+    reports = _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, req)
+    assert len(reports) == 1 and reports[0].period is Period.UNKNOWN
+
+
+@pytest.mark.parametrize(
+    "bad_code",
+    [None, "", 123.4, [11000], {}, True, "11000.5", "A B", "+11000", "011000"],
+    ids=["null", "blank", "frac", "list", "dict", "bool", "decimal", "space", "signed", "leadzero"],
+)
+def test_cafef_ratio_malformed_code_rejected(bad_code):
+    # #26: ratio Code matrix (not just statement Code).
+    p = _period("2025", 2025, 0, [(bad_code, "x", 1.0)])
+    with pytest.raises(InvalidData):
+        _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)

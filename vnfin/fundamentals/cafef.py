@@ -39,12 +39,11 @@ import re
 from datetime import date, datetime, timezone
 
 from .._contracts import (
-    MISSING,
+    canonical_enum_tag,
     canonical_provider_key,
     optional_present,
     optional_present_non_empty_str,
     reject_duplicate,
-    require_non_empty_str,
     require_object,
     require_present,
 )
@@ -207,20 +206,34 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             return self._QUARTERLY_ROW_TAGS
         return self._ANNUAL_ROW_TAGS
 
-    def _reporttype_mismatch(self, pobj: dict, expected_tags) -> bool:
-        """Issue #45: whether a period row's ReportType is a *different* cadence.
+    @property
+    def _all_row_tags(self) -> frozenset[str]:
+        """Allowed ReportType union across cadences: ``{NAM, HK, QUY, H}``."""
+        return self._ANNUAL_ROW_TAGS | self._QUARTERLY_ROW_TAGS
 
-        Key-presence is the trigger: a missing ``ReportType`` returns ``False``
-        (legacy — keep the row); a PRESENT malformed/falsey/non-string value fails
-        closed (``InvalidData`` via the contract); a present valid tag not in
-        ``expected_tags`` returns ``True`` (skip). Used by both the statement and
-        ratio paths so a present malformed ReportType can never be erased to absent
-        and stamped as the requested cadence.
+    def _validate_report_tag(self, pobj: dict, ctx: str):
+        """Issue #45: validate a present ``ReportType`` against the allowed union.
+
+        Key-presence is the trigger: a missing key returns ``None`` (legacy — keep
+        the row); a PRESENT value must be a canonical (unpadded) tag in the allowed
+        union ``{NAM, HK, QUY, H}`` — padded / unknown / blank / null / non-string
+        values fail closed (``InvalidData``). Returns the normalized tag so callers
+        can additionally enforce cadence.
         """
-        rt = optional_present(pobj, "ReportType")
-        if rt is MISSING:
+        return canonical_enum_tag(
+            optional_present(pobj, "ReportType"), self._all_row_tags, ctx, missing_ok=True
+        )
+
+    def _reporttype_mismatch(self, pobj: dict, expected_tags) -> bool:
+        """Whether a period row's ReportType names a *different* cadence (skip).
+
+        A missing tag keeps the row (legacy); a present valid tag not in
+        ``expected_tags`` is skipped; padded/unknown/blank/null/non-string tags
+        fail closed via :meth:`_validate_report_tag`.
+        """
+        tag = self._validate_report_tag(pobj, f"{self.name} ReportType")
+        if tag is None:
             return False
-        tag = require_non_empty_str(rt, f"{self.name} ReportType", canonical=False).upper()
         return tag not in expected_tags
 
     def _periods(self, parsed) -> list:
@@ -340,13 +353,12 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         skipped = 0
         for pobj in periods:
             pobj = require_object(pobj, f"{self.name} ratio period")
-            # Issue #45 (ratio path): ratios are period-agnostic (Period.UNKNOWN),
-            # so we do NOT skip on cadence — but a PRESENT ReportType must still be
-            # a well-formed tag (fail closed on malformed/falsey/non-string rather
-            # than erasing it to absent). Missing key stays legacy-compatible.
-            rt = optional_present(pobj, "ReportType")
-            if rt is not MISSING:
-                require_non_empty_str(rt, f"{self.name} ratio ReportType", canonical=False)
+            # Issue #45 (ratio path): a PRESENT ReportType must be a canonical tag in
+            # the allowed union (padded/unknown/blank/null/non-string fail closed).
+            # Ratios are INTENTIONALLY cadence-agnostic — the endpoint is always hit
+            # with the annual anchor and the result is Period.UNKNOWN — so a valid
+            # tag of any cadence is accepted (no cadence skip). Missing stays legacy.
+            self._validate_report_tag(pobj, f"{self.name} ratio ReportType")
             items = self._ratio_line_items(pobj)
             try:
                 fiscal_date = self._fiscal_date(pobj, Period.ANNUAL)

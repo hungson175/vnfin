@@ -1132,3 +1132,59 @@ def test_vndirect_statement_malformed_itemcode_rejected(bad_ic):
         _src(_stmt_envelope([row])).get_financials(
             "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
         )
+
+
+# Checkpoint C re-fix — VNDirect reportType enum contract + present-null modelType.
+def test_vndirect_padded_matching_reporttype_rejected():
+    # #44(B1): a present padded matching tag is malformed (not silently stripped).
+    row = _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", " ANNUAL ", 1)
+    with pytest.raises(InvalidData):
+        _src(_stmt_envelope([row])).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+@pytest.mark.parametrize("unknown", ["MONTHLY", "UNKNOWN"])
+def test_vndirect_mixed_valid_plus_unknown_reporttype_fails_closed(unknown):
+    # #44(B1): an unknown string tag is malformed -> fail closed even with a valid row.
+    good = _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "ANNUAL", 1)
+    bad = _stmt_row("TESTCO", 12000, 2.0, "2024-12-31", unknown, 1)
+    with pytest.raises(InvalidData):
+        _src(_stmt_envelope([good, bad])).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+def test_vndirect_mixed_valid_plus_known_different_cadence_skips_with_warning():
+    # #44: a present valid-but-different known cadence (QUARTER) is skipped, not fatal.
+    good = _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "ANNUAL", 1)
+    other = _stmt_row("TESTCO", 12000, 2.0, "2024-12-31", "QUARTER", 1)
+    reports = _src(_stmt_envelope([good, other])).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+    )
+    assert len(reports) == 1
+    assert any("skip" in w.lower() for w in reports[0].warnings)
+
+
+def test_vndirect_present_null_modeltype_rejected():
+    # #44(B2): present-null modelType fails closed (does not collapse to absent).
+    row = {
+        "code": "TESTCO", "itemCode": 11000.0, "reportType": "ANNUAL",
+        "modelType": None, "numericValue": 1.0, "fiscalDate": "2025-12-31",
+    }
+    with pytest.raises(InvalidData):
+        _src(_stmt_envelope([row])).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )
+
+
+def test_vndirect_missing_modeltype_accepted_legacy():
+    # absent modelType key stays legacy-compatible (no tag).
+    row = {
+        "code": "TESTCO", "itemCode": 11000.0, "reportType": "ANNUAL",
+        "numericValue": 1.0, "fiscalDate": "2025-12-31",
+    }
+    reports = _src(_stmt_envelope([row])).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+    )
+    assert len(reports) == 1

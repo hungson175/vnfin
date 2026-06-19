@@ -30,10 +30,10 @@ import dataclasses
 
 from .._contracts import (
     MISSING,
+    canonical_enum_tag,
     canonical_provider_key,
     optional_present,
     reject_duplicate,
-    require_non_empty_str,
     require_object,
     require_present,
 )
@@ -70,17 +70,23 @@ _ALLOWED_LINE_UNITS = frozenset({"VND", "vnd_per_share", "ratio", None})
 
 _CANONICAL_INT_STR = re.compile(r"[1-9]\d*|0")
 
+#: Issue #44: allowed VNDirect ``reportType`` cadence tags (the request-side enum
+#: values). A present tag must be one of these (padded/unknown/blank/null/non-string
+#: fail closed); a present valid tag different from the requested period is skipped.
+_VNDIRECT_REPORT_TAGS = frozenset({"ANNUAL", "QUARTER"})
+
 
 def _parse_model_type(raw):
-    """Issue #121: ``modelType`` is integer statement-template identity, not a lossy
-    coercion target. Accept an ``int`` (excluding ``bool``), an integral ``float``
-    (the provider sends e.g. ``1.0``), or a canonical digit-only string (``"1"``,
-    ``"102"``). Reject ``bool``, fractional numbers/strings, and non-canonical shapes
-    with :class:`InvalidData`. ``None`` (absent tag) returns ``None`` so the caller can
-    skip the row, preserving the tag-less fallback behavior.
+    """Issue #121 + #44(B2): ``modelType`` is integer statement-template identity,
+    not a lossy coercion target. Accept an ``int`` (excluding ``bool``), an integral
+    ``float`` (the provider sends e.g. ``1.0``), or a canonical digit-only string
+    (``"1"``, ``"102"``). Reject ``bool``, fractional numbers/strings, ``None``
+    (present-null), and non-canonical shapes with :class:`InvalidData`.
+
+    Callers MUST distinguish an absent ``modelType`` key (legacy: no tag) from a
+    PRESENT value via ``optional_present`` and only call this for present values —
+    a present ``null`` is malformed provider data and fails closed here.
     """
-    if raw is None:
-        return None
     if isinstance(raw, bool):
         raise InvalidData(f"vndirect: malformed modelType {raw!r}")
     if isinstance(raw, int):
@@ -221,11 +227,14 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         """
         votes = {True: 0, False: 0}
         for row in rows:
-            raw = row.get("modelType") if isinstance(row, dict) else None
-            mt = _parse_model_type(raw)  # Issue #121: strict; None -> skip, malformed -> raise
-            if mt is None:
+            if not isinstance(row, dict):
                 continue
-            votes[mt >= 100] += 1
+            # Issue #44(B2): absent modelType key -> no vote (legacy); a PRESENT
+            # value (incl. null) is parsed strictly so present-null fails closed.
+            mt_raw = optional_present(row, "modelType")
+            if mt_raw is MISSING:
+                continue
+            votes[_parse_model_type(mt_raw) >= 100] += 1
         if votes[True] == 0 and votes[False] == 0:
             return default
         return votes[True] > votes[False]
@@ -284,19 +293,23 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
                 raise InvalidData(f"{self.name}: row missing fiscalDate")
             # Skip rows that contradict the requested contract (wrong reportType
             # or modelType). These are provider-side mislabels, not fatal errors.
-            # Issue #44: reportType is cadence identity — key-presence is the
-            # trigger. A PRESENT malformed/falsey/non-string value fails closed; a
-            # present valid tag naming a different cadence is skipped; a missing key
-            # keeps the legacy no-cadence behavior.
-            rt = optional_present(row, "reportType")
-            if rt is not MISSING:
-                row_report = require_non_empty_str(
-                    rt, f"{self.name} statement reportType", canonical=False
-                ).upper()
-                if row_report != period.value:
-                    skipped_rows += 1
-                    continue
-            row_model = _parse_model_type(row.get("modelType"))  # Issue #121: strict
+            # Issue #44: reportType is a cadence enum — key-presence is the trigger.
+            # A PRESENT value must be a canonical tag in {ANNUAL, QUARTER}
+            # (padded/unknown/blank/null/non-string fail closed); a present valid
+            # tag naming a different cadence is skipped; a missing key keeps legacy.
+            tag = canonical_enum_tag(
+                optional_present(row, "reportType"),
+                _VNDIRECT_REPORT_TAGS,
+                f"{self.name} statement reportType",
+                missing_ok=True,
+            )
+            if tag is not None and tag != period.value:
+                skipped_rows += 1
+                continue
+            # Issue #44(B2): absent modelType -> no tag (legacy); a PRESENT value
+            # (incl. null) is parsed strictly so present-null fails closed.
+            mt_raw = optional_present(row, "modelType")
+            row_model = None if mt_raw is MISSING else _parse_model_type(mt_raw)
             if row_model is not None and row_model != model_type:
                 skipped_rows += 1
                 continue
