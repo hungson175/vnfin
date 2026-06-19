@@ -480,6 +480,24 @@ def test_success_false_raises_empty():
         _src(payload).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
+@pytest.mark.parametrize("bad_success", [None, 0, 1, "false", "true", [], {}])
+def test_cafef_malformed_success_raises_invalid(bad_success):
+    # Issue #119: the CafeF envelope's Success must be a real bool. Success is True -> parse;
+    # Success is False -> EmptyData (failover-safe); any other shape (missing/0/1/"false"/
+    # arrays/objects) is a malformed provider envelope -> InvalidData, not silently parsed.
+    env = json.loads(corp_income_two_years())
+    env["Success"] = bad_success
+    with pytest.raises(InvalidData):
+        _src(json.dumps(env)).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
+def test_cafef_missing_success_raises_invalid():
+    env = json.loads(corp_income_two_years())
+    env.pop("Success", None)
+    with pytest.raises(InvalidData):
+        _src(json.dumps(env)).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+
+
 def test_non_json_raises_invalid():
     with pytest.raises(InvalidData):
         _src("<html>503</html>").get_financials(

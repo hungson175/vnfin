@@ -200,8 +200,15 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         """
         if not isinstance(parsed, dict):
             raise InvalidData(f"{self.name}: response is not a JSON object")
-        if parsed.get("Success") is False:
+        # Issue #119: the application envelope's Success must be a real bool. False is a
+        # failover-safe source miss (EmptyData); any other shape (missing / 0 / 1 / "false" /
+        # arrays / objects) is a malformed envelope and must raise InvalidData rather than
+        # being silently parsed.
+        success = parsed.get("Success")
+        if success is False:
             raise EmptyData(f"{self.name}: Success=false ({parsed.get('Message')!r})")
+        if success is not True:
+            raise InvalidData(f"{self.name}: malformed Success envelope {success!r}")
         data = parsed.get("Data")
         if data is None:
             raise EmptyData(f"{self.name}: null Data ({parsed.get('Message')!r})")
