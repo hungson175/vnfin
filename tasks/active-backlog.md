@@ -152,10 +152,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN FINAL-APPROVED (review-202606201405); READY FOR IMPLEMENTATION
-  (sequenced AFTER #169/#168 close).** Design `84265fb`. On start → large TDD impl; consider a Workflow
-  for parallel slices (registry/models/extraction/coverage/docs) per the design's modular structure.
-  Full design history below. (spec spec-202606201222). Rounds:
+- **#157 fundamentals metrics — DESIGN FINAL-APPROVED (review-202606201405); READY FOR IMPL, queued
+  AFTER #172** (design `84265fb`). #168+#169 closed. Reviewer re-sequenced: new HIGH bug #172 (fund
+  NAV staleness) goes BEFORE the big #157 feature. On start → TDD fork building the full feature per
+  `docs/design/fundamentals-metrics.md` (rev2.6 exact spec): metric_models.py + metric_api.py + facade
+  + full §9 test matrix + docs + ADDITIVE snapshot; then adversarial verification Workflow → reviewer
+  → push+close. Full design history below. (spec spec-202606201222). Rounds:
   `1616ff6`→BLOCK×8→rev2 `a0a00cc`→BLOCK×7→rev2.1 `6fbe694`→rev2.2 `3a38a19`→BLOCK×6→rev2.3 `aeac970`
   →BLOCK×4→rev2.4 `51948cb` (+ adversarial Workflow consistency sweep caught 2 more)→BLOCK (label
   addendum review-202606201324)→rev2.5. No code until reviewer approves. **rev2.5** folds the
@@ -172,6 +174,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   investor-ready, silent bank/non-bank mixing. Spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606201222-issue157-fundamentals-metrics.md`.
 
 ## Next / in-flight bugs (BEFORE large #157 implementation)
+
+- **#172 + #173 — Fmarket fund-data coverage DESIGN BATCH (HIGH), design-first, BEFORE #157**
+  (reviewer specs review-202606201432 + review-202606201436). Author unified
+  `docs/design/fund-coverage-holdings.md`, no code until design approved.
+  - **#172 NAV staleness:** `nav_history` already wide-fetches+client-filters (#144), but if the
+    history endpoint is stale (ends 2025 while list/current NAV shows 2026), a bounded-recent window
+    silently returns `EmptyData`. Investigate request body/pagination/product-id/date-order first
+    (preferred: a correct request returns recent rows); else return an EXPLICIT staleness diagnostic/
+    warning, not silent EmptyData. Preserve #144/#158/#21 guards. No HTML scraping.
+  - **#173 bond holdings gap:** `holdings()` parses only equity `productTopHoldingList`/`stockCode`
+    → bond funds return `EmptyData`. Design an additive typed holdings model (kind/security_type,
+    bond code/name/industry/weight, asset-allocation split, as-of) OR, if bonds unmapped in v1, an
+    explicit "non-equity holdings not mapped" diagnostic — not plain no-holdings. Preserve equity
+    behavior + product-id/code guards. No scraping. Synthetic offline tests.
+
 
 - **#168 — DONE (impl), INTEGRATED GREEN, AWAITING CODE REVIEW** (reviewer spec review-202606201318;
   fix sub-agent commit `53519ff`). Fail-loud price/index namespace guard shipped. **Integration verified
