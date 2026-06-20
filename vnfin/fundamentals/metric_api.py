@@ -16,8 +16,16 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional
 
-from ..exceptions import VnfinError
-from .models import FinancialReport, LineItem, Period, StatementType, _coerce_statement
+from ..exceptions import AllSourcesFailed, SourceError, VnfinError
+from .base import AUTO, is_known_bank
+from .models import (
+    FinancialReport,
+    LineItem,
+    Period,
+    StatementType,
+    _coerce_period,
+    _coerce_statement,
+)
 from .metric_models import (
     AppliesTo,
     MetricAvailability,
@@ -785,3 +793,232 @@ def _coverage_from_statement_results(
         _build_period_coverage(is_bank, rep, results) for rep in reports
     )
     return MetricCoverage(symbol=symbol, period=period, periods=periods)
+
+
+# =========================================================================== #
+# STAGE C — the thin network wrappers (the ONLY network seam in this module).
+#
+# ``metrics`` / ``explain_metric_coverage`` fetch each of income/balance/cashflow
+# (NEVER ratios — B7) via the existing ``fundamentals.get_financials`` failover,
+# turn each outcome into a typed ``StatementFetchResult`` (success OR recoverable
+# failure — a per-statement error must NEVER raise out), resolve the concrete
+# ``is_bank`` template, then hand the 3 results to the PURE Stage-B transformers.
+# A statement no resolved source can serve (CafeF cashflow) is gated OUT before
+# any fetch via the static ``serves(...)`` predicate (deterministic, not
+# exception-text classification).
+# =========================================================================== #
+def _resolve_chain_names(source, sources) -> tuple[str, ...]:
+    """Resolved source-chain NAMES for the serves-gate (no fetch needed).
+
+    ``source`` wins over ``sources`` (matching ``get_financials``); neither -> the
+    default failover chain names ``("vndirect", "cafef")``.
+    """
+    if source is not None:
+        return (source.name,)
+    if sources is not None:
+        return tuple(s.name for s in sources)
+    return ("vndirect", "cafef")
+
+
+def _fetch_statement_result(
+    symbol: str,
+    statement: StatementType,
+    period: Period,
+    names: tuple[str, ...],
+    *,
+    is_bank,
+    limit: int,
+    source,
+    sources,
+    max_attempts: int,
+    http_get,
+    timeout: float,
+) -> StatementFetchResult:
+    """Fetch ONE statement and classify it into a typed result (never raises).
+
+    serves-gate first (capability-based): if NO resolved source can serve the
+    statement -> ``NOT_SERVED`` with the responsible source(s). Otherwise call
+    ``get_financials`` and map success -> ``OK`` / a recoverable ``SourceError``
+    or chain-level ``AllSourcesFailed`` -> ``SOURCE_ERROR`` (never exposing the
+    attempt trail — C1).
+    """
+    if not any(serves(n, statement) for n in names):
+        joined = ",".join(names)
+        return StatementFetchResult(
+            statement=statement,
+            reports=(),
+            status=StatementCoverageStatus.NOT_SERVED,
+            source=joined,
+            detail=(
+                f"statement {statement.value} not served by source '{joined}'"
+            ),
+        )
+    # Lazy import avoids the metric_api <-> fundamentals.__init__ circular import.
+    from . import get_financials
+
+    try:
+        reports = get_financials(
+            symbol,
+            statement,
+            period,
+            is_bank=is_bank,
+            limit=limit,
+            source=source,
+            sources=sources,
+            max_attempts=max_attempts,
+            http_get=http_get,
+            timeout=timeout,
+        )
+    except (SourceError, AllSourcesFailed) as exc:
+        return StatementFetchResult(
+            statement=statement,
+            reports=(),
+            status=StatementCoverageStatus.SOURCE_ERROR,
+            source=None,
+            detail=f"{type(exc).__name__}: {exc}",
+        )
+    reports = tuple(reports)
+    succeeding = reports[0].source if reports else None
+    return StatementFetchResult(
+        statement=statement,
+        reports=reports,
+        status=StatementCoverageStatus.OK,
+        source=succeeding,
+    )
+
+
+def _fetch_all_statements(
+    symbol: str,
+    period: Period,
+    *,
+    is_bank,
+    limit: int,
+    source,
+    sources,
+    max_attempts: int,
+    http_get,
+    timeout: float,
+) -> tuple[tuple[StatementFetchResult, ...], bool]:
+    """Fan out the 3 metric statements and resolve the concrete ``is_bank``.
+
+    Makes EXACTLY THREE ``get_financials`` calls (one per income/balance/
+    cashflow), ZERO ratio calls. Returns the per-statement results plus the
+    resolved ``is_bank`` template: the explicit arg if given, else the first OK
+    report's ``.is_bank``, else the known-bank heuristic on the symbol.
+    """
+    names = _resolve_chain_names(source, sources)
+    results = tuple(
+        _fetch_statement_result(
+            symbol,
+            st,
+            period,
+            names,
+            is_bank=is_bank,
+            limit=limit,
+            source=source,
+            sources=sources,
+            max_attempts=max_attempts,
+            http_get=http_get,
+            timeout=timeout,
+        )
+        for st in _METRIC_STATEMENTS
+    )
+    if is_bank is not None:
+        resolved_is_bank = bool(is_bank)
+    else:
+        first_ok = next(
+            (
+                r
+                for r in results
+                if r.status is StatementCoverageStatus.OK and r.reports
+            ),
+            None,
+        )
+        if first_ok is not None:
+            resolved_is_bank = bool(first_ok.reports[0].is_bank)
+        else:
+            resolved_is_bank = is_known_bank(symbol)
+    return results, resolved_is_bank
+
+
+def metrics(
+    symbol: str,
+    period="annual",
+    *,
+    is_bank: "bool | None" = AUTO,
+    limit: int = 8,
+    source=None,
+    sources=None,
+    max_attempts: int = 3,
+    http_get=None,
+    timeout: float = 25.0,
+) -> tuple[MetricReport, ...]:
+    """Canonical metrics for ``symbol``, newest fiscal period first.
+
+    Fetches income+balance+cashflow ``FinancialReport``s (NEVER ratios — B7),
+    each through the existing :func:`get_financials` failover, then transforms
+    them OFFLINE into one :class:`MetricReport` per fiscal period (every report
+    carries the FULL v1 catalog — applicability is expressed by ``availability``,
+    never omission). Per-statement failures are non-fatal: a recoverable
+    ``SourceError``/``AllSourcesFailed`` becomes a ``source_error`` statement and
+    its metrics are ``MISSING`` rather than raising. Sources can differ per
+    statement (CafeF does not serve cashflow), so provenance is PER STATEMENT
+    (``MetricReport.statement_sources``) — there is no single report ``source``.
+
+    Mirrors :func:`get_financials`' injection knobs (``is_bank``/``limit``/
+    ``source``/``sources``/``http_get``/``timeout``/``max_attempts``).
+    """
+    pd = _coerce_period(period)
+    results, resolved_is_bank = _fetch_all_statements(
+        symbol,
+        pd,
+        is_bank=is_bank,
+        limit=limit,
+        source=source,
+        sources=sources,
+        max_attempts=max_attempts,
+        http_get=http_get,
+        timeout=timeout,
+    )
+    return _metrics_from_statement_results(
+        symbol, pd, resolved_is_bank, results, limit
+    )
+
+
+def explain_metric_coverage(
+    symbol: str,
+    period="annual",
+    *,
+    is_bank: "bool | None" = AUTO,
+    limit: int = 8,
+    source=None,
+    sources=None,
+    max_attempts: int = 3,
+    http_get=None,
+    timeout: float = 25.0,
+) -> MetricCoverage:
+    """Offline-friendly, NON-FATAL coverage diagnostics for ``symbol``.
+
+    Same 3-statement fetch as :func:`metrics` (NEVER ratios — B7,
+    ``ratio_status`` is always ``not_requested``), but never raises on a
+    per-statement failure: it returns a :class:`MetricCoverage` whose ``periods``
+    is one :class:`PeriodCoverage` per fiscal_date (newest first), each carrying
+    per-statement provenance, named-vs-generic item counts, unmapped codes, and
+    every metric's availability + stable reason. Designed for a batch loop over a
+    universe that catches nothing and still gets a per-symbol diagnostic.
+    """
+    pd = _coerce_period(period)
+    results, resolved_is_bank = _fetch_all_statements(
+        symbol,
+        pd,
+        is_bank=is_bank,
+        limit=limit,
+        source=source,
+        sources=sources,
+        max_attempts=max_attempts,
+        http_get=http_get,
+        timeout=timeout,
+    )
+    return _coverage_from_statement_results(
+        symbol, pd, resolved_is_bank, results, limit
+    )

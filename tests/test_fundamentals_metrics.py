@@ -1287,3 +1287,385 @@ def test_reason_constants_interpolation():
         f"denominator net_revenue is negative ({(-50.0)!r})")
     assert REASON_DENOMINATOR_NOT_FINITE.format(input_id="net_revenue") == (
         "denominator net_revenue is not finite")
+
+
+# =========================================================================== #
+# STAGE C — the thin network wrappers (metrics / explain_metric_coverage) +
+# public wiring. These drive the wrappers end-to-end: an injected ``http_get``
+# returning synthetic VNDirect envelopes (house style from test_fundamentals.py)
+# for the default-chain fan-out, and STUB ``FundamentalSource`` objects for the
+# source-override + CafeF-namespace paths (the wrapper only reads ``source.name``
+# and delegates to ``get_financials``). NO real network anywhere.
+# =========================================================================== #
+import json as _json
+
+from vnfin.exceptions import EmptyData, SourceError, VnfinError
+from vnfin.fundamentals import metrics, explain_metric_coverage
+from vnfin.fundamentals import (
+    metrics as _public_metrics,
+    explain_metric_coverage as _public_coverage,
+)
+
+
+# --- synthetic VNDirect envelope helpers (mirror test_fundamentals.py) ----- #
+def _vnd_row(code, item_code, value, fiscal_date, report_type, model_type):
+    return {
+        "code": code,
+        "itemCode": float(item_code),
+        "reportType": report_type,
+        "modelType": float(model_type),
+        "numericValue": value,
+        "fiscalDate": fiscal_date,
+        "createdDate": "2000-01-01 00:00:00",
+        "modifiedDate": "2000-01-01 00:00:00",
+    }
+
+
+def _vnd_envelope(rows, total=None):
+    return _json.dumps(
+        {
+            "data": rows,
+            "currentPage": 1,
+            "size": len(rows),
+            "totalElements": total if total is not None else len(rows),
+            "totalPages": 1,
+        }
+    )
+
+
+# A VNDirect http_get that routes by the requested modelType in params["q"].
+# Corporate income=mt1, balance=mt2, cashflow=mt3. Returns one ANNUAL period.
+_FD = "2025-12-31"
+
+
+def _corp_vnd_http_get(*, record=None):
+    income = [
+        _vnd_row("TESTCO", 11000, 1000.0, _FD, "ANNUAL", 1),
+        _vnd_row("TESTCO", 11200, 400.0, _FD, "ANNUAL", 1),
+        _vnd_row("TESTCO", 14000, 300.0, _FD, "ANNUAL", 1),
+        _vnd_row("TESTCO", 21100, 180.0, _FD, "ANNUAL", 1),
+        _vnd_row("TESTCO", 20000, 250.0, _FD, "ANNUAL", 1),
+        _vnd_row("TESTCO", 21000, 200.0, _FD, "ANNUAL", 1),
+    ]
+    balance = [
+        _vnd_row("TESTCO", 23100, 500.0, _FD, "ANNUAL", 2),
+        _vnd_row("TESTCO", 23000, 800.0, _FD, "ANNUAL", 2),
+        _vnd_row("TESTCO", 30100, 300.0, _FD, "ANNUAL", 2),
+        _vnd_row("TESTCO", 30200, 200.0, _FD, "ANNUAL", 2),
+        _vnd_row("TESTCO", 25000, 2000.0, _FD, "ANNUAL", 2),
+        _vnd_row("TESTCO", 30000, 700.0, _FD, "ANNUAL", 2),
+        _vnd_row("TESTCO", 40000, 1300.0, _FD, "ANNUAL", 2),
+    ]
+    cashflow = [
+        _vnd_row("TESTCO", 31000, 350.0, _FD, "ANNUAL", 3),
+        _vnd_row("TESTCO", 32000, -120.0, _FD, "ANNUAL", 3),
+        _vnd_row("TESTCO", 33000, -80.0, _FD, "ANNUAL", 3),
+        _vnd_row("TESTCO", 34000, 150.0, _FD, "ANNUAL", 3),
+        _vnd_row("TESTCO", 35000, 600.0, _FD, "ANNUAL", 3),
+    ]
+
+    def _g(url, params, headers):
+        q = params.get("q", "") if isinstance(params, dict) else ""
+        if record is not None:
+            record.append({"url": url, "q": q})
+        if "modelType:3" in q:
+            return _vnd_envelope(cashflow)
+        if "modelType:2" in q:
+            return _vnd_envelope(balance)
+        # default corporate income (modelType:1) — also the AUTO probe target
+        return _vnd_envelope(income)
+
+    return _g
+
+
+# --- a fully-controllable STUB source for source-override / cafef tests ---- #
+class _StubSource:
+    """Minimal FundamentalSource: the wrapper only reads ``.name`` and calls
+    ``get_financials``. ``per_statement`` maps StatementType -> a callable
+    ``(symbol, period, is_bank, limit) -> tuple[FinancialReport,...]`` (it may
+    raise a SourceError to simulate a per-statement failure)."""
+
+    def __init__(self, name, per_statement, *, calls=None):
+        self.name = name
+        self._per_statement = per_statement
+        self._calls = calls
+
+    def get_financials(self, symbol, statement, period, *, is_bank=None, limit=8):
+        st = statement if isinstance(statement, StatementType) else StatementType(statement)
+        if self._calls is not None:
+            self._calls.append(st)
+        fn = self._per_statement.get(st)
+        if fn is None:
+            raise EmptyData(f"stub: no data for {st.value}")
+        return fn(symbol, period, is_bank, limit)
+
+
+def _stub_corp_for(source_name):
+    def _income(symbol, period, is_bank, limit):
+        return (_corp_income(D1, source=source_name),)
+
+    def _balance(symbol, period, is_bank, limit):
+        return (_corp_balance(D1, source=source_name),)
+
+    def _cashflow(symbol, period, is_bank, limit):
+        return (_corp_cashflow(D1, source=source_name),)
+
+    return {
+        StatementType.INCOME: _income,
+        StatementType.BALANCE: _balance,
+        StatementType.CASHFLOW: _cashflow,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Public wiring — names are importable from vnfin.fundamentals.
+# --------------------------------------------------------------------------- #
+def test_public_names_wired_into_fundamentals():
+    import vnfin.fundamentals as f
+
+    for name in (
+        "metrics", "explain_metric_coverage", "metric_catalog", "explain_metric",
+        "MetricReport", "MetricValue", "MetricDefinition", "MetricCoverage",
+        "MetricId", "MetricCategory", "MetricKind", "AppliesTo",
+        "MetricAvailability", "StatementCoverageStatus", "StatementProvenance",
+    ):
+        assert hasattr(f, name), name
+        assert name in f.__all__, name
+    # there is NO `metrics.py` submodule shadowing the function attribute (B5).
+    assert callable(f.metrics)
+
+
+# --------------------------------------------------------------------------- #
+# metrics() — default-chain VNDirect fan-out via injected http_get.
+# --------------------------------------------------------------------------- #
+def test_metrics_default_chain_fanout_three_statements():
+    record = []
+    http_get = _corp_vnd_http_get(record=record)
+    reports = metrics("TESTCO", period="annual", http_get=http_get)
+    assert isinstance(reports, tuple)
+    assert len(reports) == 1
+    rep = reports[0]
+    assert isinstance(rep, MetricReport)
+    assert rep.symbol == "TESTCO"
+    assert rep.period is Period.ANNUAL
+    assert rep.is_bank is False
+    # raw_mapped from each of the 3 statements resolved
+    assert rep.get("net_revenue").value == 1000.0          # income
+    assert rep.get("total_assets").value == 2000.0         # balance
+    assert rep.get("operating_cash_flow").value == 350.0   # cashflow
+    # derived computed from the raw values
+    assert rep.get("gross_margin").value == 400.0 / 1000.0
+    # provenance: exactly 3 statements, all OK / vndirect (no RATIOS)
+    sp = {s.statement: s for s in rep.statement_sources}
+    assert set(sp) == {
+        StatementType.INCOME, StatementType.BALANCE, StatementType.CASHFLOW}
+    for st in sp:
+        assert sp[st].status is StatementCoverageStatus.OK
+        assert sp[st].source == "vndirect"
+    # exactly THREE fetches (one per statement) and ZERO ratio calls
+    qs = [c["q"] for c in record]
+    assert all("modelType:3" not in q or "RATIO" not in q for q in qs)
+    assert not any("ratio" in c["url"].lower() for c in record)
+    # at least one fetch per statement template
+    assert any("modelType:1" in q for q in qs)
+    assert any("modelType:2" in q for q in qs)
+    assert any("modelType:3" in q for q in qs)
+
+
+def test_metrics_full_catalog_and_dataframe_shape_end_to_end():
+    reports = metrics(
+        "TESTCO", period="annual", http_get=_corp_vnd_http_get())
+    rep = reports[0]
+    # full-catalog invariant end to end
+    assert len(rep.metrics) == 26
+    assert {mv.id.value for mv in rep.metrics} == {
+        d.id.value for d in metric_catalog()}
+    df = rep.to_dataframe()
+    assert list(df.columns) == [
+        "metric_id", "name", "value", "value_unit", "kind", "availability",
+        "reason", "category", "applies_to", "fiscal_date", "input_codes",
+        "input_sources", "input_names",
+    ]
+    assert "source" not in df.attrs
+    assert df.attrs["symbol"] == "TESTCO"
+
+
+# --------------------------------------------------------------------------- #
+# metrics() — source override (single stub source).
+# --------------------------------------------------------------------------- #
+def test_metrics_source_override_uses_given_source():
+    calls = []
+    stub = _StubSource("vndirect", _stub_corp_for("vndirect"), calls=calls)
+    reports = metrics("TESTCO", period="annual", source=stub)
+    rep = reports[0]
+    assert rep.get("net_revenue").value == 1000.0
+    # exactly THREE statement fetches, one each, NEVER ratios (B7)
+    assert sorted(c.value for c in calls) == ["balance", "cashflow", "income"]
+    assert StatementType.RATIOS not in calls
+
+
+# --------------------------------------------------------------------------- #
+# metrics() — CafeF does NOT serve cashflow -> NOT_SERVED, no cashflow fetch.
+# --------------------------------------------------------------------------- #
+def test_metrics_cafef_cashflow_not_served():
+    calls = []
+    # a single CafeF-named stub that serves income/balance only
+    per = _stub_corp_for("cafef")
+    del per[StatementType.CASHFLOW]  # would raise if ever called
+    stub = _StubSource("cafef", per, calls=calls)
+    reports = metrics("TESTCO", period="annual", source=stub)
+    rep = reports[0]
+    # cashflow statement is NOT_SERVED with the responsible source = cafef
+    sp = {s.statement: s for s in rep.statement_sources}
+    assert sp[StatementType.CASHFLOW].status is StatementCoverageStatus.NOT_SERVED
+    assert sp[StatementType.CASHFLOW].source == "cafef"
+    # cashflow metrics are MISSING with the exact not-served reason
+    ocf = rep.get("operating_cash_flow")
+    assert ocf.availability is MetricAvailability.MISSING
+    assert ocf.reason == "statement cashflow not served by source 'cafef'"
+    # the cashflow statement was NEVER fetched (gated by serves())
+    assert StatementType.CASHFLOW not in calls
+    # income/balance from CafeF are BLOCKED (namespace not mapped, C3)
+    nr = rep.get("net_revenue")
+    assert nr.availability is MetricAvailability.BLOCKED
+    assert nr.reason == "metric map not available for source 'cafef'"
+
+
+# --------------------------------------------------------------------------- #
+# metrics() — a per-statement SourceError must NOT raise out (-> SOURCE_ERROR).
+# --------------------------------------------------------------------------- #
+def test_metrics_per_statement_source_error_is_non_fatal():
+    per = _stub_corp_for("vndirect")
+
+    def _boom(symbol, period, is_bank, limit):
+        raise EmptyData("no rows")
+
+    per[StatementType.INCOME] = _boom
+    stub = _StubSource("vndirect", per)
+    reports = metrics("TESTCO", period="annual", source=stub)
+    rep = reports[0]
+    sp = {s.statement: s for s in rep.statement_sources}
+    assert sp[StatementType.INCOME].status is StatementCoverageStatus.SOURCE_ERROR
+    assert sp[StatementType.INCOME].source is None
+    nr = rep.get("net_revenue")
+    assert nr.availability is MetricAvailability.MISSING
+    assert nr.reason.startswith("statement income unavailable: ")
+    # balance + cashflow still resolved (BLOCKED here: stub source is non-vndirect
+    # namespace? No — source name is 'vndirect' so they resolve normally)
+    assert rep.get("total_assets").availability is MetricAvailability.AVAILABLE
+    assert rep.get("operating_cash_flow").availability is (
+        MetricAvailability.AVAILABLE)
+
+
+# --------------------------------------------------------------------------- #
+# metrics() — bank auto-detect (is_bank resolved from the OK report).
+# --------------------------------------------------------------------------- #
+def test_metrics_bank_auto_detect_from_report():
+    def _bi(symbol, period, is_bank, limit):
+        return (_bank_income(D1),)
+
+    def _bb(symbol, period, is_bank, limit):
+        return (_bank_balance(D1),)
+
+    def _bc(symbol, period, is_bank, limit):
+        return ()  # bank cashflow empty/RAW in v1
+
+    per = {
+        StatementType.INCOME: _bi,
+        StatementType.BALANCE: _bb,
+        StatementType.CASHFLOW: _bc,
+    }
+    stub = _StubSource("vndirect", per)
+    reports = metrics("ZZBANK", period="annual", source=stub)  # is_bank=AUTO
+    rep = reports[0]
+    assert rep.is_bank is True
+    assert rep.get("net_interest_income").value == 700.0
+    assert rep.get("total_assets").value == 20000.0
+    # corporate-only id NOT_APPLICABLE for the auto-detected bank
+    assert rep.get("net_revenue").availability is (
+        MetricAvailability.NOT_APPLICABLE)
+
+
+def test_metrics_is_bank_explicit_arg_wins():
+    # force is_bank=True even though the stub reports is_bank=False
+    def _bi(symbol, period, is_bank, limit):
+        return (_bank_income(D1),)
+
+    def _bb(symbol, period, is_bank, limit):
+        return (_bank_balance(D1),)
+
+    per = {StatementType.INCOME: _bi, StatementType.BALANCE: _bb}
+    stub = _StubSource("vndirect", per)
+    reports = metrics("ZZBANK", period="annual", is_bank=True, source=stub)
+    assert reports[0].is_bank is True
+
+
+# --------------------------------------------------------------------------- #
+# explain_metric_coverage() — same fetch, non-fatal, per-fiscal-date coverage.
+# --------------------------------------------------------------------------- #
+def test_explain_metric_coverage_default_chain():
+    cov = explain_metric_coverage(
+        "TESTCO", period="annual", http_get=_corp_vnd_http_get())
+    assert isinstance(cov, MetricCoverage)
+    assert cov.symbol == "TESTCO"
+    assert cov.period is Period.ANNUAL
+    assert len(cov.periods) == 1
+    pc = cov.periods[0]
+    assert pc.ratio_status is RatioCoverageStatus.NOT_REQUESTED
+    assert len(pc.per_metric) == 26
+    # no RATIOS statement in provenance (B7)
+    for s in pc.statement_provenance:
+        assert s.statement is not StatementType.RATIOS
+
+
+def test_explain_metric_coverage_cafef_cashflow_not_served_non_fatal():
+    per = _stub_corp_for("cafef")
+    del per[StatementType.CASHFLOW]
+    stub = _StubSource("cafef", per)
+    cov = explain_metric_coverage("TESTCO", period="annual", source=stub)
+    pc = cov.periods[0]
+    sp = {s.statement: s for s in pc.statement_provenance}
+    assert sp[StatementType.CASHFLOW].status is StatementCoverageStatus.NOT_SERVED
+    assert sp[StatementType.CASHFLOW].source == "cafef"
+    by_id = {i.metric_id.value: i for i in pc.per_metric}
+    assert by_id["net_revenue"].availability is MetricAvailability.BLOCKED
+
+
+def test_explain_metric_coverage_total_failure_non_fatal():
+    # every statement raises -> coverage still returns (empty periods), no crash
+    def _boom(symbol, period, is_bank, limit):
+        raise SourceError("down")
+
+    per = {
+        StatementType.INCOME: _boom,
+        StatementType.BALANCE: _boom,
+        StatementType.CASHFLOW: _boom,
+    }
+    stub = _StubSource("vndirect", per)
+    cov = explain_metric_coverage("TESTCO", period="annual", source=stub)
+    assert isinstance(cov, MetricCoverage)
+    # no OK statement -> union of fiscal_dates is empty -> no periods
+    assert cov.periods == ()
+
+
+# --------------------------------------------------------------------------- #
+# limit is threaded through to the fetch + the alignment cap.
+# --------------------------------------------------------------------------- #
+def test_metrics_limit_capped_after_union():
+    def _income(symbol, period, is_bank, limit):
+        return (_corp_income(D1), _corp_income(D2), _corp_income(D3))
+
+    def _balance(symbol, period, is_bank, limit):
+        return (_corp_balance(D1), _corp_balance(D2), _corp_balance(D3))
+
+    def _cashflow(symbol, period, is_bank, limit):
+        return (_corp_cashflow(D1), _corp_cashflow(D2), _corp_cashflow(D3))
+
+    per = {
+        StatementType.INCOME: _income,
+        StatementType.BALANCE: _balance,
+        StatementType.CASHFLOW: _cashflow,
+    }
+    stub = _StubSource("vndirect", per)
+    reports = metrics("TESTCO", period="annual", limit=2, source=stub)
+    assert [r.fiscal_date for r in reports] == [D1, D2]

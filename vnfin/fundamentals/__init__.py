@@ -34,6 +34,35 @@ from .models import (
 )
 from .vndirect import VNDirectFundamentalSource
 
+# --- #157 canonical-metrics layer (additive, offline transform of the typed
+# FinancialReports above). Functions live in ``metric_api`` (NOT ``metrics.py``,
+# which would shadow the ``fundamentals.metrics`` function attribute — B5); the
+# data contracts live in ``metric_models``.
+from .metric_api import (
+    explain_metric,
+    explain_metric_coverage,
+    metric_catalog,
+    metrics,
+)
+from .metric_models import (
+    AppliesTo,
+    MetricAvailability,
+    MetricCategory,
+    MetricCoverage,
+    MetricCoverageItem,
+    MetricDefinition,
+    MetricId,
+    MetricInput,
+    MetricKind,
+    MetricReport,
+    MetricSourceCodes,
+    MetricValue,
+    PeriodCoverage,
+    RatioCoverageStatus,
+    StatementCoverageStatus,
+    StatementProvenance,
+)
+
 __all__ = [
     "FinancialReport",
     "LineItem",
@@ -51,6 +80,27 @@ __all__ = [
     "AUTO",
     "KNOWN_BANK_SYMBOLS",
     "is_known_bank",
+    # #157 canonical-metrics public surface (additive).
+    "metrics",
+    "explain_metric_coverage",
+    "metric_catalog",
+    "explain_metric",
+    "MetricReport",
+    "MetricValue",
+    "MetricDefinition",
+    "MetricCoverage",
+    "MetricCoverageItem",
+    "MetricInput",
+    "MetricSourceCodes",
+    "PeriodCoverage",
+    "StatementProvenance",
+    "MetricId",
+    "MetricCategory",
+    "MetricKind",
+    "AppliesTo",
+    "MetricAvailability",
+    "StatementCoverageStatus",
+    "RatioCoverageStatus",
 ]
 
 
