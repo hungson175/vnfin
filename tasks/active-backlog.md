@@ -77,13 +77,16 @@ _Last synced: 2026-06-21 00:40 +07_
 > window (re-created the #186 bug in the padding region). Fix: range-filter moved INSIDE `_build_bars`
 > (thread lo/hi), timestamp parsed first, threshold now `bad_inrange > max(_QUARANTINE_ABS_FLOOR=3,
 > _QUARANTINE_FRACTION=0.10*considered)` over in-range timestamp-parseable rows only; out-of-range dropped
-> silently, unparseable-ts disclosed-in-warning-but-excluded-from-verdict. +3 fail-first regression tests
-> (28 total in the file). Repo-wide stale-claim sweep (CHANGELOG + architecture doc → "in-range only";
-> design D3 "Implemented as/supersedes" note; test_indices comment). **Full suite 3320 green; surface
-> additive/snapshot FROZEN; no-secrets green.** **Remaining:** adversarial RE-verify on the CORRECTED code
-> (running, wf_2131012e-8dc, 3 lenses) → on clean, route to Codex×2 (reviewer directive: shared-parse-path
-> data-quality, high impact) → on APPROVE + green merged tree, push master (no PR) + close #186 (watermark
-> = reviewer).
+> silently, unparseable-ts disclosed-in-warning-but-excluded-from-verdict. **SECOND FIX `34e0ce1` (MINOR,
+> self-found via 3-lens re-verify wf_2131012e-8dc):** `considered += 1` ran before the #162 identical-dedupe
+> `continue`, so a feed emitting each date twice padded the denominator with duplicate GOOD dates → diluted
+> the bad-fraction → flipped a marginal failover into a serve. Fix: `considered -= 1` in the identical-dedupe
+> branch → verdict counts DISTINCT in-range dates. (Re-verify lenses "hide-broken-source" + "regression-
+> completeness" both CLEAN.) +4 fail-first regression tests (29 in the file). Repo-wide stale-claim/precision
+> sweep (CHANGELOG + architecture doc + design D3 → "in-range only, each date counted once"; test_indices
+> comment). **Full suite 3321 green; surface additive/snapshot FROZEN; no-secrets green.** **ROUTED TO
+> CODEX×2** (handoff `/tmp/vnfin-186-codex-review-handoff-20260621.md`, commits `74c4e7a`+`24171b0`+`34e0ce1`).
+> **Remaining:** on APPROVE + green merged tree, push master (no PR) + close #186 (watermark = reviewer).
 >
 > **AFTER #186: #185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53), code deferred.**
 > Design note committed `e6a1b4a` (`docs/design/issue-185-annual-world-gold-source.md`); reviewer APPROVE
