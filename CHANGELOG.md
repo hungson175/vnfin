@@ -25,6 +25,13 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Price/index namespace type confusion** — the price and index namespaces now **fail loud** on the
+  wrong asset type instead of silently returning wrong-typed data.
+  `vnfin.prices.history()` (and `vnfin.liquidity` by inheritance) reject a **market-index** symbol
+  (`VNINDEX`, `VN30`, sector indices, …) with `InvalidData` before any network call; equities/unknown
+  tickers are unaffected. `vnfin.indices.index_history()` / `index_history_stitched()` accept **only**
+  recognised value-history indices and reject a **stock** symbol (e.g. `FPT`) with `InvalidData`.
+  ([#168](https://github.com/hungson175/vnfin/issues/168))
 - **Index daily duplicate-date handling** — a D1 **index** source result now exposes exactly one
   public bar per calendar date: an *identical* same-date OHLCV duplicate is deduped deterministically
   (keep-first) with a ``deduped_duplicate_daily_index_bars`` warning, while a *conflicting* same-date

@@ -2,6 +2,10 @@
 
 Use this guide for Vietnam equity OHLCV bars.
 
+> **Stocks only.** `vnfin.prices.history()` is for equities. A market-index symbol
+> (`VNINDEX`, `VN30`, …) raises `InvalidData` — use
+> [`vnfin.indices.index_history()`](funds-and-indices.md) for index points instead.
+
 ## Fetch daily history
 
 ```python

@@ -1,0 +1,165 @@
+"""Issue #168: price/index namespaces must FAIL LOUD on the wrong asset type.
+
+- ``prices.history`` (and ``liquidity`` by inheritance) reject any KNOWN INDEX symbol
+  (deny-list) — an index is not a VND security price.
+- ``indices.index_history`` / ``index_history_stitched`` accept ONLY value-history-supported
+  indices (allow-list) — a stock/unknown symbol is rejected.
+All rejections happen BEFORE any network call (zero-network).
+"""
+from __future__ import annotations
+
+from datetime import date
+
+import pytest
+
+import vnfin
+from vnfin._contracts.index_registry import (
+    _KNOWN_INDEX_IDENTIFIERS,
+    _VALUE_HISTORY_INDICES,
+    is_known_index,
+    is_value_history_index,
+)
+from vnfin.exceptions import InvalidData
+
+_START = date(2024, 1, 1)
+_END = date(2024, 6, 30)
+
+
+class _NetReached(Exception):
+    """Raised by the fake http_get to prove the call passed the guard to the network layer."""
+
+
+def _recorder():
+    calls: list = []
+
+    def _http_get(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise _NetReached()
+
+    return calls, _http_get
+
+
+# --------------------------------------------------------------------------- #
+# registry unit tables
+# --------------------------------------------------------------------------- #
+def test_is_known_index_membership():
+    for sym in ("VNINDEX", "VN30", "HNXINDEX", "HNX30", "UPCOM", "UPCOMINDEX",
+                "VNALLSHARE", "VNALL", "VN100", "VNMID", "VNSML", "VNDIAMOND",
+                "VNFINLEAD", "VNFINSELECT", "VNXALL", "VNFIN", "VNIT", "VNREAL"):
+        assert is_known_index(sym), sym
+    # normalization
+    assert is_known_index(" vn30 ")
+    assert is_known_index("vnindex")
+    # non-indices / malformed
+    for sym in ("FPT", "VCB", "VNM", "", "   ", "ABC", None, 123, b"VN30"):
+        assert not is_known_index(sym), sym
+
+
+def test_is_value_history_index_membership():
+    for sym in ("VNINDEX", "VN30", "HNXINDEX", "HNX30", "UPCOM", "UPCOMINDEX",
+                "VNALLSHARE", "VNALL"):
+        assert is_value_history_index(sym), sym
+    assert is_value_history_index(" vnindex ")
+    # deny-only indices (known index but NOT value-history allow-listed yet)
+    for sym in ("VN100", "VNMID", "VNSML", "VNDIAMOND", "VNFINLEAD", "VNFINSELECT",
+                "VNXALL", "VNFIN", "VNIT", "VNREAL"):
+        assert not is_value_history_index(sym), sym
+    # non-indices
+    for sym in ("FPT", "", None, 123):
+        assert not is_value_history_index(sym), sym
+
+
+def test_allow_list_is_subset_of_deny_list():
+    assert _VALUE_HISTORY_INDICES <= _KNOWN_INDEX_IDENTIFIERS
+
+
+# --------------------------------------------------------------------------- #
+# prices path — deny known indices (zero-network)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("sym", ["VNINDEX", "VN30", "UPCOMINDEX", "VNFIN", "VNMID", "VNDIAMOND"])
+def test_prices_history_rejects_index_symbol(sym):
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData) as exc:
+        vnfin.prices.history(sym, start=_START, end=_END, http_get=http_get)
+    assert "index" in str(exc.value).lower()
+    assert calls == []  # zero network
+
+
+def test_prices_history_rejects_index_with_whitespace_lowercase():
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData):
+        vnfin.prices.history(" vn30 ", start=_START, end=_END, http_get=http_get)
+    assert calls == []
+
+
+@pytest.mark.parametrize("sym", ["FPT", "VCB", "ABC"])
+def test_prices_history_allows_non_index_symbol_to_reach_network(sym):
+    # An equity / unknown ticker must PASS the guard (reach the network layer), not be
+    # rejected as an index. The fake http_get records the call then raises.
+    calls, http_get = _recorder()
+    with pytest.raises(Exception) as exc:
+        vnfin.prices.history(sym, start=_START, end=_END, http_get=http_get)
+    assert not isinstance(exc.value, InvalidData) or "index" not in str(exc.value).lower()
+    assert calls, f"{sym} should have reached the network (passed the guard)"
+
+
+# --------------------------------------------------------------------------- #
+# index path — allow only value-history indices (zero-network on reject)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("sym", ["FPT", "VCB", "ABC", "VN100", "VNFIN", "VNDIAMOND"])
+def test_index_history_rejects_non_value_history_symbol(sym):
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData) as exc:
+        vnfin.indices.index_history(sym, _START, _END, http_get=http_get)
+    assert "index" in str(exc.value).lower()
+    assert calls == []
+
+
+@pytest.mark.parametrize("sym", ["FPT", "VN100", "VNFIN"])
+def test_index_history_stitched_rejects_non_value_history_symbol(sym):
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData):
+        vnfin.indices.index_history_stitched(sym, _START, _END, http_get=http_get)
+    assert calls == []
+
+
+@pytest.mark.parametrize("sym", ["VNINDEX", "VN30", "HNXINDEX", "HNX30", "UPCOM", "VNALLSHARE"])
+def test_index_history_allows_value_history_index_to_reach_network(sym):
+    calls, http_get = _recorder()
+    with pytest.raises(Exception) as exc:
+        vnfin.indices.index_history(sym, _START, _END, http_get=http_get)
+    assert not isinstance(exc.value, InvalidData) or "not a known market index" not in str(exc.value).lower()
+    assert calls, f"{sym} should have reached the network (passed the allow-list guard)"
+
+
+def test_index_history_allows_whitespace_lowercase_index():
+    calls, http_get = _recorder()
+    with pytest.raises(Exception):
+        vnfin.indices.index_history(" vnindex ", _START, _END, http_get=http_get)
+    assert calls, "normalized index should pass the allow-list guard"
+
+
+# --------------------------------------------------------------------------- #
+# sector index is deny-only: rejected by BOTH paths
+# --------------------------------------------------------------------------- #
+def test_sector_index_rejected_by_both_paths():
+    sym = "VNFIN"  # known index (deny-list) but NOT value-history allow-listed
+    calls_p, http_p = _recorder()
+    with pytest.raises(InvalidData):
+        vnfin.prices.history(sym, start=_START, end=_END, http_get=http_p)
+    assert calls_p == []
+    calls_i, http_i = _recorder()
+    with pytest.raises(InvalidData):
+        vnfin.indices.index_history(sym, _START, _END, http_get=http_i)
+    assert calls_i == []
+
+
+# --------------------------------------------------------------------------- #
+# liquidity inherits the price guard (no separate guard)
+# --------------------------------------------------------------------------- #
+def test_liquidity_profile_inherits_price_index_guard():
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData) as exc:
+        vnfin.liquidity.profile("VNINDEX", _START, _END, http_get=http_get)
+    assert "index" in str(exc.value).lower()
+    assert calls == []  # zero network — guard fired before the price client fetched

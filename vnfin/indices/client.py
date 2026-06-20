@@ -17,7 +17,7 @@ from typing import Optional, Union
 from ..client import FailoverPriceClient
 from ..exceptions import InvalidData, VnfinError
 from ..models import AdjustmentPolicy, Interval, PriceHistory
-from .._contracts import canonical_security_symbol
+from .._contracts import canonical_security_symbol, is_value_history_index
 from ..validation import validate_date_range, validate_non_empty_string
 from .models import IndexConstituents
 from .sources import (
@@ -61,6 +61,10 @@ class IndexClient:
         if sources is None:
             sources = default_index_sources(http_get=http_get, timeout=timeout)
         self._client = FailoverPriceClient(sources, max_attempts=max_attempts)
+        # Issue #168: this is the legitimate index value-history path — the underlying
+        # price client must NOT reject index symbols here (the IndexClient methods apply
+        # their own value-history ALLOW-LIST guard instead). Private flag → no snapshot churn.
+        self._client._reject_index_symbols = False
         self._constituents = constituents_source or IndexConstituentsSource(
             http_get=http_get, timeout=timeout
         )
@@ -82,6 +86,14 @@ class IndexClient:
         # identifier — reject malformed shapes before the failover engine runs and
         # normalize to uppercase so identity checks match the sources' canonical form.
         symbol = canonical_security_symbol(symbol, "symbol")
+        # Issue #168: index value-history serves only recognised market indices. A stock
+        # (e.g. FPT) or unknown symbol must fail loud BEFORE any network call instead of
+        # being fetched and mislabelled as index points.
+        if not is_value_history_index(symbol):
+            raise InvalidData(
+                f"symbol {symbol} is not a known market index; "
+                "use vnfin.prices.history() for stocks"
+            )
         validate_date_range(start, end, name="index_history")
         return self._client.get_history(symbol, interval, start, end)
 
@@ -113,6 +125,13 @@ class IndexClient:
                 f"index_history_stitched: only daily (D1) is supported, got {interval}"
             )
         symbol = canonical_security_symbol(symbol, "symbol")
+        # Issue #168: only recognised market indices have value-history; fail loud on a
+        # stock/unknown symbol before any segment fetch.
+        if not is_value_history_index(symbol):
+            raise InvalidData(
+                f"symbol {symbol} is not a known market index; "
+                "use vnfin.prices.history() for stocks"
+            )
         lo, hi = validate_date_range(start, end, name="index_history_stitched")
 
         bars: list = []

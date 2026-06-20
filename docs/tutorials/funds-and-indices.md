@@ -30,6 +30,10 @@ for h in holdings[:10]:
 
 ## Index levels
 
+> **Indices only.** `index_history()` accepts recognised market indices (`VNINDEX`, `VN30`,
+> `HNXINDEX`, `HNX30`, `UPCOM`, `VNALLSHARE`). A stock symbol (e.g. `FPT`) raises `InvalidData` —
+> use [`vnfin.prices.history()`](stock-prices.md) for equity prices instead.
+
 ```python
 from datetime import date
 import vnfin

@@ -16,6 +16,7 @@ from datetime import date, datetime
 
 from ._contracts import (
     canonical_security_symbol,
+    is_known_index,
     non_empty_reason,
     result_type_reason,
     row_object_and_aware_datetime_reason,
@@ -99,6 +100,11 @@ class FailoverPriceClient:
 
     def __init__(self, sources, max_attempts: int = 3):
         sources = list(sources)  # materialize once; guard + engine both need the list
+        # Issue #168: by default this STOCK-price client rejects market-index symbols
+        # (VNINDEX/VN30/...). It is a PRIVATE instance flag (not a constructor param — keeps
+        # the public-API snapshot unchanged). ``IndexClient`` reuses this class for the
+        # legitimate index value-history path and turns the flag OFF after construction.
+        self._reject_index_symbols = True
         # Issue #7: homogenous adjustment policies before the generic engine runs.
         _adjustment_policy_guard(sources)
         self._chain_unit = _price_unit(next((s for s in sources if _price_unit(s) is not None), None))
@@ -136,6 +142,15 @@ class FailoverPriceClient:
         # bytes, non-string) before the failover engine runs, and normalize to
         # uppercase so identity checks match the sources' canonical form.
         symbol = canonical_security_symbol(symbol, "symbol")
+        # Issue #168: a market index (e.g. VNINDEX/VN30) is NOT a VND security price.
+        # Fail loud BEFORE any network call instead of silently returning index points
+        # mislabelled as stock prices. Equities/unknown tickers pass through (open universe).
+        # The flag is OFF only when IndexClient reuses this client for the index path.
+        if self._reject_index_symbols and is_known_index(symbol):
+            raise InvalidData(
+                f"symbol {symbol} is a market index, not a stock; "
+                "use vnfin.indices.index_history() instead"
+            )
         validate_date_range(start, end, name="price history")
         # Issue #23: validate the interval is an Interval enum before the failover
         # engine's capability probe / no_capable_factory touches it. This prevents
