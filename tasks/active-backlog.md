@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 ~19:1x +07_
+_Last synced: 2026-06-20 ~19:4x +07_
 
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
@@ -27,22 +27,24 @@ _Last synced: 2026-06-20 ~19:1x +07_
 > review-202606201831 (all 4 refinements present; judgment call ENDORSED by all 3 — accept the
 > self-clearing daily→weekly transition transient over a false-negative suppressor; lone note: the
 > `max(1,…)` floor is dead-but-harmless guard). #172 commented + CLOSED. Full 3001 green, trio exit0,
-> fmarket cov 96%, snapshot untouched. **This closes the entire reporter-bug queue — only the #157
-> metrics leg remains.** FundList.nav per-fund as-of → reviewer-filed **#181** (out of v1 scope).
+> fmarket cov 96%, snapshot untouched. **This closed the entire reporter-bug queue.** FundList.nav
+> per-fund as-of → reviewer-filed **#181** (out of v1 scope).
 >
-> **NOW: #157 METRICS LAYER — IMPLEMENTED + IN Codex×2 REVIEW** (sent ~19:1x, handoff
-> `/tmp/vnfin-157-metrics-review-handoff-20260620.md`). Built per rev2.6 via implement→adversarial-verify
-> workflow `wf_4125b404-2eb`: new `metric_models.py` + `metric_api.py` (26-metric v1 catalog, `serves()`,
+> **#157 METRICS LAYER — ✅ DONE + PUSHED + CLOSED** (`694b63f..8a3a21f`; #157 CLOSED 19:39).
+> All THREE #157 legs now shipped: ratios (`9edad80`) + bank-mislabel (`aa72dca`) + metrics layer
+> (`0739def..8a3a21f`). Built per rev2.6 via implement→adversarial-verify workflow `wf_4125b404-2eb`:
+> new `metric_models.py` + `metric_api.py` (26-metric v1 catalog = 21 mapped + 5 derived, `serves()`,
 > pure transformers, `metrics()`/`explain_metric_coverage()`, 11 exact §5 reasons) + docs/skill/CHANGELOG +
-> 2 docs-contract guards. Commits `0739def`(A)→`8cdaa36`(B)→`fa13cf4`(C)→`be58b9d`(D)→`5c84d53`(bank-code
-> allowlist guard hardening). **Full suite 3082 passed, exit0; gate trio green; snapshot untouched (additive);
-> clean-room clean.** Bank metrics keyed ONLY to 12700/13000/14000/412000/413300/23800/23000/421900. 6-way
-> adversarial verify → **ALL 6 PASS**, 3 MINORs (1 applied; 2 judgment calls open for reviewer: AllSourcesFailed
-> detail text; raw non-finite seam guard needs a new §5 reason — not added unilaterally). **AWAITING reviewer**:
-> on APPROVE → push to master + comment #157 metrics leg (#157 stays OPEN if other legs remain — confirm close state).
-> Then vf-advisor: **#179 (monthly CPI+SBV via IMF IFS/DBnomics) is cleanly startable** (specs DONE by
-> reviewer, no new adapter/key); **#177 (S&P500 / Alpha Vantage BYOK) + #178 (VN gold, no clean source)
-> WAIT on Boss**.
+> 2 docs-contract guards. Codex×2 returned APPROVE_WITH_NOTES (review-202606201928) with ONE must-fix
+> **M1** (trail-free `detail` on the AllSourcesFailed branch — C1+docstring leak; my judgment-call #2
+> premise was wrong). **M1 landed `8a3a21f`** with a fail-first regression
+> (`test_metrics_all_sources_failed_detail_is_trail_free`, proven red→green) + optional N1/N2 honesty
+> polish (comments only). **Full suite 3083 passed, exit0; metrics+no_secrets+surface+docs gates green;
+> snapshot untouched (additive); clean-room clean.** Bank metrics keyed ONLY to
+> 12700/13000/14000/412000/413300/23800/23000/421900. NO Codex re-gate (M1 surgical, reviewer-authorized).
+> #157 commented + CLOSED via `bin/gh-maintainer` (metrics was the last leg). Watermark left to reviewer.
+> **NEXT-STARTABLE: vf-advisor #179** (monthly CPI+SBV via GSO/SBV/DBnomics/FRED, specs DONE by reviewer,
+> no new adapter/key); **#177 (S&P500/FRED BYOK) + #178 (VN gold, no clean source) WAIT on Boss.**
 
 ---
 
