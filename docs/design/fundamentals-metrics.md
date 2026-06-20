@@ -1,7 +1,9 @@
 # Design — fundamentals metrics & coverage diagnostics (#157)
 
-**Status:** DESIGN (rev 2 — addresses design-review BLOCK 2026-06-20: per-fiscal-date/per-statement
-source shape, multi-source safety, CafeF code-namespace mapping). Must be APPROVED before any code.
+**Status:** DESIGN (rev 2.2 — resolves both design-review rounds: 8 blockers review-202606201230 and
+7 spec-precision blockers review-202606201245: typed statement-result seam, fully-typed coverage
+enums/records, explicit VNDirect-namespaced codes, exact reason table, exact dataframe contract).
+Must be APPROVED before any code.
 **Scope:** an **additive, offline** canonical-metrics + coverage-diagnostics layer on top of the
 existing `vnfin.fundamentals` reports — fundamental **data primitives and diagnostics** for
 long-term investors, *not* an advice/ranking/screener layer.
@@ -120,21 +122,41 @@ def explain_metric_coverage(
     timeout: float = 25.0,
 ) -> MetricCoverage: ...
 
-# Private PURE transformer (B4) — no network; synthetic tests build FinancialReports and call this
-# directly, so unit tests need no fake HTTP plumbing. The fetching wrappers above call get_financials
-# per statement then delegate to this.
-def _metrics_from_reports(
-    symbol, period, is_bank,
-    by_statement: dict,   # {StatementType: tuple[FinancialReport, ...]} aligned-by-fiscal_date upstream
+# B1: a TYPED per-statement fetch result so the pure seam can encode FAILURES (source_error /
+# not_served), not just successes. The wrappers fetch each statement, catch recoverable SourceErrors,
+# and build one of these per statement; the pure transformers consume them — no hidden wrapper logic.
+@dataclass(frozen=True)
+class StatementFetchResult:
+    statement: StatementType
+    reports: tuple[FinancialReport, ...]      # () when the fetch failed / not served
+    status: StatementCoverageStatus           # OK | MISSING | SOURCE_ERROR | NOT_SERVED
+    source: Optional[str]                     # succeeding source (None on failure)
+    detail: Optional[str] = None              # SourceError message class on failure
+
+# Private PURE transformers (B1/B4) — NO network. Synthetic tests build StatementFetchResults
+# (success AND failure) and call these directly, so unit tests need no fake HTTP plumbing.
+def _metrics_from_statement_results(
+    symbol, period, is_bank, results: tuple[StatementFetchResult, ...],
 ) -> tuple[MetricReport, ...]: ...
+def _coverage_from_statement_results(
+    symbol, period, is_bank, results: tuple[StatementFetchResult, ...],
+) -> MetricCoverage: ...
 ```
+
+**Fiscal-date alignment (B1):** align statements by the **union of fiscal dates across the
+successful statements**, newest-first; a metric whose statement has no report at a given date →
+`MISSING`; cap the period list to `limit` **after** alignment. The fetching wrappers
+(`metrics`/`explain_metric_coverage`) call `get_financials` per statement (catching recoverable
+`SourceError` → a failed `StatementFetchResult`) then delegate to the pure transformers above.
+`source` wins over `sources` (matching the existing `get_financials` helper).
 
 - `metrics()`/`explain_metric_coverage()` mirror `get_financials`' injection knobs (`is_bank`,
   `limit`, `source`/`sources`, `http_get`, `timeout`, `max_attempts`) so tests can inject a fake
   `http_get` or a stub `source`, and callers keep the same controls.
 - `metric_catalog()`/`explain_metric()` make **zero** network calls (pure registry).
-- The pure `_metrics_from_reports(...)` transformer is the TDD seam: synthetic `FinancialReport`
-  fixtures → `MetricReport`s with **no HTTP**.
+- The pure `_metrics_from_statement_results(...)` / `_coverage_from_statement_results(...)`
+  transformers are the TDD seam: synthetic `StatementFetchResult`s (success + failure) →
+  `MetricReport`s / `MetricCoverage` with **no HTTP**.
 
 ### Proposed final names
 
@@ -199,6 +221,13 @@ class MetricCategory(str, Enum):     # PROFITABILITY | LIQUIDITY | LEVERAGE | CA
 class MetricKind(str, Enum):         # RAW_MAPPED | PROVIDER_NATIVE | DERIVED
 class AppliesTo(str, Enum):          # CORPORATE | BANK | BOTH
 class MetricAvailability(str, Enum): # AVAILABLE | MISSING | BLOCKED | NOT_APPLICABLE | UNSUPPORTED
+class StatementCoverageStatus(str, Enum):  # B2: OK | MISSING | SOURCE_ERROR | NOT_SERVED
+class RatioCoverageStatus(str, Enum):      # B2: NOT_REQUESTED (v1) — extends when ratios ship
+
+@dataclass(frozen=True)
+class MetricSourceCodes:             # B3: codes for ONE source namespace (no cross-namespace mixing)
+    corporate_code: Optional[str] = None
+    bank_code: Optional[str] = None
 
 @dataclass(frozen=True)
 class MetricInput:                   # one source line a metric was built from (lineage)
@@ -217,11 +246,11 @@ class MetricDefinition:              # static catalog entry (no symbol)
     kind: MetricKind
     applies_to: AppliesTo
     value_unit: str                  # canonical unit of the metric value
-    # raw_mapped: which statement+code(s) supply it (per corporate/bank);
-    # derived: the formula + the MetricIds it consumes.
-    corporate_code: Optional[str] = None
-    bank_code: Optional[str] = None
-    statement: Optional[StatementType] = None
+    statement: Optional[StatementType] = None   # which statement supplies a raw_mapped metric
+    # B3: codes are EXPLICITLY namespaced by source so CafeF string codes can never be put in a
+    # VNDirect numeric slot. v1 ships ONLY the "vndirect" key; v1.x adds "cafef". explain_metric()
+    # surfaces this mapping so callers see these are VNDirect-namespace codes.
+    codes_by_source: Mapping[str, MetricSourceCodes] = field(default_factory=dict)  # {"vndirect": ...}
     formula: Optional[str] = None            # human formula for derived, e.g. "gross_profit / net_revenue"
     inputs: tuple[MetricId, ...] = ()        # derived dependencies
 
@@ -240,7 +269,7 @@ class MetricValue:
 @dataclass(frozen=True)
 class StatementProvenance:           # per-statement outcome for one fiscal period
     statement: StatementType
-    status: str                      # "ok" | "missing" | "source_error" | "not_served"
+    status: StatementCoverageStatus  # B2: typed enum (OK/MISSING/SOURCE_ERROR/NOT_SERVED)
     source: Optional[str]            # SUCCEEDING source (C1: no failed-attempt trail in v1)
     detail: Optional[str] = None     # e.g. the SourceError message class
 
@@ -256,9 +285,12 @@ class MetricReport:                  # all metrics for one symbol + one fiscal p
     statement_sources: tuple[StatementProvenance, ...]
     warnings: tuple[str, ...] = ()   # incl. "mixed_source" when a value's inputs span >1 source
     def get(self, metric_id) -> Optional[MetricValue]: ...   # B6: returns a value even when unavailable
-    # to_dataframe() — one row per metric; columns (Q5):
+    # to_dataframe() — one row per metric. EXACT fixed columns (B6, deterministic):
     #   metric_id, name, value, value_unit, kind, availability, reason, category, applies_to,
-    #   fiscal_date (+ input_codes, input_sources where practical). Metadata in df.attrs.
+    #   fiscal_date, input_codes, input_sources
+    #   (input_codes/input_sources are tuples joined to comma-strings; empty for unavailable metrics).
+    # EXACT df.attrs: symbol, period, fiscal_date, is_bank, statement_sources.
+    # MUST NOT set df.attrs["source"] (C2: there is no single report source).
     def to_dataframe(self) -> "pd.DataFrame": ...
 
 @dataclass(frozen=True)
@@ -277,7 +309,7 @@ class PeriodCoverage:               # B1: coverage is PER fiscal_date
     named_item_count: int                                   # LineItems with a real name
     generic_item_count: int                                 # LineItems still "item_<code>"
     unmapped_codes: tuple[str, ...]                         # present codes not in the metric map
-    ratio_status: str = "not_requested"                     # B7: v1 never fetches ratios
+    ratio_status: RatioCoverageStatus = RatioCoverageStatus.NOT_REQUESTED   # B7: v1 never fetches ratios
 
 @dataclass(frozen=True)
 class MetricCoverage:               # offline-friendly diagnosis for a symbol over the fetched periods
@@ -310,10 +342,9 @@ need `TimeSeriesResult` (it is one period; the *tuple* of reports is the series 
    returns a `MetricValue` (possibly unavailable) for any known id. For each `MetricDefinition`:
    - **`applies_to` mismatch** (e.g. `gross_margin` for a bank, or a bank-only id for a corporate)
      → `NOT_APPLICABLE`, value `None`. (It is still present in the report.)
-   - **Source-namespace gate (C3):** pick the code for the metric's statement by that statement's
-     **succeeding source** — `corporate_code`/`bank_code` are VNDirect-namespace; if the source is not
-     `vndirect` (unmapped in v1, e.g. CafeF) → `BLOCKED`, reason `"metric map not available for
-     source <name>"` (never silent MISSING).
+   - **Source-namespace gate (C3):** look the metric up in `definition.codes_by_source[<succeeding
+     source>]`. v1 ships only the `"vndirect"` key; if the statement's succeeding source has no entry
+     (e.g. CafeF) → `BLOCKED` (never silent MISSING).
    - **raw_mapped:** look the code up in the statement's `code -> LineItem` index; build a
      `MetricInput` from the full `LineItem` (statement, code, value, `value_unit`, fiscal_date,
      **source**). Missing code / missing-or-failed statement → `MISSING` with a reason naming the input.
@@ -323,6 +354,29 @@ need `TimeSeriesResult` (it is one period; the *tuple* of reports is the series 
      `mixed_source` warning.
 5. Carry per-statement provenance + any `mixed_source`/failover warnings onto the report (no single
    `source` field — C2).
+
+### Exact availability + reason rules (B4)
+
+Reasons are **exact, stable strings** (the implementation defines them as constants; tests assert
+them verbatim). `{…}` are substituted; string literals use single quotes as shown.
+
+| Case | availability | exact `reason` |
+|------|--------------|----------------|
+| value present & valid | `AVAILABLE` | `None` |
+| source namespace not mapped | `BLOCKED` | `metric map not available for source '{source}'` |
+| input statement missing (no report this period) | `MISSING` | `missing statement {statement} for {fiscal_date}` |
+| input statement source error | `MISSING` | `statement {statement} unavailable: {detail}` |
+| statement not served by source (cashflow via cafef) | `MISSING` | `statement {statement} not served by source '{source}'` |
+| raw mapped code absent from the report | `MISSING` | `missing line item {code} in {statement}` |
+| applies_to mismatch (e.g. corporate-only for a bank) | `NOT_APPLICABLE` | `metric '{id}' does not apply to {'bank' if is_bank else 'non-bank'} entities` |
+| derived input missing | `MISSING` | `missing input metric {input_id}` |
+| derived input blocked/not-applicable | `BLOCKED` | `input metric {input_id} is {availability}` |
+| derived denominator zero | `MISSING` | `denominator {input_id} is zero` |
+| derived denominator negative | `MISSING` | `denominator {input_id} is negative ({value})` |
+| derived denominator non-finite/NaN | `MISSING` | `denominator {input_id} is not finite` |
+
+`UNAPPLICABLE`/`UNSUPPORTED` are reserved for v2 metric kinds (valuation/ROE-family) absent from the
+v1 catalog. All examples and tests in §9 reference these exact strings.
 
 ### Coverage (`explain_metric_coverage`)
 
@@ -362,8 +416,8 @@ If a future `metrics_batch(symbols)` helper is added, it returns per-symbol resu
 
 > **Id renames (reviewer Q2)** for clarity/disambiguation: `net_revenue` (not `revenue`),
 > `total_liabilities` (not `liabilities`), `owners_equity` (not `equity`), `cash_end_of_period`
-> (not `cash_end`). Bank `total_liabilities`/`owners_equity` reuse the same canonical ids via
-> `bank_code`.
+> (not `cash_end`). Bank `total_liabilities`/`owners_equity` reuse the same canonical ids via the
+> `bank_code` inside `codes_by_source["vndirect"]`.
 
 | MetricId | code | category |
 |----------|------|----------|
@@ -408,8 +462,8 @@ If a future `metrics_batch(symbols)` helper is added, it returns per-symbol resu
 
 > `profit_before_tax`, `net_income`, `total_assets`, `total_liabilities`, `owners_equity`, and the
 > cashflow trio are **shared canonical ids** (reviewer Q2 APPROVED) with **different underlying codes
-> per entity type** (one `MetricId`,
-> `corporate_code` + `bank_code` on the definition). `applies_to=BOTH` for those; corporate-only
+> per entity type** (one `MetricId`, with `codes_by_source["vndirect"]` carrying both
+> `corporate_code` and `bank_code`). `applies_to=BOTH` for those; corporate-only
 > margins are `applies_to=CORPORATE`; bank-specific lines are `applies_to=BANK`.
 
 ### v1 — derived (formula-backed, guarded)
@@ -423,7 +477,7 @@ If a future `metrics_batch(symbols)` helper is added, it returns per-symbol resu
 | operating_cash_flow_margin | operating_cash_flow / net_revenue | CORPORATE | ratio |
 
 (For banks, revenue-based margins are `NOT_APPLICABLE`; `liabilities_to_equity` uses the bank codes
-via `bank_code` on the shared `total_liabilities`/`owners_equity` definitions.)
+via `codes_by_source["vndirect"].bank_code` on the shared `total_liabilities`/`owners_equity` defs.)
 
 ### v1.x — CafeF code-namespace map (deferred, C3)
 
@@ -478,7 +532,7 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
 - **corporate extraction:** fake income+balance+cashflow → `MetricReport` with correct raw_mapped
   ids/units/values, newest-first, `is_bank=False`.
 - **bank extraction:** fake bank reports (modelType 101/102/103 codes) → bank metrics; corporate-only
-  margins `NOT_APPLICABLE`; shared ids resolve via `bank_code`.
+  margins `NOT_APPLICABLE`; shared ids resolve via `codes_by_source["vndirect"].bank_code`.
 - **derived metrics:** correct values; **denominator zero / negative / missing → MISSING/BLOCKED**
   with stable `reason`, value `None` (assert never `inf`/`NaN`).
 - **missing-input diagnostics:** drop a required line → metric `MISSING`, reason names the input.
@@ -486,8 +540,17 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
   `unmapped_codes` populated; named count correct.
 - **ratios NOT fetched in v1 (B7):** assert `metrics()`/`explain_metric_coverage()` make **zero**
   ratio (`StatementType.RATIOS`) calls and `ratio_status == "not_requested"` for every period.
-- **pure transformer (B4):** `_metrics_from_reports(...)` builds correct `MetricReport`s from
-  synthetic `FinancialReport`s with **no HTTP** (the primary unit-test seam).
+- **pure transformers (B1/B4):** `_metrics_from_statement_results(...)` and
+  `_coverage_from_statement_results(...)` build correct `MetricReport`s / `MetricCoverage` from
+  synthetic `StatementFetchResult`s — including **failed** statements (`SOURCE_ERROR`/`NOT_SERVED`)
+  — with **no HTTP** (the primary unit-test seam). Cover the fiscal-date union/alignment + `limit` cap.
+- **exact reason strings (B4):** for each row of the reason table, assert `MetricValue.reason` equals
+  the exact constant (e.g. `denominator net_revenue is zero`, `metric map not available for source
+  'cafef'`).
+- **typed coverage (B2):** `StatementProvenance.status` is a `StatementCoverageStatus`, `ratio_status`
+  is `RatioCoverageStatus.NOT_REQUESTED`, `per_metric` entries are `MetricCoverageItem` (not tuples).
+- **dataframe contract (B6):** `MetricReport.to_dataframe()` has the exact fixed columns; `df.attrs`
+  has `symbol/period/fiscal_date/is_bank/statement_sources` and **no `source` key**.
 - **full-catalog invariant (B6):** every `MetricReport` contains a `MetricValue` for every v1 metric;
   `get()` returns a value (possibly `NOT_APPLICABLE`/`MISSING`/`BLOCKED`) for any known id.
 - **lineage not via `get()` (B8):** a raw_mapped `MetricValue.inputs[0]` carries `value_unit`/code/
@@ -517,7 +580,8 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
 - [x] Exact non-goals (§2).
 - [x] Test matrix (§9).
 - [x] Source / legal statement (§8).
-- [x] **rev2:** all 8 review blockers (B1-B8, review-202606201230) resolved in §3/§3.5/§4/§5/§6/§9 (§11).
+- [x] **rev2:** all 8 review blockers (B1-B8, review-202606201230) resolved (§11).
+- [x] **rev2.2:** all 7 spec-precision blockers (review-202606201245) resolved (§12); no open questions.
 - [ ] **No implementation code** until the reviewer approves this revised design.
 
 ## 11. Blocker resolutions (review-202606201230) + reviewer-answered questions
@@ -530,8 +594,8 @@ trail deferred to a possible `get_financials(..., return_attempts=True)` v2 (§3
 **B3 — vague coverage:** replaced loose dict/tuple with frozen typed records `StatementProvenance` /
 `MetricCoverageItem` / `PeriodCoverage` (no bare tuple-of-tuples); coverage is **per fiscal_date** (§4).
 **B4 — signatures/injection:** exact `metrics()`/`explain_metric_coverage()` signatures with
-`is_bank/limit/source/sources/http_get/timeout/max_attempts` + private pure `_metrics_from_reports`
-transformer for HTTP-free tests (§3, §9).
+`is_bank/limit/source/sources/http_get/timeout/max_attempts` + private pure
+`_metrics_from_statement_results`/`_coverage_from_statement_results` transformers for HTTP-free tests (§3, §9).
 **B5 — module collision:** implementation module is `metric_api.py`, not `metrics.py` (§3).
 **B6 — NOT_APPLICABLE invariant:** every report carries the **full catalog**; applicability via
 `availability`, never omission; `get()` returns a value even when unavailable (§5).
@@ -547,7 +611,26 @@ Q3 EPS/BV — defer (v2). Q4 `metrics_batch` — not in v1 (docs-only loop). Q5 
 expanded to `metric_id,name,value,value_unit,kind,availability,reason,category,applies_to,fiscal_date`
 (+ `input_codes`/`input_sources` where practical) (§4).
 
-## 12. Remaining question for the reviewer
+## 12. REV2.1/2.2 blocker resolutions (review-202606201245)
 
-1. The reviewer mentioned "a clearer end-of-period cash id" — this design uses `cash_end_of_period`
-   (VNDirect `35000`). Confirm that id name, or suggest an alternative.
+The REV2 re-review (a0a00cc) raised 7 spec-precision blockers; all resolved here (no open questions
+remain — implementation-ready):
+
+- **B1 pure seam insufficient:** added typed `StatementFetchResult(statement, reports, status,
+  source, detail)`; two pure transformers `_metrics_from_statement_results` /
+  `_coverage_from_statement_results` consume success **and** failure; explicit fiscal-date alignment
+  rule (union of successful-statement dates, newest-first, cap by `limit` after alignment) (§3).
+- **B2 coverage not fully typed:** added `StatementCoverageStatus` + `RatioCoverageStatus` enums and
+  `MetricSourceCodes`; `StatementProvenance.status`/`ratio_status`/`per_metric` are now typed
+  (`MetricCoverageItem`) — no loose strings/tuples (§4).
+- **B3 namespace must be modeled:** `MetricDefinition.codes_by_source: Mapping[str, MetricSourceCodes]`
+  (v1 only `"vndirect"`); generic `corporate_code`/`bank_code` removed so a CafeF code can never sit
+  in a VNDirect slot; `explain_metric()` surfaces the namespaced mapping (§4/§5).
+- **B4 exact reasons:** added the exact availability + reason-string table; all examples/tests bind
+  to it verbatim (§5).
+- **B5 stale attempts phrase:** §3 now says "warnings + succeeding source only; no failed-attempt
+  trail in v1" (rev2.1).
+- **B6 dataframe contract:** exact fixed columns + exact `df.attrs` (`symbol, period, fiscal_date,
+  is_bank, statement_sources`); **`df.attrs["source"]` explicitly forbidden** (C2) (§4).
+- **B7 cash id:** reviewer approved `cash_end_of_period` (VNDirect `35000`) — **resolved, no open
+  question.** Also added "`source` wins over `sources`" to the signature notes (§3, non-blocker #2).
