@@ -72,7 +72,19 @@ class FXHistory(TimeSeriesResult):
         NEVER forward-fills, interpolates, or picks a nearest date. For the annual v1
         series the caller must pass the stamped key (Jan 1 of the year) — use
         :meth:`rate_for_year` for year-keyed sugar.
+
+        This is a public, user-facing accessor, so it fails closed: ``d`` must be a
+        plain :class:`datetime.date`. A :class:`datetime.datetime` (a ``date`` subclass),
+        ``bool``, ``str``, ``None``, etc. raises :class:`InvalidData` rather than leaking
+        a raw ``AttributeError``/``TypeError``.
         """
+        # `datetime` is a subclass of `date`; require the exact type so a datetime's
+        # time component cannot silently never-match an annual Jan-1 key.
+        if type(d) is not date:
+            raise InvalidData(
+                f"{self.source}: rate_on requires a plain datetime.date, "
+                f"got {type(d).__name__}"
+            )
         for p in self.points:
             if p.date == d:
                 return p.rate
@@ -82,7 +94,20 @@ class FXHistory(TimeSeriesResult):
         )
 
     def rate_for_year(self, year: int) -> float:
-        """Exact rate for ``year`` (sugar over ``rate_on(date(year, 1, 1))``)."""
+        """Exact rate for ``year`` (sugar over ``rate_on(date(year, 1, 1))``).
+
+        Public accessor: ``year`` must be a non-bool ``int`` in ``1..9999``; a ``str``,
+        ``float``, ``bool``, or out-of-range value raises :class:`InvalidData` (a ``bool``
+        is never coerced to year 0/1).
+        """
+        if isinstance(year, bool) or not isinstance(year, int):
+            raise InvalidData(
+                f"{self.source}: rate_for_year requires an int year, got {year!r}"
+            )
+        if not 1 <= year <= 9999:
+            raise InvalidData(
+                f"{self.source}: rate_for_year year {year} is out of range 1..9999"
+            )
         return self.rate_on(date(year, 1, 1))
 
     def latest(self) -> Optional[FXPoint]:

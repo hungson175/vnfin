@@ -37,9 +37,10 @@ Requires Python ≥ 3.10. No API key is needed for the default path of any domai
    runs inside every failover client — it refuses to mix or relabel units, so a chain can never
    silently return a wrong-scale number.
 4. **`start`/`end` are required for history and validated up front.** `prices.history`,
-   `indices.index_history`, and `gold ...get_history` raise `vnfin.exceptions.InvalidData` /
-   `VnfinError` **before any network call** if a date is missing/mistyped or `start > end`. (FX
-   has **no history** in v0.2 — it is a single current quote.)
+   `indices.index_history`, `gold ...get_history`, and `fx.history` raise
+   `vnfin.exceptions.InvalidData` / `VnfinError` **before any network call** if a date is
+   missing/mistyped or `start > end`. (FX has **two shapes**: `fx.get_rate()`/`FXRate` is a single
+   current quote; `fx.history()`/`FXHistory` is an annual USD/VND series via World Bank.)
 5. **`.to_dataframe()` needs the optional `pandas` extra.** The typed dataclasses work without
    pandas; install `vnfin[pandas]` to enable DataFrame conversion.
 
@@ -53,7 +54,7 @@ Requires Python ≥ 3.10. No API key is needed for the default path of any domai
 | `vnfin.indices` | `client()` / `index_history()` / `index_constituents()` | `PriceHistory` (+ `IndexConstituents`) | **points** | ✅ |
 | `vnfin.gold` | `vn()` / `world()` / `source(provider)` (**no `client()`**) | `GoldQuote` / `GoldHistory` | **VND/lượng** or **USD/oz** | ✅ |
 | `vnfin.crypto` | `client()` / `source()` | `CryptoHistory` (OHLCV) | **USD** | ✅ |
-| `vnfin.fx` | `client()` / `source()` / `get_rate()` | `FXRate` (spot only) | **VND per 1 base** | ✅ |
+| `vnfin.fx` | `client()` / `source()` / `get_rate()` (spot); `history()` (annual USD/VND) | `FXRate` (spot) / `FXHistory` (history) | **VND per 1 base** | ✅ |
 | `vnfin.macro` | `client()` / `source()` / `get_indicator()` | `IndicatorSeries` | per-indicator | ✅ (FRED BYOK opt-in) |
 
 ## 3. Quickstart
@@ -247,11 +248,13 @@ print(hist.base_asset, hist.quote_asset, hist.price_unit)   # ETH USD 'USD per E
   **rejected by the USD failover client** (never mislabeled). Coinbase has no W1/MN1 bars (skipped
   for those). Timestamps are tz-aware **UTC** (crypto is 24/7).
 
-### 5.7 `vnfin.fx` — FX reference rates (VND per 1 unit; spot only)
+### 5.7 `vnfin.fx` — FX reference rates (VND per 1 unit; spot + annual history)
 
 ```python
+from datetime import date
 import vnfin
 
+# Spot/current
 r = vnfin.fx.get_rate("USD")                       # FXRate; failover open.er-api → Vietcombank
 print(r.base, r.quote, r.rate, r.unit)             # 'USD' 'VND' 26111.0 'VND per 1 USD'
 
@@ -260,12 +263,23 @@ print(c.get_rate("USD").rate, c.get_rate("EUR").rate)
 
 vcb = vnfin.fx.VietcombankFXSource().get_rate("USD")   # bid/ask (Buy/Sell) populated by VCB
 print(vcb.rate, vcb.bid, vcb.ask)
+
+# Annual history (issue #159) — USD/VND via World Bank PA.NUS.FCRF (no key)
+h = vnfin.fx.history("USD", "VND", start=date(2010, 1, 1), end=date(2024, 12, 31))
+print(h.source, h.unit, h.frequency.value, len(h))     # 'worldbank_fx' 'VND per 1 USD' 'annual' 15
+print(h.rate_for_year(2024))                            # exact-match-or-raise (never fills)
 ```
 
-- **Gotchas:** **spot/current only** (no history in v0.2; `FXRate` is one quote). Quote is
-  **VND-only** (other quote → `InvalidData`). Unit is **VND per 1 base** (not base per VND).
-  `bid`/`ask` only from Vietcombank (its `Transfer` rate is a commercial reference quote, **not**
-  the SBV central rate). Malformed ISO code → `InvalidData` before any network call.
+- **Gotchas (spot):** `get_rate()`/`FXRate` is **point-in-time** (one quote). Quote is **VND-only**
+  (other quote → `InvalidData`). Unit is **VND per 1 base** (not base per VND). `bid`/`ask` only
+  from Vietcombank (its `Transfer` rate is a commercial reference quote, **not** the SBV central
+  rate). Malformed ISO code → `InvalidData` before any network call.
+- **Gotchas (history):** `history()`/`FXHistory` is **annual USD/VND only** (monthly + non-USD
+  cross-quotes are deferred to v2). The annual point is a **period-average** rate stamped Jan 1
+  (not year-end, not SBV central). `rate_on(date)` / `rate_for_year(year)` are **exact-match-or-
+  raise** — they never forward-fill or interpolate. Unsupported pair, bad frequency, or
+  missing/mistyped/reversed dates → `InvalidData` before any network call (via the `history()`
+  facade **and** a direct `WorldBankFXHistorySource().get_history(...)` call).
 
 ### 5.8 `vnfin.macro` — cross-country macro indicators
 

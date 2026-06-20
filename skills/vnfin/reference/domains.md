@@ -87,12 +87,13 @@ h = crypto.client().get_klines("BTCUSDT", Interval.D1, date(2024,1,1), date(2024
 print(h.currency, h.bars[-1].close)   # 'USD' ...
 ```
 
-## fx — reference rates (VND per 1 base; spot only)
+## fx — reference rates (VND per 1 base; spot + annual history)
 
-- **Entry:** `vnfin.fx.get_rate(base, quote="VND", *, http_get=None, timeout=25.0)` → `FXRate`; `vnfin.fx.client()` → `FailoverFXClient` with `.get_rate(base, quote="VND")`; `vnfin.fx.source()` → `OpenErApiFXSource`; `vnfin.fx.VietcombankFXSource()` for bid/ask.
-- **Failover:** open.er-api → Vietcombank.
-- **Result:** `FXRate(base, quote='VND', rate, unit='VND per 1 {base}', as_of_utc, source, bid, ask)`.
-- **Gotchas:** **spot/current only** (no history in v0.2). Quote VND-only (else `InvalidData`). Unit is **VND per 1 base**. `bid`/`ask` only from Vietcombank (its `Transfer` is a commercial reference quote, not the SBV central rate). Sources cache ~1h (reuse one `client()`). Malformed ISO → `InvalidData` pre-network.
+- **Entry (spot):** `vnfin.fx.get_rate(base, quote="VND", *, http_get=None, timeout=25.0)` → `FXRate`; `vnfin.fx.client()` → `FailoverFXClient` with `.get_rate(base, quote="VND")`; `vnfin.fx.source()` → `OpenErApiFXSource`; `vnfin.fx.VietcombankFXSource()` for bid/ask.
+- **Entry (history, #159):** `vnfin.fx.history(base="USD", quote="VND", start=None, end=None, *, frequency=Frequency.ANNUAL)` → `FXHistory` (annual USD/VND via World Bank `PA.NUS.FCRF`, no key); `vnfin.fx.WorldBankFXHistorySource().get_history(...)`. `FXHistory.rate_on(date)` / `rate_for_year(year)` are **exact-match-or-raise** (never fill/interpolate).
+- **Failover:** spot open.er-api → Vietcombank; history is single-source (World Bank).
+- **Result:** `FXRate(base, quote='VND', rate, unit='VND per 1 {base}', as_of_utc, source, bid, ask)`; `FXHistory(base, quote, points=(FXPoint(date, rate),...), unit, frequency, source='worldbank_fx', ...)`.
+- **Gotchas:** spot (`get_rate`/`FXRate`) is point-in-time; **history (`history`/`FXHistory`) is annual USD/VND only** (monthly + non-USD cross-quotes are v2; period-average rate, not year-end/SBV-central). Quote VND-only (else `InvalidData`). Unit is **VND per 1 base**. `bid`/`ask` only from Vietcombank (its `Transfer` is a commercial reference quote, not the SBV central rate). Sources cache ~1h (reuse one `client()`). Malformed ISO / unsupported pair / bad dates → `InvalidData` pre-network (facade **and** direct source).
 
 ```python
 import vnfin

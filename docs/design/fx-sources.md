@@ -114,9 +114,12 @@ Reuse the generic `vnfin.failover.FailoverClient`:
 
 ## Limitations (documented for users)
 
-- **Spot/current only** — no historical FX in v0.2 (no-key sources don't offer it). Historical FX
-  is a future BYOK enhancement (paid ExchangeRate-API / fixer / ECB for non-VND).
-- Quote currency is **VND only** in v0.2; arbitrary cross-quotes are out of scope.
+- **This (spot) design is current/point-in-time only** — `get_rate()`/`FXRate` is a single quote
+  (the no-key *spot* sources don't offer history). **Historical FX now ships separately** as
+  `vnfin.fx.history()` -> `FXHistory` (annual USD/VND via World Bank `PA.NUS.FCRF`, issue #159; see
+  [`fx-history.md`](fx-history.md)). Monthly / non-USD cross-quote history remains a future v2
+  enhancement (IMF/DBnomics, paid ExchangeRate-API / fixer / ECB for non-VND).
+- Spot quote currency is **VND only**; arbitrary spot cross-quotes are out of scope.
 
 ## Legal / provenance (must appear in the adapter docs)
 

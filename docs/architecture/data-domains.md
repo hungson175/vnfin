@@ -15,7 +15,7 @@
 | Gold (VN) | `vnfin.gold.vn` | VND/luong | No (pick one) | BTMC or PNJ | spot only |
 | Gold (world) | `vnfin.gold.world` | USD/oz | Yes (history) | CurrencyApi (default); Stooq (opt-in) | daily EOD |
 | Crypto | `vnfin.crypto` | USD | Yes | Binance -> Coinbase | D1 + intraday |
-| FX | `vnfin.fx` | VND per 1 unit | Yes | open.er-api -> Vietcombank | spot/current only (v0.2) |
+| FX | `vnfin.fx` | VND per 1 unit | Yes | open.er-api -> Vietcombank (spot); World Bank (history) | spot via `get_rate`; annual USD/VND history via `history()` (#159) |
 | Macro | `vnfin.macro` | indicator-specific | Yes | WorldBank -> IMF -> DBnomics; FRED (BYOK, opt-in) | annual (primary); quarterly/monthly varies |
 | News | `vnfin.news` | — | No (BYOK) | Alpha Vantage (api_key required) | daily headline metadata |
 | Diagnostics | `vnfin.diagnostics` | — | N/A (offline) | static registry (no network) | — |
@@ -203,8 +203,10 @@ Both emit USD-denominated OHLCV. `FailoverCryptoClient` enforces unit homogeneit
 | `OpenErApiFXSource` | open.er-api, no key; primary |
 | `VietcombankFXSource` | Vietcombank XML; failover |
 
-Unit: VND per 1 unit of the base currency. Spot/current rates only in v0.2 (no history).
-Both sources quote VND-per-foreign-unit; unit-homogeneity guard is satisfied.
+Unit: VND per 1 unit of the base currency. `get_rate()`/`FXRate` are spot/current; the spot
+sources above quote VND-per-foreign-unit (unit-homogeneity guard satisfied). Historical FX is
+served separately by `vnfin.fx.history()` -> `FXHistory` (annual USD/VND via World Bank
+`PA.NUS.FCRF`, issue #159; `WorldBankFXHistorySource`) — see `docs/design/fx-history.md`.
 
 **Key contract enforcements:**
 - Vietcombank rejects duplicate `CurrencyCode` rows (issue #28).

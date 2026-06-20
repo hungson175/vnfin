@@ -23,9 +23,11 @@ import math
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from ..exceptions import InvalidData
+from ..exceptions import EmptyData, InvalidData
 from ..macro.indicators import Frequency
 from ..macro.worldbank import WorldBankMacroSource
+from ..validation import validate_date_range
+from .base import _ISO4217
 from .history_models import FXHistory, FXPoint
 
 #: WB official exchange rate indicator (LCU per US$, period average), annual.
@@ -50,6 +52,16 @@ class WorldBankFXHistorySource:
     def name(self) -> str:
         return self.NAME
 
+    def _normalize_ccy(self, code, label: str) -> str:
+        """Validate an ISO-4217 alphabetic code (3 letters) and upper-case it.
+
+        Mirrors the spot :class:`FXSource._normalize_ccy` / facade contract so the
+        PUBLIC source class is independently fail-closed (a direct caller does not get
+        the facade's validation for free)."""
+        if not isinstance(code, str) or not _ISO4217.fullmatch(code.strip()):
+            raise InvalidData(f"{self.NAME}: invalid ISO-4217 {label} currency code {code!r}")
+        return code.strip().upper()
+
     def get_history(
         self,
         base: str = "USD",
@@ -59,19 +71,36 @@ class WorldBankFXHistorySource:
     ) -> FXHistory:
         """Fetch the annual ``base``/``quote`` series and map it to :class:`FXHistory`.
 
+        This PUBLIC method enforces the v1 contract itself (it is exported and may be
+        called directly, bypassing :func:`vnfin.fx.history`): ``base``/``quote`` are
+        validated for ISO-4217 shape and restricted to **USD/VND**, and ``start``/``end``
+        are validated, all **before any network call** — an unsupported pair or malformed
+        date raises :class:`~vnfin.exceptions.InvalidData`, never a raw ``KeyError`` /
+        ``AttributeError`` or a mislabeled series.
+
         ``start``/``end`` are interpreted as an inclusive **calendar-year** window
         (by ``.year``), so a mid-year ``start`` never drops the Jan-1-stamped annual
         point of that year. ``None`` bounds mean "no lower/upper limit".
         """
-        country = _QUOTE_COUNTRY[quote]
-        unit = f"{quote} per 1 {base}"
+        # Fail-closed BEFORE any network call (B1/B2): shape + supported-pair + dates.
+        b = self._normalize_ccy(base, "base")
+        q = self._normalize_ccy(quote, "quote")
+        if b != "USD" or q != "VND":
+            raise InvalidData(
+                f"{self.NAME}: only USD/VND is supported in v1, got {b}/{q} "
+                "(non-USD cross-quotes are deferred to v2)"
+            )
+        lo, hi = validate_date_range(start, end, allow_none=True, name="worldbank_fx.history")
+
+        country = _QUOTE_COUNTRY[q]
+        unit = f"{q} per 1 {b}"
         # Fetch the full annual series (one page) and filter locally by year so the
         # one-sided/two-sided window semantics are fully under our control (the WB
         # raw fetch treats a single year bound as a single-year window, which is wrong here).
         series = self._wb.get_indicator(country, _FCRF_CODE)
 
-        lo_year = start.year if start is not None else None
-        hi_year = end.year if end is not None else None
+        lo_year = lo.year if lo is not None else None
+        hi_year = hi.year if hi is not None else None
 
         points: list[FXPoint] = []
         for d, value in series.points:
@@ -82,16 +111,14 @@ class WorldBankFXHistorySource:
             points.append(FXPoint(date=d, rate=self._validate_rate(value, d)))
 
         if not points:
-            from ..exceptions import EmptyData
-
             raise EmptyData(
-                f"{self.NAME}: no {base}/{quote} observations in requested window"
+                f"{self.NAME}: no {b}/{q} observations in requested window"
             )
 
         points.sort(key=lambda p: p.date)
         return FXHistory(
-            base=base,
-            quote=quote,
+            base=b,
+            quote=q,
             points=tuple(points),
             unit=unit,
             frequency=Frequency.ANNUAL,

@@ -283,3 +283,99 @@ def test_fx_capability_in_registry():
     assert fx[0].granularity == "annual"
     assert fx[0].coverage_start == dt.date(1983, 1, 1)
     assert fx[0].is_single_source
+
+
+# --------------------------------------------------------------------------- #
+# BLOCKERS (review-202606201054) — direct public-source contract + accessors
+# --------------------------------------------------------------------------- #
+# B1: WorldBankFXHistorySource.get_history() is public/exported; it must enforce
+# the USD/VND contract itself (the facade is not the only entry point) and never
+# mislabel another pair or leak a raw KeyError — fail closed BEFORE any network call.
+def test_b1_source_rejects_non_usd_base_no_network():
+    # was: mislabeled WB VND/USD series as "VND per 1 EUR"
+    src = WorldBankFXHistorySource(http_get=_no_network)
+    with pytest.raises(InvalidData):
+        src.get_history("EUR", "VND")
+
+
+@pytest.mark.parametrize("quote", ["JPY", "USD", "EUR"])
+def test_b1_source_rejects_unsupported_quote_no_network(quote):
+    # was: an unsupported quote leaked a raw KeyError from _QUOTE_COUNTRY[quote]
+    src = WorldBankFXHistorySource(http_get=_no_network)
+    with pytest.raises(InvalidData):
+        src.get_history("USD", quote)
+
+
+@pytest.mark.parametrize("base,quote", [("usd", "vnd"), ("USD", " vnd "), (" usd ", "VND")])
+def test_b1_source_normalizes_lowercase_padded_usd_vnd(base, quote):
+    # lowercase/padded codes are valid ISO shape -> normalized to USD/VND, not a KeyError
+    src = WorldBankFXHistorySource(http_get=_http(_WB_VNM))
+    h = src.get_history(base, quote)
+    assert h.base == "USD" and h.quote == "VND" and h.unit == "VND per 1 USD"
+
+
+@pytest.mark.parametrize("bad", ["US", "USDD", "U$D", "", "   ", 840, None])
+def test_b1_source_rejects_malformed_iso_codes_no_network(bad):
+    src = WorldBankFXHistorySource(http_get=_no_network)
+    with pytest.raises(InvalidData):
+        src.get_history(bad, "VND")
+
+
+# B2: the public source must preflight date bounds/types BEFORE any network call.
+def test_b2_source_reversed_range_raises_before_network():
+    # was: EmptyData after fetch/filter (network already hit)
+    src = WorldBankFXHistorySource(http_get=_no_network)
+    with pytest.raises(InvalidData):
+        src.get_history("USD", "VND", start=dt.date(2024, 1, 1), end=dt.date(2020, 1, 1))
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"start": "2020-01-01"},   # was: AttributeError 'str' has no attribute 'year'
+    {"end": True},             # was: AttributeError 'bool' has no attribute 'year'
+    {"start": 2020},
+    {"end": 2024.0},
+])
+def test_b2_source_malformed_date_types_raise_before_network(kwargs):
+    src = WorldBankFXHistorySource(http_get=_no_network)
+    with pytest.raises(InvalidData):
+        src.get_history("USD", "VND", **kwargs)
+
+
+def test_b2_source_valid_dates_still_work():
+    # regression guard: hardening must not break the happy path / year-inclusive semantics
+    src = WorldBankFXHistorySource(http_get=_http(_WB_VNM))
+    h = src.get_history("USD", "VND", start=dt.date(2021, 7, 15), end=dt.date(2022, 6, 30))
+    assert [p.date.year for p in h.points] == [2021, 2022]
+    assert h.base == "USD" and h.quote == "VND" and h.unit == "VND per 1 USD"
+
+
+# B3: rate_on / rate_for_year are public accessors; malformed input fails closed.
+def _vnm_history():
+    return history(http_get=_http(_WB_VNM))
+
+
+@pytest.mark.parametrize("bad", [
+    "2021-01-01",
+    None,
+    True,
+    2021,
+    1.5,
+    dt.datetime(2021, 1, 1),   # datetime is a date subclass -> must still be rejected
+])
+def test_b3_rate_on_rejects_non_date(bad):
+    h = _vnm_history()
+    with pytest.raises(InvalidData):
+        h.rate_on(bad)
+
+
+@pytest.mark.parametrize("bad", ["2021", 1.5, True, None, 0, 10000])
+def test_b3_rate_for_year_rejects_non_int_or_out_of_range(bad):
+    h = _vnm_history()
+    with pytest.raises(InvalidData):
+        h.rate_for_year(bad)
+
+
+def test_b3_accessors_happy_path_unaffected():
+    h = _vnm_history()
+    assert h.rate_on(dt.date(2024, 1, 1)) == pytest.approx(25000.0)
+    assert h.rate_for_year(2024) == pytest.approx(25000.0)

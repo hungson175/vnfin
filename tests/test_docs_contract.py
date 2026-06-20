@@ -252,3 +252,47 @@ def test_fx_history_entrypoints_and_docs():
             if "start=" not in ln and bad.search(ln):
                 offenders.append(f"{md.relative_to(root)}: {ln.strip()}")
     assert not offenders, "positional-date fx.history in docs: " + "; ".join(offenders)
+
+
+def test_fx_docs_do_not_claim_fx_has_no_history():
+    """Guard (review-202606201054 B4): now that vnfin.fx.history exists, agent-/user-facing
+    docs must not regress to claiming FX is spot-only / has no history.
+
+    Two-sided: (a) FX-specific no-history phrases (which never describe gold's separate
+    "spot only" sources) are forbidden anywhere in the FX doc files; (b) each FX doc must
+    positively affirm the history entrypoint, so deleting the history docs also fails.
+    """
+    import pathlib, re
+
+    root = pathlib.Path(__file__).resolve().parent.parent
+    fx_doc_files = [
+        "docs/ai-usage.md",
+        "skills/vnfin/reference/domains.md",
+        "docs/architecture/data-domains.md",
+        "docs/architecture/maintainer-workflow.md",
+        "vnfin/fx/__init__.py",
+    ]
+    # FX-specific denials of history. These phrasings were the stale ones and do NOT occur
+    # in gold's legitimate "spot only" rows (gold uses bare "spot only", never these).
+    forbidden = re.compile(
+        r"no history in v0\.2|no historical fx|spot/current only|"
+        r"history deferred to a future issue",
+        re.I,
+    )
+    forbidden_offenders = []
+    affirm_missing = []
+    for rel in fx_doc_files:
+        text = (root / rel).read_text()
+        for ln in text.splitlines():
+            if forbidden.search(ln):
+                forbidden_offenders.append(f"{rel}: {ln.strip()}")
+        low = text.lower()
+        if "fx.history" not in low and "fxhistory" not in low:
+            affirm_missing.append(rel)
+    assert not forbidden_offenders, (
+        "stale 'FX has no history' doc claims: " + " | ".join(forbidden_offenders)
+    )
+    assert not affirm_missing, (
+        "FX docs must document the history entrypoint (fx.history/FXHistory): "
+        + ", ".join(affirm_missing)
+    )

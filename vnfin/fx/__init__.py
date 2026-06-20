@@ -1,12 +1,15 @@
 """FX domain: daily/current foreign-exchange reference rates vs VND (no-key).
 
-Canonical unit: **VND per 1 unit of the base currency** (e.g. USD/VND ≈ 26,000). Spot/current
-only — no history in v0.2 (see ``docs/design/fx-sources.md``). Standard facade verbs:
+Canonical unit: **VND per 1 unit of the base currency** (e.g. USD/VND ≈ 26,000). Two shapes:
+**spot/current** (``get_rate`` -> ``FXRate``, a single quote; see ``docs/design/fx-sources.md``)
+and **annual history** (``history`` -> ``FXHistory``, USD/VND from World Bank ``PA.NUS.FCRF``;
+see ``docs/design/fx-history.md``). Standard facade verbs:
 
     import vnfin
-    r  = vnfin.fx.get_rate("USD")          # one-shot FXRate (failover chain)
-    c  = vnfin.fx.client()                 # FailoverFXClient (open.er-api -> Vietcombank)
-    s  = vnfin.fx.source()                 # OpenErApiFXSource (primary only)
+    r  = vnfin.fx.get_rate("USD")          # one-shot FXRate (failover chain, spot)
+    c  = vnfin.fx.client()                 # FailoverFXClient (open.er-api -> Vietcombank, spot)
+    s  = vnfin.fx.source()                 # OpenErApiFXSource (primary only, spot)
+    h  = vnfin.fx.history("USD", "VND")    # FXHistory (annual USD/VND via World Bank, #159)
 
 Sources are clean-room, no-key: open.er-api (primary) + Vietcombank XML (failover). Both quote
 VND-per-foreign-unit, so the unit-homogeneity guard is satisfied. Data is runtime-fetch only;

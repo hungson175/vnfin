@@ -163,7 +163,7 @@ GitHub issues for them without Boss direction.
 |------|------|
 | Funds NAV: no clean no-auth backup | Single-source accepted in v0.2 |
 | Index constituents: no clean fallback | Single-source; `diagnostics.explain_index_constituents` covers the gap |
-| FX: spot/current only (v0.2) | History deferred to a future issue |
+| FX spot via `get_rate`/`FXRate`; annual USD/VND history via `history()`/`FXHistory` (#159) | Monthly + non-USD cross-quote history deferred to v2 |
 | Gold: VN domestic spot failover client | Two spot sources exist (BTMC, PNJ) but no combined failover client |
 | Accepted exchange allow-list / symbol contradiction policy | Not yet specified; requires product/legal input |
 | Intraday intervals: best-effort only | No SLA; may be added or extended per future provider research |
