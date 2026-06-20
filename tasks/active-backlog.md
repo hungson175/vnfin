@@ -176,8 +176,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   prices guard, VNINDEX passes index guard; liquidity inherits. New private `_contracts/index_registry.py`.
   **ONE judgment call for reviewer:** sector indices (VNCOND…VNUTI) are **deny-only** (rejected in
   prices) but **NOT allow-listed** in index_history (no per-symbol value-history test; doc says VPS
-  serves them) — a later reviewer-gated 1-line expansion. NEXT: reviewer code review (range
-  `b20b246..53519ff`) → push+close #168 on APPROVE.
+  serves them) — a later reviewer-gated 1-line expansion. Code-review BLOCK (review-202606201352):
+  missing alias HNXUPCOMINDEX in price deny-list → FIXED `f7ab8f9` (deny-only + 5 zero-network
+  regressions; suite 2847, snapshot unchanged, cov 95%). NEXT: reviewer re-review (range
+  `b20b246..f7ab8f9`) → push+close #168 on APPROVE.
 
 - **#168 (orig spec):** price/index namespaces must **fail loud on wrong asset type**, not silently
   return wrong-typed data:
@@ -201,10 +203,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   VNFINLEAD/VNFINSELECT. Zero-network TDD; liquidity inherits price guard only. **PROCEED with TDD
   now (#157 rev2.5 patch done).** → delegate to a sub-agent.
 
+- **#171 — docs/diagnostics polish: world-gold opt-in Stooq path** (poller triage review-202606201355).
+  In-scope docs/enhancement; PARKED behind #168/#169/#157. Make the opt-in Stooq path unambiguous —
+  either expose a supported factory OR update diagnostics suggested_actions + docs/api.md with exact
+  manual opt-in (`StooqGoldSource` + `default_world_gold_client`). Do NOT add Stooq to the default chain.
 - **#170 — design-first: domestic VN gold history / diagnostics** (poller triage review-202606201348).
   In-scope; PARKED behind #168/#169/#157. NO implementation without a source/legal/provenance design.
-- **#169 — HIGH data-coverage BUG: crypto long-window partial coverage** (reviewer spec
-  review-202606201334). Queue AFTER #168, BEFORE large #157 implementation. Crypto daily history must
+- **#169 — HIGH data-coverage BUG: crypto long-window partial coverage — DESIGN APPROVED (option B)**
+  (spec review-202606201334; design choice review-202606201356). Queue AFTER #168 closes, BEFORE large
+  #157 impl. **Approved contract:** failover-first; full-coverage = `first_bar.date<=start AND
+  last_bar.date>=end`; partial primary → reject → backup; if a backup fully covers → select it; if NONE
+  covers → return **best-available** (maximize covered requested-day overlap, then source order) + an
+  exact `partial_coverage` warning constant naming requested start/end + returned first/last dates;
+  no coverage check when start/end unset; retain identity/unit/value guards. Zero-network synthetic TDD
+  (short-prefix primary + full backup; both-partial; prefix+suffix gaps; full unchanged; unbounded
+  unchanged). No new provider/scraping; no explain_crypto_coverage in this slice. → delegate TDD after #168. Crypto daily history must
   not silently accept a primary-source result whose returned window starts after requested `start` /
   ends before requested `end`:
   1. client/failover-level requested-window coverage validation for crypto daily history;
