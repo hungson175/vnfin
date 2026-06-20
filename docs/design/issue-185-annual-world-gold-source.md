@@ -24,15 +24,36 @@ Since #178's OUTPUT is **annual**, the fix is an **annual** world-gold source th
 
 ## 2. Recommended source — World Bank CMO "Pink Sheet" annual gold (verified clean + server-reachable)
 
+> **CODE-TIME ACQUISITION FINDINGS (2026-06-21, supersede the design assumptions below):**
+> A primary-source agent resolved + downloaded the real current vintage and verified its contents.
+> Two material corrections, folded into D2/D4/§6:
+> 1. **Full vintage hash is the 32-char `74e8be41ceb20fa0da750cda2f6b9e4e`** — the truncated `74e8be41`
+>    from earlier notes **404s**. Confirmed current URL (HTTP 200, 3,177,955-byte xlsx, `PK\x03\x04`,
+>    43 zip members, `testzip` clean):
+>    `https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Annual.xlsx`
+> 2. **The gold header is SPLIT across two cells** (no single combined string): name cell `Gold`
+>    (sharedString idx 26) at row 7 / col 67, and units cell `($/troy oz)` (idx 186) directly below at
+>    row 8 / same col 67. So D2's "match by header text" must match `Gold` on the name row **and**
+>    `($/troy oz)` on the units row of the **same column**, not one cell. Sheet `Annual Prices (Nominal)`
+>    → `r:id=rId2` → `xl/worksheets/sheet2.xml`. Descriptor (idx 310) confirms the LBMA basis: "Gold,
+>    spot average of daily rates, from June 2025; previously (UK), 99.5% fine, London afternoon fixing…".
+> Contents verified: year in col 0; **1960–2025, 66 points, no gaps**; 1960=35.27, 2023=1942.67,
+> 2024=2387.70, 2025=3441.51. Fixture on disk (to be committed): `tests/fixtures/cmo/CMO-Historical-Data-Annual.xlsx`,
+> SHA256 `9fbcb348f40ecdb02eb1bcf858a2965383d2aaf3445e8920dd7d60ae7b04af51`. No prior-vintage fallback
+> located (the only known fragment was this current vintage, truncated) → `_CMO_ANNUAL_URLS` is a
+> single-element ordered list for v1; backfill a prior vintage when WB next rotates the hash. Reachability:
+> clean GET from the datacenter host, no anti-bot; **HEAD reports `size=0`** (no Content-Length on HEAD) so
+> the fetcher must GET + check `PK\x03\x04` magic, not gate on HEAD length (D3's `_request_bytes` already GETs).
+
 - **Distribution:** World Bank Commodity Markets "Pink Sheet", historical data, **annual `.xlsx`**.
 - **URL (vintage-coded — see §4):**
   `https://thedocs.worldbank.org/en/doc/<vintage-hash>-0050012026/related/CMO-Historical-Data-Annual.xlsx`
-  (the `<vintage-hash>` segment is a per-release digest that shifts between vintages; resolve the
-  concrete current URL from the WB Pink Sheet portal at #185 code time — see §4. NOT pinned inline
-  here to keep the doc scanner-clean; the #185 code will make a deliberate secret-scanner decision
-  for the pinned `_CMO_ANNUAL_URLS` list at its gate.)
-- **Series:** sheet `Annual Prices (Nominal)`; **match the gold column BY HEADER TEXT (`Gold` + units
-  `($/troy oz)`), NOT a fixed column index** (position shifts between vintages). Year in column 0.
+  (the `<vintage-hash>` segment is a per-release digest that shifts between vintages; the concrete
+  current URL is resolved above. The #185 code makes a deliberate secret-scanner decision for the
+  pinned `_CMO_ANNUAL_URLS` list at its gate — a public CC-BY data URL, not a secret.)
+- **Series:** sheet `Annual Prices (Nominal)` (→ `xl/worksheets/sheet2.xml`); **match the gold column BY
+  HEADER TEXT (split `Gold` name row + `($/troy oz)` units row, same column), NOT a fixed column index**
+  (position shifts between vintages). Year in column 0.
 - **Coverage:** 1960–2025 annual, **no gaps** (66 points; e.g. 1960=35.27, 2024=2387.70, 2025=3441.51).
 - **License:** keyless, **CC-BY 4.0** (clean for runtime fetch + commercial use, attribution only).
 - **Reachability:** verified `HTTP 200` from this datacenter on 2026-06-21 (no anti-bot, unlike Stooq/
@@ -74,11 +95,15 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
 ### D2 — xlsx parse: **stdlib `zipfile` + `xml.etree`** (no new dependency)
 - vnfin's only core dep is `httpx` (`pyproject.toml`); `pandas` is an *optional* extra and `openpyxl` is
   absent. An xlsx is a zip of OOXML. A **scoped** stdlib parser reads exactly what CMO needs:
-  1. `xl/workbook.xml` → map sheet name `Annual Prices (Nominal)` → its `r:id`;
-  2. `xl/_rels/workbook.xml.rels` → resolve that `r:id` → `xl/worksheets/sheetN.xml`;
+  1. `xl/workbook.xml` → map sheet name `Annual Prices (Nominal)` → its `r:id` (real vintage: `rId2`);
+  2. `xl/_rels/workbook.xml.rels` → resolve that `r:id` → `xl/worksheets/sheetN.xml` (real vintage: `sheet2.xml`);
   3. `xl/sharedStrings.xml` → the shared-string table (header/text cells are indices into it);
-  4. walk the sheet rows: find the header row, **match the `Gold` + `($/troy oz)` column by text**, then read
-     `(year, value)` from the year column + the matched gold column.
+  4. walk the sheet rows: locate the gold column by its **split** header — the column whose name-row cell
+     is `Gold` (exact, trimmed) **and** whose units-row cell directly below is `($/troy oz)` — then read
+     `(year, value)` from the year column (col 0) + the matched gold column. Resolve column position from
+     the header match, never a hard-coded index (the real file has gold at col 67, but that shifts).
+     A data row is one whose col-0 cell parses as a 4-digit year; rows above the data block (title/metadata,
+     the two header rows) are skipped. Numeric cells may be stored as raw numbers (not shared strings).
 - **Why stdlib over the optional-extra (reviewer's option b):** the synthesis is a **core accessor** whose
   whole purpose here is to **unblock a live product server-side**. Gating it behind `vnfin[gold-history]`→
   openpyxl means the chart stays broken on any install that didn't add the extra — fragile for the exact
@@ -103,12 +128,16 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
   unchanged. Transport errors still wrap to `SourceUnavailable` with secret redaction (unchanged path).
 
 ### D4 — Vintage-coded URL robustness: pinned current + ordered fallback list
-- The `…74e8be41…-0050012026…` path segment is vintage-coded; prior-vintage URLs still return 200. So pin an
-  **ordered list** `_CMO_ANNUAL_URLS = (current, prior_vintage, …)`; try each in order; on a per-URL
-  404/anti-bot/non-xlsx/parse-failure continue to the next; **all-fail → `SourceUnavailable`** (fail safe,
-  like the existing sources). Document the URL + its vintage in `docs/sources/`. *Deferred enhancement
-  (NOT v1):* scrape the Commodity Markets HTML page to auto-discover the current link — adds HTML-parse
-  fragility for marginal gain; a pinned list updated when WB rotates the vintage is a small maintenance task.
+- The `…74e8be41ceb20fa0da750cda2f6b9e4e-0050012026…` path segment is vintage-coded. Pin an **ordered tuple**
+  `_CMO_ANNUAL_URLS = (current, …)`; try each in order; on a per-URL 404/anti-bot/non-xlsx/parse-failure
+  continue to the next; **all-fail → `SourceUnavailable`** (fail safe, like the existing sources).
+  **Code-time:** the confirmed current URL is the full-32-char-hash one in §2; **no prior-vintage fallback
+  was reproducible** (the earlier "prior vintages still 200" note did not hold — the only known fragment
+  was this current vintage, truncated), so v1 ships a **single-element** tuple. Keep the iterate-and-continue
+  structure so a prior vintage can be prepended/appended when WB next rotates. Document the URL + its vintage
+  in `docs/sources/`. *Deferred enhancement (NOT v1):* scrape the Commodity Markets HTML page to
+  auto-discover the current link — adds HTML-parse fragility for marginal gain; a pinned list updated when WB
+  rotates the vintage is a small maintenance task.
 
 ### D5 — Integration: pure synthesis stays **byte-identical**; swap ONLY the gold-leg acquisition
 - **Key finding:** `_synthesize_world_reference` (`world_reference.py:84-174`) aggregates the gold leg by
@@ -190,15 +219,20 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
 ## 6. Test plan (offline, synthetic — TDD red-first; [[fork-echoes-context-use-fresh-agent-for-delegated-impl]])
 
 - **xlsx parser:** build a **minimal valid xlsx in-test via stdlib `zipfile`** (workbook.xml + rels +
-  sharedStrings.xml + one worksheet shaped like `Annual Prices (Nominal)`) → assert `{year: usd_per_oz}`
-  parsed, **gold column matched by header text**. Robustness: missing `Gold` header / shifted gold column
-  (parser still finds it by text) / malformed sheet / non-numeric value → `InvalidData`; non-xlsx (HTML/
-  empty/truncated-zip) body → `InvalidData`/`SourceUnavailable`.
+  sharedStrings.xml + one worksheet shaped like `Annual Prices (Nominal)` — with the **split** `Gold` /
+  `($/troy oz)` header on two rows, same column) → assert `{year: usd_per_oz}` parsed, **gold column matched
+  by the split header text**. Robustness: missing `Gold` name cell / missing `($/troy oz)` units cell /
+  `Gold` present but units mismatched (must NOT match — guards against a non-troy-oz gold column) / shifted
+  gold column (parser still finds it by text) / malformed sheet / non-numeric value → `InvalidData`; non-xlsx
+  (HTML/empty/truncated-zip) body → `InvalidData`/`SourceUnavailable`.
 - **Source:** inject `http_get` returning the synthetic xlsx **bytes** for the CMO URL → `get_history` returns
   annual `GoldHistory` (one Jan-1 bar/year, USD/oz); HTTP 404/anti-bot → `SourceUnavailable`; **URL-fallback
   exercised** (first URL raises, second serves). Non-finite/`<=0`/duplicate-year price → `InvalidData`.
   **N1 magnitude guard:** a parsed value < 20 or > 10000 USD/oz → `InvalidData`. **N1 real-vintage parse:**
-  parse a committed real CMO xlsx fixture, assert known year values (2024≈2387.70, 2025≈3441.51).
+  parse the committed real CMO xlsx fixture `tests/fixtures/cmo/CMO-Historical-Data-Annual.xlsx`
+  (SHA256 `9fbcb348…af51`), assert known year values (1960≈35.27, 2024≈2387.70, 2025≈3441.51) and
+  66 points 1960–2025 with no gaps — this is the test that proves the parser handles the REAL split-header
+  layout (it is exactly the surprise a synthetic-only test would miss).
 - **N2 SourceError-subclass discipline:** assert every recoverable CMO failure raises a `SourceError`
   subclass (unreachable→`SourceUnavailable`, malformed/out-of-band→`InvalidData`, empty-span→`EmptyData`) so
   the `except SourceError` fallback engages; assert a non-`SourceError` bug propagates (NOT swallowed).
