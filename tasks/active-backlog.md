@@ -42,6 +42,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **#146 liquidity & position sizing: DONE** (Boss-authored; pushed `e518878..4ce11dc`, CLOSED;
   reviewer review-202606200632). Additive offline `vnfin.liquidity` (from_price_history + profile;
   ADV stats + max-order sizing; close*volume estimate labeled). Suite 2705 green; public-API additive.
+- **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
+  No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
+  do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
 - **Architecture deep-dive docs: DONE** (Boss directive; pushed `b046374..f48e789`; reviewer
   review-202606200802). New `docs/architecture/` directory (system-overview / data-domains /
   failover-and-validation / maintainer-workflow + refreshed provider-contracts) with progressive
