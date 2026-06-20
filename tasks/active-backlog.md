@@ -164,10 +164,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   guard to scan REPO-WIDE** (docs/**, skills/**, vnfin/fx/*, diagnostics, llms.txt, README) instead
   of a curated list (the recurring root cause); diagnostics guard now covers source-diagnostics.md;
   reworded accurate per-source 'Spot/current only' notes to point at fx.history.
-  **Re-integration verified ON MERGED TREE:** full suite **2811 passed**, gate trio green (repo-wide
-  B4 guard + diagnostics guard), coverage **95%**, diff/clean-room clean, **reviewer's full B4 grep
-  across the WHOLE repo now CLEAN**.
-  NEXT: reviewer re-review#4 (range `ca1ae7b..eb746d6`) → push+close #159 + advance watermark on APPROVE.
+  Re-review#4 (review-202606201132) BLOCKed on CHANGELOG.md (FX spot/current only + history deferred
+  to BYOK) + fx-sources.md top scope + guard not scanning root markdown. **Round-4 fix `42348b9`:**
+  added Unreleased CHANGELOG entry for `fx.history` #159 (public-API change ⇒ CHANGELOG) + reworded
+  old 0.2.0 FX line to historically-accurate forward-pointer; fx-sources.md Status/Scope→IMPLEMENTED;
+  **guard now scans ALL root markdown** (`root.glob('*.md')` → CHANGELOG/README/…).
+  **Re-integration verified ON MERGED TREE:** full suite **2811 passed**, gate trio green, coverage
+  **95%**, diff/clean-room clean, **reviewer's full B4 grep (incl CHANGELOG) now CLEAN**.
+  NEXT: reviewer re-review#5 (range `ca1ae7b..42348b9`) → push+close #159 + advance watermark on APPROVE.
   _Prior state:_ IMPLEMENTED + integrated green (design APPROVE_WITH_NOTES
   review-202606201033; design `ca1ae7b`; impl sub-agent commit `167c622`). v1 = WB `PA.NUS.FCRF`
   annual USD/VND via `WorldBankFXHistorySource` (composes WorldBankMacroSource); `FXHistory`/`FXPoint`
