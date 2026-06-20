@@ -63,19 +63,20 @@ _Last synced: 2026-06-21 00:40 +07_
 > Suite **3290 green**, surface additive (snapshot FROZEN), no-secrets green. Reviewer pinging vf-advisor
 > to drop its client-side aggregation workaround. state/ watermark = reviewer.
 >
-> **NOW (TOP CODE PRIORITY): #186 quarantine-and-warn for bad upstream bars — DESIGN-NOTE-FIRST.**
-> vf-advisor first-consumer finding; JUMPS AHEAD of #185 code (core-view blocker > secondary gold view).
-> `vnfin/sources/udf.py` raises `InvalidData` on the FIRST per-bar quality failure (OHLC invariant :221,
-> conflicting same-date :240, non-positive :212, non-finite :208, neg/fractional vol :214/:218) → aborts
-> the whole response → both vps_index/ssi_index hit the same bad date (2018-08-22 / 2020-12-25) →
-> `AllSourcesFailed`. ONE bad bar blocks a 10y VN-Index chart. FIX: **quarantine-and-warn** — drop the
-> individual bad bar(s), KEEP the rest, emit a mechanical `quarantined_invalid_bars` warning naming dropped
-> dates+reasons (never silent); conflicting same-date → drop the date entirely + warn; **THRESHOLD guard**
-> (mirror gold coverage gate) so a systematically-broken source still raises→fails over; SHARED udf.py loop
-> (benefits index_history AND prices.history); KEEP structural/parse failures (malformed arrays/shape) as
-> hard raises; do NOT hardcode-repair the 2 dates; mind #66 equity exact-ts strictness vs #162 index
-> dedupe-by-date. Process: **SHORT DESIGN NOTE → reviewer LEAD gate → TDD → Codex×2.** Next action: write
-> the #186 design note, route to reviewer LEAD. (#186 issue has the full spec.)
+> **NOW (TOP CODE PRIORITY): #186 quarantine-and-warn for bad upstream bars — CODE COMMITTED, ADVERSARIAL
+> VERIFY IN FLIGHT → Codex×2 NEXT.** Design APPROVED (reviewer LEAD gate); full impl + tests + repo-wide
+> doc sweep committed `74c4e7a` (10 files + new `tests/test_quarantine_bad_bars.py`, 25 tests) on a green
+> merged tree (3317 passed; surface additive/snapshot FROZEN; no-secrets green). Pre-existing test_no_secrets
+> RED (I'd introduced via the #185 doc commit in a prior session, never gated) fixed SEPARATELY `f12a8f0`
+> (placeholder, scanner untouched) so #186 lands on green. **Change:** `UDFSource._build_bars` (SHARED loop,
+> benefits index_history AND prices.history) now QUARANTINES isolated bad bars — drop+record, emit mechanical
+> `quarantined_invalid_bars` warning naming dropped dates+reasons (never silent); conflicting same-date →
+> drop the date entirely + warn; equity exact-ts dup → drop the ts + warn; THRESHOLD guard
+> `len(quarantined) > max(_QUARANTINE_ABS_FLOOR=3, _QUARANTINE_FRACTION=0.10*n)` → systematically-broken
+> source still raises→fails over; lone-bad row → EmptyData → failover. Structural/shape faults still hard-raise
+> InvalidData. #162 index identical-dup dedupe UNCHANGED. **Remaining:** adversarial Workflow self-verify
+> (running, wf_c4660301-02c) → on clean, route to Codex×2 (reviewer directive: shared-parse-path data-quality,
+> high impact) → on APPROVE + green merged tree, push master (no PR) + close #186 (watermark = reviewer).
 >
 > **AFTER #186: #185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53), code deferred.**
 > Design note committed `e6a1b4a` (`docs/design/issue-185-annual-world-gold-source.md`); reviewer APPROVE
