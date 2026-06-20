@@ -36,9 +36,11 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 2. **`client()` = failover, `source()` = single primary.** `gold` is the exception — no
    `client()` (two unit families); use `vn()` / `world()`.
 3. **Read the unit off the result; never assume.** Equities `VND`; **indices reuse the price
-   shape but `value_unit="points"`**; gold `VND/lượng` (domestic) or `USD/oz` (world);
-   fundamentals **raw, unscaled VND**; FX `VND per 1 base`. A unit-homogeneity guard inside every
-   failover client refuses to mix/relabel units.
+   shape but `value_unit="points"`**; gold `VND/lượng` (domestic) or `USD/oz` (world), plus
+   `gold.world_reference_history_vnd()` = **annual world-reference `VND/luong`, NOT the SJC/BTMC
+   domestic price** (it understates it; carries a `world_reference_excludes_domestic_premium`
+   warning); fundamentals **raw, unscaled VND**; FX `VND per 1 base`. A unit-homogeneity guard
+   inside every failover client refuses to mix/relabel units.
 4. **`start`/`end` are required for history** (`prices.history`, `indices.index_history`,
    `gold ...get_history`) and validated **before any network call** (→ `InvalidData`/`VnfinError`).
    FX has **two shapes**: `fx.get_rate()`/`FXRate` = spot/current quote; `fx.history()`/`FXHistory`

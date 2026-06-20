@@ -7,6 +7,29 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **World-reference VND/lượng gold history** (#178) — new `vnfin.gold.world_reference_history_vnd(start,
+  end, *, http_get=None, timeout=25.0, max_attempts=3)` returning a `GoldHistory` in **`VND/luong`**,
+  **ANNUAL** (one Jan-1 point per calendar year). It composes the existing world-gold daily history
+  (USD/oz; `CurrencyApiGoldSource` → `StooqGoldSource` failover — a multi-year window exceeds
+  CurrencyApi's ~1100-day range and **fails over to Stooq**, the only full-history world-gold source)
+  with annual USD/VND FX (World Bank `PA.NUS.FCRF`, via `vnfin.fx.history`):
+  `VND/lượng[y] = annual_avg(gold_USD/oz)[y] × annual_USD_VND[y] × (GRAMS_PER_LUONG / GRAMS_PER_TROY_OZ)`,
+  the oz→lượng factor (37.5 / 31.1035 ≈ **1.20566**) computed from named, auditable constants. The
+  basis is annual to match the annual-only FX (a daily output would imply false daily-FX precision).
+  **This is the world-gold-implied VND value, NOT the VN domestic (SJC/BTMC) price** — domestic gold
+  trades a large, time-varying premium (historically **+10–21%**) above it, so the series understates
+  the domestic price. It self-discloses **redundantly**: the accessor name, `product="XAU/VND
+  (world-reference)"`, `value_unit="VND/luong"`, `source="world-gold (failover) × USD/VND (World
+  Bank)"`, and an always-present mechanical **`world_reference_excludes_domestic_premium`** warning
+  (plus a `world_reference_annual_basis` note). Year alignment is an honest intersection: an empty
+  overlap raises `EmptyData`, dropped years emit a `world_reference_partial_year_coverage` warning, and
+  a total failure of either leg propagates (`AllSourcesFailed` / `EmptyData`) — never a silent
+  half-result. `vnfin.gold.domestic_history(...)` is **reserved**: it raises a clear source-gap
+  diagnostic (no clean-room multi-year domestic source vetted yet — tracked in #182) and never falls
+  back to this synthesis. Additive new exports `world_reference_history_vnd`, `domestic_history` under
+  `vnfin.gold`. See [`docs/sources/gold-world-reference.md`](docs/sources/gold-world-reference.md),
+  [`docs/ai-usage.md`](docs/ai-usage.md).
+  ([#178](https://github.com/hungson175/vnfin/issues/178))
 - **World/US equity index (S&P 500) accessor** (#177) — new `vnfin.indices.world(symbol="SPY",
   start=None, end=None, *, interval=Interval.D1)` returning the shared `PriceHistory` over its **own**
   2-source failover chain, separate from the VN HOSE/HNX index path (which is untouched).

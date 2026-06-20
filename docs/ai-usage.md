@@ -261,11 +261,25 @@ hist = w.get_history(date(2026, 1, 1), date(2026, 3, 31))  # GoldHistory
 print(hist.unit, len(hist.bars), hist.bars[0].date, hist.bars[0].price)  # 'USD/oz' ...
 
 client = default_world_gold_client()               # world-only failover client (USD/oz)
+
+# World-reference VND/lượng history (#178) — ANNUAL; NOT the SJC/BTMC domestic price.
+from vnfin.gold import world_reference_history_vnd
+ref = world_reference_history_vnd(date(2018, 1, 1), date(2024, 12, 31))     # GoldHistory
+print(ref.unit, ref.currency, len(ref.bars))       # 'VND/luong' 'VND' 7  (one point per year)
+for w in ref.warnings:
+    print(w)                                        # 'world_reference_excludes_domestic_premium: ...'
 ```
 
 - **Gotchas:** VN unit is **VND/lượng** (1 lượng = 10 chỉ = 37.5 g), not plain VND. VN domestic
   sources are **spot-only** (`get_history` raises). World history default chain is
   `[CurrencyApiGoldSource]` (Stooq is opt-in). `gold` has **no `client()`**.
+- **`world_reference_history_vnd(start, end)` is the world-gold-implied VND/lượng value, ANNUAL
+  (one Jan-1 point per year), and is NOT the VN domestic price** — SJC/BTMC trade a large,
+  time-varying premium (+10–21%) above it, so it understates the domestic price; it self-discloses
+  via the accessor name, `source`, `value_unit`, and a mechanical
+  `world_reference_excludes_domestic_premium` warning. `gold.domestic_history()` is **reserved**
+  and raises a source-gap diagnostic (→ #182), never this synthesis. See
+  [`docs/sources/gold-world-reference.md`](sources/gold-world-reference.md).
 
 ### 5.6 `vnfin.crypto` — crypto OHLCV (USD)
 

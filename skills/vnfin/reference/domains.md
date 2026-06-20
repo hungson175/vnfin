@@ -86,11 +86,14 @@ print(spy.source, spy.provider_symbol, spy.value_unit, [w for w in spy.warnings]
 - **Entry:** `vnfin.gold.vn(provider="btmc")` (`"btmc"`/`"pnj"`) → domestic source, `.get_quotes()` → `tuple[GoldQuote]` (spot only); `vnfin.gold.world(provider="currency_api")` → world source, `.get_quotes()` + `.get_history(start: date, end: date)` → `GoldHistory`; `vnfin.gold.source(provider)` dispatches by name; `vnfin.gold.default_world_gold_client()` → `FailoverGoldClient` (world-only, USD/oz).
 - **Result:** `GoldQuote(time, product, buy, sell, unit, currency, source, fetched_at_utc)` + props `.spread`, `.mid`. `GoldHistory(product, unit, currency, source, bars: tuple[GoldBar(date, price)], value_unit, ..., .to_dataframe())`.
 - **Gotchas:** **no `client()`** (VND/lượng vs USD/oz). VN unit is **VND/lượng** (1 lượng = 10 chỉ = 37.5 g). VN sources spot-only (`get_history` raises). World default chain `[CurrencyApiGoldSource]`; `world("gold_api")` is spot-only; Stooq opt-in. Optional `VNFIN_BTMC_WIDGET_KEY` overrides the public `BTMC_PUBLIC_WIDGET_KEY`.
+- **World-reference VND/lượng history (#178):** `vnfin.gold.world_reference_history_vnd(start, end, *, http_get=None, timeout=25.0, max_attempts=3)` → `GoldHistory` in `VND/luong`, **ANNUAL** (one Jan-1 point per calendar year) = `annual_avg(world_gold_USD/oz) × annual_USD_VND (World Bank) × (37.5/31.1035 oz→lượng)` over the `CurrencyApi→Stooq` world-gold failover + `vnfin.fx.history` FX. **NOT the SJC/BTMC domestic price** — the domestic price sits a time-varying **+10–21%** premium above it (so this understates it); discloses via accessor name + `source` + `value_unit` + a mechanical `world_reference_excludes_domestic_premium` warning. Empty year-overlap → `EmptyData`; dropped years → `world_reference_partial_year_coverage` warning. `vnfin.gold.domestic_history(...)` is **reserved** → raises a source-gap diagnostic (→ #182), never this synthesis. Provenance: `docs/sources/gold-world-reference.md`.
 
 ```python
-from datetime import date; from vnfin.gold import vn, world
+from datetime import date; from vnfin.gold import vn, world, world_reference_history_vnd
 print(vn("btmc").get_quotes()[0].unit)                         # 'VND/luong'
 print(world().get_history(date(2026,1,1), date(2026,3,31)).unit)  # 'USD/oz'
+ref = world_reference_history_vnd(date(2018,1,1), date(2024,12,31))  # ANNUAL world-reference, NOT domestic
+print(ref.unit, len(ref.bars))                                 # 'VND/luong' 7
 ```
 
 ## crypto — OHLCV (USD)
