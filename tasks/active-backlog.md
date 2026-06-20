@@ -81,7 +81,21 @@ _Last synced: 2026-06-21 00:40 +07_
 > (2) quarantine constants module-level not per-adapter. Dev-box note: `~/.local` vnfin is a STALE pre-#186
 > build that shadows naive `python -c` probes — `pip install -e .` before #185 dev to avoid false probes.
 >
-> **NOW: #185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53), CODE NEXT.**
+> **NOW: #185 annual world-gold source — CODE IN PROGRESS (build delegated, TDD red-first).**
+> **Acquisition DONE + committed `a23ac15`:** primary-source agent resolved the real current vintage and
+> committed the real xlsx regression fixture (`tests/fixtures/cmo/CMO-Historical-Data-Annual.xlsx`, 3.18 MB,
+> SHA256 `9fbcb348…af51`). **2 material code-time findings folded into the design note (D2/D4/§2/§6):**
+> (1) full 32-char vintage hash `74e8be41ceb20fa0da750cda2f6b9e4e` (truncated `74e8be41` 404s); (2) the gold
+> header is **SPLIT across two cells** — `Gold` name row + `($/troy oz)` units row, same column, NO single
+> combined string → parser matches BOTH rows. Sheet `Annual Prices (Nominal)`→`sheet2.xml`; 1960=35.27,
+> 2024=2387.70, 2025=3441.51, 66 pts no gaps; no prior-vintage fallback reproducible → single-element
+> `_CMO_ANNUAL_URLS`. **Build delegated to fresh general-purpose agent** against the corrected design note
+> (3 files: NEW `vnfin/gold/worldbank_cmo.py` + parser; EDIT `transport.py` `_request_bytes`/`binary=`; EDIT
+> `world_reference.py` gold-leg swap, synthesis byte-identical) + docs/CHANGELOG. Next: integrate on merged
+> tree → full suite + gates → adversarial-verify wf → Codex×2 → push+close → ping vf-advisor.
+> _(Original design summary below.)_
+>
+> **#185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53).**
 > Design note committed `e6a1b4a` (`docs/design/issue-185-annual-world-gold-source.md`); reviewer APPROVE
 > 04:53 ratified D1–D6 + 2 gate notes folded in: **N1** defensive gold-magnitude guard (~20..10000 USD/oz,
 > backstop vs stdlib-OOXML column-misparse) + real-CMO-vintage parse test; **N2** CMO→daily fallback
