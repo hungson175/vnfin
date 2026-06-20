@@ -12,31 +12,26 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 22:13 +07_
+_Last synced: 2026-06-21 00:40 +07_
 
-> **NOW: #177 S&P 500 world-index — ✅ CODE COMPLETE, AWAITING CODEX×2** (commits `011cffa` impl +
-> `8ff1e78` critical fix + `2e7c694` docs; on top of design notes `76b0414`/`f34f090`). Shipped per the
-> APPROVED design: `indices.world(symbol="SPY")→PriceHistory` over its OWN chain `AlphaVantageIndexSource`
-> (TIME_SERIES_DAILY SPY, BYOK `ALPHAVANTAGE_API_KEY`, key-redact, keyless→skip-no-network,
-> Note/Information→SourceUnavailable, cache_ttl 6h) PRIMARY → `StooqIndexSource` (`^SPX` CSV,
-> anti-bot→SourceUnavailable) FALLBACK; VN indices untouched; unit-homogeneity guard disabled
-> (disclosed single-source pick); REQUIRED `fallback_instrument_served` warning when ^SPX served (both
-> throttle + keyless paths; absent on SPY success). **Adversarial self-verify (critical-code-reviewer)
-> found 1 CRITICAL** — AV primary accepted negative/zero OHLC (ordering invariant passes all-negative;
-> parse_provider_float ignores sign) → corrupt series served as trusted primary; **FIXED** `8ff1e78` with
-> positivity guard in AV `_field` + fail-first regressions (`test_av_negative_price_invalid`,
-> `test_av_zero_price_invalid`). Also fixed a latent secret-scanner blob in the test fake-key. **Full
-> suite 3172 green; gate trio 70 green; world_sources 99% / world_client 100% cov; snapshot frozen.**
-> Docs+skill+CHANGELOG shipped (`2e7c694`, + new `docs/sources/indices-world.md`). → handing CODE to
-> Codex×2; on APPROVE push (`011cffa..2e7c694`, plus design/backlog commits) + close #177.
-> **ORDER (reviewer re-prioritized 00:04, vf-advisor blocking signal): #177 → #178 (gold, JUMPS ahead) →
-> #174 (routing bug) → #183 (NEW).** Rationale: #177+#178 hard-block the live advisor product; #174 is a
-> UX/diagnostic bug (dangerous 1000x leak already prevented) so it waits behind the advisor blocker.
-> **#178 gold = QUEUED NEXT** (separate item, NOT a batch): `gold.world_reference_history_vnd()` =
-> existing Stooq world-gold × USD/VND FX × (31.1035/37.5) → VND/lượng, MANDATORY `world_reference_*`
-> naming + `premium_note` (excludes +10-21% VN premium; NOT SJC); reserve `gold.domestic_history()` →
-> clear source-gap diagnostic, never the synthesis. Likely straight to TDD→Codex×2. Source-hunt
-> follow-up filed as **#182** (refs #178/#170).
+> **#177 S&P 500 world-index — ✅ DONE (PUSHED + CLOSED).** Pushed master `011cffa..28bc529`
+> (impl `011cffa` + critical fix `8ff1e78` + docs `2e7c694` + design/backlog + reviewer-suggested
+> comment tweaks `28bc529`); #177 commented + CLOSED. Codex×2 APPROVE, zero blockers
+> (review-202606210024); B's "MAJOR flake" = concurrent-reviewer tree collision, NOT a defect
+> (8× deterministic green confirmed). `indices.world("SPY")→PriceHistory` via AV SPY (BYOK) →
+> Stooq ^SPX fallback + `fallback_instrument_served` warning; adversarial self-verify caught+fixed 1
+> CRITICAL (AV non-positive OHLC served as trusted primary). Full suite 3172 green. vf-advisor cleared
+> to flip its S&P 500 chart mock→real.
+>
+> **NOW: #178 gold world-reference history — ACTIVE (TDD).** Ship labeled
+> `gold.world_reference_history_vnd()` = existing Stooq world-gold (XAU USD/oz) × USD/VND FX ×
+> oz→lượng factor → VND/lượng; MANDATORY `world_reference_*` naming + `premium_note` ("world-gold-
+> implied VND reference; excludes the VN domestic premium, historically +10–21%, time-varying; NOT
+> SJC/BTMC"); reserve `gold.domestic_history()` → clear source-gap diagnostic, NEVER the synthesis.
+> **⚠️ SPEC FORMULA CHECK:** spec writes `×(31.1035/37.5)` but physics says `×(37.5/31.1035)≈1.2057`
+> (1 lượng=37.5g > 1 troy oz=31.1035g, so per-lượng scales UP); the spec's own 2023 sanity figures
+> (~56M world-equiv + ~11.7M SJC premium → ~67M SJC) confirm 37.5/31.1035. Flagging to reviewer
+> before coding. Composes existing primitives → TDD → Codex×2. Source-hunt follow-up = **#182**.
 > **#174 = QUEUED after #178** (spec `spec-202606202230`): branch on `is_known_index()` in BOTH
 > `index_history` + `index_history_stitched` after alias resolution → terminal "recognized index but
 > value-history unsupported" diagnostic (no prices.history text) for ALL deny-only ids; TDD → reviewer
