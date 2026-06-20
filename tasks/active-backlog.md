@@ -63,32 +63,25 @@ _Last synced: 2026-06-21 00:40 +07_
 > Suite **3290 green**, surface additive (snapshot FROZEN), no-secrets green. Reviewer pinging vf-advisor
 > to drop its client-side aggregation workaround. state/ watermark = reviewer.
 >
-> **NOW (TOP CODE PRIORITY): #186 quarantine-and-warn for bad upstream bars — FIX + REVIEWER-FOLLOWUP FIX
-> COMMITTED, ADVERSARIAL RE-VERIFY IN FLIGHT → Codex×2 NEXT.** Design APPROVED (reviewer LEAD gate). Base
-> impl + tests + repo-wide doc sweep `74c4e7a` (10 files + new `tests/test_quarantine_bad_bars.py`);
-> pre-existing no-secrets RED fixed separately `f12a8f0`. **Change:** `UDFSource._build_bars` (SHARED loop,
-> benefits index_history AND prices.history) QUARANTINES isolated bad bars — drop+record, emit mechanical
-> `quarantined_invalid_bars` warning (never silent); conflicting same-date → drop the date + warn; equity
-> exact-ts dup → drop the ts + warn; systematically-broken source still raises→fails over; lone-bad row →
-> EmptyData → failover; structural/shape faults still hard-raise; #162 identical-dup dedupe UNCHANGED.
-> **REVIEWER-FOLLOWUP FIX `24171b0` (self-found via pre-handoff adversarial wf, MAJOR):** the threshold
-> accounting ran over ALL provider rows BEFORE the requested-range filter, so out-of-window provider padding
-> (bad rows outside [start,end]) counted toward "systematically broken" → spuriously failed over a clean
-> window (re-created the #186 bug in the padding region). Fix: range-filter moved INSIDE `_build_bars`
-> (thread lo/hi), timestamp parsed first, threshold now `bad_inrange > max(_QUARANTINE_ABS_FLOOR=3,
-> _QUARANTINE_FRACTION=0.10*considered)` over in-range timestamp-parseable rows only; out-of-range dropped
-> silently, unparseable-ts disclosed-in-warning-but-excluded-from-verdict. **SECOND FIX `34e0ce1` (MINOR,
-> self-found via 3-lens re-verify wf_2131012e-8dc):** `considered += 1` ran before the #162 identical-dedupe
-> `continue`, so a feed emitting each date twice padded the denominator with duplicate GOOD dates → diluted
-> the bad-fraction → flipped a marginal failover into a serve. Fix: `considered -= 1` in the identical-dedupe
-> branch → verdict counts DISTINCT in-range dates. (Re-verify lenses "hide-broken-source" + "regression-
-> completeness" both CLEAN.) +4 fail-first regression tests (29 in the file). Repo-wide stale-claim/precision
-> sweep (CHANGELOG + architecture doc + design D3 → "in-range only, each date counted once"; test_indices
-> comment). **Full suite 3321 green; surface additive/snapshot FROZEN; no-secrets green.** **ROUTED TO
-> CODEX×2** (handoff `/tmp/vnfin-186-codex-review-handoff-20260621.md`, commits `74c4e7a`+`24171b0`+`34e0ce1`).
-> **Remaining:** on APPROVE + green merged tree, push master (no PR) + close #186 (watermark = reviewer).
+> **#186 quarantine-and-warn for bad upstream bars — ✅ DONE + PUSHED + CLOSED.** Pushed master
+> `2c1ed62..5e5edf6`; #186 commented + CLOSED (06:1x). Codex×2 APPROVE, ZERO blockers, no must-fix
+> (review-202606210614); BOTH self-found fixes verified genuine + LOAD-BEARING (red-first regressions are
+> RED on the parent commits, not backfilled); 3 mutations + 9 boundary probes each caught a test; modified-test
+> honesty confirmed (no structural-failure assertion weakened). **What shipped:** `UDFSource._build_bars`
+> (SHARED loop, benefits index_history AND prices.history) QUARANTINES isolated bad bars — drop+record, emit
+> `quarantined_invalid_bars` warning (never silent); conflicting same-date → drop the date; equity exact-ts dup
+> → drop the ts; structural/shape faults still hard-raise; #162 identical-dedupe UNCHANGED; failover threshold
+> `bad_inrange > max(3, 0.10*considered)` judged over the REQUESTED window only. **2 self-found fixes (pre-handoff
+> adversarial wf):** MAJOR `24171b0` (threshold counted out-of-window padding → spuriously failed clean windows;
+> range-filter moved INSIDE _build_bars) + MINOR `34e0ce1` (#162 identical-dedupe diluted the denominator;
+> `considered -= 1` in dedupe branch). 4 fail-first regressions; full suite 3321 green; snapshot FROZEN; docs+
+> skill+CHANGELOG updated. **Watermark/state = reviewer.** Confirmed back to reviewer → reviewer pings vf-advisor
+> to flip the 10y/Max VN-Index chart mock→real. **Non-gating follow-ups (deferred, NOT issues):** (1) a bool
+> scalar now reports generic 'malformed scalar' not the specific #87 bool reason (still correct, less specific);
+> (2) quarantine constants module-level not per-adapter. Dev-box note: `~/.local` vnfin is a STALE pre-#186
+> build that shadows naive `python -c` probes — `pip install -e .` before #185 dev to avoid false probes.
 >
-> **AFTER #186: #185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53), code deferred.**
+> **NOW: #185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53), CODE NEXT.**
 > Design note committed `e6a1b4a` (`docs/design/issue-185-annual-world-gold-source.md`); reviewer APPROVE
 > 04:53 ratified D1–D6 + 2 gate notes folded in: **N1** defensive gold-magnitude guard (~20..10000 USD/oz,
 > backstop vs stdlib-OOXML column-misparse) + real-CMO-vintage parse test; **N2** CMO→daily fallback
