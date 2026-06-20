@@ -167,11 +167,13 @@ report). The parse now **quarantines** instead:
   requested-range filter runs *inside* `_build_bars`, so out-of-window provider padding is dropped
   **before** the threshold is computed. If `bad_inrange > max(_QUARANTINE_ABS_FLOOR,
   _QUARANTINE_FRACTION × considered)` — where `considered` is the in-range, timestamp-parseable rows
-  and `bad_inrange` is how many of those failed a quality check — the parse raises `InvalidData`
+  (counting each calendar date once — identical #162 duplicates don't inflate the denominator) and
+  `bad_inrange` is how many of those failed a quality check — the parse raises `InvalidData`
   (a `SourceError`) → the failover client tries the next source; all-sources-bad → `AllSourcesFailed`.
-  Bad rows **outside** `[start, end]`, and rows whose timestamp is itself unparseable (can't be
-  range-attributed), are excluded from the verdict so a provider's out-of-window junk can't spuriously
-  fail an otherwise-clean window (a reviewer-found regression of the original fix). Constants:
+  Bad rows **outside** `[start, end]`, rows whose timestamp is itself unparseable (can't be
+  range-attributed), and identical same-date duplicates collapsed by the #162 dedupe are excluded from
+  the verdict so a provider's out-of-window junk — or merely sending each date twice — can't spuriously
+  fail an otherwise-clean window (reviewer-found regressions of the original fix). Constants:
   `_QUARANTINE_ABS_FLOOR = 3` (a few isolated glitches never block any window), `_QUARANTINE_FRACTION =
   0.10` (a mostly-bad in-range response is untrustworthy). A lone all-bad row drops below the floor →
   zero bars → `EmptyData` (still a `SourceError`).

@@ -81,11 +81,13 @@ warning. A systematically-broken source still fails over via a threshold guard. 
 > constants `_QUARANTINE_FRACTION = 0.10` **and** `_QUARANTINE_ABS_FLOOR = 3`; the source fails over
 > iff `bad_inrange > max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION × considered)`. **The threshold is
 > judged over the requested window, NOT all provider rows** — the range filter runs *inside*
-> `_build_bars`, so `considered` = in-range timestamp-parseable rows and `bad_inrange` = how many of
-> those failed; out-of-range padding and unplaceable (timestamp-unparseable) rows are excluded. This
-> corrects a reviewer-found regression: computing the threshold over *all* provider rows (before the
-> range filter) let a provider's bad rows OUTSIDE `[start, end]` spuriously fail over a clean window —
-> re-creating the very #186 bug in the padding region. See
+> `_build_bars`, so `considered` = in-range timestamp-parseable rows (each calendar date counted once)
+> and `bad_inrange` = how many of those failed; out-of-range padding, unplaceable (timestamp-unparseable)
+> rows, and identical #162 same-date duplicates are excluded. This corrects two reviewer-found
+> regressions: (1) computing the threshold over *all* provider rows (before the range filter) let bad
+> rows OUTSIDE `[start, end]` spuriously fail over a clean window — re-creating the #186 bug in the
+> padding region; (2) counting identical same-date duplicates in the denominator let a feed that emits
+> each date twice dilute the bad-fraction and flip a marginal failover into a serve. See
 > `docs/architecture/failover-and-validation.md` → "A systematically-broken source still fails over".
 
 ### D4 — The warning (never-silent) + how it threads to BOTH paths

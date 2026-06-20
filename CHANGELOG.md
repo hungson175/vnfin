@@ -190,10 +190,11 @@ All notable changes to `vnfin` are documented here. The format follows
   `quarantined_invalid_bars` warning naming the dropped dates + reasons (surfaced on both equity and index
   results). **A systematically-broken source still fails over — judged over the requested window:** when
   the in-range quality failures exceed `max(_QUARANTINE_ABS_FLOOR=3, _QUARANTINE_FRACTION=0.10 ×
-  considered)` over the in-range, timestamp-parseable rows, the parse raises `InvalidData` → the next
-  source is tried (all-bad → `AllSourcesFailed`). Bad rows *outside* the requested `[start, end]` (provider
-  padding) and rows with an unparseable timestamp are excluded from that verdict, so a provider's
-  out-of-window junk can't spuriously fail an otherwise-clean window. **Structural/shape faults
+  considered)` over the in-range, timestamp-parseable rows (each calendar date counted once), the parse
+  raises `InvalidData` → the next source is tried (all-bad → `AllSourcesFailed`). Bad rows *outside* the
+  requested `[start, end]` (provider padding), rows with an unparseable timestamp, and identical same-date
+  duplicates collapsed by the #162 dedupe are excluded from that verdict, so a provider's out-of-window
+  junk — or merely sending each date twice — can't spuriously fail an otherwise-clean window. **Structural/shape faults
   still hard-raise** (misaligned/missing arrays, malformed envelope/status). Behavior change: a *lone*
   bad row now yields `EmptyData` (still a `SourceError` → failover) rather than `InvalidData`. No
   public-API surface change (the warning is just a string). See

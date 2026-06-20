@@ -397,6 +397,47 @@ def test_out_of_range_padding_does_not_break_prices_history():
 
 
 # --------------------------------------------------------------------------- #
+# 4c. Identical same-date dedupe (#162) must NOT dilute the failover denominator.
+# (Adversarial finding on the #186 follow-up: `considered` is incremented for every
+#  in-range parseable row BEFORE the identical-dedupe `continue`, so an index feed that
+#  emits each date TWICE — exactly what _DEDUPE_IDENTICAL_DUPLICATE_BARS handles — padded
+#  the denominator with duplicate copies of GOOD dates, halving the effective bad-fraction
+#  and flipping a marginal failover into a serve. The verdict must depend on DISTINCT
+#  dates, not on how many identical copies the provider sent.)
+# --------------------------------------------------------------------------- #
+_DEDUP_WINDOW = (date(2024, 1, 1), date(2024, 3, 31))
+
+
+def _dedup_dilution_rows(duplicate_good: bool):
+    # 4 OHLC-invariant bad distinct dates + 20 good distinct dates. When duplicate_good,
+    # each good date is emitted as an IDENTICAL pair (40 rows); otherwise once (20 rows).
+    # Bad-fraction over DISTINCT dates is 4/24 -> 4 > max(3, 0.1*24=2.4)=3 -> must FAIL OVER
+    # in BOTH shapes. Pre-fix the duplicate shape inflated considered to 44 (4 > 4.4 False ->
+    # wrongly served); the no-dup shape always raised. The two must now agree.
+    bad = [
+        (f"2024-02-{d:02d}", 1000.0, 1010.0, 1099.0, 1005.0, 100_000_000)  # low>high
+        for d in range(1, 5)
+    ]
+    good = []
+    for d in range(1, 21):
+        row = (f"2024-01-{d:02d}", 1000.0, 1010.0, 995.0, 1005.0, 100_000_000)
+        good.append(row)
+        if duplicate_good:
+            good.append(row)  # identical same-date duplicate -> #162 dedupe
+    return bad + good
+
+
+def test_identical_dedupe_does_not_dilute_failover_threshold():
+    # Both shapes carry the SAME 4 bad among 24 distinct dates -> both must fail over. The
+    # identical-duplicate padding must not change the verdict.
+    for duplicate_good in (False, True):
+        with pytest.raises(InvalidData, match="systematically broken"):
+            _eq(_payload(_dedup_dilution_rows(duplicate_good)), cls=_Idx).get_history(
+                "VNINDEX", Interval.D1, *_DEDUP_WINDOW
+            )
+
+
+# --------------------------------------------------------------------------- #
 # 5. Warning threads through BOTH public accessors; order = quarantine, then dedupe
 # --------------------------------------------------------------------------- #
 def test_quarantine_warning_surfaces_via_prices_history():

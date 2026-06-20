@@ -327,6 +327,13 @@ class UDFSource(HttpDataSource, PriceSource):
                         op, hp, lp, cp, vol
                     ):
                         self._dedup_occurred = True
+                        # An identical same-date copy (#162) is neither served as a new bar nor
+                        # a quality failure -> back out its ``considered`` increment so it does
+                        # not dilute the failover denominator. Otherwise a feed that emits each
+                        # date TWICE could pad ``considered`` with duplicate copies of GOOD
+                        # dates and flip a marginal failover into a serve. ``considered`` must
+                        # count DISTINCT in-range dates (served-or-bad), not raw row copies.
+                        considered -= 1
                         continue  # identical same-date bar -> dedupe (keep first, #162)
                 # conflicting (index) or any duplicate (equity/intraday) -> poison the key:
                 # count the prior kept row + this row; the prior is removed from bars below.
