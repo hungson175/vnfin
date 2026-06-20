@@ -96,7 +96,7 @@ src = vnfin.crypto.source()                  # BinanceCryptoSource (primary only
 # fx — daily/current FX reference rates (VND per 1 unit of base). Failover open.er-api -> Vietcombank.
 c   = vnfin.fx.client()                       # FailoverFXClient (open.er-api -> Vietcombank)
 src = vnfin.fx.source()                       # OpenErApiFXSource (primary only)
-r   = vnfin.fx.get_rate("USD")                # one-shot FXRate; rate = VND per 1 USD (spot/current only)
+r   = vnfin.fx.get_rate("USD")                # one-shot FXRate; rate = VND per 1 USD (spot/current quote)
 h   = vnfin.fx.history(start=date(2010, 1, 1), end=date(2024, 12, 31))  # FXHistory; annual USD/VND (period-average)
 
 # macro — cross-country indicators. No-key failover World Bank -> IMF -> DBnomics.
