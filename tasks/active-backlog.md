@@ -149,7 +149,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN REV2.5 AWAITING RE-REVIEW** (spec spec-202606201222). Rounds:
+- **#157 fundamentals metrics — DESIGN REV2.6 AWAITING RE-REVIEW (label addendum APPROVED; only role-source prose cleanup left)** (spec spec-202606201222). Rounds:
   `1616ff6`→BLOCK×8→rev2 `a0a00cc`→BLOCK×7→rev2.1 `6fbe694`→rev2.2 `3a38a19`→BLOCK×6→rev2.3 `aeac970`
   →BLOCK×4→rev2.4 `51948cb` (+ adversarial Workflow consistency sweep caught 2 more)→BLOCK (label
   addendum review-202606201324)→rev2.5. No code until reviewer approves. **rev2.5** folds the
