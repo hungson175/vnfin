@@ -426,6 +426,15 @@ def test_series_end_gap_robust_to_single_cadence_gap():
     assert len(out) == 1 and out[0].startswith(f"{_SERIES_END_GAP}:")
 
 
+def test_series_end_gap_single_point_uses_monthly_fallback_floor():
+    # len==1 has no inter-point diff to derive a cadence, so typical_gap falls back to
+    # 31d -> threshold = max(2*31, 210) = 210 (floor-dominated). Boundary either side:
+    one = [(date(2024, 1, 1), 3.0)]
+    assert _series_end_gap_warning(one, date(2024, 7, 1)) == ()       # ~182d gap < 210d floor -> fresh
+    out = _series_end_gap_warning(one, date(2024, 12, 1))            # ~335d gap > 210d floor -> warns
+    assert len(out) == 1 and out[0].startswith(f"{_SERIES_END_GAP}:")
+
+
 # --- staleness: through get_indicator (pinned _today) ----------------------
 
 def test_get_indicator_emits_series_end_gap_when_stale(monkeypatch):
