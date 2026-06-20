@@ -19,6 +19,30 @@ print(hist.source, hist.value_unit, len(hist.bars))
 `hist.value_unit` is `VND`. Bars are provider-adjusted by the broker feed; read
 `hist.adjustment_policy` when doing backtests.
 
+## Resample to a coarser cadence (weekly/monthly/quarterly/yearly)
+
+Pass `interval` to aggregate the daily series into coarser calendar periods — useful when a
+long window (e.g. 10 years) returns thousands of daily rows. Daily (`Interval.D1`, the default)
+is unchanged. Accept an `Interval` member **or** a pandas-style alias string
+(`'D'`/`'W'`/`'M'`/`'Q'`/`'Y'`, case-insensitive):
+
+```python
+# Interval.MN1 == monthly; the alias 'M' ALSO means MONTH (not minute — Interval.M1 is 1 minute).
+monthly = vnfin.prices.history("FPT", "M", start=date(2015, 1, 1), end=date(2024, 12, 31))
+yearly = vnfin.prices.history("FPT", Interval.Y1, start=date(2015, 1, 1), end=date(2024, 12, 31))
+print(len(yearly.bars), yearly.warnings)
+```
+
+- Each aggregated bar is full **OHLC** per period (`open`=first, `high`=max, `low`=min,
+  `close`=last day's close, `volume`=sum), labelled at the **last actual trading day** in the period.
+- **`'M'` = MONTH (`Interval.MN1`), never minute.** Resampling is daily → coarser only:
+  intraday (`M1`/`M5`/`M15`/`M30`/`H1`) is rejected (`UnsupportedInterval`).
+- The network still fetches the full **daily** range — the win is the returned row count
+  (10y → ~10 yearly / ~120 monthly rows), not fewer requests.
+- The result self-discloses: `warnings` always contains `resampled_from_d1`, and a
+  `resample_partial_period` warning is added when the first/last bar covers an incomplete
+  calendar period relative to your window (the partial bars are kept, not dropped).
+
 ## Reuse the failover client
 
 ```python

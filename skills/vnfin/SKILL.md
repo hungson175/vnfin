@@ -46,6 +46,15 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
    FX has **two shapes**: `fx.get_rate()`/`FXRate` = spot/current quote; `fx.history()`/`FXHistory`
    = **annual USD/VND history** (World Bank `PA.NUS.FCRF`, no-key).
 5. **`.to_dataframe()` needs the `pandas` extra**; the typed dataclasses work without it.
+6. **Resample (#183):** `prices.history` and `indices.index_history` take an optional `interval` —
+   an `Interval` member OR a pandas alias string (`'D'/'W'/'M'/'Q'/'Y'`, case-insensitive). Default
+   `D1` = daily (unchanged). Coarser periods (`W1/MN1/Q1/Y1`) are aggregated **client-side** from the
+   fetched daily series: full OHLC per period, bar dated at the last actual trading day. **TRAP:
+   `'M'` = MONTH (`Interval.MN1`), NOT minute — `Interval.M1` is 1 minute.** Intraday
+   (`M1/M5/M15/M30/H1`) → `UnsupportedInterval` (cannot upsample daily→intraday). Resampled results
+   always carry a `resampled_from_d1` warning, plus `resample_partial_period` when an edge period is
+   incomplete (bars kept). Network still fetches full daily range — the win is fewer returned rows.
+   (`index_history_stitched` stays D1-only.)
 
 ## Domain cheat-sheet
 

@@ -24,6 +24,8 @@ class Interval(str, Enum):
     D1 = "1d"
     W1 = "1w"
     MN1 = "1M"
+    Q1 = "1Q"   # calendar quarter (resample-only; no native source)
+    Y1 = "1Y"   # calendar year   (resample-only; no native source)
 
     @property
     def is_intraday(self) -> bool:

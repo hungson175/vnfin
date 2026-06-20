@@ -7,6 +7,30 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Optional interval/resample on `prices.history` + `index_history`** (#183) — both daily-native
+  accessors now accept the existing `interval` arg as an `Interval` member **or** a pandas-style
+  alias string (`'D'/'W'/'M'/'Q'/'Y'`, case-insensitive). Default `Interval.D1` is unchanged
+  (back-compat passthrough — existing callers untouched). Coarser periods (`W1`/`MN1`/`Q1`/`Y1`) are
+  aggregated **client-side** from the fetched daily series (pure in-memory OHLC aggregation — no new
+  source, no new network call): `open`=first, `high`=max, `low`=min, `close`=last, `volume`=sum per
+  calendar period, with each aggregated bar labelled at the **last actual trading day** in the period
+  (a real market date, never a synthetic calendar boundary). OHLC-per-period for BOTH prices (VND) and
+  index (points) — units/`source`/metadata are preserved. **Two new additive `Interval` members:
+  `Q1="1Q"` (calendar quarter) and `Y1="1Y"` (calendar year)**, resample-only (each source's
+  `supports()` gates native serving, so crypto/world sources cleanly reject them). The pandas alias
+  **`'M'` maps to `MN1` (MONTH), never `M1` (one minute)** — the single highest-risk mapping, with a
+  dedicated test. Intraday intervals (`M1/M5/M15/M30/H1`) are rejected with `UnsupportedInterval` (a
+  daily-native series cannot be upsampled to intraday) **before any network fetch**. Resampled results
+  are never-silent: `warnings` always contains `resampled_from_d1` (the series discloses it is
+  aggregated, not native), plus a `resample_partial_period` warning when the first/last emitted bar
+  covers an incomplete calendar period relative to the requested window (the partial bars are KEPT,
+  not dropped). The network still fetches the full **daily** range — the win is the returned row count
+  (10y → ~10 yearly / ~120 monthly rows vs ~2,500 daily), which is the reported pain (agent context
+  overflow on long pulls). `index_history_stitched` resample is a tracked **follow-up** (it stays
+  D1-only). See [`docs/tutorials/stock-prices.md`](docs/tutorials/stock-prices.md),
+  [`docs/tutorials/funds-and-indices.md`](docs/tutorials/funds-and-indices.md),
+  [`docs/design/prices-index-resample.md`](docs/design/prices-index-resample.md).
+  ([#183](https://github.com/hungson175/vnfin/issues/183))
 - **World-reference VND/lượng gold history** (#178) — new `vnfin.gold.world_reference_history_vnd(start,
   end, *, http_get=None, timeout=25.0, max_attempts=3)` returning a `GoldHistory` in **`VND/luong`**,
   **ANNUAL** (one Jan-1 point per calendar year). It composes the existing world-gold daily history

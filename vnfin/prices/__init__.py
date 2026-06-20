@@ -37,6 +37,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
+from .._resample import apply_interval
 from ..client import FailoverPriceClient
 from ..models import (
     AdjustmentPolicy,
@@ -91,8 +92,9 @@ def history(
     passing ``start > end`` raises a stable :class:`~vnfin.exceptions.InvalidData`
     (a ``VnfinError``) — never a raw ``TypeError``.
     """
-    return client(max_attempts=max_attempts, http_get=http_get, timeout=timeout).get_history(
-        symbol, interval, start, end
+    c = client(max_attempts=max_attempts, http_get=http_get, timeout=timeout)
+    return apply_interval(
+        interval, start, end, lambda: c.get_history(symbol, Interval.D1, start, end)
     )
 
 

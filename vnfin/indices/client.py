@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional, Union
 
+from .._resample import apply_interval
 from ..client import FailoverPriceClient
 from ..exceptions import InvalidData, VnfinError
 from ..models import AdjustmentPolicy, Interval, PriceHistory
@@ -132,7 +133,12 @@ class IndexClient:
         if not is_value_history_index(symbol):
             raise _unservable_index_error(symbol)
         validate_date_range(start, end, name="index_history")
-        return self._client.get_history(symbol, interval, start, end)
+        return apply_interval(
+            interval,
+            start,
+            end,
+            lambda: self._client.get_history(symbol, Interval.D1, start, end),
+        )
 
     def index_history_stitched(
         self,

@@ -59,6 +59,25 @@ print(vni.source, vni.value_unit, vni.bars[-1].close)  # points, not VND
 Index levels use the same bar shape as prices but the unit is `points`. Do not compare index values
 as money.
 
+### Resample index levels (weekly/monthly/quarterly/yearly)
+
+`index_history` takes the same optional `interval` as `prices.history` — pass an `Interval` member
+or a pandas alias (`'D'`/`'W'`/`'M'`/`'Q'`/`'Y'`, case-insensitive) to aggregate the daily index
+series into coarser periods. This is the smaller-context win for a charting/agent workflow that pulls
+5–15 years of levels:
+
+```python
+# 'M' = MONTH (Interval.MN1), NOT minute. Default is daily.
+monthly = vnfin.indices.index_history("VNINDEX", date(2015, 1, 1), date(2024, 12, 31), interval="M")
+print(monthly.value_unit, len(monthly.bars), monthly.warnings)  # still "points"
+```
+
+Aggregation is full OHLC per period (`close` is the period-end level), labelled at the last actual
+trading day; the unit stays `points`. The series self-discloses with a `resampled_from_d1` warning
+(always) and a `resample_partial_period` warning when an edge period is incomplete (bars kept). The
+network still fetches the full daily range — the win is the returned row count. Intraday is rejected.
+Resample is on `index_history` only for now; `index_history_stitched` stays D1.
+
 For a **long multi-year** window (e.g. a 10-year VNINDEX backtest) where a single source has one
 bad day somewhere in the range, use the opt-in stitcher — it fetches each calendar year via the
 failover chain (routing around each source's bad day) and stitches the years into one series:
