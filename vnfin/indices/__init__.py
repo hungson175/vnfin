@@ -32,6 +32,13 @@ from .sources import (
     VNDirectIndexSource,
     VPSIndexSource,
 )
+from .world_client import (
+    FailoverWorldIndexClient,
+    default_world_index_client,
+    default_world_index_sources,
+    world,
+)
+from .world_sources import AlphaVantageIndexSource, StooqIndexSource
 
 __all__ = [
     "IndexClient",
@@ -47,6 +54,13 @@ __all__ = [
     "VNDirectIndexSource",
     "client",
     "source",
+    # --- world/US equity index (S&P 500) — own chain, additive (#177) ---
+    "world",
+    "AlphaVantageIndexSource",
+    "StooqIndexSource",
+    "default_world_index_sources",
+    "default_world_index_client",
+    "FailoverWorldIndexClient",
 ]
 
 
