@@ -60,7 +60,16 @@ README and task tutorials above.
 The following folders preserve design/research history. They are **not** the starting point for
 normal users:
 
-- `docs/architecture/provider-contracts.md` — the private `vnfin/_contracts/` layer (internal; not public API)
+**Architecture docs** (internal; not public API):
+
+- `docs/architecture/system-overview.md` — layer map, facade shape, exception hierarchy, feature-scope policy, test suite overview
+- `docs/architecture/data-domains.md` — domain-by-domain source strategy, units, failover chains, and known single-source limitations
+- `docs/architecture/provider-contracts.md` — the private `vnfin/_contracts/` layer: absent-vs-present policy, canonical identifier grammars, adapter migration checklist, refactor status
+- `docs/architecture/failover-and-validation.md` — generic failover engine, price-client specialization, transport/cache layer, public input validators, `TimeSeriesResult` mixin
+- `docs/architecture/maintainer-workflow.md` — reviewer-gated specs, backlog discipline, testing gates, release safety, VNStock blacklist enforcement, known future debt
+
+**Design/research history:**
+
 - `docs/design/`
 - `docs/research/`
 - `docs/steps/`

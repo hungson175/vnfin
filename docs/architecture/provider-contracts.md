@@ -45,6 +45,24 @@ vnfin/_contracts/
   `SourceAttempt.reason`) or `None`; messages are parameterized so each domain keeps its exact
   wording.
 
+```mermaid
+flowchart LR
+    subgraph adapter["Source adapter (parsing a provider response)"]
+        AP["fields · keys · rows<br/>(present-vs-absent, canonical ids, object/list/dedup)"]
+    end
+    subgraph client["Failover client (accepting a typed result)"]
+        RP["results · timeseries<br/>(type/empty, row+key shape, ascending, provenance)"]
+    end
+    ERR["errors.contract_error(ctx, detail)"]
+    IV["InvalidData (a SourceError → triggers failover)"]
+    AP --> ERR
+    RP -. "reason string or None" .-> REASON["SourceAttempt.reason"]
+    AP -. "fail closed" .-> ERR
+    ERR --> IV
+    classDef priv fill:#eef,stroke:#88a;
+    class AP,RP,ERR priv;
+```
+
 ## The core rule: absent vs present-malformed
 
 > A **missing key** may be legacy-compatible (providers historically omit fields).
@@ -93,9 +111,31 @@ When migrating an adapter onto the contracts:
 6. Behavior must be unchanged except **fail-closed on malformed provider data**. Run the full suite
    + public-API snapshot + docs-contract + no-secrets gates.
 
+## Phase-4 adapter migrations completed
+
+All domain adapters were migrated onto the `_contracts` primitives in Phase 4 (committed
+and pushed as part of the full refactor):
+
+| Batch | Adapters migrated | Issues closed |
+|-------|------------------|---------------|
+| Phase 2 | VNDirect + CafeF fundamentals | #44, #45, #21, #26 |
+| Phase 4 batch 1 | Fmarket funds (`stockCode`/`fundCode`) | #33, #34 |
+| Phase 4 batch 2 | Macro sources (WB/IMF/DBnomics/FRED) | #32, #48, macro #21 |
+| Phase 4 batch 3 | Security/index identifiers (price + indices) | #30, #75 |
+| Phase 4 batch 4 | Crypto/FX adapters | #9, #93 |
+| Phase 4 batch 5 | Gold (PNJ silver exclusion + dedup) | #143 |
+| Phase 4 + Phase 6 | Fundamentals symbol canonicalization close-loop | #142 |
+
 ## Test matrices
 
 Shared negative/positive matrices live in `tests/test_contract_{fields,keys,rows,results,
 timeseries}.py`. Adapter tests reuse the same malformed shapes (`""`, `"   "`, `None`, `[]`, `{}`,
 `False`/`True`, numbers, internal-space/slash/punctuation/newline, signed/leading-zero) so every
 adapter inherits the same regression coverage.
+
+## Refactor status: COMPLETE
+
+Phases 0–6 are fully implemented, reviewed (Checkpoint A–F), and pushed. The suite is
+2705+ green (as of v0.2 + post-refactor feature milestones). Zero open bugs. Phase 6
+closed the loop by re-verifying each parked issue against the contract tests and closing
+them with refactor commit references.
