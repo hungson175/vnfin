@@ -60,8 +60,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     for D1 index (dedupe-identical+warning / raise-conflicting in source path); H1/non-D1 + equity unchanged.
   - **#164: DONE** — docs keyword start=/end= for prices.history (7 examples) + guard; pushed
     `207c462..3731f14`, CLOSED (review-202606201008).
-  - Design-first: #157/#159. Design-eval-only (parked): #160/#161/#163 (corp-actions) + #150 cost/tax addendum
+  - Design-first: #157/#159 (#159 now in implementation, see Now). Design-eval-only (parked):
+    #160/#161/#163 (corp-actions) + #150 cost/tax addendum
     (design-first, offline, user-supplied/preset w/ effective-dates/provenance/stale-warnings) — batch w/ #157/#161/#150.
+    - **#163 addendum** (poller triage review-202606201039): external addendum useful but PARKED
+      design-eval only — do NOT switch from #159. Future #163 scope: corporate-action/dividend
+      EVENT data primitives + source/legal/diagnostics design; OUT: total-return/backtest/app
+      helpers and blind scraping.
+    - **#149 addendum** (poller triage review-202606201046): macro source-health addendum accepted
+      for future design-first work but PARKED — do NOT switch from #159. Future safe scope: macro
+      data primitives + indicator catalog/freshness/coverage diagnostics; OUT: regime
+      scoring/advice/blind scraping.
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
@@ -123,15 +132,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#159 FX history — DESIGN-FIRST ONLY** (reviewer spec review-202606201018). Deliverable:
-  `docs/design/fx-history.md` (no code until reviewer approves the design). In-scope v1: historical
-  FX data primitives (esp. VND quote paths), typed FX time series (base/quote/rate/unit/date/
-  frequency/source/fetched_at_utc/warnings+coverage), pair/capability diagnostics
-  (`explain_fx_coverage`), minimal deterministic conversion primitives only over explicit FX input.
-  Sources: WB `PA.NUS.FCRF` (annual LCU/USD) first; IMF/DBnomics monthly only if clean/no-key/terms-OK.
-  Out: portfolio/backtest, `normalize_to_vnd(asset_history)`, scraping, spot-backfilled history,
-  real-time/min/hourly, silent spot+history mixing. Keep VNStock blacklist. Reviewer spec file:
-  `~/tools/vnfin-oss-reviewer/reviews/review-202606201018-open-backlog-spec-159-fx-history.md`.
+- **#159 FX history — IMPLEMENTED, INTEGRATED GREEN, AWAITING CODE REVIEW** (design APPROVE_WITH_NOTES
+  review-202606201033; design `ca1ae7b`; impl sub-agent commit `167c622`). v1 = WB `PA.NUS.FCRF`
+  annual USD/VND via `WorldBankFXHistorySource` (composes WorldBankMacroSource); `FXHistory`/`FXPoint`
+  + `fx.history()` + `explain_fx_coverage`. All P1/P2 gates addressed (rate>0/finite/non-bool guard;
+  year-inclusive start/end incl. mid-year-start-keeps-Jan-1; `coverage_start=1983`; runtime-fetch-only
+  docs; additive snapshot +5/0-breaking; freq str|enum normalize; docs sources/api/tutorial/
+  source-diagnostics/index).
+  **Integration verified ON MERGED TREE by main agent:** full suite **2776 passed**, gate trio
+  66 passed (public-API additive / docs-contract / no-secrets), coverage **95%** (≥85), clean-room
+  grep clean (blacklist wording only), `git diff --check` clean, offline public-API smoke OK.
+  NEXT: reviewer code review (range `ca1ae7b..167c622`) → push+close #159 + advance watermark on APPROVE.
+
+  (Design-first spec `review-202606201018` delivered as the design doc; now in implementation.)
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
