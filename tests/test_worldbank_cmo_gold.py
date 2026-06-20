@@ -227,6 +227,18 @@ def test_parser_resolves_worksheet_via_rels_not_hardcoded():
     assert out == {2021: 1800.0}
 
 
+def test_parser_rejects_dotdot_worksheet_target():
+    # A crafted rels Target containing ".." must NOT divert the read to a
+    # differently-named "xl/../..." zip member. The relative reference is resolved
+    # (collapsing "." / ".." per the OOXML/RFC-3986 rules) and validated against the
+    # real parts, so an out-of-band member fails safe as InvalidData rather than being
+    # parsed silently. (_build_cmo_xlsx writes the worksheet at the literal
+    # "xl/../evil/sheet.xml" member, which the unnormalized resolver would have read.)
+    raw = _build_cmo_xlsx(worksheet_target="../evil/sheet.xml", rows={2021: 1800.0})
+    with pytest.raises(InvalidData):
+        _parse_cmo_annual_gold(raw)
+
+
 # --------------------------------------------------------------------------- #
 # Parser — robustness (each -> InvalidData)                                    #
 # --------------------------------------------------------------------------- #

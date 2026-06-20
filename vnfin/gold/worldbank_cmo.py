@@ -36,6 +36,7 @@ the World Bank's own server. Zero vnstock.
 from __future__ import annotations
 
 import math
+import posixpath
 import re
 import zipfile
 from datetime import date, datetime, timezone
@@ -179,12 +180,16 @@ def _resolve_worksheet_path(zf: zipfile.ZipFile) -> str:
     if not target:
         raise InvalidData(f"worldbank_cmo: relationship {rid!r} has no worksheet target")
 
-    # Targets in workbook.xml.rels are relative to the xl/ directory.
+    # Targets in workbook.xml.rels are relative to the xl/ directory. Resolve the
+    # relative reference, collapsing any "." / ".." per the OOXML/RFC-3986 rules, so a
+    # crafted Target cannot divert the read to a differently-named "xl/../..." zip
+    # member; the resolved path is then validated against the real parts.
     target = target.lstrip("/")
     if target.startswith("xl/"):
         path = target
     else:
         path = "xl/" + target
+    path = posixpath.normpath(path)
     if path not in zf.namelist():
         raise InvalidData(f"worldbank_cmo: worksheet part {path!r} not in xlsx")
     return path
