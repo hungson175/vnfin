@@ -49,7 +49,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   + long-message rules (1074a0a, Boss directive).
 - **Design-first parked (reviewer triage review-202606200902, filtered specs only):**
   - B: **#147** v1 DONE (sub-agent + main integrate; pushed `eadf7e1..a645c71`, CLOSED; review-202606200931). index_history_stitched. Deferred polish (non-blocking notes): rename design-doc 'Open questions' heading; add returned-segment-interval regression.
-  - C: **#149/#152/#156** macro / rates / global-benchmark diagnostics. **#152 addendum** (poller
+  - C: **#149/#152/#156** macro / rates / global-benchmark diagnostics. **#156 addendum** (poller
+    triage ~13:10): global equity benchmark coverage diagnostics — in-scope/design-first, queued
+    BEHIND #157; do NOT switch. **#152 addendum** (poller
     triage review-202606201103): deposit-rate/fixed-income parked design-first. Scope: fixed-income/
     rates/yield-curve data + diagnostics IN; deposit-rate aggregation is source/legal-diagnostic ONLY
     unless clean sources approved; OUT: bank-product advice/ranking/blind scraping.
@@ -147,16 +149,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN REV2.3 AWAITING RE-REVIEW** (spec spec-202606201222). Design
-  iterations: `1616ff6` → BLOCK×8 (review-202606201230) → `a0a00cc` → BLOCK×7 (review-202606201245) +
-  read-only BLOCK×2 → `6fbe694` rev2.1 → `3a38a19` rev2.2 → BLOCK×6 public-contract/TDD-precision
-  (review-202606201300) → rev2.3. No code until reviewer approves. Rev2.3 resolves the 6: B1
-  AllSourcesFailed/NOT_SERVED classification; B2 NOT_SERVED responsible-source metadata; B3 `limit`
-  on the pure transformer seam; B4 exact enum `.value`s + interpolation rules (UNAPPLICABLE→
-  NOT_APPLICABLE); B5 `metric_catalog(applies_to)` filter semantics (bank→BANK+BOTH etc., invalid→
-  VnfinError); B6 exact df attr value types (period.value/date.isoformat()/statement_sources tuple).
-  Doc now implementation-ready. Deliverable: `docs/design/fundamentals-metrics.md` (design-only).
-  On APPROVE → delegate TDD impl (consider a Workflow for parallel test/impl slices per new CLAUDE.md). Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
+- **#157 fundamentals metrics — DESIGN REV2.4 (in consistency-sweep before re-request)** (spec
+  spec-202606201222). Design rounds: `1616ff6`→BLOCK×8→`a0a00cc`→BLOCK×7→`6fbe694` rev2.1→`3a38a19`
+  rev2.2→BLOCK×6→rev2.3 `aeac970`→BLOCK×4 (review-202606201310)→rev2.4. No code until reviewer approves.
+  Rev2.4 fixes B1-B4: net_revenue category=size (single, no slash); C1 status list includes
+  not_served + responsible-source rule; source-map reason uses exact quoted form
+  `metric map not available for source '{source}'`; deterministic capability-based
+  AllSourcesFailed→NOT_SERVED predicate (`serves(source,statement)` static set) + TDD matrix in §9;
+  N/A→NOT_APPLICABLE cleanup. Then ran an adversarial Workflow consistency sweep (5 auditors + verify)
+  to catch ANY remaining staleness before re-request (break the multi-round cycle). Deliverable:
+  `docs/design/fundamentals-metrics.md` (design-only). On APPROVE → delegate TDD impl (Workflow for
+  parallel test/impl slices per CLAUDE.md). Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
   external source). v1: canonical metric catalog (corporate + bank headline mapped, per spec codes) +
   5 derived (gross/net margin, liab/equity, cash/assets, OCF margin) + coverage diagnostics. API:
   `metric_catalog()`, `explain_metric(id)`, `metrics(symbol, period)`, `explain_metric_coverage(...)`.
