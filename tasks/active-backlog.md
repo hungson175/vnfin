@@ -48,16 +48,18 @@ _Last synced: 2026-06-21 00:40 +07_
 > (serving sector-index HISTORY = separate feature needing a clean source + per-symbol tests).
 > Watermark/state left to reviewer.
 >
-> **NOW: #183 optional interval/resample — CODE COMMITTED, awaiting Codex×2.** Design APPROVED + 6
-> decisions LOCKED (`6e03048` in docs/design/prices-index-resample.md). Built TDD-first (fresh
-> general-purpose agent → my integrator verify): new `vnfin/_resample.py` (resolve_interval/
-> apply_interval/resample_history), `Interval.Q1="1Q"`/`Y1="1Y"` additive, client-side OHLC resample on
-> `prices.history` + `index_history` (D1 passthrough default; 'M'→MN1 MONTH not minute; intraday→
-> UnsupportedInterval pre-fetch; `resampled_from_d1` always + `resample_partial_period` bars-kept);
-> stitched/world/get_history/crypto untouched. Docs+skill+CHANGELOG in same commit. **Commit `c6e8a23`
-> (NOT pushed).** My re-run on merged tree: full suite **3290 passed** (3260+30), surface+no-secrets
-> green, snapshot frozen. Handoff `/tmp/vnfin-183-codex-handoff-20260621.md` sent to reviewer 02:xx →
-> Codex×2. On APPROVE: push `c6e8a23` + close #183. Clean-room: zero VNStock. state/ watermark = reviewer.
+> **NOW: #183 optional interval/resample — MUST-FIX DONE, awaiting reviewer diff-confirm (NO re-gate).**
+> Codex×2 verdict = APPROVE_WITH_NOTES, ONE must-fix (reviewer's owned gate miss): the original
+> `apply_interval` hardcoded fetch=D1 + rejected intraday pre-fetch → **silently broke existing native-
+> intraday callers** of `prices.history` (and `index_history`, whose sources inherit intraday from the
+> equity base via `_IndexUDFMixin` — so index intraday is ALSO natively served, contra the reviewer's
+> "index sources don't serve intraday" premise → flagged back). **Fix `7c5ec2c`:** resample ONLY
+> W1/MN1/Q1/Y1 from `fetch(Interval.D1)`; everything else (D1 + intraday) → `fetch(interval)` native;
+> source `supports()` is the only reject. Thunks now `lambda iv: ...get_history(symbol, iv, ...)`.
+> TDD: flipped 3 intraday tests → assert native serving (RED→GREEN). Docs/CHANGELOG/skill/domains/2
+> tutorials reworded "intraday rejected"→"unchanged/native". Full suite **3290 passed**, surface+no-
+> secrets green, snapshot frozen. Commits `c6e8a23`+`7c5ec2c` (NOT pushed). On reviewer confirm: push
+> both + close #183 + CONFIRM back (→ reviewer pings vf-advisor to drop workaround). state/ = reviewer.
 >
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
