@@ -152,10 +152,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   broadened (now scans SKILL.md + forbids literal 'FX has no history'); `docs/design/fx-history.md`
   Status→IMPLEMENTED + resolved open-Qs; `fx-sources.md` stale TimeSeriesResult open-Q→resolved;
   `diagnostics.py` docstring notes FX coverage.
-  **Re-integration verified ON MERGED TREE:** full suite **2810 passed**, gate trio green (broadened
-  B4 guard passes; forbids 'FX has no history' incl. bold variant, no false positives), coverage
-  **95%**, diff/clean-room clean, reviewer stale-phrase grep CLEAN.
-  NEXT: reviewer re-review#2 (range `ca1ae7b..b9eaba1`) → push+close #159 + advance watermark on APPROVE.
+  Re-review#2 (review-202606201115) APPROVED guard but BLOCKed on 3 more residuals — now fixed
+  (`4fe275b`/`e911bb4`/`e0e1e1f`): **B4.4** ai-usage 'fx.history requires dates' → optional/allow_none
+  (split from prices/indices/gold); **B4.5** api.md + data-domains source_capabilities text now names
+  FX leg + data-domains adds explain_fx_coverage to fn list; **B4.6** diagnostics.py dataclass comments
+  add fx/history/worldbank_fx + unsupported_pair/unsupported_frequency statuses; new guard
+  `test_diagnostics_docs_enumerate_fx_coverage`; proactive sweep added fx-history to llms.txt + reworded
+  api.md get_rate 'spot/current quote'.
+  **Re-integration verified ON MERGED TREE:** full suite **2811 passed**, gate trio green (2 B4 guards),
+  coverage **95%**, diff/clean-room clean, **reviewer's full stale-phrase grep now CLEAN**.
+  NEXT: reviewer re-review#3 (range `ca1ae7b..e0e1e1f`) → push+close #159 + advance watermark on APPROVE.
   _Prior state:_ IMPLEMENTED + integrated green (design APPROVE_WITH_NOTES
   review-202606201033; design `ca1ae7b`; impl sub-agent commit `167c622`). v1 = WB `PA.NUS.FCRF`
   annual USD/VND via `WorldBankFXHistorySource` (composes WorldBankMacroSource); `FXHistory`/`FXPoint`
