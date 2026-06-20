@@ -13,7 +13,11 @@ universe is **open**, so the guard is asymmetric and uses two sets:
 * :data:`_VALUE_HISTORY_INDICES` — the **allow-list** for the *index-history* path
   (``indices.index_history`` / ``index_history_stitched``). ONLY indices whose value
   (OHLCV-in-points) history is documented as supported by the index sources. A symbol
-  not in this set is rejected by ``index_history`` (use ``prices.history`` for stocks).
+  not in this set is rejected by ``index_history``; the rejection branches on
+  :func:`is_known_index` (#174): a genuinely unknown / equity symbol is routed to
+  ``prices.history`` ("for stocks"), while a recognised index that is merely deny-only
+  (in :data:`_KNOWN_INDEX_IDENTIFIERS` but not here) gets a terminal "recognised index,
+  value-history unsupported" diagnostic — never bounced back to the price path.
 
 Both sets are **private** (no public API / snapshot surface) and seeded **clean-room**
 from repo-internal evidence only — ``docs/sources/indices-constituents.md`` (the blessed

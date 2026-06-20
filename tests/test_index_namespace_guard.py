@@ -244,3 +244,96 @@ def test_index_history_stitched_routes_bare_hnx():
         vnfin.indices.index_history_stitched("hnx", _START, _END, http_get=http_get)
     assert not (isinstance(exc.value, InvalidData) and "not a known market index" in str(exc.value).lower())
     assert calls, "stitched HNX should route to HNXINDEX and reach the network"
+
+
+# --------------------------------------------------------------------------- #
+# #174: contradictory routing LOOP. A deny-only identifier (a recognized index that
+# is NOT value-history-servable) must get a TERMINAL "recognized index, history-
+# unsupported" diagnostic from index_history / index_history_stitched — it must NEVER
+# be told to "use prices.history()", because the price path correctly rejects it as an
+# index, so that guidance bounces the user between the two namespaces forever. A
+# genuinely unknown / equity symbol still (correctly) routes to prices.history().
+# --------------------------------------------------------------------------- #
+
+#: Every deny-only identifier: in the deny-list but NOT the value-history allow-list,
+#: EXCLUDING the bare "HNX" alias (it canonicalizes to HNXINDEX, which IS served, so it
+#: never reaches the loop). This is the routing regression matrix the reporter asked for.
+_DENY_ONLY_INDICES = [
+    # 10 HOSE sector indices
+    "VNCOND", "VNCONS", "VNENE", "VNFIN", "VNHEAL", "VNIND", "VNIT", "VNMAT", "VNREAL", "VNUTI",
+    # other deny-only groups (membership attested; value-history not allow-listed)
+    "VN100", "VNMID", "VNSML", "VNDIAMOND", "VNFINLEAD", "VNFINSELECT", "VNXALL", "VNXALLSHARE",
+    # provider-form UPCOM alias (deny-only)
+    "HNXUPCOMINDEX",
+]
+
+
+def test_deny_only_matrix_matches_registry_difference():
+    # Lock the matrix to the registry so a future set edit cannot silently shrink it and
+    # re-open the loop: deny-only == known minus value-history, minus the served HNX alias.
+    expected = set(_KNOWN_INDEX_IDENTIFIERS) - set(_VALUE_HISTORY_INDICES)
+    expected.discard("HNX")  # canonicalizes to HNXINDEX (served) before the guard
+    assert set(_DENY_ONLY_INDICES) == expected
+
+
+def _assert_recognized_index_diagnostic(msg: str):
+    """The #174 invariant on the terminal diagnostic for a known-but-unservable index."""
+    low = msg.lower()
+    assert "prices.history" not in low, msg       # never bounce back to the price path
+    assert "for stocks" not in low, msg           # it is an index, not a stock
+    assert "recognized market index" in low, msg  # tell the user it IS a known index
+    assert ("not supported" in low) or ("not available" in low), msg
+
+
+@pytest.mark.parametrize("sym", _DENY_ONLY_INDICES)
+def test_index_history_deny_only_gives_terminal_diagnostic(sym):
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData) as exc:
+        vnfin.indices.index_history(sym, _START, _END, http_get=http_get)
+    _assert_recognized_index_diagnostic(str(exc.value))
+    assert calls == []  # zero network
+
+
+@pytest.mark.parametrize("sym", _DENY_ONLY_INDICES)
+def test_index_history_stitched_deny_only_gives_terminal_diagnostic(sym):
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData) as exc:
+        vnfin.indices.index_history_stitched(sym, _START, _END, http_get=http_get)
+    _assert_recognized_index_diagnostic(str(exc.value))
+    assert calls == []  # zero network
+
+
+@pytest.mark.parametrize("sym", _DENY_ONLY_INDICES)
+def test_prices_history_still_rejects_deny_only_index_unchanged(sym):
+    # The price path is unchanged: a deny-only index is still pointed at index_history()
+    # (correct — it IS an index), never at itself. Regression lock for the other half of the loop.
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData) as exc:
+        vnfin.prices.history(sym, start=_START, end=_END, http_get=http_get)
+    low = str(exc.value).lower()
+    assert "market index" in low and "index_history" in low
+    assert calls == []
+
+
+@pytest.mark.parametrize("sym", ["NOTAREALSYMBOL", "FPT", "VCB", "ABC"])
+def test_index_history_unknown_or_equity_still_routes_to_prices(sym):
+    # The route-to-prices guidance is correct ONLY for a genuinely unknown / equity symbol.
+    for fn in (vnfin.indices.index_history, vnfin.indices.index_history_stitched):
+        calls, http_get = _recorder()
+        with pytest.raises(InvalidData) as exc:
+            fn(sym, _START, _END, http_get=http_get)
+        low = str(exc.value).lower()
+        assert "not a known market index" in low, (fn.__name__, sym, exc.value)
+        assert "prices.history" in low, (fn.__name__, sym, exc.value)  # correct branch here
+        assert calls == []
+
+
+def test_index_history_headline_indices_still_serve():
+    # Regression lock: real value-history indices are unaffected — they pass the guard and
+    # reach the network (no InvalidData routing error).
+    for sym in ("VNINDEX", "VN30", "HNXINDEX", "HNX30", "UPCOM", "VNALLSHARE"):
+        calls, http_get = _recorder()
+        with pytest.raises(Exception) as exc:
+            vnfin.indices.index_history(sym, _START, _END, http_get=http_get)
+        assert not isinstance(exc.value, InvalidData), (sym, exc.value)
+        assert calls, f"{sym} should reach the network (passed the allow-list guard)"

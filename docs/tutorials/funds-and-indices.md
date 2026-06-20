@@ -43,7 +43,10 @@ print(alloc.as_of_utc)                        # freshest provider updateAt, or N
 
 > **Indices only.** `index_history()` accepts recognised market indices (`VNINDEX`, `VN30`,
 > `HNXINDEX`, `HNX30`, `UPCOM`, `VNALLSHARE`). A stock symbol (e.g. `FPT`) raises `InvalidData` —
-> use [`vnfin.prices.history()`](stock-prices.md) for equity prices instead.
+> use [`vnfin.prices.history()`](stock-prices.md) for equity prices instead. A recognised index
+> whose value history is not yet served (e.g. the HOSE **sector** indices `VNFIN`/`VNIT`/…, or
+> `VN100`/`VNDIAMOND`) raises a distinct `InvalidData` that names it as a recognised index with
+> unsupported history — it is **not** sent back to `prices.history()`, because it is not a stock.
 
 ```python
 from datetime import date

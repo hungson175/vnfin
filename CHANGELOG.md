@@ -148,6 +148,18 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Contradictory index/price routing loop for recognised-but-unservable indices** (#174) —
+  `index_history()` / `index_history_stitched()` rejected a recognised index whose value history is
+  not served (the 10 HOSE **sector** indices `VNCOND…VNUTI`, plus `VN100`/`VNMID`/`VNSML`/`VNDIAMOND`/
+  `VNFINLEAD`/`VNFINSELECT`/`VNXALL`/`VNXALLSHARE` and the `HNXUPCOMINDEX` provider alias) with
+  *"not a known market index; use vnfin.prices.history() for stocks"* — but the price path correctly
+  rejects the same symbol as an index and points back to `index_history()`, bouncing the caller
+  between the two namespaces forever (a sector-allocation dashboard dead-ended). The index path now
+  branches on `is_known_index()`: a recognised index returns a **terminal** diagnostic naming it as a
+  recognised market index with unsupported value history (never *"use prices.history()"*), while a
+  genuinely unknown / equity symbol keeps the correct route-to-prices guidance. Error-text/diagnostic
+  change only — no public-API, value-behavior, or registry-set change; serving sector-index *history*
+  remains a separate tracked enhancement. ([#174](https://github.com/hungson175/vnfin/issues/174))
 - **Financial ratios completely unavailable** (#157) — `get_financials(sym, "ratios", ...)` (P/E, P/B,
   ROE, ROA, ROS, EPS, BV, per-share) raised `AllSourcesFailed` for **every** symbol because of two
   independent defects, now both fixed: (1) the failover **unit-homogeneity guard is now

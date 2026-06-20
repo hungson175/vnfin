@@ -19,6 +19,7 @@ from ..exceptions import InvalidData, VnfinError
 from ..models import AdjustmentPolicy, Interval, PriceHistory
 from .._contracts import (
     canonical_security_symbol,
+    is_known_index,
     is_value_history_index,
     resolve_index_alias,
 )
@@ -45,6 +46,36 @@ def _validate_index_selector(value, name: str = "index") -> str:
     reject non-string/bytes/blank/whitespace/punctuation/internal-space before any
     URL/provider call; normalize padded/lowercase (e.g. " vn30 " -> "VN30")."""
     return canonical_security_symbol(value, name)
+
+
+def _unservable_index_error(symbol: str) -> InvalidData:
+    """Issue #174: build the rejection for a symbol the index path cannot serve, branching
+    on whether it is a RECOGNIZED index (deny-list) vs a genuinely unknown / equity symbol.
+
+    The bug this fixes is a contradictory routing LOOP: a deny-only identifier (a known index
+    that is not value-history-servable, e.g. the HOSE sector indices, VN100, VNDIAMOND, …) was
+    told to "use prices.history() for stocks", but the price path correctly rejects it as an
+    index and points back here — bouncing the caller between the two namespaces forever. So:
+
+    * recognized index but no served value-history -> a TERMINAL diagnostic that names it as an
+      index and does NOT mention ``prices.history``/"for stocks" (serving these is a tracked
+      enhancement, not this path's job).
+    * genuinely unknown / equity symbol -> the original route-to-prices guidance, which is
+      correct ONLY here.
+
+    Called on the ALREADY alias-resolved symbol, so served aliases (HNX -> HNXINDEX) never reach
+    it. Single source so both ``index_history`` and ``index_history_stitched`` stay identical.
+    """
+    if is_known_index(symbol):
+        return InvalidData(
+            f"symbol {symbol} is a recognized market index, but its value history is not "
+            f"supported in this version (no served source); it is not available via "
+            f"index_history()."
+        )
+    return InvalidData(
+        f"symbol {symbol} is not a known market index; "
+        "use vnfin.prices.history() for stocks"
+    )
 
 
 class IndexClient:
@@ -96,11 +127,10 @@ class IndexClient:
         # Issue #168: index value-history serves only recognised market indices. A stock
         # (e.g. FPT) or unknown symbol must fail loud BEFORE any network call instead of
         # being fetched and mislabelled as index points.
+        # Issue #174: a deny-only index (recognized but not value-history-servable) gets a
+        # terminal diagnostic, NOT "use prices.history()" (which loops); see the helper.
         if not is_value_history_index(symbol):
-            raise InvalidData(
-                f"symbol {symbol} is not a known market index; "
-                "use vnfin.prices.history() for stocks"
-            )
+            raise _unservable_index_error(symbol)
         validate_date_range(start, end, name="index_history")
         return self._client.get_history(symbol, interval, start, end)
 
@@ -136,11 +166,10 @@ class IndexClient:
         symbol = resolve_index_alias(symbol)
         # Issue #168: only recognised market indices have value-history; fail loud on a
         # stock/unknown symbol before any segment fetch.
+        # Issue #174: a deny-only index gets the terminal diagnostic, not the looping
+        # "use prices.history()" guidance (shared helper keeps both call sites identical).
         if not is_value_history_index(symbol):
-            raise InvalidData(
-                f"symbol {symbol} is not a known market index; "
-                "use vnfin.prices.history() for stocks"
-            )
+            raise _unservable_index_error(symbol)
         lo, hi = validate_date_range(start, end, name="index_history_stitched")
 
         bars: list = []
