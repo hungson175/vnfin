@@ -63,20 +63,27 @@ _Last synced: 2026-06-21 00:40 +07_
 > Suite **3290 green**, surface additive (snapshot FROZEN), no-secrets green. Reviewer pinging vf-advisor
 > to drop its client-side aggregation workaround. state/ watermark = reviewer.
 >
-> **NOW (TOP CODE PRIORITY): #186 quarantine-and-warn for bad upstream bars — CODE COMMITTED, ADVERSARIAL
-> VERIFY IN FLIGHT → Codex×2 NEXT.** Design APPROVED (reviewer LEAD gate); full impl + tests + repo-wide
-> doc sweep committed `74c4e7a` (10 files + new `tests/test_quarantine_bad_bars.py`, 25 tests) on a green
-> merged tree (3317 passed; surface additive/snapshot FROZEN; no-secrets green). Pre-existing test_no_secrets
-> RED (I'd introduced via the #185 doc commit in a prior session, never gated) fixed SEPARATELY `f12a8f0`
-> (placeholder, scanner untouched) so #186 lands on green. **Change:** `UDFSource._build_bars` (SHARED loop,
-> benefits index_history AND prices.history) now QUARANTINES isolated bad bars — drop+record, emit mechanical
-> `quarantined_invalid_bars` warning naming dropped dates+reasons (never silent); conflicting same-date →
-> drop the date entirely + warn; equity exact-ts dup → drop the ts + warn; THRESHOLD guard
-> `len(quarantined) > max(_QUARANTINE_ABS_FLOOR=3, _QUARANTINE_FRACTION=0.10*n)` → systematically-broken
-> source still raises→fails over; lone-bad row → EmptyData → failover. Structural/shape faults still hard-raise
-> InvalidData. #162 index identical-dup dedupe UNCHANGED. **Remaining:** adversarial Workflow self-verify
-> (running, wf_c4660301-02c) → on clean, route to Codex×2 (reviewer directive: shared-parse-path data-quality,
-> high impact) → on APPROVE + green merged tree, push master (no PR) + close #186 (watermark = reviewer).
+> **NOW (TOP CODE PRIORITY): #186 quarantine-and-warn for bad upstream bars — FIX + REVIEWER-FOLLOWUP FIX
+> COMMITTED, ADVERSARIAL RE-VERIFY IN FLIGHT → Codex×2 NEXT.** Design APPROVED (reviewer LEAD gate). Base
+> impl + tests + repo-wide doc sweep `74c4e7a` (10 files + new `tests/test_quarantine_bad_bars.py`);
+> pre-existing no-secrets RED fixed separately `f12a8f0`. **Change:** `UDFSource._build_bars` (SHARED loop,
+> benefits index_history AND prices.history) QUARANTINES isolated bad bars — drop+record, emit mechanical
+> `quarantined_invalid_bars` warning (never silent); conflicting same-date → drop the date + warn; equity
+> exact-ts dup → drop the ts + warn; systematically-broken source still raises→fails over; lone-bad row →
+> EmptyData → failover; structural/shape faults still hard-raise; #162 identical-dup dedupe UNCHANGED.
+> **REVIEWER-FOLLOWUP FIX `24171b0` (self-found via pre-handoff adversarial wf, MAJOR):** the threshold
+> accounting ran over ALL provider rows BEFORE the requested-range filter, so out-of-window provider padding
+> (bad rows outside [start,end]) counted toward "systematically broken" → spuriously failed over a clean
+> window (re-created the #186 bug in the padding region). Fix: range-filter moved INSIDE `_build_bars`
+> (thread lo/hi), timestamp parsed first, threshold now `bad_inrange > max(_QUARANTINE_ABS_FLOOR=3,
+> _QUARANTINE_FRACTION=0.10*considered)` over in-range timestamp-parseable rows only; out-of-range dropped
+> silently, unparseable-ts disclosed-in-warning-but-excluded-from-verdict. +3 fail-first regression tests
+> (28 total in the file). Repo-wide stale-claim sweep (CHANGELOG + architecture doc → "in-range only";
+> design D3 "Implemented as/supersedes" note; test_indices comment). **Full suite 3320 green; surface
+> additive/snapshot FROZEN; no-secrets green.** **Remaining:** adversarial RE-verify on the CORRECTED code
+> (running, wf_2131012e-8dc, 3 lenses) → on clean, route to Codex×2 (reviewer directive: shared-parse-path
+> data-quality, high impact) → on APPROVE + green merged tree, push master (no PR) + close #186 (watermark
+> = reviewer).
 >
 > **AFTER #186: #185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53), code deferred.**
 > Design note committed `e6a1b4a` (`docs/design/issue-185-annual-world-gold-source.md`); reviewer APPROVE
