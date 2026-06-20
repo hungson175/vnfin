@@ -38,7 +38,13 @@ _Last synced: 2026-06-21 00:40 +07_
 > green**, surface additive (snapshot FROZEN), no-secrets green. Watermark/state left to reviewer;
 > reviewer pinging vf-advisor to flip the gold line mock→real. Memory: [[compose-daily-and-annual-legs-align-calendar-year]].
 >
-> **NOW: #174 sector-index routing BUG — ACTIVE (TDD → reviewer LEAD review, NOT Codex×2).** Spec
+> **NOW: #174 sector-index routing BUG — CODE DONE (TDD GREEN), IN reviewer LEAD review (NOT Codex×2);
+> NOT pushed.** Commit `83223ed`; handoff `/tmp/vnfin-174-leadreview-handoff-20260621.md`. Shared
+> `_unservable_index_error()` branches on `is_known_index()` at BOTH guard sites — recognised-but-
+> unservable index → terminal diagnostic (no prices.history/for-stocks), unknown/equity → unchanged
+> route-to-prices. No registry-set change. TDD matrix locked to registry diff (19 deny-only ids), full
+> suite **3260 green**, surface frozen. On APPROVE: push `e48e56a..83223ed` + close #174 (serving
+> sector-index HISTORY = tracked enhancement, note in close comment). Spec
 > `spec-202606202230`. BUG: `prices.history(VNFIN)` correctly rejects (deny-list) but
 > `index_history(VNFIN)` wrongly says "not a known market index; use prices.history()" (allow-list
 > miss) → user dead-ends. FIX (minimal, NO registry-data/new-source): in BOTH `index_history` +
