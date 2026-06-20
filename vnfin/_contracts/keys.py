@@ -235,3 +235,38 @@ def canonical_enum_tag(
             ctx, f"{value!r} is not one of {sorted(allowed_set)}"
         )
     return tag
+
+
+def enum_tag_or_other(
+    value: Any,
+    allowed: Iterable[str],
+    ctx: str,
+    *,
+    missing_ok: bool = False,
+    other: str = "OTHER",
+    normalize=str.upper,
+) -> str | None:
+    """Like :func:`canonical_enum_tag`, but an unknown-but-stringlike value maps to
+    ``other`` (default ``"OTHER"``) instead of failing closed.
+
+    Contract (a tuple-returning accessor must not hard-break a whole result on a
+    new provider enum value, but must still reject genuine data-quality errors):
+
+    * ``MISSING`` -> ``None`` when ``missing_ok`` (else raises) — same as
+      :func:`canonical_enum_tag`;
+    * a present, non-empty canonical string whose normalized form is in ``allowed``
+      -> that normalized tag;
+    * a present, non-empty canonical string NOT in ``allowed`` -> ``other`` (an
+      honest fallback, never a mislabel) — this is the one behavioural difference;
+    * a present *malformed* value (non-string, or empty/blank/padded string) -> raises
+      ``InvalidData`` (a data-quality error, distinct from a new enum value).
+    """
+    allowed_set = set(allowed)
+    if value is MISSING:
+        if missing_ok:
+            return None
+        raise contract_error(ctx, "missing required tag")
+    tag = require_non_empty_str(value, ctx, canonical=True)
+    if normalize is not None:
+        tag = normalize(tag)
+    return tag if tag in allowed_set else other

@@ -11,8 +11,9 @@ All notable changes to `vnfin` are documented here. The format follows
   per-security **equity** (`productTopHoldingList`) **and bond** (`productTopHoldingBondList`) rows into
   one `tuple[FundHolding]`, so a bond or balanced fund returns its real positions instead of a bare
   `EmptyData` (a category-wide blind spot: 22 BOND funds + at-par BALANCED funds). Each `FundHolding`
-  gains two **appended, defaulted** (additive) fields: `instrument_type` (`"STOCK"`/`"BOND"`; an
-  unrecognized provider type fails closed) and `as_of_utc` (the row's `updateAt`, epoch-ms → UTC, or
+  gains two **appended, defaulted** (additive) fields: `instrument_type`
+  (`"STOCK"`/`"BOND"`/`"UNLISTED_BOND"`/`"OTHER"` — an unknown-but-stringlike provider type maps to the
+  honest `"OTHER"` tag, a malformed type fails closed) and `as_of_utc` (the row's `updateAt`, epoch-ms → UTC, or
   `None` — never fabricated). A new sibling accessor **`asset_allocation(product_id)` → `AssetAllocation`**
   (with `AssetClassWeight`) exposes the typed equity/bond/cash split (class codes `{STOCK, BOND, CASH}`,
   weights 0–100 not forced to sum to 100%, `as_of_utc` from `updateAt`). All changes are additive.
@@ -53,6 +54,15 @@ All notable changes to `vnfin` are documented here. The format follows
   still fails closed. Ratios remain `Period.UNKNOWN` (the provider's `reportDate`, which may be a TTM
   snapshot, is surfaced faithfully and never relabeled as a fiscal-year annual figure). Internal-only;
   no public-API change. ([#157](https://github.com/hungson175/vnfin/issues/157))
+- **Fund unlisted-bond holdings** (#173 residual) — `vnfin.funds` `holdings(product_id)` no longer
+  hard-fails (`InvalidData`) the ~8 real Fmarket unlisted-bond funds (e.g. ASBF id 51, VFF id 21,
+  DCBF id 27) whose rows carry `type="UNLISTED_BOND"` and/or a **descriptive** `stockCode` (e.g.
+  `'Trái phiếu chưa niêm yết'`). `FundHolding.instrument_type` now also reports `"UNLISTED_BOND"` and
+  `"OTHER"` (a present-but-unknown stringlike provider `type` → `"OTHER"` instead of fail-closed; a
+  present-malformed `type` still fails closed). `stock_code` validation is now relaxed for
+  bond/unlisted-bond/other rows (required present + non-empty, stored verbatim) while equities stay
+  strict (`[A-Z][A-Z0-9]*`). Additive — existing listed-bond/equity behavior is unchanged.
+  ([#173](https://github.com/hungson175/vnfin/issues/173))
 - **Fmarket NAV-history staleness** — `vnfin.funds` `nav_history(...)` no longer returns a silent
   `EmptyData` (indistinguishable from "no data") when the provider's history is stale. When the
   newest `navDate` is strictly before the requested window start, it now raises the new `StaleData`

@@ -73,7 +73,7 @@ reports = vnfin.fundamentals.get_financials("FAKECORP", "income", "annual")  # u
 src   = vnfin.funds.client()                 # FmarketFundSource (accepted single-source; client() == source())
 funds = src.list_funds()
 holds = src.holdings(funds[0].id)            # tuple[FundHolding] — equities + bonds merged; each has
-                                             # .instrument_type ("STOCK"/"BOND") + .as_of_utc
+                                             # .instrument_type (STOCK/BOND/UNLISTED_BOND/OTHER) + .as_of_utc
 alloc = src.asset_allocation(funds[0].id)    # AssetAllocation — asset-class split (equity/bond/cash)
 
 # indices — index value (points) + members.

@@ -78,6 +78,49 @@ def test_canonical_enum_tag_present_valid_but_unknown_raises():
         canonical_enum_tag("MONTHLY", ANNUAL_QUARTER, CTX, missing_ok=True)
 
 
+# --- enum_tag_or_other (#173 unlisted-bond residual) ------------------------
+# Like canonical_enum_tag but a present-but-UNKNOWN stringlike value maps to a
+# fallback ("OTHER") instead of failing closed — a tuple-returning accessor must
+# not hard-break a whole fund on a new provider type. A MISSING key still
+# returns None (missing_ok) and a present-MALFORMED value (non-string/blank)
+# still fails closed (genuine data-quality error, distinct from a new enum).
+from vnfin._contracts import enum_tag_or_other
+
+STOCK_BOND = {"STOCK", "BOND", "UNLISTED_BOND"}
+
+
+def test_enum_tag_or_other_known_normalizes_and_accepts():
+    assert enum_tag_or_other("stock", STOCK_BOND, CTX, missing_ok=True) == "STOCK"
+    assert enum_tag_or_other("UNLISTED_BOND", STOCK_BOND, CTX, missing_ok=True) == "UNLISTED_BOND"
+
+
+def test_enum_tag_or_other_unknown_string_maps_to_other():
+    # The behavioural difference from canonical_enum_tag: unknown-but-stringlike
+    # does NOT raise — it returns the OTHER fallback.
+    assert enum_tag_or_other("WARRANT", STOCK_BOND, CTX, missing_ok=True) == "OTHER"
+
+
+def test_enum_tag_or_other_missing_returns_none_when_ok():
+    assert enum_tag_or_other(MISSING, STOCK_BOND, CTX, missing_ok=True) is None
+
+
+def test_enum_tag_or_other_missing_not_ok_raises():
+    with pytest.raises(InvalidData, match="missing required tag"):
+        enum_tag_or_other(MISSING, STOCK_BOND, CTX, missing_ok=False)
+
+
+@pytest.mark.parametrize("bad", ["", "   ", None, [], {}, False, True, 123])
+def test_enum_tag_or_other_present_malformed_still_raises(bad):
+    # Present-malformed (non-string or empty/blank) is a data-quality error and
+    # must still fail closed — only an unrecognized *stringlike* value → OTHER.
+    with pytest.raises(InvalidData):
+        enum_tag_or_other(bad, STOCK_BOND, CTX, missing_ok=True)
+
+
+def test_enum_tag_or_other_custom_fallback():
+    assert enum_tag_or_other("ZZZ", STOCK_BOND, CTX, missing_ok=True, other="MISC") == "MISC"
+
+
 # Phase 4 — canonical security/fund identifier (#34/#33/#30/#9).
 from vnfin._contracts import canonical_fund_code, canonical_security_symbol
 

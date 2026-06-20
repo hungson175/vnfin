@@ -116,7 +116,12 @@ bonds merged), `asset_allocation(fund_id)` (asset-class split).
 `as_of_utc`), `AssetAllocation`, `AssetClassWeight`.
 
 **Key contract enforcements (Phase 4 migration):**
-- `stockCode` / `fundCode` validated via `canonical_security_symbol` / `canonical_fund_code`.
+- `fundCode` validated via `canonical_fund_code`; holding `stockCode` is canonical
+  (`canonical_security_symbol`) **for equities only** — bond / unlisted-bond / other holding rows take a
+  relaxed identifier (required present + non-empty, stored verbatim) so a descriptive provider bond
+  label does not fail the fund.
+- `FundHolding.instrument_type` ∈ `{STOCK, BOND, UNLISTED_BOND, OTHER}`: an unknown-but-stringlike
+  provider `type` → `OTHER` (honest, not fail-closed); a present-malformed `type` fails closed.
 - Present-null fund code fails closed.
 - NAV history broad-window fetch + client-side filter (issue #144).
 

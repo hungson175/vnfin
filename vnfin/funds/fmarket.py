@@ -33,7 +33,9 @@ from .._contracts import (
     canonical_enum_tag,
     canonical_fund_code,
     canonical_security_symbol,
+    enum_tag_or_other,
     optional_present,
+    require_non_empty_str,
     require_present,
 )
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable, StaleData
@@ -518,14 +520,42 @@ class FmarketFundSource(HttpDataSource):
     def _parse_holding(row, seen_codes=None, *, default_type: str = "STOCK") -> FundHolding:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: holding row is not an object")
-        # Issue #34: stockCode is a public security identifier — a present blank or
-        # malformed non-blank shape (internal space / punctuation / digit-first) must
-        # fail closed, not just be stripped/uppercased. canonical_security_symbol
-        # normalizes (strip().upper()) then validates [A-Z][A-Z0-9]*.
-        stock_code = canonical_security_symbol(
-            require_present(row, "stockCode", "fmarket holding stockCode"),
-            "fmarket holding stockCode",
+        # Issue #173 (residual): resolve instrument_type FIRST (it needs only the
+        # row's `type` + the per-list default), then choose stockCode strictness by
+        # type. The accepted set is the known reals {STOCK, BOND, UNLISTED_BOND}
+        # (listed vs unlisted is a real credit-risk distinction worth carrying); a
+        # present-but-unknown *stringlike* type maps to the honest "OTHER" tag
+        # rather than fail-closing a whole fund (a holdings tuple has no per-row
+        # warning channel). A present-MALFORMED `type` (non-string / blank) is a
+        # genuine data-quality error and still fails closed via enum_tag_or_other.
+        # An absent `type` falls back to the per-list default (equity list -> STOCK,
+        # bond list -> BOND).
+        instrument_type = (
+            enum_tag_or_other(
+                optional_present(row, "type"),
+                {"STOCK", "BOND", "UNLISTED_BOND"},
+                "fmarket holding type",
+                missing_ok=True,
+                other="OTHER",
+            )
+            or default_type
         )
+        # Issue #34 / #173: stockCode is a public identifier. For equities it stays
+        # STRICT — a present blank or malformed non-blank shape (internal space /
+        # punctuation / digit-first) fails closed via canonical_security_symbol
+        # (strip().upper() then [A-Z][A-Z0-9]*). For bond / unlisted-bond / other
+        # rows it is RELAXED: a real Fmarket unlisted-bond row may carry a
+        # descriptive phrase (e.g. 'Trái phiếu chưa niêm yết') instead of a
+        # canonical code, which must NOT hard-fail the fund. The key must still be
+        # present and a non-empty string (present-null / blank / missing still fail
+        # closed); it is stripped and stored verbatim (no upper-case, no grammar).
+        raw_code = require_present(row, "stockCode", "fmarket holding stockCode")
+        if instrument_type == "STOCK":
+            stock_code = canonical_security_symbol(raw_code, "fmarket holding stockCode")
+        else:
+            stock_code = require_non_empty_str(
+                raw_code, "fmarket holding stockCode", canonical=False
+            )
         if seen_codes is not None:
             if stock_code in seen_codes:
                 raise InvalidData(f"fmarket: duplicate holding stock code {stock_code}")
@@ -548,20 +578,6 @@ class FmarketFundSource(HttpDataSource):
             if price < 0:
                 raise InvalidData(f"fmarket: holding {stock_code} price is negative: {price}")
             price_unit = "raw"
-        # Issue #173: instrument type tags the line item STOCK vs BOND. A present
-        # `type` is validated against {STOCK, BOND} and fails closed if unknown (a
-        # holdings tuple has no per-row warning channel, so we never silently
-        # mislabel). An absent `type` falls back to the per-list default the caller
-        # passes (the equity list -> STOCK, the bond list -> BOND).
-        instrument_type = (
-            canonical_enum_tag(
-                optional_present(row, "type"),
-                {"STOCK", "BOND"},
-                f"fmarket holding {stock_code} type",
-                missing_ok=True,
-            )
-            or default_type
-        )
         return FundHolding(
             stock_code=stock_code,
             weight_pct=weight,

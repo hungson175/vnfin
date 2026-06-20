@@ -32,6 +32,7 @@ from .keys import (
     canonical_fund_code,
     canonical_provider_key,
     canonical_security_symbol,
+    enum_tag_or_other,
 )
 from .index_registry import is_known_index, is_value_history_index, resolve_index_alias
 from .results import non_empty_reason, result_type_reason
@@ -52,6 +53,7 @@ __all__ = [
     "optional_present_non_empty_str",
     "canonical_provider_key",
     "canonical_enum_tag",
+    "enum_tag_or_other",
     "canonical_security_symbol",
     "canonical_fund_code",
     "canonical_country_iso3",

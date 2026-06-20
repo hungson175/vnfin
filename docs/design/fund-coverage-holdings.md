@@ -111,10 +111,21 @@ former name. The full typed per-security model (Option A) is therefore buildable
 1. **`holdings()` merges both line-item lists.** It now parses `productTopHoldingList` (equity, first)
    **and** `productTopHoldingBondList` (bonds), reusing one row parser. The return type stays
    `tuple[FundHolding, ...]` (no breaking change). A bond/balanced fund now returns its real positions.
-2. **`FundHolding.instrument_type`** (`"STOCK"`/`"BOND"`, appended field, default `"STOCK"`) tags each
-   row. A row's own `type` is validated against `{STOCK, BOND}` and **fails closed if unrecognized**
-   (a holdings tuple has no per-row warning channel — never silently mislabel); an absent `type` falls
-   back to the per-list default (equity list → STOCK, bond list → BOND).
+2. **`FundHolding.instrument_type`** (one of `{STOCK, BOND, UNLISTED_BOND, OTHER}`, appended field,
+   default `"STOCK"`) tags each row. A row's own `type` is normalized against the known reals
+   `{STOCK, BOND, UNLISTED_BOND}` (listed vs unlisted is a real credit-risk distinction worth keeping);
+   a **present-but-unknown but stringlike** type maps to the honest **`"OTHER"`** tag rather than
+   fail-closing the whole fund (a holdings tuple has no per-row warning channel; "OTHER" is honest, not
+   a mislabel). A present-*malformed* `type` (non-string / blank) is still a data-quality error and
+   **fails closed**. An absent `type` falls back to the per-list default (equity list → STOCK, bond
+   list → BOND).
+   - **#173 residual (re-open):** the original `{STOCK, BOND}` fail-closed whitelist hard-failed ~8
+     real unlisted-bond funds (ASBF id 51, VFF id 21, DCBF id 27 carry `type="UNLISTED_BOND"`),
+     regressing them from `EmptyData` to `InvalidData`. Additionally, `stock_code` validation is
+     **strict (`[A-Z][A-Z0-9]*`) only for equities**; for bond / unlisted-bond / other rows it is
+     relaxed (required present + non-empty, stripped, stored verbatim) so a descriptive provider
+     identifier like `'Trái phiếu chưa niêm yết'` no longer fails the fund. Dedup still spans the
+     resolved `stock_code` across both lists.
 3. **`FundHolding.as_of_utc`** (appended, default `None`) carries the provider's per-row `updateAt`
    (epoch-**ms** → tz-aware UTC; absent/malformed → `None`, never a fabricated `now()`), so a holdings
    tuple is no longer freshness-blind.

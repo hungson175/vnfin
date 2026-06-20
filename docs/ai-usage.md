@@ -174,7 +174,7 @@ print(hist.value_unit, hist.currency)             # 'VND/unit' 'VND'
 
 holdings = src.holdings(f0.id)                     # tuple[FundHolding] — equities + bonds merged
 for h in holdings:
-    print(h.stock_code, h.weight_pct, h.instrument_type)  # 'STOCK'/'BOND'; weight_pct = % of NAV (0–100)
+    print(h.stock_code, h.weight_pct, h.instrument_type)  # STOCK/BOND/UNLISTED_BOND/OTHER; weight_pct = % of NAV (0–100)
 
 alloc = src.asset_allocation(f0.id)                # AssetAllocation — asset-class split
 for c in alloc:
@@ -183,9 +183,12 @@ for c in alloc:
 
 - **Gotchas:** `nav_history`/`holdings`/`asset_allocation` take the fund's **internal `Fund.id`
   (int)**, not the ticker. `holdings()` merges equity + bond rows (a pure-bond fund returns its bond
-  positions, no longer `EmptyData`); each row has `instrument_type` and an optional `as_of_utc`
-  (provider `updateAt`, or `None`). `FundHolding.price_raw` is **opaque/unnormalized**
-  (`price_unit='raw'/None`) — don't treat as money; `weight_pct` is the safe numeric.
+  positions, no longer `EmptyData`); each row has `instrument_type`
+  (`STOCK`/`BOND`/`UNLISTED_BOND`/`OTHER` — an unknown provider type → `OTHER`, never a hard fail) and
+  an optional `as_of_utc` (provider `updateAt`, or `None`). `stock_code` is a canonical ticker for
+  equities, but for bond/unlisted-bond/other rows it may be a non-canonical descriptive identifier.
+  `FundHolding.price_raw` is **opaque/unnormalized** (`price_unit='raw'/None`) — don't treat as money;
+  `weight_pct` is the safe numeric.
 
 ### 5.4 `vnfin.indices` — index value (points) + constituents
 

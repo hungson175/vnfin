@@ -25,8 +25,10 @@ holdings = fund_src.holdings(first.id)
 
 print(nav.value_unit, nav.points[-1])
 # holdings merges equities and bonds; each row is tagged with instrument_type
-# ("STOCK"/"BOND") and an optional as_of_utc freshness stamp. A pure-bond fund
-# returns its bond positions (it no longer raises EmptyData).
+# (STOCK / BOND / UNLISTED_BOND / OTHER) and an optional as_of_utc freshness
+# stamp. A pure-bond fund returns its bond positions (it no longer raises
+# EmptyData). For bond rows stock_code may be a descriptive identifier, not a
+# canonical ticker.
 for h in holdings[:10]:
     print(h.stock_code, h.weight_pct, h.instrument_type)  # FundHolding fields
 

@@ -1215,11 +1215,136 @@ def test_holdings_equity_row_without_type_defaults_to_stock():
     assert holds[0].instrument_type == "STOCK"
 
 
-def test_holdings_present_unknown_type_raises_invalid():
-    # A present-but-unknown instrument type fails closed (not STOCK/BOND).
+def test_holdings_present_unknown_type_maps_to_other():
+    # #173 residual: a present-but-unknown but *stringlike* instrument type maps
+    # to the honest "OTHER" tag — it must NOT fail-close the whole fund (a
+    # tuple-returning accessor has no per-row warning channel, and an unknown
+    # provider type is not a data-quality error, just a new value).
     top = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "type": "WARRANT"}]
+    holds = _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+    assert holds[0].instrument_type == "OTHER"
+
+
+def test_holdings_unlisted_bond_type_parsed():
+    # #173 residual (ASBF id 51, VFF id 21, DCBF id 27): real Fmarket bond funds
+    # report type="UNLISTED_BOND" on their unlisted-bond rows. The old
+    # {STOCK,BOND} whitelist hard-failed (InvalidData) ~8 such funds; the granular
+    # tag must now be accepted and carried (listed vs unlisted is a credit-risk
+    # distinction worth keeping).
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "type": "UNLISTED_BOND", "price": None}]
+    holds = _src(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    ).holdings(FAKE_ID_A)
+    assert len(holds) == 1
+    assert holds[0].stock_code == "ZZZBOND1"
+    assert holds[0].instrument_type == "UNLISTED_BOND"
+
+
+def test_holdings_descriptive_bond_stock_code_accepted_verbatim():
+    # #173 residual (ASBF id 51): an unlisted-bond row whose stockCode is a
+    # descriptive phrase ('Trái phiếu chưa niêm yết' = "unlisted bond") must NOT
+    # fail the whole fund. For bond/unlisted-bond/other rows stockCode is relaxed:
+    # required present + non-empty, stripped, but NOT forced to the canonical
+    # [A-Z][A-Z0-9]* grammar — stored verbatim (no upper-case, no regex).
+    bond = [
+        {"stockCode": "  Trái phiếu chưa niêm yết  ", "netAssetPercent": 8.0, "type": "UNLISTED_BOND"},
+    ]
+    holds = _src(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    ).holdings(FAKE_ID_A)
+    assert len(holds) == 1
+    assert holds[0].stock_code == "Trái phiếu chưa niêm yết"
+    assert holds[0].instrument_type == "UNLISTED_BOND"
+
+
+def test_holdings_descriptive_code_on_other_type_row_accepted():
+    # A present-but-unknown type ⇒ OTHER, which (like bond rows) takes the relaxed
+    # stockCode path so a non-canonical identifier on an OTHER row is also accepted.
+    bond = [{"stockCode": "some descriptive label", "netAssetPercent": 3.0, "type": "WARRANT"}]
+    holds = _src(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    ).holdings(FAKE_ID_A)
+    assert holds[0].instrument_type == "OTHER"
+    assert holds[0].stock_code == "some descriptive label"
+
+
+def test_holdings_equity_row_descriptive_code_still_raises_invalid():
+    # Regression guard: equities stay STRICT — a non-canonical/descriptive
+    # stockCode on a STOCK row still fails closed (canonical validation preserved).
+    top = [{"stockCode": "not a ticker", "netAssetPercent": 5.0, "type": "STOCK"}]
     with pytest.raises(InvalidData):
         _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+def test_holdings_equity_default_type_descriptive_code_still_raises_invalid():
+    # Same guard via the per-list default (no `type` on an equity-list row ⇒ STOCK).
+    top = [{"stockCode": "not a ticker", "netAssetPercent": 5.0}]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("bad_type", [123, 4.5, True, "", "   "])
+def test_holdings_present_malformed_type_still_raises_invalid(bad_type):
+    # A present-MALFORMED type (non-string, or empty/blank string) is a genuine
+    # data-quality error and STILL fails closed — distinct from an unknown-but-
+    # stringlike type (which → OTHER).
+    top = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "type": bad_type}]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+def test_holdings_bond_descriptive_code_dedup_still_applies():
+    # Dedup spans the resolved stock_code string even for relaxed/phrase codes.
+    bond = [
+        {"stockCode": "Trái phiếu chưa niêm yết", "netAssetPercent": 4.0, "type": "UNLISTED_BOND"},
+        {"stockCode": "Trái phiếu chưa niêm yết", "netAssetPercent": 5.0, "type": "UNLISTED_BOND"},
+    ]
+    with pytest.raises(InvalidData, match="duplicate holding stock code"):
+        _src(
+            _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+        ).holdings(FAKE_ID_A)
+
+
+@pytest.mark.parametrize(
+    "bad_code",
+    [None, "", "   "],
+    ids=["null", "empty", "blank"],
+)
+def test_holdings_bond_present_null_or_blank_code_still_raises(bad_code):
+    # Relaxing the GRAMMAR for bond rows does NOT relax presence: a present-null /
+    # empty / blank stockCode on a bond row still fails closed.
+    bond = [{"stockCode": bad_code, "netAssetPercent": 5.0, "type": "BOND"}]
+    with pytest.raises(InvalidData):
+        _src(
+            _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+        ).holdings(FAKE_ID_A)
+
+
+def test_holdings_bond_missing_code_still_raises():
+    bond = [{"netAssetPercent": 5.0, "type": "BOND"}]
+    with pytest.raises(InvalidData):
+        _src(
+            _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+        ).holdings(FAKE_ID_A)
+
+
+def test_holdings_end_to_end_unlisted_bond_fund_populated_not_raising():
+    # End-to-end regression: a whole fund whose bond list carries an UNLISTED_BOND
+    # row with a descriptive stockCode now returns a POPULATED tuple instead of
+    # raising InvalidData (the #173 residual that hard-failed ~8 defensive-credit
+    # funds — ASBF/VFF/DCBF). Drives holdings() through the detail/HTTP layer with
+    # a synthetic payload.
+    bond = [
+        {"stockCode": "Trái phiếu chưa niêm yết", "netAssetPercent": 30.0, "type": "UNLISTED_BOND"},
+        {"stockCode": "ZZZBOND2", "netAssetPercent": 20.0, "type": "BOND"},
+    ]
+    holds = _src(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    ).holdings(FAKE_ID_A)
+    assert len(holds) == 2
+    by_code = {h.stock_code: h for h in holds}
+    assert by_code["Trái phiếu chưa niêm yết"].instrument_type == "UNLISTED_BOND"
+    assert by_code["ZZZBOND2"].instrument_type == "BOND"
 
 
 def test_holdings_per_holding_as_of_from_update_at():

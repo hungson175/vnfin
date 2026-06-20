@@ -112,13 +112,22 @@ class FundHolding:
     Both may be ``None`` when the provider omits the price.
 
     ``instrument_type`` is the normalized asset class of the underlying line item —
-    ``"STOCK"`` for equity holdings and ``"BOND"`` for fixed-income holdings — so a
-    bond fund's per-bond positions are no longer silently dropped. Equity holdings
-    keep ``price_raw``/``price_unit``; bonds typically report no price (both ``None``).
-    A *present-but-unrecognized* provider instrument type fails the whole call closed
-    (a holdings tuple has no per-row warning channel, so we never silently mislabel a
-    position); if a new real provider type ever appears, the additive fix is a new
-    enum value (e.g. ``"OTHER"``), never a misleading ``"STOCK"`` default.
+    one of ``"STOCK"`` (equity), ``"BOND"`` (listed fixed-income),
+    ``"UNLISTED_BOND"`` (unlisted/OTC fixed-income — kept granular because listed vs
+    unlisted is a real credit-risk distinction), or ``"OTHER"`` (any present-but-
+    unrecognized provider type) — so a bond fund's per-bond positions are no longer
+    silently dropped. Equity holdings keep ``price_raw``/``price_unit``; bonds
+    typically report no price (both ``None``). A present-but-unrecognized provider
+    type maps to the honest ``"OTHER"`` tag rather than fail-closing the whole call
+    (a holdings tuple has no per-row warning channel; "OTHER" is honest, not a
+    mislabel). A present-*malformed* ``type`` (non-string / blank) is still a
+    data-quality error that fails closed. ``stock_code`` is a canonical
+    ``[A-Z][A-Z0-9]*`` ticker for equities, but for bond / unlisted-bond / other
+    rows it may be a non-canonical descriptive identifier (e.g. an unlisted-bond row
+    whose provider ``stockCode`` is a phrase) stored verbatim — i.e. a provider label,
+    not necessarily a tradeable symbol. Callers that use ``stock_code`` as a tradeable
+    ticker must first gate on ``instrument_type == "STOCK"`` (only equities are
+    guaranteed a canonical symbol). Field default stays ``"STOCK"``.
 
     ``as_of_utc`` is the provider's per-holding last-update timestamp (tz-aware UTC),
     or ``None`` when the provider omits it — never fabricated. It gives each holding a

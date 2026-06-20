@@ -153,11 +153,11 @@ bond list. (There is no `productBondHoldingList` key — the bond array is `prod
 
 | Provider field | Model field | Notes |
 |----------------|-------------|-------|
-| `stockCode` | `FundHolding.stock_code` | canonical ticker / bond code |
+| `stockCode` | `FundHolding.stock_code` | canonical `[A-Z][A-Z0-9]*` ticker for equities; for bond / unlisted-bond / other rows a relaxed identifier (required present + non-empty, stored verbatim — may be a descriptive phrase e.g. `'Trái phiếu chưa niêm yết'`) |
 | `netAssetPercent` | `FundHolding.weight_pct` | percent of NAV, 0–100 |
 | `industry` | `FundHolding.industry` | nullable |
 | `price` | `FundHolding.price_raw` (+ `price_unit="raw"`) | unverified scale, kept RAW; bonds usually `null` |
-| `type` | `FundHolding.instrument_type` | `{STOCK, BOND}`; present-but-unknown fails closed; absent → per-list default |
+| `type` | `FundHolding.instrument_type` | known reals `{STOCK, BOND, UNLISTED_BOND}`; present-but-unknown stringlike → `OTHER` (honest, not fail-closed); present-malformed (non-string/blank) fails closed; absent → per-list default |
 | `updateAt` | `FundHolding.as_of_utc` | epoch-**ms** → UTC; absent/malformed → `None` (never fabricated) |
 
 `asset_allocation(product_id)` reads `productAssetHoldingList` off the same document:
