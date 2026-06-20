@@ -49,7 +49,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   + long-message rules (1074a0a, Boss directive).
 - **Design-first parked (reviewer triage review-202606200902, filtered specs only):**
   - B: **#147** v1 DONE (sub-agent + main integrate; pushed `eadf7e1..a645c71`, CLOSED; review-202606200931). index_history_stitched. Deferred polish (non-blocking notes): rename design-doc 'Open questions' heading; add returned-segment-interval regression.
-  - C: **#149/#152/#156** macro / rates / global-benchmark diagnostics.
+  - C: **#149/#152/#156** macro / rates / global-benchmark diagnostics. **#152 addendum** (poller
+    triage review-202606201103): deposit-rate/fixed-income parked design-first. Scope: fixed-income/
+    rates/yield-curve data + diagnostics IN; deposit-rate aggregation is source/legal-diagnostic ONLY
+    unless clean sources approved; OUT: bank-product advice/ranking/blind scraping.
   - D: **#154/#150** derived gold-premium / portfolio analytics (offline, data-only, no advice).
   - E: **#155** fund metadata / allocation diagnostics. **Addendum** (poller triage
     review-202606201058): accepted/parked design-first behind #159 (likely after #157 unless Boss
