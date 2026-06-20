@@ -23,15 +23,18 @@ _Last synced: 2026-06-21 00:40 +07_
 > CRITICAL (AV non-positive OHLC served as trusted primary). Full suite 3172 green. vf-advisor cleared
 > to flip its S&P 500 chart mock→real.
 >
-> **NOW: #178 gold world-reference history — ACTIVE (TDD).** Ship labeled
-> `gold.world_reference_history_vnd()` = existing Stooq world-gold (XAU USD/oz) × USD/VND FX ×
-> oz→lượng factor → VND/lượng; MANDATORY `world_reference_*` naming + `premium_note` ("world-gold-
-> implied VND reference; excludes the VN domestic premium, historically +10–21%, time-varying; NOT
-> SJC/BTMC"); reserve `gold.domestic_history()` → clear source-gap diagnostic, NEVER the synthesis.
-> **⚠️ SPEC FORMULA CHECK:** spec writes `×(31.1035/37.5)` but physics says `×(37.5/31.1035)≈1.2057`
-> (1 lượng=37.5g > 1 troy oz=31.1035g, so per-lượng scales UP); the spec's own 2023 sanity figures
-> (~56M world-equiv + ~11.7M SJC premium → ~67M SJC) confirm 37.5/31.1035. Flagging to reviewer
-> before coding. Composes existing primitives → TDD → Codex×2. Source-hunt follow-up = **#182**.
+> **NOW: #178 gold world-reference history — CODE DONE, IN Codex×2 REVIEW (handoff sent 2026-06-21).**
+> Committed `f82db41..89de02c` (feat `4857068` + docs `6ae1538` + self-verify fix `89de02c`); NOT
+> pushed. Shipped `gold.world_reference_history_vnd()` = world-gold (XAU USD/oz, CurrencyApi→Stooq
+> failover) × USD/VND (World Bank) × oz→lượng **1.20565** (37.5/31.1035, named constants) → annual
+> VND/lượng; mandatory `world_reference_*` naming + always-present excludes-domestic-premium warning
+> (+10–21%, NOT SJC/BTMC); `gold.domestic_history()` reserved → NotImplementedError source-gap (#182).
+> **Self-verify (5-lens wf) found+fixed 2 majors BEFORE handoff:** (1) boundary-year partial-mean bias
+> (+20.53%) → snap gold+FX fetch to whole calendar years; (2) dropped gold-leg `partial_coverage`
+> warning → now forwarded namespaced. Suite **3194 green**, surface additive (snapshot FROZEN),
+> no-secrets green. Handoff: `/tmp/vnfin-178-codereview-handoff-20260621.md`. **Push/close ONLY after
+> Codex×2 APPROVE + green merged tree.** Source-hunt follow-up = **#182**.
+> _(Resolved pre-code spec formula flag: physics + spec sanity figures confirmed 37.5/31.1035 — design-gate LOCKED it.)_
 > **#174 = QUEUED after #178** (spec `spec-202606202230`): branch on `is_known_index()` in BOTH
 > `index_history` + `index_history_stitched` after alias resolution → terminal "recognized index but
 > value-history unsupported" diagnostic (no prices.history text) for ALL deny-only ids; TDD → reviewer
