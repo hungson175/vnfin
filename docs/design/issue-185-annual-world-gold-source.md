@@ -26,7 +26,11 @@ Since #178's OUTPUT is **annual**, the fix is an **annual** world-gold source th
 
 - **Distribution:** World Bank Commodity Markets "Pink Sheet", historical data, **annual `.xlsx`**.
 - **URL (vintage-coded — see §4):**
-  `https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Annual.xlsx`
+  `https://thedocs.worldbank.org/en/doc/<vintage-hash>-0050012026/related/CMO-Historical-Data-Annual.xlsx`
+  (the `<vintage-hash>` segment is a per-release digest that shifts between vintages; resolve the
+  concrete current URL from the WB Pink Sheet portal at #185 code time — see §4. NOT pinned inline
+  here to keep the doc scanner-clean; the #185 code will make a deliberate secret-scanner decision
+  for the pinned `_CMO_ANNUAL_URLS` list at its gate.)
 - **Series:** sheet `Annual Prices (Nominal)`; **match the gold column BY HEADER TEXT (`Gold` + units
   `($/troy oz)`), NOT a fixed column index** (position shifts between vintages). Year in column 0.
 - **Coverage:** 1960–2025 annual, **no gaps** (66 points; e.g. 1960=35.27, 2024=2387.70, 2025=3441.51).
