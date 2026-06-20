@@ -121,6 +121,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   handle them via migration, Phase 6 closes them. Do not apply the stash before then.
 - **#140 — "financial news" enhancement** — parked (product/scope, not a bug).
 
+## Now (WIP)
+
+- **#159 FX history — DESIGN-FIRST ONLY** (reviewer spec review-202606201018). Deliverable:
+  `docs/design/fx-history.md` (no code until reviewer approves the design). In-scope v1: historical
+  FX data primitives (esp. VND quote paths), typed FX time series (base/quote/rate/unit/date/
+  frequency/source/fetched_at_utc/warnings+coverage), pair/capability diagnostics
+  (`explain_fx_coverage`), minimal deterministic conversion primitives only over explicit FX input.
+  Sources: WB `PA.NUS.FCRF` (annual LCU/USD) first; IMF/DBnomics monthly only if clean/no-key/terms-OK.
+  Out: portfolio/backtest, `normalize_to_vnd(asset_history)`, scraping, spot-backfilled history,
+  real-time/min/hourly, silent spot+history mixing. Keep VNStock blacklist. Reviewer spec file:
+  `~/tools/vnfin-oss-reviewer/reviews/review-202606201018-open-backlog-spec-159-fx-history.md`.
+
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
 - _(none)_
