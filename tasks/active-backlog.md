@@ -63,17 +63,33 @@ _Last synced: 2026-06-21 00:40 +07_
 > Suite **3290 green**, surface additive (snapshot FROZEN), no-secrets green. Reviewer pinging vf-advisor
 > to drop its client-side aggregation workaround. state/ watermark = reviewer.
 >
-> **NOW: #185 annual world-gold source (unblocks vf-advisor LIVE gold chart) — DESIGN-NOTE-FIRST.**
-> Reviewer spec `~/tools/vnfin-oss-reviewer/reviews/spec-202606210205-issue185-annual-world-gold-source.md`.
-> Follow-up to closed #178: from a datacenter host the daily world-gold leg (CurrencyApi→Stooq) is
-> unfetchable, so the ANNUAL `world_reference_history_vnd` gold leg needs an annual source. RECOMMENDED:
-> **World Bank CMO "Pink Sheet" annual xlsx** (keyless, CC-BY 4.0, server-reachable, 1960–2025 no gaps;
-> match gold col BY HEADER `Gold ($/troy oz)`). Process: builder DESIGN NOTE first → reviewer LEAD GATE
-> → TDD → Codex×2. Open Qs: (1) xlsx-parse dep (stdlib `zipfile`+`xml.etree` / optional `vnfin[gold-
-> history]`→openpyxl / core openpyxl; reviewer leans a/b lean-core); (2) vintage-coded URL robustness
-> (pin+fallback, clean `SourceUnavailable`/`InvalidData`). Rewire ONLY the annual synthesis to CMO;
-> preserve #178 intersection + premium/annual-basis/partial warnings + trailing-year guard; leave
-> `gold.world()` daily on CurrencyApi→Stooq. Next action: write the design note, route to reviewer LEAD.
+> **NOW (TOP CODE PRIORITY): #186 quarantine-and-warn for bad upstream bars — DESIGN-NOTE-FIRST.**
+> vf-advisor first-consumer finding; JUMPS AHEAD of #185 code (core-view blocker > secondary gold view).
+> `vnfin/sources/udf.py` raises `InvalidData` on the FIRST per-bar quality failure (OHLC invariant :221,
+> conflicting same-date :240, non-positive :212, non-finite :208, neg/fractional vol :214/:218) → aborts
+> the whole response → both vps_index/ssi_index hit the same bad date (2018-08-22 / 2020-12-25) →
+> `AllSourcesFailed`. ONE bad bar blocks a 10y VN-Index chart. FIX: **quarantine-and-warn** — drop the
+> individual bad bar(s), KEEP the rest, emit a mechanical `quarantined_invalid_bars` warning naming dropped
+> dates+reasons (never silent); conflicting same-date → drop the date entirely + warn; **THRESHOLD guard**
+> (mirror gold coverage gate) so a systematically-broken source still raises→fails over; SHARED udf.py loop
+> (benefits index_history AND prices.history); KEEP structural/parse failures (malformed arrays/shape) as
+> hard raises; do NOT hardcode-repair the 2 dates; mind #66 equity exact-ts strictness vs #162 index
+> dedupe-by-date. Process: **SHORT DESIGN NOTE → reviewer LEAD gate → TDD → Codex×2.** Next action: write
+> the #186 design note, route to reviewer LEAD. (#186 issue has the full spec.)
+>
+> **AFTER #186: #185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53), code deferred.**
+> Design note committed `e6a1b4a` (`docs/design/issue-185-annual-world-gold-source.md`); reviewer APPROVE
+> 04:53 ratified D1–D6 + 2 gate notes folded in: **N1** defensive gold-magnitude guard (~20..10000 USD/oz,
+> backstop vs stdlib-OOXML column-misparse) + real-CMO-vintage parse test; **N2** CMO→daily fallback
+> `except SourceError` (not bare Exception) so recoverable failures fail over but a programmer bug fails
+> loud. Recommends: D2 xlsx-parse via **stdlib zipfile+xml.etree** (no new dep — core accessor must work
+> server-side out-of-box; alt = optional `vnfin[gold-history]`→openpyxl); D3 add binary `_request_bytes` to
+> transport; D4 pinned+fallback URL list; D5 **pure synthesis stays BYTE-IDENTICAL** (CMO annual bars pass
+> through existing year-averaging), only the gold-leg fetch swaps to CMO-primary + daily-fallback, CMO
+> bypasses `FailoverGoldClient` daily coverage gate (annual series would be wrongly rejected); D6 snapshot
+> frozen (new source internal). Source = **WB CMO Pink Sheet annual xlsx** (keyless, CC-BY 4.0, 1960–2025
+> no gaps; match gold col BY HEADER `Gold ($/troy oz)`). On LEAD APPROVE → TDD → Codex×2 → push+close →
+> ping vf-advisor. Reviewer spec `~/tools/vnfin-oss-reviewer/reviews/spec-202606210205-issue185-...`.
 >
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:

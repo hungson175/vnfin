@@ -1,8 +1,10 @@
 # Design note — #185 annual world-gold source (unblocks vf-advisor's live gold chart)
 
-**Status:** PRE-CODE design note for the reviewer LEAD gate. No code written yet.
+**Status:** **DESIGN APPROVED** by reviewer LEAD gate 2026-06-21 04:53 — D1–D6 all ratified; gate notes
+**N1** (defensive magnitude guard) + **N2** (SourceError-subclass fail-loud/fail-over discipline) folded in
+below. **CODE is deferred behind #186** (the core VN-Index blocker) per the reviewer's confirmed sequencing.
 **Issue:** #185 (follow-up to closed #178). **Reviewer spec:** `reviews/spec-202606210205-issue185-annual-world-gold-source.md`.
-**Process:** this note → reviewer LEAD gate → TDD (red-first) → Codex×2 (it changes the #178 synthesis internals) → on APPROVE push + close #185 → ping vf-advisor.
+**Process:** design note → reviewer LEAD gate ✅ → (after #186) TDD (red-first) → Codex×2 (it changes the #178 synthesis internals) → on APPROVE push + close #185 → ping vf-advisor.
 
 ---
 
@@ -59,6 +61,11 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
   the FX annual convention and the synthesis output).
 - **Data-integrity guards (mirror the strictest sibling — [[new-source-must-mirror-sibling-data-integrity-guards]]):**
   reject non-finite / `<= 0` prices → `InvalidData`; reject a non-monotonic / duplicate year → `InvalidData`.
+- **GATE NOTE N1 (reviewer APPROVE 04:53 — defense against a silent stdlib-OOXML column-misparse):** ALSO
+  reject a parsed value outside a **plausible gold band (~20 .. 10000 USD/oz)** → `InvalidData`. The
+  header-text match (D2) is the primary defense; this magnitude guard is the backstop so a mis-resolved
+  shared-string index / wrong column can never feed a wrong gold number into the synthesis. (Band is
+  generous — 1960 gold ≈ 35, 2025 ≈ 3441 — it only catches gross misparses, not legitimate values.)
 
 ### D2 — xlsx parse: **stdlib `zipfile` + `xml.etree`** (no new dependency)
 - vnfin's only core dep is `httpx` (`pyproject.toml`); `pandas` is an *optional* extra and `openpyxl` is
@@ -75,7 +82,9 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
   Cost: ~120 LOC of bounded OOXML parsing, fully testable offline (the test builds a minimal valid xlsx with
   stdlib `zipfile` — see §6). *Alternative (b):* optional extra → openpyxl, source raises a clear
   `InvalidData`/import-error if missing. **My pick: stdlib (a).** ⚠️ This is the biggest call — explicitly
-  for the LEAD gate to confirm or flip to (b).
+  for the LEAD gate to confirm or flip to (b). **GATE: RATIFIED (reviewer 04:53)** — stdlib, NO new dep; the
+  Codex×2 will hard-scrutinize the parser and the test plan includes a **real-CMO-vintage parse test**
+  (parse an actual committed CMO xlsx fixture, assert known year values e.g. 2024≈2387.70, 2025≈3441.51).
 
 ### D3 — Binary transport: add `_request_bytes` to `HttpDataSource`
 - xlsx is **binary**; the existing `_request_text` returns `str` and `_default_http_get` returns `resp.text`.
@@ -126,6 +135,13 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
     `world_reference_gold_source_fallback: CMO annual source unavailable; used daily-averaging path`
     warning so the switch is disclosed (consistent with the leg-warning-forwarding discipline already in the
     synthesis). The result still carries the daily leg's `world_reference_gold_leg_*` warnings too.
+  - **GATE NOTE N2 (reviewer APPROVE 04:53 — fail-loud vs fail-over discipline):** the `except` catches
+    **`SourceError`** (the base of `SourceUnavailable`/`InvalidData`/`EmptyData`/`StaleData`), NOT bare
+    `Exception` — so every *recoverable* CMO failure (unreachable/blocked → `SourceUnavailable`; malformed
+    xlsx / out-of-band value → `InvalidData`; no years in span → `EmptyData`) reliably engages the daily
+    fallback, while a **non-`SourceError` programmer bug propagates (fails loud)** instead of being silently
+    swallowed into the fallback. CMO's `get_history` must therefore raise ONLY `SourceError` subclasses for
+    all expected/recoverable conditions (tested in §6).
 - **Everything else in #178 is preserved unchanged:** gold∩FX year intersection, `EmptyData`-on-no-overlap,
   the finiteness/positivity guard, ALL warnings (`_PREMIUM_NOTE` + `_ANNUAL_BASIS_NOTE` always;
   `world_reference_partial_year_coverage` when years are dropped; the `world_reference_trailing_year_incomplete`
@@ -177,6 +193,11 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
 - **Source:** inject `http_get` returning the synthetic xlsx **bytes** for the CMO URL → `get_history` returns
   annual `GoldHistory` (one Jan-1 bar/year, USD/oz); HTTP 404/anti-bot → `SourceUnavailable`; **URL-fallback
   exercised** (first URL raises, second serves). Non-finite/`<=0`/duplicate-year price → `InvalidData`.
+  **N1 magnitude guard:** a parsed value < 20 or > 10000 USD/oz → `InvalidData`. **N1 real-vintage parse:**
+  parse a committed real CMO xlsx fixture, assert known year values (2024≈2387.70, 2025≈3441.51).
+- **N2 SourceError-subclass discipline:** assert every recoverable CMO failure raises a `SourceError`
+  subclass (unreachable→`SourceUnavailable`, malformed/out-of-band→`InvalidData`, empty-span→`EmptyData`) so
+  the `except SourceError` fallback engages; assert a non-`SourceError` bug propagates (NOT swallowed).
 - **Transport:** `_request_bytes` returns bytes from an injected stub; default-path binary mode covered where
   feasible; transport error → `SourceUnavailable`; existing `_request_text`/`_request_json` callers unaffected.
 - **Synthesis (the #178-internals change):** with CMO bytes + a synthetic WB-FX envelope, assert
@@ -195,5 +216,6 @@ datacenter IPs), LBMA direct (license-gated; CMO already redistributes LBMA's nu
 
 ---
 
-**Ask of the LEAD gate:** ratify D1–D6 (esp. **D2 stdlib-vs-optional-extra** and **D3 binary transport**, the
-two non-obvious calls), or flip them, before I write red-first tests. On APPROVE I TDD → Codex×2 → push + close.
+**LEAD gate verdict (2026-06-21 04:53):** ✅ **APPROVE — D1–D6 all ratified**, with gate notes N1 (magnitude
+guard) + N2 (SourceError-subclass discipline) now folded in above. Next: complete **#186** (core VN-Index
+blocker) first, then return here for #185 TDD (red-first) → Codex×2 → push + close → ping vf-advisor.
