@@ -179,10 +179,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   APPROVE_WITH_NOTES; design doc `fund-coverage-holdings.md`).** Picks: Q1=A, Q2=B reframed, Q3=two
   separate commits/reviews, Q4=yes subclass. Sequencing: #172 impl → commit → reviewer → #173 impl →
   commit → reviewer → then #157.
-  - **#172 NAV staleness → `StaleData(EmptyData)` (option A; C deferred). COMMITTED `18eb915` (local,
-    NOT pushed) — AWAITING reviewer Codex x2 code review vs the 4 conditions (routed ~15:3x).**
-    Suite 2871 green; cov TOTAL 95% / fmarket.py 97%; gate-trio green; clean-room + diff --check clean;
-    8 fail-first synthetic tests. Push to master only after reviewer APPROVE.
+  - **#172 NAV staleness → `StaleData(EmptyData)`. ✅ DONE — pushed `18eb915` (287ae5b..6c37e7c) +
+    CLOSED + watermark advanced.** Reviewer Codex x2 BOTH APPROVE (review-202606201534, all 4
+    conditions verified). Suite 2871 green; cov TOTAL 95% / fmarket.py 97%; gate-trio green; clean-room
+    + diff --check clean; 8 fail-first tests. Non-blocking fast-follows: N1 snapshot regen at release,
+    N3 max==lo + hi-only-stale regression tests.
     Gated live probe (2026-06-20 ~15:12) RULED OUT truncation/pagination: all 65 funds' wide
     `nav_history` ends uniformly at 2025-12-05, per-fund row counts vary 110→1267, first-dates track
     each inception → array complete inception→provider cutoff = genuine systemic provider staleness
@@ -192,17 +193,22 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     product {id} ends at {latest}, before requested {start}..{end}"` (data-gap only, true for closed
     funds); else `EmptyData` (unchanged — pre-inception + sparse/weekend straddle). Add `StaleData`
     to exceptions.__all__ (additive; snapshot regen at release). 8 synthetic offline tests.
-  - **#173 bond holdings → option B REFRAMED (allocation-aware). IMPLEMENT AFTER #172 commit.**
-    Premise corrected: `/res/products/{id}` has NO per-bond list — only `productTopHoldingList`
-    (equity), `productAssetHoldingList` (asset-class STOCK/CASH/BOND %), `productIndustriesHoldingList`.
-    Option A (typed per-bond model) DEFERRED (speculative). Reframed v1: (1) `productTopHoldingList`
-    empty/absent AND `productAssetHoldingList` non-STOCK (BOND/CASH) >0% → raise `NonEquityHoldings(
-    EmptyData)` naming the alloc (not bare EmptyData); (2) NEW sibling accessor
-    `asset_allocation(product_id) -> AssetAllocation` (typed class code + pct 0-100 + as-of from
-    updateAt) read direct from source — do NOT change `holdings()` return; (3) detect from the detail
-    response, NOT `Fund.asset_type`; (4) preserve genuine EmptyData when BOTH lists empty;
-    (5) balanced funds (equity rows + BOND%) unchanged; (6) update docs/sources/funds-fmarket.md
-    mapping + error table. Additive public API (new exception + AssetAllocation model + accessor).
+  - **#173 bond holdings → OPTION A (parse `productTopHoldingBondList`). NOW (WIP).** Reviewer's
+    independent live probe (review-202606201528) SUPERSEDES the B-reframe: `productTopHoldingBondList`
+    EXISTS (VFF/ABBF = 10 bond rows each, stock list empty, SAME row shape as equity:
+    `{stockCode, netAssetPercent, industry, price=None, type:'BOND', updateAt, id}`). 22 BOND funds +
+    1 at-par BALANCED currently return bare EmptyData = category-wide HIGH blind spot. Spec
+    (8 points): (1) parse `productTopHoldingBondList` in `holdings()` reusing `_parse_holding` (bond
+    codes `BAF126003` pass `canonical_security_symbol`), combine with equity rows; (2) additive
+    `FundHolding.instrument_type: str = "STOCK"` from row `type` (STOCK/BOND), return stays
+    `tuple[FundHolding,...]`; (3) as-of from per-row `updateAt` epoch (NOT `updateAssetHoldingTime`=null);
+    (4) BOTH lists empty → `EmptyData` "no holdings published yet" (e.g. VBIF); (5) dedup + COMBINED
+    weight≤100 guard, preserve #21 identity guards + equity behavior; (6) NEW sibling accessor
+    `asset_allocation(product_id) -> AssetAllocation` (productAssetHoldingList BOND/CASH/STOCK %);
+    (7) **sweep recon docs repo-wide** (funds-fmarket.md + research/2026-06-18-funds.md + design doc)
+    correcting the now-STALE "no per-bond list" claim — [[feature-flips-stale-fact-sweep-whole-repo]];
+    (8) synthetic tests. Additive public API (instrument_type + AssetAllocation + accessor; snapshot
+    regen at release). Codex x2 review again. NonEquityHoldings(EmptyData) from B-reframe = DROPPED.
 
 
 - **#171 — docs/diagnostics polish: world-gold opt-in Stooq path** (poller triage review-202606201355).
