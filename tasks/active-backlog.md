@@ -179,11 +179,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   APPROVE_WITH_NOTES; design doc `fund-coverage-holdings.md`).** Picks: Q1=A, Q2=B reframed, Q3=two
   separate commits/reviews, Q4=yes subclass. Sequencing: #172 impl → commit → reviewer → #173 impl →
   commit → reviewer → then #157.
-  - **#172 NAV staleness → `StaleData(EmptyData)`. ✅ DONE — pushed `18eb915` (287ae5b..6c37e7c) +
-    CLOSED + watermark advanced.** Reviewer Codex x2 BOTH APPROVE (review-202606201534, all 4
-    conditions verified). Suite 2871 green; cov TOTAL 95% / fmarket.py 97%; gate-trio green; clean-room
-    + diff --check clean; 8 fail-first tests. Non-blocking fast-follows: N1 snapshot regen at release,
-    N3 max==lo + hi-only-stale regression tests.
+  - **#172 NAV staleness → `StaleData(EmptyData)`. ✅ FIX SHIPPED (correct, stays) — pushed `18eb915`
+    (287ae5b..6c37e7c). ⚠️ ISSUE RE-OPENED for a RESIDUAL (success-path staleness) — see #172-RESIDUAL
+    below, queued BEHIND #173, design-first.** Reviewer Codex x2 BOTH APPROVE on the StaleData fix
+    (review-202606201534, all 4 conditions verified). Suite 2871 green; cov TOTAL 95% / fmarket.py 97%;
+    gate-trio green; clean-room + diff --check clean; 8 fail-first tests. (Watermark: reviewer owns it —
+    I restored last_seen.txt, left state/ to reviewer; see memory.) N1 snapshot regen at release.
     Gated live probe (2026-06-20 ~15:12) RULED OUT truncation/pagination: all 65 funds' wide
     `nav_history` ends uniformly at 2025-12-05, per-fund row counts vary 110→1267, first-dates track
     each inception → array complete inception→provider cutoff = genuine systemic provider staleness
@@ -217,6 +218,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   manual opt-in (`StooqGoldSource` + `default_world_gold_client`). Do NOT add Stooq to the default chain.
 - **#170 — design-first: domestic VN gold history / diagnostics** (poller triage review-202606201348).
   In-scope; PARKED behind #168/#169/#157. NO implementation without a source/legal/provenance design.
+- **#172-RESIDUAL — success-path NAV staleness warning (DESIGN-FIRST, queue BEHIND #173).** Reviewer
+  re-opened #172 (review-202606201541): StaleData (shipped, correct) only fires for a FULLY-PAST window;
+  the COMMON calls — default `nav_history(id)`, `to_date`-only, or a window STRADDLING the 2025-12-05
+  cutoff — still SUCCEED and silently return a series ending ~6mo short with `warnings=()`. Fix (additive,
+  NO exception): on a successful `nav_history` whose `max(navDate)` is MATERIALLY older than the effective
+  upper bound (`to_date` else today), append a non-fatal entry to `NavHistory.warnings` (field already
+  exists). TWO hard boundaries: (1) NO `list_funds` cross-ref inside `nav_history` (no 2nd call, no
+  history-as-of vs current-NAV coupling); (2) pick a 'material' staleness threshold so a normal 1-3
+  business-day lag does NOT warn but a months-long lag does — **that threshold is THE design decision,
+  document it**. Design-first → converge with reviewer BEFORE coding; Codex x2 review when it lands.
 - **#174 — sector-index routing (fast-follow, MEDIUM)** — reviewer triage review-202606201501,
   ACCEPTED. Small tri-state index-guard fix. Do NOT interrupt the #172/#173 batch; queue behind it.
 
