@@ -198,3 +198,16 @@ def test_diagnostics_docs_mention_window_too_wide_status():
         "docs/architecture/data-domains.md",
     ):
         assert "window_too_wide" in _read(path), f"{path} missing window_too_wide status"
+
+
+# Issue #153 — gold tutorial must use GoldBar.price (GoldBar has no .close, unlike PriceBar).
+def test_gold_tutorial_uses_goldbar_price_not_close():
+    import dataclasses
+    from vnfin.gold.models import GoldBar
+
+    fields = {f.name for f in dataclasses.fields(GoldBar)}
+    assert "price" in fields and "close" not in fields
+    tut = _read("docs/tutorials/gold-and-crypto.md")
+    world_block = tut.split("## Crypto", 1)[0]  # the World gold section only
+    assert "hist.bars[-1].price" in world_block
+    assert "hist.bars[-1].close" not in world_block  # no PriceBar-style .close on a GoldBar

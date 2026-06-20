@@ -25,7 +25,7 @@ import vnfin
 
 world = vnfin.gold.world()
 hist = world.get_history(date(2024, 1, 1), date(2024, 6, 30))
-print(hist.unit, hist.bars[-1].close)  # USD/oz
+print(hist.unit, hist.bars[-1].price)  # USD/oz — GoldBar has .price (not .close)
 ```
 
 ## Crypto OHLCV
