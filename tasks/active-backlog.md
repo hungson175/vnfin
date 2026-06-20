@@ -179,7 +179,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   APPROVE_WITH_NOTES; design doc `fund-coverage-holdings.md`).** Picks: Q1=A, Q2=B reframed, Q3=two
   separate commits/reviews, Q4=yes subclass. Sequencing: #172 impl → commit → reviewer → #173 impl →
   commit → reviewer → then #157.
-  - **#172 NAV staleness → `StaleData(EmptyData)` (option A; C deferred). IMPLEMENTING (TDD fork).**
+  - **#172 NAV staleness → `StaleData(EmptyData)` (option A; C deferred). COMMITTED `18eb915` (local,
+    NOT pushed) — AWAITING reviewer Codex x2 code review vs the 4 conditions (routed ~15:3x).**
+    Suite 2871 green; cov TOTAL 95% / fmarket.py 97%; gate-trio green; clean-room + diff --check clean;
+    8 fail-first synthetic tests. Push to master only after reviewer APPROVE.
     Gated live probe (2026-06-20 ~15:12) RULED OUT truncation/pagination: all 65 funds' wide
     `nav_history` ends uniformly at 2025-12-05, per-fund row counts vary 110→1267, first-dates track
     each inception → array complete inception→provider cutoff = genuine systemic provider staleness
@@ -188,7 +191,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     AND window start `lo` given AND `max_navdate < lo` → `StaleData` msg `"fmarket: NAV history for
     product {id} ends at {latest}, before requested {start}..{end}"` (data-gap only, true for closed
     funds); else `EmptyData` (unchanged — pre-inception + sparse/weekend straddle). Add `StaleData`
-    to exceptions.__all__ (additive; snapshot regen at release). 5 synthetic offline tests.
+    to exceptions.__all__ (additive; snapshot regen at release). 8 synthetic offline tests.
   - **#173 bond holdings → option B REFRAMED (allocation-aware). IMPLEMENT AFTER #172 commit.**
     Premise corrected: `/res/products/{id}` has NO per-bond list — only `productTopHoldingList`
     (equity), `productAssetHoldingList` (asset-class STOCK/CASH/BOND %), `productIndustriesHoldingList`.
