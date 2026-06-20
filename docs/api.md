@@ -140,7 +140,7 @@ never fabricated data:
 
 - `vnfin.diagnostics.source_capabilities() -> tuple[SourceCapability, ...]` — known,
   conservative coverage metadata for the source-limited legs (world-gold history,
-  index constituents).
+  index constituents, FX history `worldbank_fx` — annual USD/VND).
 - `vnfin.diagnostics.explain_world_gold_history(start, end) -> RequestDiagnostic` —
   classify a window as `coverage_gap` / `partial_coverage` / `window_too_wide` / `ok` vs the
   default source's known coverage start and max range width (the live `vnfin.gold.world(...)`

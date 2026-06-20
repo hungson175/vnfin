@@ -36,11 +36,13 @@ Requires Python ≥ 3.10. No API key is needed for the default path of any domai
    or `USD/oz` (world); fundamentals money is **raw, unscaled VND**. A **unit-homogeneity guard**
    runs inside every failover client — it refuses to mix or relabel units, so a chain can never
    silently return a wrong-scale number.
-4. **`start`/`end` are required for history and validated up front.** `prices.history`,
-   `indices.index_history`, `gold ...get_history`, and `fx.history` raise
-   `vnfin.exceptions.InvalidData` / `VnfinError` **before any network call** if a date is
-   missing/mistyped or `start > end`. (FX has **two shapes**: `fx.get_rate()`/`FXRate` is a single
-   current quote; `fx.history()`/`FXHistory` is an annual USD/VND series via World Bank.)
+4. **History dates are validated up front (before any network call).** `prices.history`,
+   `indices.index_history`, and `gold ...get_history` **require** `start`/`end` and raise
+   `vnfin.exceptions.InvalidData` / `VnfinError` if a date is missing/mistyped or `start > end`.
+   `fx.history` is the exception: `start`/`end` are **optional** (`None` → all available annual
+   points), but any **provided** bound is still validated before network (malformed/reversed →
+   `InvalidData`). (FX has **two shapes**: `fx.get_rate()`/`FXRate` is a single current quote;
+   `fx.history()`/`FXHistory` is an annual USD/VND series via World Bank.)
 5. **`.to_dataframe()` needs the optional `pandas` extra.** The typed dataclasses work without
    pandas; install `vnfin[pandas]` to enable DataFrame conversion.
 

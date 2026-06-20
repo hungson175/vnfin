@@ -70,9 +70,9 @@ class SourceCapability:
     rolling/unknown end, and a ``None`` ``coverage_start`` means no documented bound.
     """
 
-    domain: str  # "gold" / "indices"
-    endpoint: str  # "world_history" / "constituents"
-    source: str  # e.g. "currency-api", "stooq", "ssi_iboard_query"
+    domain: str  # "gold" / "indices" / "fx"
+    endpoint: str  # "world_history" / "constituents" / "history"
+    source: str  # e.g. "currency-api", "stooq", "ssi_iboard_query", "worldbank_fx"
     instruments: tuple[str, ...]
     granularity: str | None
     coverage_start: date | None
@@ -91,7 +91,7 @@ class RequestDiagnostic:
     domain: str
     endpoint: str
     request: dict
-    status: str  # "ok" | "coverage_gap" | "partial_coverage" | "window_too_wide" | "single_source" | "unknown"
+    status: str  # "ok" | "coverage_gap" | "partial_coverage" | "window_too_wide" | "single_source" | "unsupported_pair" | "unsupported_frequency" | "unknown"
     sources: tuple[SourceCapability, ...]
     notes: tuple[str, ...] = ()
     suggested_actions: tuple[str, ...] = field(default=())

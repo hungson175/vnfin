@@ -297,3 +297,32 @@ def test_fx_docs_do_not_claim_fx_has_no_history():
         "FX docs must document the history entrypoint (fx.history/FXHistory): "
         + ", ".join(affirm_missing)
     )
+
+
+def test_diagnostics_docs_enumerate_fx_coverage():
+    """Guard (review-202606201115 B4.5): the docs that enumerate the offline
+    ``vnfin.diagnostics`` API must not describe it as only gold + indices once
+    ``explain_fx_coverage`` ships. Each diagnostics-enumerating doc must mention the FX
+    coverage function so 'source_capabilities = world-gold + index constituents'-only text
+    cannot silently go stale again.
+    """
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parent.parent
+    # Docs that enumerate the diagnostics function set / source_capabilities legs.
+    diag_doc_files = [
+        "docs/api.md",
+        "docs/architecture/data-domains.md",
+    ]
+    missing = []
+    for rel in diag_doc_files:
+        text = (root / rel).read_text().lower()
+        # If a file talks about source_capabilities at all, it must also name the FX leg.
+        if "source_capabilities" in text and (
+            "explain_fx_coverage" not in text and "worldbank_fx" not in text
+        ):
+            missing.append(rel)
+    assert not missing, (
+        "diagnostics docs enumerate source_capabilities but omit FX coverage "
+        "(explain_fx_coverage / worldbank_fx): " + ", ".join(missing)
+    )
