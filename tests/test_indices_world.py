@@ -35,7 +35,7 @@ from vnfin.models import AdjustmentPolicy, Interval, PriceHistory
 # --------------------------------------------------------------------------- #
 # synthetic fixtures
 # --------------------------------------------------------------------------- #
-_FAKE_KEY = "fakeAVkey1234567890"  # mixed lower+digit only inside a test literal
+_FAKE_KEY = "fake-av-key-1234567890"  # placeholder; hyphens keep alnum runs < the secret-scanner floor
 
 
 def _av_payload(rows=None):
@@ -287,6 +287,23 @@ def test_av_non_finite_value_invalid():
 
 def test_av_non_numeric_value_invalid():
     bad = _av_payload({"2024-01-02": ("470.0", "x", "468.0", "472.0", "1000000")})
+    src = _av_source(bad)
+    with pytest.raises(InvalidData):
+        src.get_history("SPY")
+
+
+def test_av_negative_price_invalid():
+    # The OHLC-ordering invariant (lo<=o<=h, lo<=c<=h) is satisfied by all-negative
+    # values, so without a positivity guard a corrupt series is served as the trusted
+    # primary. AV must reject like the Stooq fallback already does (review 011cffa).
+    bad = _av_payload({"2024-01-02": ("-5", "-1", "-10", "-3", "1000000")})
+    src = _av_source(bad)
+    with pytest.raises(InvalidData):
+        src.get_history("SPY")
+
+
+def test_av_zero_price_invalid():
+    bad = _av_payload({"2024-01-02": ("0", "0", "0", "0", "1000000")})
     src = _av_source(bad)
     with pytest.raises(InvalidData):
         src.get_history("SPY")

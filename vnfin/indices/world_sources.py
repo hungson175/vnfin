@@ -235,9 +235,17 @@ class AlphaVantageIndexSource(HttpDataSource):
     def _field(self, ohlcv: dict, key: str, raw_date) -> float:
         if key not in ohlcv:
             raise InvalidData(f"{self.NAME}: missing {key!r} for {raw_date!r}")
-        return parse_provider_float(
+        value = parse_provider_float(
             ohlcv.get(key), label=f"{key} for {raw_date}", source=self.NAME
         )
+        # parse_provider_float rejects NaN/Inf but not sign; a non-positive price is
+        # corrupt and (since all-negative OHLC still satisfies lo<=o<=h) would otherwise
+        # be served as the trusted primary. Match the Stooq fallback's positivity guard.
+        if value <= 0:
+            raise InvalidData(
+                f"{self.NAME}: non-positive {key} {value!r} for {raw_date!r}"
+            )
+        return value
 
     def _volume(self, raw, raw_date) -> int:
         if raw is None:
