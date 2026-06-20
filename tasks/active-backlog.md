@@ -48,12 +48,16 @@ _Last synced: 2026-06-21 00:40 +07_
 > (serving sector-index HISTORY = separate feature needing a clean source + per-symbol tests).
 > Watermark/state left to reviewer.
 >
-> **NOW: #183 optional interval/resample — DESIGN-NOTE-FIRST (no code yet).** Flow: SHORT design note →
-> reviewer LEAD gate → TDD → Codex×2. Scope: optional interval/resample on `prices.history` +
-> `indices.index_history`. Reviewer lean (01:46): Interval-primary `D1/W1/MN1/Q1/Y1` + pandas
-> `'D'/'W'/'M'/'Q'/'Y'` aliases; index = period-end, prices = OHLC per period; resolve the `Interval.M1`
-> minute-vs-month enum wrinkle (see #183 GitHub triage). Lowest priority (advisor has a client-side
-> workaround). Clean-room: zero VNStock. state/ watermark = reviewer.
+> **NOW: #183 optional interval/resample — CODE COMMITTED, awaiting Codex×2.** Design APPROVED + 6
+> decisions LOCKED (`6e03048` in docs/design/prices-index-resample.md). Built TDD-first (fresh
+> general-purpose agent → my integrator verify): new `vnfin/_resample.py` (resolve_interval/
+> apply_interval/resample_history), `Interval.Q1="1Q"`/`Y1="1Y"` additive, client-side OHLC resample on
+> `prices.history` + `index_history` (D1 passthrough default; 'M'→MN1 MONTH not minute; intraday→
+> UnsupportedInterval pre-fetch; `resampled_from_d1` always + `resample_partial_period` bars-kept);
+> stitched/world/get_history/crypto untouched. Docs+skill+CHANGELOG in same commit. **Commit `c6e8a23`
+> (NOT pushed).** My re-run on merged tree: full suite **3290 passed** (3260+30), surface+no-secrets
+> green, snapshot frozen. Handoff `/tmp/vnfin-183-codex-handoff-20260621.md` sent to reviewer 02:xx →
+> Codex×2. On APPROVE: push `c6e8a23` + close #183. Clean-room: zero VNStock. state/ watermark = reviewer.
 >
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
