@@ -23,22 +23,34 @@ _Last synced: 2026-06-21 00:40 +07_
 > CRITICAL (AV non-positive OHLC served as trusted primary). Full suite 3172 green. vf-advisor cleared
 > to flip its S&P 500 chart mock→real.
 >
-> **NOW: #178 gold world-reference history — CODE DONE, IN Codex×2 REVIEW (handoff sent 2026-06-21).**
-> Committed `f82db41..89de02c` (feat `4857068` + docs `6ae1538` + self-verify fix `89de02c`); NOT
-> pushed. Shipped `gold.world_reference_history_vnd()` = world-gold (XAU USD/oz, CurrencyApi→Stooq
-> failover) × USD/VND (World Bank) × oz→lượng **1.20565** (37.5/31.1035, named constants) → annual
-> VND/lượng; mandatory `world_reference_*` naming + always-present excludes-domestic-premium warning
-> (+10–21%, NOT SJC/BTMC); `gold.domestic_history()` reserved → NotImplementedError source-gap (#182).
-> **Self-verify (5-lens wf) found+fixed 2 majors BEFORE handoff:** (1) boundary-year partial-mean bias
-> (+20.53%) → snap gold+FX fetch to whole calendar years; (2) dropped gold-leg `partial_coverage`
-> warning → now forwarded namespaced. Suite **3194 green**, surface additive (snapshot FROZEN),
-> no-secrets green. Handoff: `/tmp/vnfin-178-codereview-handoff-20260621.md`. **Push/close ONLY after
-> Codex×2 APPROVE + green merged tree.** Source-hunt follow-up = **#182**.
-> _(Resolved pre-code spec formula flag: physics + spec sanity figures confirmed 37.5/31.1035 — design-gate LOCKED it.)_
-> **#174 = QUEUED after #178** (spec `spec-202606202230`): branch on `is_known_index()` in BOTH
-> `index_history` + `index_history_stitched` after alias resolution → terminal "recognized index but
-> value-history unsupported" diagnostic (no prices.history text) for ALL deny-only ids; TDD → reviewer
-> LEAD review (not Codex×2).
+> **#178 gold world-reference history — ✅ DONE + PUSHED + CLOSED.** Pushed master
+> `28bc529..21f47cd`; #178 commented + CLOSED. Codex×2 APPROVE + 1 surgical M1 folded (no re-gate).
+> Shipped `gold.world_reference_history_vnd()` = world-gold (XAU USD/oz, CurrencyApi→Stooq failover)
+> × USD/VND (World Bank) × oz→lượng **1.20565** (37.5/31.1035, named constants) → annual VND/lượng;
+> mandatory `world_reference_*` naming + always-present excludes-domestic-premium warning (+10–21%,
+> NOT SJC/BTMC); `gold.domestic_history()` reserved → NotImplementedError source-gap (#182).
+> **Self-verify (5-lens wf, pre-handoff) found+fixed 2 majors:** boundary-year partial-mean bias
+> (+20.53%) → snap gold+FX to whole calendar years; dropped gold-leg `partial_coverage` → forwarded
+> namespaced. **Reviewer M1 (folded `21f47cd`):** in-progress current year was a silent partial-year
+> mean (dilutable coverage aggregate) → `world_reference_trailing_year_incomplete` warning, `_today()`-
+> injected, independent of the aggregate. **Post-M1 3-lens self-verify ALL PASS** (2 minor findings
+> folded: `current_year in common` robustness + UTC-choice doc; NIT `Optional` dropped). Suite **3197
+> green**, surface additive (snapshot FROZEN), no-secrets green. Watermark/state left to reviewer;
+> reviewer pinging vf-advisor to flip the gold line mock→real. Memory: [[compose-daily-and-annual-legs-align-calendar-year]].
+>
+> **NOW: #174 sector-index routing BUG — ACTIVE (TDD → reviewer LEAD review, NOT Codex×2).** Spec
+> `spec-202606202230`. BUG: `prices.history(VNFIN)` correctly rejects (deny-list) but
+> `index_history(VNFIN)` wrongly says "not a known market index; use prices.history()" (allow-list
+> miss) → user dead-ends. FIX (minimal, NO registry-data/new-source): in BOTH `index_history` +
+> `index_history_stitched` (`indices/client.py` ~101 and ~141), after alias resolution, when a symbol
+> is NOT value-history-servable, branch on `is_known_index(symbol)`: True → terminal "recognized
+> market index but value-history not supported in this version" diagnostic (NO "use prices.history()"
+> text); else → keep existing route-to-prices message. GENERAL — covers ALL deny-only ids (10 sector +
+> VN100/VNMID/VNSML/VNDIAMOND/VNFINLEAD/VNFINSELECT/VNXALL). Tests: each sector idx → prices rejects
+> (unchanged) + both index fns give new diagnostic asserting NO "prices.history"/"for stocks";
+> headline indices still serve (regression); HNX alias still serves; unknown symbol still routes to
+> prices; add the 10 to the routing regression matrix. Serving sector-index HISTORY = separate
+> deferred feature (note in close comment). TDD → reviewer LEAD review.
 > **#183 = NEW, QUEUED LAST** (reviewer-accepted 00:04): optional interval/resample on `prices.history` +
 > `indices.index_history`; **design-note-first**; lowest priority (advisor has a client-side workaround);
 > has an `Interval.M1` minute-vs-month enum wrinkle (see #183 GitHub triage). Reviewer specs/gates when up.
