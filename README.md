@@ -78,7 +78,7 @@ from datetime import date
 import vnfin
 
 # Daily stock prices: VND OHLCV bars, with broker failover.
-prices = vnfin.prices.history("FPT", date(2024, 1, 1), date(2024, 6, 30))
+prices = vnfin.prices.history("FPT", start=date(2024, 1, 1), end=date(2024, 6, 30))
 print(prices.source, prices.value_unit, prices.bars[-1].close)
 
 # Annual financial statement: raw VND line items.

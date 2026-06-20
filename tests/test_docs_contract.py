@@ -211,3 +211,17 @@ def test_gold_tutorial_uses_goldbar_price_not_close():
     world_block = tut.split("## Crypto", 1)[0]  # the World gold section only
     assert "hist.bars[-1].price" in world_block
     assert "hist.bars[-1].close" not in world_block  # no PriceBar-style .close on a GoldBar
+
+
+# Issue #164 — prices.history(symbol, interval=D1, start=None, end=None): a date passed
+# positionally lands in `interval` and breaks. Docs must always use start=/end= keywords.
+def test_docs_prices_history_uses_keyword_dates():
+    import pathlib, re
+    bad = re.compile(r"prices\.history\([^)]*,\s*date\(")  # positional date as 2nd arg
+    root = pathlib.Path(__file__).resolve().parent.parent
+    offenders = []
+    for md in list(root.glob("docs/**/*.md")) + [root / "README.md"]:
+        for ln in md.read_text().splitlines():
+            if "start=" not in ln and bad.search(ln):
+                offenders.append(f"{md.relative_to(root)}: {ln.strip()}")
+    assert not offenders, "positional-date prices.history in docs: " + "; ".join(offenders)

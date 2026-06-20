@@ -11,7 +11,7 @@ not a provider-published turnover figure — see the
 import vnfin
 from datetime import date
 
-hist = vnfin.prices.history("FPT", date(2025, 1, 1), date(2025, 3, 31))
+hist = vnfin.prices.history("FPT", start=date(2025, 1, 1), end=date(2025, 3, 31))
 prof = vnfin.liquidity.from_price_history(hist, adv_fraction=0.10, capital_vnd=1_000_000_000)
 
 print(prof.avg_daily_value_vnd)        # avg estimated daily traded value (VND)

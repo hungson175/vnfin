@@ -44,7 +44,7 @@ Every returned object carries its unit and source. Read those fields before comp
 from datetime import date
 import vnfin
 
-hist = vnfin.prices.history("FPT", date(2024, 1, 1), date(2024, 6, 30))
+hist = vnfin.prices.history("FPT", start=date(2024, 1, 1), end=date(2024, 6, 30))
 
 print(hist.symbol)       # FPT
 print(hist.source)       # provider that served the data, e.g. ssi
@@ -116,7 +116,7 @@ Catch `VnfinError` for application-level handling:
 from vnfin.exceptions import VnfinError
 
 try:
-    hist = vnfin.prices.history("FPT", date(2024, 1, 1), date(2024, 6, 30))
+    hist = vnfin.prices.history("FPT", start=date(2024, 1, 1), end=date(2024, 6, 30))
 except VnfinError as exc:
     print(f"vnfin could not fetch data: {exc}")
 ```

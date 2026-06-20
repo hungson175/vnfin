@@ -8,7 +8,7 @@ import vnfin
 from vnfin.exceptions import VnfinError
 
 try:
-    hist = vnfin.prices.history("FPT", date(2024, 1, 1), date(2024, 6, 30))
+    hist = vnfin.prices.history("FPT", start=date(2024, 1, 1), end=date(2024, 6, 30))
 except VnfinError as exc:
     print(f"data unavailable or invalid: {exc}")
 ```
