@@ -40,6 +40,19 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Financial ratios completely unavailable** (#157) — `get_financials(sym, "ratios", ...)` (P/E, P/B,
+  ROE, ROA, ROS, EPS, BV, per-share) raised `AllSourcesFailed` for **every** symbol because of two
+  independent defects, now both fixed: (1) the failover **unit-homogeneity guard is now
+  statement-type-aware** — ratios are dimensionless/non-monetary, so a `ratios` report legitimately
+  carries `currency=None` and is no longer rejected as a `VND` mismatch (the VND homogeneity check is
+  unchanged for the monetary income/balance/cashflow statements, and a `ratios` report arriving WITH a
+  monetary currency is still rejected); (2) the **CafeF ratios parser now tolerates a present-null /
+  absent `ReportType`** (the real CafeF ratios shape), which previously raised `InvalidData`
+  ("expected a string, got NoneType") — `ReportType` is a non-identity descriptive field for
+  cadence-agnostic ratios, so a null/absent value is tolerated while a present non-null malformed value
+  still fails closed. Ratios remain `Period.UNKNOWN` (the provider's `reportDate`, which may be a TTM
+  snapshot, is surfaced faithfully and never relabeled as a fiscal-year annual figure). Internal-only;
+  no public-API change. ([#157](https://github.com/hungson175/vnfin/issues/157))
 - **Fmarket NAV-history staleness** — `vnfin.funds` `nav_history(...)` no longer returns a silent
   `EmptyData` (indistinguishable from "no data") when the provider's history is stale. When the
   newest `navDate` is strictly before the requested window start, it now raises the new `StaleData`

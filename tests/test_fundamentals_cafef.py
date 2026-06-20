@@ -1040,13 +1040,45 @@ def test_cafef_statement_present_malformed_reporttype_rejected(bad_rt):
         _src(_envelope([p])).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
-@pytest.mark.parametrize("bad_rt", [None, [], {}, False, 123], ids=["null", "list", "dict", "false", "int"])
+@pytest.mark.parametrize("bad_rt", [[], {}, False, 123], ids=["list", "dict", "false", "int"])
 def test_cafef_ratio_present_malformed_reporttype_rejected(bad_rt):
-    # #45 ratio path: present malformed ReportType fails closed (period-agnostic,
-    # so no cadence skip, but malformed shape still rejected).
+    # #45 ratio path: a present NON-NULL malformed ReportType (wrong shape) fails
+    # closed (period-agnostic, so no cadence skip, but a corrupt shape still
+    # rejected). NOTE: a present-NULL ReportType is tolerated for ratios — see
+    # test_cafef_ratio_null_reporttype_tolerated (issue #157).
     p = _period("2025", 2025, 0, [("EPS", "EPS", 1.0)], report_type=bad_rt)
     with pytest.raises(InvalidData):
         _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+
+
+# Issue #157: CafeF's real ratios endpoint sends rows with ``"ReportType": null``.
+# Ratios are cadence-agnostic (always emitted as Period.UNKNOWN), so ReportType is
+# a purely descriptive, NON-identity field there — a present-null (or absent) value
+# must be TOLERATED (parsed, not raise InvalidData), consistent with the
+# present-malformed-vs-absent contract: fail-closed only where identity matters.
+# Before the fix this raised "cafef ratio ReportType: expected a string, got
+# NoneType" and made ALL ratios unavailable for every symbol via the CafeF leg.
+def test_cafef_ratio_null_reporttype_tolerated():
+    p = _period("2025", 2025, 0, [("EPS", "EPS", 5_000.0), ("PE", "P/E", 18.0)], report_type=None)
+    reports = _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+    assert len(reports) == 1
+    assert reports[0].statement_type is StatementType.RATIOS
+    assert reports[0].period is Period.UNKNOWN
+    assert reports[0].currency is None
+    assert reports[0].get("PE") == 18.0
+
+
+def test_cafef_ratio_missing_reporttype_key_tolerated():
+    # An ABSENT ReportType key (legacy) is likewise tolerated for ratios.
+    p = {
+        "Time": "2025",
+        "Year": 2025,
+        "Quater": 0,
+        "Conten": "x",
+        "Value": [{"Code": "PE", "Name": "P/E", "Value": 18.0}],
+    }
+    reports = _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+    assert len(reports) == 1 and reports[0].get("PE") == 18.0
 
 
 @pytest.mark.parametrize("loc", ["top", "data"])
@@ -1093,9 +1125,11 @@ def test_cafef_statement_unknown_or_padded_reporttype_rejected(bad_rt):
         _src(_envelope([p])).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
-@pytest.mark.parametrize("bad_rt", ["UNKNOWN", " HK ", None, "", "   ", True, []], ids=["unknown", "padded", "null", "blank", "ws", "bool", "list"])
+@pytest.mark.parametrize("bad_rt", ["UNKNOWN", " HK ", "", "   ", True, []], ids=["unknown", "padded", "blank", "ws", "bool", "list"])
 def test_cafef_ratio_unknown_or_padded_or_malformed_reporttype_rejected(bad_rt):
-    # #45 B2: ratio path enforces the enum contract (padded/unknown/malformed reject).
+    # #45 B2: ratio path enforces the enum contract for a PRESENT NON-NULL value
+    # (padded/unknown/blank/non-string fail closed). A present-null ReportType is
+    # tolerated for ratios (see test_cafef_ratio_null_reporttype_tolerated, #157).
     p = _period("2025", 2025, 0, [("EPS", "EPS", 1.0)], report_type=bad_rt)
     with pytest.raises(InvalidData):
         _src(_envelope([p])).get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)

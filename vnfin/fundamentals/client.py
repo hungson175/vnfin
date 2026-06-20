@@ -268,11 +268,25 @@ def _validate_fundamental_result(
                 f"{report.is_bank!r} != requested {is_bank!r}"
             )
 
-        # Issue #70: VND-chain unit guards.
-        if chain_unit is not None and report.currency != chain_unit:
+        # Issue #70 + #157: statement-type-aware VND unit-homogeneity guard.
+        #
+        # Monetary statements (income/balance/cashflow) must be homogeneously
+        # denominated in the chain unit (VND). Ratios are dimensionless /
+        # per-share — a ``ratios`` report's report-wide ``currency`` is therefore
+        # ``None`` (the chain unit is effectively dimensionless for a ratios
+        # request), so ``None`` is CONSISTENT, not a VND mismatch. Homogeneity is
+        # still enforced WITHIN ratios: a ratios report arriving WITH a monetary
+        # currency is the real anomaly and is rejected.
+        expected_currency = None if statement is StatementType.RATIOS else chain_unit
+        if expected_currency is not None and report.currency != expected_currency:
             return (
                 f"currency mismatch: report {report.fiscal_date} has currency "
-                f"{report.currency!r} != chain unit {chain_unit!r}"
+                f"{report.currency!r} != chain unit {expected_currency!r}"
+            )
+        if statement is StatementType.RATIOS and report.currency is not None:
+            return (
+                f"currency mismatch: ratios report {report.fiscal_date} has currency "
+                f"{report.currency!r} but dimensionless ratios must have currency None"
             )
         # Issue #122: a source result is "successful" only if its returned line
         # items are themselves well-formed. A custom/future source can bypass the

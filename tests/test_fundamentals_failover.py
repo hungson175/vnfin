@@ -807,3 +807,211 @@ def test_fundamentals_malformed_symbol_fails_closed_zero_call(bad):
     with pytest.raises(InvalidData):
         client.get_financials(bad, StatementType.INCOME, Period.ANNUAL)
     assert primary.calls == 0
+
+
+# --------------------------------------------------------------------------- #
+# Issue #157: the VND unit-homogeneity guard is STATEMENT-TYPE-AWARE.
+#
+# Ratios are dimensionless / non-monetary, so a ``ratios`` report legitimately
+# carries ``currency=None`` — for a ratios request the chain unit is effectively
+# dimensionless, so ``None`` is CONSISTENT (NOT a VND mismatch). The VND
+# homogeneity check stays intact for income/balance/cashflow (monetary
+# statements), and a ratios report arriving WITH a monetary currency is the real
+# anomaly and is still rejected.
+# --------------------------------------------------------------------------- #
+def _ratios_report(symbol, source, *, currency=None, fiscal_date="2026-06-30"):
+    fd = datetime.strptime(fiscal_date, "%Y-%m-%d").date()
+    return FinancialReport(
+        symbol=symbol,
+        statement_type=StatementType.RATIOS,
+        period=Period.UNKNOWN,
+        fiscal_date=fd,
+        items=(LineItem(item_code="PE", name="P/E", value=18.0, value_unit="ratio"),),
+        source=source,
+        currency=currency,
+        fetched_at_utc=datetime.now(timezone.utc),
+    )
+
+
+def test_dimensionless_ratios_report_passes_unit_guard():
+    """A ratios report with currency=None must NOT be rejected by the VND guard
+    (the chain unit is dimensionless for a ratios request)."""
+    primary = FakeSource("vndirect", unit="VND", result=(_ratios_report("TESTCO", "vndirect"),))
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+    assert reports[0].source == "vndirect"
+    assert reports[0].statement_type is StatementType.RATIOS
+    assert reports[0].currency is None
+    assert primary.calls == 1
+
+
+def test_quarter_ratios_report_passes_unit_guard():
+    """The same dimensionless-OK rule holds for a quarter ratios request."""
+    primary = FakeSource("vndirect", unit="VND", result=(_ratios_report("TESTCO", "vndirect"),))
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", StatementType.RATIOS, Period.QUARTER)
+    assert reports[0].statement_type is StatementType.RATIOS
+    assert reports[0].currency is None
+
+
+@pytest.mark.parametrize("bad_currency", ["VND", "USD"])
+def test_ratios_report_with_monetary_currency_is_rejected(bad_currency):
+    """Within ratios, all reports must be homogeneously dimensionless — a ratios
+    report arriving WITH a monetary currency is the real anomaly and is rejected
+    (homogeneity preserved)."""
+    bad = _ratios_report("TESTCO", "vndirect", currency=bad_currency)
+    client = FailoverFundamentalClient([FakeSource("vndirect", result=(bad,))])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+    assert "currency" in ei.value.attempts[0].reason
+
+
+def test_monetary_statement_vnd_homogeneity_guard_unchanged():
+    """Regression: income/balance/cashflow still REQUIRE currency == VND.
+    A monetary report with currency=None must still be rejected."""
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=StatementType.INCOME,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency=None,
+    )
+    _assert_fundamental_rejected(lambda: bad, "currency mismatch")
+
+
+@pytest.mark.parametrize("statement", [StatementType.BALANCE, StatementType.CASHFLOW])
+def test_monetary_statements_reject_none_currency(statement):
+    """The VND homogeneity check is intact for every monetary statement type."""
+    bad = FinancialReport(
+        symbol="TESTCO",
+        statement_type=statement,
+        period=Period.ANNUAL,
+        fiscal_date=date(2025, 12, 31),
+        items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
+        source="vndirect",
+        currency=None,
+    )
+    client = FailoverFundamentalClient([FakeSource("vndirect", result=(bad,))])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_financials("TESTCO", statement, Period.ANNUAL)
+    assert "currency mismatch" in ei.value.attempts[0].reason
+
+
+def test_ratios_with_none_currency_period_label_is_unknown_not_fiscal_year():
+    """Issue #157 #3 (period mapping): an ``annual`` ratios request that surfaces a
+    TTM-looking reportDate (e.g. 2026-06-30) must NOT be relabeled as a fiscal-year
+    annual report — ratios stay Period.UNKNOWN (period-agnostic), so the TTM
+    snapshot is never silently presented as a fiscal-year figure."""
+    primary = FakeSource(
+        "vndirect",
+        unit="VND",
+        result=(_ratios_report("TESTCO", "vndirect", fiscal_date="2026-06-30"),),
+    )
+    client = FailoverFundamentalClient([primary])
+    reports = client.get_financials("TESTCO", StatementType.RATIOS, Period.ANNUAL)
+    assert reports[0].fiscal_date == date(2026, 6, 30)
+    # Crucially the requested ANNUAL is NOT echoed onto the ratios report.
+    assert reports[0].period is Period.UNKNOWN
+
+
+# --------------------------------------------------------------------------- #
+# Issue #157 — END-TO-END through the REAL adapters + failover client, HTTP layer
+# mocked with synthetic fixtures (no network). Proves ratios are NOT
+# AllSourcesFailed for either cadence, exercising BOTH fixes together:
+#   (1) the cafef leg parses a present-null ReportType (real CafeF ratios shape);
+#   (2) the dimensionless (currency=None) ratios pass the statement-type-aware
+#       failover unit guard.
+# --------------------------------------------------------------------------- #
+import json  # noqa: E402
+
+
+def _vndirect_ratios_payload(symbol, report_date, *, rows=(("PE", "P/E", 18.0), ("EPS", "EPS", 5000.0))):
+    return json.dumps(
+        {
+            "data": [
+                {
+                    "code": symbol,
+                    "ratioCode": rc,
+                    "reportDate": report_date,
+                    "itemName": name,
+                    "value": val,
+                }
+                for (rc, name, val) in rows
+            ],
+            "currentPage": 1,
+            "size": len(rows),
+            "totalElements": len(rows),
+            "totalPages": 1,
+        }
+    )
+
+
+def _cafef_ratios_payload_null_reporttype(year):
+    # Real CafeF ratios shape: rows carry "ReportType": null.
+    return json.dumps(
+        {
+            "Data": {
+                "Count": 1,
+                "Value": [
+                    {
+                        "Time": str(year),
+                        "Year": year,
+                        "Quater": 0,
+                        "ReportType": None,
+                        "Conten": "x",
+                        "Value": [
+                            {"Code": "PE", "Name": "P/E", "Value": 18.0},
+                            {"Code": "EPS", "Name": "EPS", "Value": 5.0},
+                        ],
+                    }
+                ],
+            },
+            "Message": None,
+            "Success": True,
+        }
+    )
+
+
+def _routing_http_get(vndirect_text, cafef_text):
+    """Route by host: VNDirect api-finfo vs CafeF cafef.vn."""
+
+    def _g(url, params, headers):
+        if "vndirect" in url:
+            return vndirect_text
+        return cafef_text
+
+    return _g
+
+
+@pytest.mark.parametrize("cadence", [Period.ANNUAL, Period.QUARTER])
+def test_e2e_ratios_via_vndirect_primary_no_all_sources_failed(cadence):
+    """Real VNDirect adapter primary succeeds with a dimensionless ratios payload
+    (currency=None); the failover guard accepts it — no AllSourcesFailed."""
+    http_get = _routing_http_get(
+        _vndirect_ratios_payload("FPT", "2026-06-30"), "{}"
+    )
+    reports = get_financials("FPT", "ratios", cadence, http_get=http_get)
+    assert reports[0].source == "vndirect"
+    assert reports[0].statement_type is StatementType.RATIOS
+    assert reports[0].currency is None
+    assert reports[0].period is Period.UNKNOWN
+    assert reports[0].get("PE") == 18.0
+
+
+@pytest.mark.parametrize("cadence", [Period.ANNUAL, Period.QUARTER])
+def test_e2e_ratios_falls_over_to_cafef_with_null_reporttype(cadence):
+    """VNDirect ratios leg empty -> CafeF leg parses a present-null ReportType and
+    returns dimensionless ratios accepted by the guard — no AllSourcesFailed."""
+    http_get = _routing_http_get(
+        # VNDirect ratios endpoint returns no rows -> EmptyData (failover)
+        json.dumps({"data": []}),
+        _cafef_ratios_payload_null_reporttype(2025),
+    )
+    reports = get_financials("FPT", "ratios", cadence, http_get=http_get)
+    assert reports[0].source == "cafef"
+    assert reports[0].statement_type is StatementType.RATIOS
+    assert reports[0].currency is None
+    assert reports[0].period is Period.UNKNOWN
+    assert reports[0].get("PE") == 18.0

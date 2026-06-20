@@ -224,6 +224,27 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
             optional_present(pobj, "ReportType"), self._all_row_tags, ctx, missing_ok=True
         )
 
+    def _validate_ratio_report_tag(self, pobj: dict, ctx: str):
+        """Validate ``ReportType`` for the RATIO path, tolerating a present-null.
+
+        Issue #157: CafeF's real ratios endpoint sends rows with
+        ``"ReportType": null``. Ratios are cadence-agnostic (always emitted as
+        ``Period.UNKNOWN``), so ``ReportType`` is a purely descriptive,
+        NON-identity field here — a present ``null`` (or an absent key) carries no
+        meaning we use and must be TOLERATED, not fail closed (that previously made
+        ALL ratios unavailable for every symbol via the CafeF leg).
+
+        A present NON-NULL value is still validated against the enum union via
+        :meth:`_validate_report_tag` (padded/unknown/blank/non-string fail closed),
+        so a genuinely corrupt descriptive value still signals a broken row. This
+        tolerance is scoped to ratios only — the statement path keeps the strict
+        ``_validate_report_tag`` where the cadence tag IS identity-bearing.
+        """
+        if optional_present(pobj, "ReportType") is None:
+            # Present-null: treat as absent (no usable cadence tag) for ratios.
+            return None
+        return self._validate_report_tag(pobj, ctx)
+
     def _reporttype_mismatch(self, pobj: dict, expected_tags) -> bool:
         """Whether a period row's ReportType names a *different* cadence (skip).
 
@@ -353,12 +374,14 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         skipped = 0
         for pobj in periods:
             pobj = require_object(pobj, f"{self.name} ratio period")
-            # Issue #45 (ratio path): a PRESENT ReportType must be a canonical tag in
-            # the allowed union (padded/unknown/blank/null/non-string fail closed).
-            # Ratios are INTENTIONALLY cadence-agnostic — the endpoint is always hit
-            # with the annual anchor and the result is Period.UNKNOWN — so a valid
-            # tag of any cadence is accepted (no cadence skip). Missing stays legacy.
-            self._validate_report_tag(pobj, f"{self.name} ratio ReportType")
+            # Issue #45 + #157 (ratio path): a PRESENT NON-NULL ReportType must be a
+            # canonical tag in the allowed union (padded/unknown/blank/non-string fail
+            # closed). Ratios are INTENTIONALLY cadence-agnostic — the endpoint is
+            # always hit with the annual anchor and the result is Period.UNKNOWN — so a
+            # valid tag of any cadence is accepted (no cadence skip). A present-NULL
+            # (real CafeF shape) or absent key is tolerated: ReportType is a
+            # non-identity descriptive field for ratios (see _validate_ratio_report_tag).
+            self._validate_ratio_report_tag(pobj, f"{self.name} ratio ReportType")
             items = self._ratio_line_items(pobj)
             try:
                 fiscal_date = self._fiscal_date(pobj, Period.ANNUAL)

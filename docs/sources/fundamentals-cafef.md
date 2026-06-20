@@ -62,7 +62,24 @@ GET https://cafef.vn/du-lieu/Ajax/PageNew/GetDataChiSoTaiChinh.ashx
 - **Ratios are NOT monetary**: ratio `LineItem.value_unit == "ratio"`
   (dimensionless / per-share) and the report's `currency is None`. Ratio reports
   carry `period == Period.UNKNOWN` (CafeF ratios have no trustworthy period
-  dimension), mirroring the VNDirect ratios contract.
+  dimension), mirroring the VNDirect ratios contract. The dimensionless `currency
+  is None` is consistent with the failover unit guard, which is statement-type-aware
+  — a `ratios` report's chain "unit" is dimensionless, so `None` is accepted (a
+  ratios report carrying a monetary currency is rejected; the VND check is intact
+  for income/balance/cashflow). A `ratios` `fiscal_date` is the provider's own
+  reporting date and may be a **TTM** (trailing-twelve-month) snapshot; because the
+  report is `Period.UNKNOWN` it is **never relabeled as a fiscal-year annual** figure.
+
+### `ReportType` on ratio rows (non-identity descriptive field)
+
+For ratios the `ReportType` tag is **not** identity-bearing — the ratio endpoint is
+always hit with the annual anchor and the result is `Period.UNKNOWN`, so no cadence
+filtering is applied. CafeF's real ratios feed sends rows with **`"ReportType": null`**;
+a present-null (or absent) `ReportType` is therefore **tolerated** (parsed, not
+rejected). A present **non-null** `ReportType` is still validated against the
+`{NAM, HK, QUY, H}` union (padded / unknown / blank / non-string fail closed), so a
+genuinely corrupt descriptive value still raises `InvalidData`. (On the **statement**
+path `ReportType` IS cadence identity, so there a present-null fails closed.)
 
 ## Cashflow caveat (single-source)
 
