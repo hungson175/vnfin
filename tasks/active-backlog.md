@@ -12,11 +12,13 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 ~16:55 +07_
+_Last synced: 2026-06-20 ~17:30 +07_
 
-> **State snapshot (16:55):** #157 RATIOS leg **DONE+PUSHED** (`9edad80`, #157 commented, stays OPEN).
-> #173-unlisted **integrated** on master local (`d522637`, 2958 green) → **in Codex×2 review**, push+re-close on approve.
-> #157 bank-mislabel **design doc written** (`c2bb4db`, `docs/design/bank-fundamentals-itemcodes.md`) → **in reviewer design gate** (5 open Qs). Next non-blocked: #176 phantom-tail design (HIGH).
+> **State snapshot (17:30):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
+> #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
+> `aa72dca` per-model_type itemcode map + `0a28339` reviewer cosmetics; Codex×2 APPROVE review-202606201727;
+> #157 commented, **stays OPEN for the metrics leg**). Q1 probe PASS (VPB/ACB) + provenance `a01d3da`.
+> **Now (WIP): #176 phantom-tail code** (design approved review-202606201703; token `trailing_zero_volume_tail`).
 
 ---
 
@@ -176,11 +178,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   MetricCoverage. v2 (deferred/blocked): ROE/ROA/ROIC, FCF, valuation (P/E,P/B,...), EPS/BV. Non-goals:
   ranking/advice/screener-with-strategy, blind external ingestion, generic item_<code> as
   investor-ready, silent bank/non-bank mixing. Spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606201222-issue157-fundamentals-metrics.md`.
-  - **#157 BANK DATA-INTEGRITY INPUT (HIGH; reviewer-reproduced, review-202606201553) — 📐 DESIGN DOC
-    WRITTEN `c2bb4db` (`docs/design/bank-fundamentals-itemcodes.md`, local) → IN reviewer DESIGN GATE.**
-    No code until design converges (5 open Qs: validate-vs-more-banks, signature, cashflow, diagnostic
-    home, near-dup codes). Doc has verified anchor table (VCB/CTG/BID + official VCB + accounting
-    identity), model_type-keyed map (no corp fallback, raw-for-unmapped, never-wrong-label), test plan.
+  - **#157 BANK DATA-INTEGRITY INPUT (HIGH) — ✅ DONE + PUSHED `d522637..0a28339` (`aa72dca` fix +
+    `0a28339` cosmetics). Codex×2 APPROVE (review-202606201727); #157 commented, STAYS OPEN (metrics leg).**
+    Per-`model_type` itemcode map (`_NAMES_BY_MODEL_TYPE`) + hard-switch `item_name(code, *, model_type=)`;
+    `_BANK` + corporate cross-fallback removed → a code resolves only inside its own statement template,
+    else honest raw `item_<code>` (the 6 wrong-label codes 22070/421601/22160/411600/413100/412000-as-assets
+    now go raw). vndirect:337 migrated. Q1 probe PASS (VPB/ACB share SOCB codes; identity 13000+14000==12700
+    exact to the VND, all 4 banks) — provenance `a01d3da` (`docs/design/bank-itemcodes-probe-20260620.md`).
+    N1 metrics §6 re-point done; corporate labels byte-identical; suite 2961 green, itemcodes.py 100% cov.
+    Design doc `c2bb4db`+`a01d3da`. _Original gate notes:_ 5 Qs resolved (Q1 PASS, Q2 hard-switch, Q3 cashflow
+    raw, Q4 diagnostic in metric layer, Q5 412100/23003 raw).
     Reporter + reviewer
     independently reproduced a bank fundamentals mislabel in `get_financials` (VCB, is_bank=True,
     balance, annual): code `412000` is labeled 'Tổng tài sản'(Total assets)=1,648.5T but that is
