@@ -55,9 +55,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   All design-first: no code until reviewer-approved design.
   - **#158: DONE** (delegated to sub-agent, integrated by main; pushed `7d528d2..cd7b941`, CLOSED;
     review-202606200907). Same-NAV dedupe+warning; conflicting -> InvalidData; #144 guards preserved.
-  - **#162 P0: IMPLEMENTED** (sub-agent 45cfc72, integrated by main; suite 2726 green) — index D1
-    dedupe-identical+warning / raise-conflicting in the UDF parse (equity unchanged via class-attr gate);
-    **awaiting reviewer review** before push.
+  - **#162 P0: DONE** (sub-agent + main; 2 review rounds: calendar-date keying, then D1 gating;
+    pushed `46a3ce5..b36a688`, CLOSED; review-202606201001 + 2 Codex sub-reviewers). One bar/calendar-date
+    for D1 index (dedupe-identical+warning / raise-conflicting in source path); H1/non-D1 + equity unchanged.
   - Design-first: #157/#159. Design-eval-only (parked): #160/#161/#163 (corp-actions) + #150 cost/tax addendum
     (design-first, offline, user-supplied/preset w/ effective-dates/provenance/stale-warnings) — batch w/ #157/#161/#150.
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
