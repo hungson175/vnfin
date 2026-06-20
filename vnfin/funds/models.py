@@ -110,6 +110,20 @@ class FundHolding:
     canonical money unit (the provider's price scale is unverified and ambiguous),
     so callers must treat ``price_raw`` as opaque until a live-verified unit exists.
     Both may be ``None`` when the provider omits the price.
+
+    ``instrument_type`` is the normalized asset class of the underlying line item —
+    ``"STOCK"`` for equity holdings and ``"BOND"`` for fixed-income holdings — so a
+    bond fund's per-bond positions are no longer silently dropped. Equity holdings
+    keep ``price_raw``/``price_unit``; bonds typically report no price (both ``None``).
+    A *present-but-unrecognized* provider instrument type fails the whole call closed
+    (a holdings tuple has no per-row warning channel, so we never silently mislabel a
+    position); if a new real provider type ever appears, the additive fix is a new
+    enum value (e.g. ``"OTHER"``), never a misleading ``"STOCK"`` default.
+
+    ``as_of_utc`` is the provider's per-holding last-update timestamp (tz-aware UTC),
+    or ``None`` when the provider omits it — never fabricated. It gives each holding a
+    freshness signal so callers can detect stale rows (a holdings tuple otherwise
+    carries no provenance of its own).
     """
 
     stock_code: str
@@ -117,3 +131,44 @@ class FundHolding:
     industry: Optional[str] = None
     price_raw: Optional[float] = None
     price_unit: Optional[str] = None
+    instrument_type: str = "STOCK"
+    as_of_utc: Optional[datetime] = None
+
+
+@dataclass(frozen=True)
+class AssetClassWeight:
+    """One asset-class slice of a fund's portfolio: ``weight_pct`` (0-100) of NAV
+    in the asset class ``asset_class`` (the provider's normalized class code, e.g.
+    ``"STOCK"``/``"BOND"``/``"CASH"``)."""
+
+    asset_class: str
+    weight_pct: float
+
+
+@dataclass(frozen=True)
+class AssetAllocation:
+    """A fund's asset-class allocation (the equity/bond/cash split) plus provenance.
+
+    Unlike :class:`FundHolding` (per-line-item positions), this is the top-level
+    portfolio breakdown by asset class. ``as_of_utc`` is the freshest provider
+    ``updateAt`` across the allocation rows (``None`` when the provider omits it —
+    never fabricated).
+    """
+
+    product_id: int
+    classes: tuple[AssetClassWeight, ...]
+    source: str
+    currency: str = "VND"
+    code: Optional[str] = None
+    as_of_utc: Optional[datetime] = None
+    fetched_at_utc: Optional[datetime] = None
+    warnings: tuple[str, ...] = ()
+
+    def __len__(self) -> int:
+        return len(self.classes)
+
+    def __iter__(self):
+        return iter(self.classes)
+
+    def __getitem__(self, idx):
+        return self.classes[idx]

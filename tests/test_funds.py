@@ -16,6 +16,8 @@ import pytest
 
 from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable, StaleData
 from vnfin.funds import (
+    AssetAllocation,
+    AssetClassWeight,
     Fund,
     FundHolding,
     FundList,
@@ -1144,6 +1146,302 @@ def test_holdings_transport_error_wrapped():
     src = FmarketFundSource(http_get=_raising_get(OSError("net down")))
     with pytest.raises(SourceUnavailable):
         src.holdings(FAKE_ID_A)
+
+
+# ---------------------------------------------------------------------------
+# Issue #173: bond holdings (productTopHoldingBondList) + instrument_type
+# ---------------------------------------------------------------------------
+
+
+def test_holdings_bond_only_fund_parses_bond_list():
+    # A pure BOND fund: equity list empty, bond list populated. Today this returns
+    # bare EmptyData (category-wide blind spot); option A must parse the bond list.
+    bond = [
+        {"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "industry": "Fake bond industry", "type": "BOND", "price": None},
+        {"stockCode": "ZZZBOND2", "netAssetPercent": 12.17, "industry": "Fake bond industry", "type": "BOND", "price": None},
+    ]
+    holds = _src(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    ).holdings(FAKE_ID_A)
+    assert len(holds) == 2
+    assert {h.stock_code for h in holds} == {"ZZZBOND1", "ZZZBOND2"}
+    assert all(h.instrument_type == "BOND" for h in holds)
+    assert all(h.price_raw is None and h.price_unit is None for h in holds)
+    by_code = {h.stock_code: h for h in holds}
+    assert by_code["ZZZBOND1"].weight_pct == pytest.approx(11.59)
+    assert by_code["ZZZBOND2"].weight_pct == pytest.approx(12.17)
+
+
+def test_holdings_balanced_fund_combines_equity_and_bond():
+    equity = [{"stockCode": "FAKE1", "netAssetPercent": 4.0, "industry": "X", "type": "STOCK", "price": 11.1}]
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 6.0, "industry": "Y", "type": "BOND", "price": None}]
+    holds = _src(
+        _holdings_payload_with(productTopHoldingList=equity, productTopHoldingBondList=bond)
+    ).holdings(FAKE_ID_A)
+    assert len(holds) == 2
+    by_code = {h.stock_code: h for h in holds}
+    assert by_code["FAKE1"].instrument_type == "STOCK"
+    assert by_code["FAKE1"].price_raw == pytest.approx(11.1)
+    assert by_code["FAKE1"].price_unit == "raw"
+    assert by_code["ZZZBOND1"].instrument_type == "BOND"
+    assert by_code["ZZZBOND1"].price_raw is None
+    # Equity rows come first (stable ordering for existing equity-only tests).
+    assert holds[0].stock_code == "FAKE1"
+
+
+def test_holdings_equity_fund_unchanged_with_instrument_type():
+    # The legacy equity-only path is preserved AND now carries instrument_type.
+    holds = _src(_holdings_payload()).holdings(FAKE_ID_A)
+    assert len(holds) == 2
+    assert holds[0].stock_code == "FAKE1"
+    assert holds[0].weight_pct == pytest.approx(5.0)
+    assert holds[0].industry == "Fake industry one"
+    assert holds[0].instrument_type == "STOCK"
+
+
+def test_holdings_bond_row_without_type_defaults_to_bond():
+    # A bond row that omits `type` still gets instrument_type='BOND' via the
+    # per-list default (holdings() passes default_type='BOND' for the bond list).
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 5.0, "industry": "Y"}]
+    holds = _src(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    ).holdings(FAKE_ID_A)
+    assert holds[0].instrument_type == "BOND"
+
+
+def test_holdings_equity_row_without_type_defaults_to_stock():
+    top = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "industry": "X"}]
+    holds = _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+    assert holds[0].instrument_type == "STOCK"
+
+
+def test_holdings_present_unknown_type_raises_invalid():
+    # A present-but-unknown instrument type fails closed (not STOCK/BOND).
+    top = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "type": "WARRANT"}]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+
+
+def test_holdings_per_holding_as_of_from_update_at():
+    # The accepted as-of lever: each FundHolding carries the provider's per-row
+    # updateAt (epoch-ms) so a holdings tuple is no longer freshness-blind.
+    top = [
+        {"stockCode": "FAKE1", "netAssetPercent": 5.0, "type": "STOCK", "updateAt": 1700000000000},
+        {"stockCode": "FAKE2", "netAssetPercent": 4.0, "type": "STOCK"},  # no updateAt
+    ]
+    holds = _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+    by_code = {h.stock_code: h for h in holds}
+    assert by_code["FAKE1"].as_of_utc == datetime.fromtimestamp(
+        1700000000000 / 1000.0, tz=timezone.utc
+    )
+    assert by_code["FAKE2"].as_of_utc is None
+
+
+def test_holdings_malformed_update_at_leaves_as_of_none():
+    # A malformed/absent updateAt must NOT fabricate now() — it stays None.
+    top = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "type": "STOCK", "updateAt": "garbage"}]
+    holds = _src(_holdings_payload(top=top)).holdings(FAKE_ID_A)
+    assert holds[0].as_of_utc is None
+
+
+def test_holdings_both_lists_empty_raises_empty():
+    with pytest.raises(EmptyData):
+        _src(
+            _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=[])
+        ).holdings(FAKE_ID_A)
+
+
+def test_holdings_both_lists_absent_raises_empty():
+    base = json.loads(_holdings_payload())
+    base["data"].pop("productTopHoldingList", None)
+    # bond key never present in the default payload either
+    with pytest.raises(EmptyData):
+        _src(json.dumps(base)).holdings(FAKE_ID_A)
+
+
+@pytest.mark.parametrize(
+    "bad_row",
+    [
+        {"stockCode": "ZZZBOND1", "netAssetPercent": "garbage", "type": "BOND"},
+        {"netAssetPercent": 5.0, "type": "BOND"},  # missing stockCode
+        {"stockCode": "   ", "netAssetPercent": 5.0, "type": "BOND"},  # blank
+        {"stockCode": "ZZZBOND1", "netAssetPercent": 5.0, "type": "BOND", "price": -1.0},  # neg price
+        {"stockCode": "ZZZBOND1", "netAssetPercent": 150.0, "type": "BOND"},  # weight oob
+        {"stockCode": "ZZZBOND1", "netAssetPercent": 5.0, "type": "BOND", "industry": 123},  # bad industry
+    ],
+    ids=["weight", "missing_code", "blank_code", "neg_price", "weight_oob", "bad_industry"],
+)
+def test_holdings_malformed_bond_row_raises_invalid(bad_row):
+    # Bond rows get the SAME scalar/identifier validation as equity rows.
+    with pytest.raises(InvalidData):
+        _src(
+            _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=[bad_row])
+        ).holdings(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("bond", [{}, "", False, 0])
+def test_holdings_bond_list_not_array_raises_invalid(bond):
+    with pytest.raises(InvalidData, match="productTopHoldingBondList is not an array"):
+        _src(
+            _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+        ).holdings(FAKE_ID_A)
+
+
+def test_holdings_combined_aggregate_weight_above_100_raises_invalid():
+    # #90 guard now sums equity + bond COMBINED (60 + 50 = 110), not per-list.
+    equity = [{"stockCode": "FAKE1", "netAssetPercent": 60.0, "type": "STOCK"}]
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 50.0, "type": "BOND"}]
+    with pytest.raises(InvalidData, match="aggregate holdings weight exceeds 100%"):
+        _src(
+            _holdings_payload_with(productTopHoldingList=equity, productTopHoldingBondList=bond)
+        ).holdings(FAKE_ID_A)
+
+
+def test_holdings_dedup_stock_code_across_lists_raises_invalid():
+    # The per-fund dedup set spans BOTH lists: the same code in equity and bond
+    # is a provider self-inconsistency that fails closed.
+    equity = [{"stockCode": "FAKE1", "netAssetPercent": 5.0, "type": "STOCK"}]
+    bond = [{"stockCode": "FAKE1", "netAssetPercent": 6.0, "type": "BOND"}]
+    with pytest.raises(InvalidData, match="duplicate holding stock code"):
+        _src(
+            _holdings_payload_with(productTopHoldingList=equity, productTopHoldingBondList=bond)
+        ).holdings(FAKE_ID_A)
+
+
+def test_holdings_bond_only_uses_id_in_path_and_identity_preserved():
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "type": "BOND"}]
+    get = _capture_get(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    )
+    FmarketFundSource(http_get=get).holdings(FAKE_ID_A)
+    assert get.calls[0]["url"].endswith(f"/res/products/{FAKE_ID_A}")
+
+
+def test_holdings_bond_only_rejects_mismatched_detail_id():
+    # #21 identity guard still gates the bond-only path.
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "type": "BOND"}]
+    with pytest.raises(InvalidData):
+        _src(
+            _holdings_payload_with(id=9999, productTopHoldingList=[], productTopHoldingBondList=bond)
+        ).holdings(FAKE_ID_A)
+
+
+# ---------------------------------------------------------------------------
+# Issue #173: asset_allocation() sibling accessor
+# ---------------------------------------------------------------------------
+
+
+def test_asset_allocation_returns_typed_split():
+    asset = [
+        {"assetType": {"code": "BOND", "name": "Fake bond"}, "assetPercent": 88.0},
+        {"assetType": {"code": "CASH", "name": "Fake cash"}, "assetPercent": 12.0},
+    ]
+    alloc = _src(_holdings_payload_with(productAssetHoldingList=asset)).asset_allocation(FAKE_ID_A)
+    assert isinstance(alloc, AssetAllocation)
+    assert alloc.product_id == FAKE_ID_A
+    assert alloc.source == "fmarket"
+    assert alloc.currency == "VND"
+    assert len(alloc) == 2
+    assert all(isinstance(c, AssetClassWeight) for c in alloc)
+    by_class = {c.asset_class: c.weight_pct for c in alloc}
+    assert by_class["BOND"] == pytest.approx(88.0)
+    assert by_class["CASH"] == pytest.approx(12.0)
+
+
+def test_asset_allocation_uses_id_in_path():
+    get = _capture_get(_holdings_payload())
+    FmarketFundSource(http_get=get).asset_allocation(FAKE_ID_A)
+    assert get.calls[0]["url"].endswith(f"/res/products/{FAKE_ID_A}")
+
+
+def test_asset_allocation_as_of_from_update_at():
+    asset = [
+        {"assetType": {"code": "BOND", "name": "B"}, "assetPercent": 70.0, "updateAt": 1700000000000},
+        {"assetType": {"code": "CASH", "name": "C"}, "assetPercent": 30.0, "updateAt": 1700000100000},
+    ]
+    alloc = _src(_holdings_payload_with(productAssetHoldingList=asset)).asset_allocation(FAKE_ID_A)
+    assert alloc.as_of_utc == datetime.fromtimestamp(1700000100000 / 1000.0, tz=timezone.utc)
+
+
+def test_asset_allocation_absent_update_at_leaves_as_of_none():
+    asset = [{"assetType": {"code": "BOND", "name": "B"}, "assetPercent": 100.0}]
+    alloc = _src(_holdings_payload_with(productAssetHoldingList=asset)).asset_allocation(FAKE_ID_A)
+    assert alloc.as_of_utc is None
+
+
+def test_asset_allocation_empty_raises_empty():
+    with pytest.raises(EmptyData):
+        _src(_holdings_payload_with(productAssetHoldingList=[])).asset_allocation(FAKE_ID_A)
+
+
+def test_asset_allocation_absent_raises_empty():
+    base = json.loads(_holdings_payload())
+    base["data"].pop("productAssetHoldingList", None)
+    with pytest.raises(EmptyData):
+        _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("rows", [{}, "", False, 0])
+def test_asset_allocation_present_non_list_raises_invalid(rows):
+    with pytest.raises(InvalidData, match="productAssetHoldingList is not an array"):
+        _src(_holdings_payload_with(productAssetHoldingList=rows)).asset_allocation(FAKE_ID_A)
+
+
+@pytest.mark.parametrize(
+    "bad_row",
+    [
+        {"assetType": {"code": "BOND"}, "assetPercent": "garbage"},
+        {"assetType": {"code": "BOND"}, "assetPercent": 150.0},
+        {"assetType": "BOND", "assetPercent": 50.0},  # assetType not a dict
+        {"assetType": {"code": "   "}, "assetPercent": 50.0},  # blank code
+        {"assetType": {}, "assetPercent": 50.0},  # missing code
+    ],
+    ids=["weight", "weight_oob", "asset_type_str", "blank_code", "missing_code"],
+)
+def test_asset_allocation_malformed_row_raises_invalid(bad_row):
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(productAssetHoldingList=[bad_row])).asset_allocation(FAKE_ID_A)
+
+
+def test_asset_allocation_unknown_class_raises_invalid():
+    # A present-but-unrecognized asset class fails closed (not STOCK/BOND/CASH).
+    asset = [{"assetType": {"code": "DERIVATIVE"}, "assetPercent": 50.0}]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(productAssetHoldingList=asset)).asset_allocation(FAKE_ID_A)
+
+
+def test_asset_allocation_partial_disclosure_under_100_ok():
+    # Disclosed weights need NOT sum to 100% (partial disclosure is allowed).
+    asset = [{"assetType": {"code": "BOND"}, "assetPercent": 60.0}]
+    alloc = _src(_holdings_payload_with(productAssetHoldingList=asset)).asset_allocation(FAKE_ID_A)
+    assert len(alloc) == 1
+    assert alloc[0].weight_pct == pytest.approx(60.0)
+
+
+def test_asset_allocation_dedup_class_raises_invalid():
+    asset = [
+        {"assetType": {"code": "BOND"}, "assetPercent": 50.0},
+        {"assetType": {"code": "BOND"}, "assetPercent": 30.0},
+    ]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(productAssetHoldingList=asset)).asset_allocation(FAKE_ID_A)
+
+
+def test_asset_allocation_rejects_mismatched_detail_id():
+    # #21 identity guard on the new accessor (same endpoint as holdings).
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(id=9999)).asset_allocation(FAKE_ID_A)
+
+
+def test_asset_allocation_invalid_product_id_rejected():
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload()).asset_allocation(0)
+
+
+def test_asset_allocation_models_are_frozen():
+    c = AssetClassWeight(asset_class="BOND", weight_pct=50.0)
+    with pytest.raises(Exception):
+        c.weight_pct = 1.0  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------

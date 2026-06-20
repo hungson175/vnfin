@@ -5,7 +5,14 @@ open-ended mutual funds:
 
   - ``list_funds()``  -> POST /res/products/filter
   - ``nav_history(product_id)`` -> POST /res/product/get-nav-history  (isAllData:1)
-  - ``holdings(product_id)``    -> GET  /res/products/{id}
+  - ``holdings(product_id)``         -> GET /res/products/{id}
+  - ``asset_allocation(product_id)`` -> GET /res/products/{id}
+
+The product-detail document carries the per-line-item holdings (equities in
+``productTopHoldingList`` and bonds in ``productTopHoldingBondList`` — bond funds
+disclose only the latter) and the top-level asset-class split
+(``productAssetHoldingList``). ``holdings()`` merges both line-item lists;
+``asset_allocation()`` reads the class split off the same document.
 
 NAV is VND per fund unit; ``navDate`` is ``YYYY-MM-DD``. Provenance, compliance,
 and shape notes live in ``docs/sources/funds-fmarket.md``.
@@ -18,10 +25,12 @@ Runtime fetch only — no caching or redistribution of provider data.
 """
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timezone
 
 from .._contracts import (
     MISSING,
+    canonical_enum_tag,
     canonical_fund_code,
     canonical_security_symbol,
     optional_present,
@@ -30,7 +39,15 @@ from .._contracts import (
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable, StaleData
 from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import validate_iso_date_string
-from .models import Fund, FundHolding, FundList, NavHistory, NavPoint
+from .models import (
+    AssetAllocation,
+    AssetClassWeight,
+    Fund,
+    FundHolding,
+    FundList,
+    NavHistory,
+    NavPoint,
+)
 
 _BASE_URL = "https://api.fmarket.vn"
 _FILTER_PATH = "/res/products/filter"
@@ -70,6 +87,29 @@ def _require_array(value, who: str):
     if not isinstance(value, list):
         raise InvalidData(f"fmarket: {who} is not an array")
     return value
+
+
+def _parse_update_at(raw):
+    """Parse a provider epoch-**millisecond** ``updateAt`` to a tz-aware UTC datetime.
+
+    Returns ``None`` (never a fabricated ``now()``) when the field is absent or
+    malformed — a holding/allocation freshness stamp must reflect the provider, not
+    the fetch time. Rejects ``bool``; accepts a positive ``int`` or an integral,
+    finite ``float`` (providers send e.g. ``1700000000000.0``). Out-of-range epochs
+    (``ValueError``/``OverflowError``/``OSError``) also yield ``None``.
+    """
+    if raw is None or isinstance(raw, bool):
+        return None
+    if isinstance(raw, float):
+        if not math.isfinite(raw) or not raw.is_integer():
+            return None
+        raw = int(raw)
+    if not isinstance(raw, int) or raw <= 0:
+        return None
+    try:
+        return datetime.fromtimestamp(raw / 1000.0, tz=timezone.utc)
+    except (ValueError, OverflowError, OSError):
+        return None
 
 
 def _optional_str(value, *, ctx: str) -> str:
@@ -272,23 +312,26 @@ class FmarketFundSource(HttpDataSource):
             warnings=warnings,
         )
 
-    def holdings(self, product_id: int) -> tuple[FundHolding, ...]:
-        """Top disclosed portfolio holdings for a fund (by internal ``product_id``)."""
-        fid = _validate_product_id(product_id)
+    def _fetch_detail_data(self, fid: int, who: str) -> dict:
+        """GET the product-detail document and enforce the #21 fund-identity guard.
+
+        ``holdings()`` and ``asset_allocation()`` both read the same
+        ``/res/products/{id}`` document, so the identity check lives here once.
+
+        Issue #21 (reopen): the detail document MUST identify the requested fund — a
+        missing/null id bypasses identity entirely, so ``id`` is required: a non-bool
+        int equal to ``fid`` (None/missing, bool, non-int, or mismatch all reject).
+        ``code`` has no requested counterpart to compare, but a present value must be
+        a non-empty CANONICAL string (no surrounding whitespace) so a corrupt identity
+        shape is not silently accepted.
+        """
         url = f"{_BASE_URL}{_DETAIL_PATH}/{fid}"
-        parsed = self._get(url, who="holdings")
-        data = _require_data_object(parsed.get("data"), who="holdings")
-        # Issue #21 (reopen): the holdings detail document MUST identify the
-        # requested fund — a missing/null id bypasses identity entirely, so `id`
-        # is required: it must be a non-bool int equal to fid (None/missing,
-        # bool, non-int, or mismatch all reject). `code` has no requested
-        # counterpart to compare, but a present value must be a non-empty CANONICAL
-        # string (no surrounding whitespace) so a corrupt identity shape is not
-        # silently accepted.
+        parsed = self._get(url, who=who)
+        data = _require_data_object(parsed.get("data"), who=who)
         detail_id = data.get("id")
         if isinstance(detail_id, bool) or not isinstance(detail_id, int) or detail_id != fid:
             raise InvalidData(
-                f"fmarket: holdings detail id {detail_id!r} != requested {fid}"
+                f"fmarket: {who} detail id {detail_id!r} != requested {fid}"
             )
         detail_code = data.get("code")
         if detail_code is not None and (
@@ -297,21 +340,92 @@ class FmarketFundSource(HttpDataSource):
             or detail_code != detail_code.strip()
         ):
             raise InvalidData(
-                f"fmarket: holdings detail code {detail_code!r} is not a non-empty canonical string"
+                f"fmarket: {who} detail code {detail_code!r} is not a non-empty canonical string"
             )
-        rows = _require_array(
-            data.get("productTopHoldingList"), who="holdings productTopHoldingList"
+        return data
+
+    def holdings(self, product_id: int) -> tuple[FundHolding, ...]:
+        """Top disclosed portfolio holdings for a fund (by internal ``product_id``).
+
+        Returns equity holdings (``productTopHoldingList``) followed by bond holdings
+        (``productTopHoldingBondList``) — a bond fund discloses only the latter, so a
+        pure-bond or balanced fund now returns its real positions instead of empty
+        data. Each :class:`FundHolding` carries ``instrument_type`` (``"STOCK"``/
+        ``"BOND"``). :class:`EmptyData` is raised only when *both* lists are empty/
+        absent (the fund has published no holdings yet).
+        """
+        fid = _validate_product_id(product_id)
+        data = self._fetch_detail_data(fid, who="holdings")
+        equity = (
+            _require_array(
+                data.get("productTopHoldingList"), who="holdings productTopHoldingList"
+            )
+            or []
         )
-        if rows is None or len(rows) == 0:
-            raise EmptyData(f"fmarket: no holdings for product {product_id}")
+        bonds = (
+            _require_array(
+                data.get("productTopHoldingBondList"),
+                who="holdings productTopHoldingBondList",
+            )
+            or []
+        )
+        if not equity and not bonds:
+            raise EmptyData(
+                f"fmarket: no holdings published yet for product {product_id}"
+            )
+        # One dedup set spans BOTH lists: the same code in equity and bond is a
+        # provider self-inconsistency that fails closed. Equity rows come first so
+        # the equity-only ordering callers already rely on is preserved.
         seen: set[str] = set()
-        holdings = tuple(self._parse_holding(r, seen) for r in rows)
+        holdings = tuple(
+            [self._parse_holding(r, seen, default_type="STOCK") for r in equity]
+            + [self._parse_holding(r, seen, default_type="BOND") for r in bonds]
+        )
         total_weight = sum(h.weight_pct for h in holdings)
         if total_weight > 100.0 + 1e-9:
             raise InvalidData(
                 f"fmarket: aggregate holdings weight exceeds 100% ({total_weight})"
             )
         return holdings
+
+    def asset_allocation(self, product_id: int) -> AssetAllocation:
+        """Asset-class split (equity/bond/cash) for a fund, off the same detail doc.
+
+        Parses ``productAssetHoldingList`` into typed :class:`AssetClassWeight` rows.
+        Each class code is validated against ``{STOCK, BOND, CASH}`` (a present-but-
+        unrecognized class fails closed). The disclosed weights are NOT forced to sum
+        to 100% (partial disclosure is allowed). ``as_of_utc`` is the freshest per-row
+        ``updateAt`` (``None`` when the provider omits it). :class:`EmptyData` is
+        raised when the allocation list is empty/absent.
+        """
+        fid = _validate_product_id(product_id)
+        data = self._fetch_detail_data(fid, who="asset-allocation")
+        rows = _require_array(
+            data.get("productAssetHoldingList"),
+            who="asset-allocation productAssetHoldingList",
+        )
+        if rows is None or len(rows) == 0:
+            raise EmptyData(
+                f"fmarket: no asset allocation published yet for product {product_id}"
+            )
+        seen: set[str] = set()
+        classes: list[AssetClassWeight] = []
+        as_of = None
+        for row in rows:
+            classes.append(self._parse_asset_class(row, seen))
+            row_as_of = _parse_update_at(row.get("updateAt")) if isinstance(row, dict) else None
+            if row_as_of is not None and (as_of is None or row_as_of > as_of):
+                as_of = row_as_of
+        code = data.get("code") if isinstance(data.get("code"), str) else None
+        return AssetAllocation(
+            product_id=fid,
+            classes=tuple(classes),
+            source="fmarket",
+            currency="VND",
+            code=code,
+            as_of_utc=as_of,
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
 
     # --- row parsers ------------------------------------------------------
 
@@ -401,7 +515,7 @@ class FmarketFundSource(HttpDataSource):
         return NavPoint(date=d, nav=nav)
 
     @staticmethod
-    def _parse_holding(row, seen_codes=None) -> FundHolding:
+    def _parse_holding(row, seen_codes=None, *, default_type: str = "STOCK") -> FundHolding:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: holding row is not an object")
         # Issue #34: stockCode is a public security identifier — a present blank or
@@ -434,13 +548,62 @@ class FmarketFundSource(HttpDataSource):
             if price < 0:
                 raise InvalidData(f"fmarket: holding {stock_code} price is negative: {price}")
             price_unit = "raw"
+        # Issue #173: instrument type tags the line item STOCK vs BOND. A present
+        # `type` is validated against {STOCK, BOND} and fails closed if unknown (a
+        # holdings tuple has no per-row warning channel, so we never silently
+        # mislabel). An absent `type` falls back to the per-list default the caller
+        # passes (the equity list -> STOCK, the bond list -> BOND).
+        instrument_type = (
+            canonical_enum_tag(
+                optional_present(row, "type"),
+                {"STOCK", "BOND"},
+                f"fmarket holding {stock_code} type",
+                missing_ok=True,
+            )
+            or default_type
+        )
         return FundHolding(
             stock_code=stock_code,
             weight_pct=weight,
             industry=industry,
             price_raw=price,
             price_unit=price_unit,
+            instrument_type=instrument_type,
+            as_of_utc=_parse_update_at(row.get("updateAt")),
         )
+
+    @staticmethod
+    def _parse_asset_class(row, seen_codes=None) -> AssetClassWeight:
+        """Parse one ``productAssetHoldingList`` row into an :class:`AssetClassWeight`.
+
+        ``assetType`` must be an object; its ``code`` is validated against
+        ``{STOCK, BOND, CASH}`` (present-but-unrecognized fails closed). ``assetPercent``
+        is range-checked 0-100. A class code repeated within the list fails closed.
+        """
+        if not isinstance(row, dict):
+            raise InvalidData("fmarket: asset-allocation row is not an object")
+        asset_type = row.get("assetType")
+        if not isinstance(asset_type, dict):
+            raise InvalidData("fmarket: asset-allocation row assetType is not an object")
+        asset_class = canonical_enum_tag(
+            optional_present(asset_type, "code"),
+            {"STOCK", "BOND", "CASH"},
+            "fmarket asset-allocation class code",
+        )
+        if seen_codes is not None:
+            if asset_class in seen_codes:
+                raise InvalidData(
+                    f"fmarket: duplicate asset-allocation class {asset_class}"
+                )
+            seen_codes.add(asset_class)
+        weight = _as_float(
+            row.get("assetPercent"), f"asset-allocation {asset_class} weight"
+        )
+        if not (0.0 <= weight <= 100.0):
+            raise InvalidData(
+                f"fmarket: asset-allocation {asset_class} weight out of range: {weight}"
+            )
+        return AssetClassWeight(asset_class=asset_class, weight_pct=weight)
 
     # --- transport --------------------------------------------------------
 

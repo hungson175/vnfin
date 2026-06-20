@@ -1,7 +1,8 @@
 """vnfin.funds — VN open-ended mutual fund data (clean-room).
 
 Public API:
-    - Typed models: ``Fund``, ``FundList``, ``NavPoint``, ``NavHistory``, ``FundHolding``.
+    - Typed models: ``Fund``, ``FundList``, ``NavPoint``, ``NavHistory``, ``FundHolding``,
+      ``AssetAllocation``, ``AssetClassWeight``.
     - Adapter: ``FmarketFundSource`` (Fmarket public, no-auth API).
 
 Example::
@@ -11,12 +12,21 @@ Example::
     src = FmarketFundSource()
     funds = src.list_funds(asset_type="STOCK")
     hist = src.nav_history(funds[0].id)         # full NAV history (VND/unit)
-    holdings = src.holdings(funds[0].id)        # top disclosed holdings
+    holdings = src.holdings(funds[0].id)        # top disclosed holdings (stocks + bonds)
+    alloc = src.asset_allocation(funds[0].id)   # asset-class split (equity/bond/cash)
 """
 from __future__ import annotations
 
 from .fmarket import FmarketFundSource
-from .models import Fund, FundHolding, FundList, NavHistory, NavPoint
+from .models import (
+    AssetAllocation,
+    AssetClassWeight,
+    Fund,
+    FundHolding,
+    FundList,
+    NavHistory,
+    NavPoint,
+)
 
 __all__ = [
     "Fund",
@@ -24,6 +34,8 @@ __all__ = [
     "NavPoint",
     "NavHistory",
     "FundHolding",
+    "AssetAllocation",
+    "AssetClassWeight",
     "FmarketFundSource",
     "client",
     "source",
