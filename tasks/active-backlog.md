@@ -22,9 +22,11 @@ _Last synced: 2026-06-20 ~17:30 +07_
 > run, warn-not-drop) pushed `0a28339..1402b37`; Codex×2 APPROVE review-202606201750; #176 commented +
 > CLOSED (reported silent-corruption surfaced). Deferred design-eval follow-ups (trim / cross-source
 > reconciliation / ADV-dilution) live in design §8 + below — NOT open issues. **Now: #172-RESIDUAL
-> DESIGN APPROVED_WITH_NOTES** (reviewer review-202606201803, `ea44de7`) — cadence-relative `nav_end_gap`
-> with trailing-window cadence + today-injection; TDD in flight (implement→adversarial-verify workflow).
-> FundList.nav as-of follow-up filed by reviewer as **#181** (out of v1 scope).
+> CODE committed `27cb353`** (base `7bbd730`) — `nav_end_gap` success-path warning (cadence-relative,
+> trailing-window, today-injected); implement→5-skeptic verify, 3 findings resolved (1 JUDGMENT CALL:
+> accept+pin the daily→weekly transition transient). Full 3001 green, trio exit0, fmarket cov 96%,
+> snapshot untouched. Handoff `/tmp/vnfin-172-residual-nav-end-gap-handoff-20260620.md`; **in Codex×2
+> review**. On APPROVE: push + close #172. FundList.nav as-of → reviewer-filed **#181** (out of v1 scope).
 
 ---
 
