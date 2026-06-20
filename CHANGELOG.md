@@ -175,6 +175,27 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **One bad upstream bar no longer blocks an entire price/index window** (#186) — the shared UDF parse
+  (`UDFSource._build_bars`, behind both `prices.history` and `index_history`) used to `raise InvalidData`
+  on the **first** per-bar data-quality failure, aborting the whole response. Because the same bad day
+  (e.g. an OHLC-invariant-violating 2018-08-22, or a conflicting same-date 2020-12-25) exists in *every*
+  source, one bad bar anywhere in a 10-year window failed the whole failover chain → `AllSourcesFailed`,
+  making a 10y/Max VN-Index chart unrenderable. The parse now **quarantines** the offending bar instead:
+  isolated per-row value-quality failures (OHLC-invariant violation, non-positive/non-finite price,
+  negative/fractional volume, unparseable scalar) are **dropped from the series — never served** — and
+  the rest of the window is returned. **Conflicting / duplicate keys drop the whole key**: a *conflicting*
+  same-date index bar removes that entire date (both bars — we cannot tell which is right; an *identical*
+  same-date duplicate still dedupes keep-first as before, #162), and any duplicate exact timestamp
+  (equity / intraday) drops that timestamp. **Never silent:** the result carries a new
+  `quarantined_invalid_bars` warning naming the dropped dates + reasons (surfaced on both equity and index
+  results). **A systematically-broken source still fails over:** when quarantined rows exceed
+  `max(_QUARANTINE_ABS_FLOOR=3, _QUARANTINE_FRACTION=0.10 × n)` over the `n` provider rows, the parse
+  raises `InvalidData` → the next source is tried (all-bad → `AllSourcesFailed`). **Structural/shape faults
+  still hard-raise** (misaligned/missing arrays, malformed envelope/status). Behavior change: a *lone*
+  bad row now yields `EmptyData` (still a `SourceError` → failover) rather than `InvalidData`. No
+  public-API surface change (the warning is just a string). See
+  [`docs/architecture/failover-and-validation.md`](docs/architecture/failover-and-validation.md) →
+  "Source-side bad-bar quarantine". ([#186](https://github.com/hungson175/vnfin/issues/186))
 - **Contradictory index/price routing loop for recognised-but-unservable indices** (#174) —
   `index_history()` / `index_history_stitched()` rejected a recognised index whose value history is
   not served (the 10 HOSE **sector** indices `VNCOND…VNUTI`, plus `VN100`/`VNMID`/`VNSML`/`VNDIAMOND`/

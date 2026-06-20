@@ -150,18 +150,34 @@ def test_build_params_keys():
     assert params == {"resolution": "1D", "symbol": "FPT", "from": 100, "to": 200}
 
 
-def test_bool_ohlc_raises_invalid():
-    # Issue #87: JSON booleans must not become scaled VND prices via float(True).
+def test_bool_ohlc_quarantined_not_served_as_price():
+    # Issue #87: JSON booleans must NEVER become scaled VND prices via float(True).
+    # Under #186 a bool scalar fails parse → the row is quarantined (dropped), so the
+    # bool is never served; the clean bar alongside it is kept and a warning is emitted.
+    rows = [
+        ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1_000_000),
+        ("2024-01-03", True, True, True, True, True),
+    ]
+    h = _src(_envelope(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h] == [date(2024, 1, 2)]  # bool row dropped, not served
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)
+
+
+def test_bool_ohlc_all_bad_yields_emptydata():
+    # A lone bool-only row leaves zero clean bars → EmptyData (a SourceError → failover),
+    # so the bool is still never served as a price.
     rows = [("2024-01-02", True, True, True, True, True)]
-    with pytest.raises(InvalidData, match="bool is not numeric"):
+    with pytest.raises(EmptyData):
         _src(_envelope(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
 
 
-def test_bool_timestamp_raises_invalid():
-    rows = [("1970-01-01", 70.0, 72.0, 69.5, 71.0, 1000)]
+def test_bool_timestamp_quarantined_not_served():
+    rows = [
+        ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1_000_000),
+        ("2024-01-03", 72.3, 73.0, 72.1, 72.8, 1_200_000),
+    ]
     payload = json.loads(_envelope(rows=rows))
-    payload["data"]["t"] = [True]
-    with pytest.raises(InvalidData, match="bool is not numeric"):
-        _src(json.dumps(payload)).get_history(
-            "FPT", Interval.D1, date(1970, 1, 1), date(1970, 1, 1)
-        )
+    payload["data"]["t"][1] = True  # corrupt the 2nd row's timestamp to a JSON bool
+    h = _src(json.dumps(payload)).get_history("FPT", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h] == [date(2024, 1, 2)]  # bool-ts row dropped
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)

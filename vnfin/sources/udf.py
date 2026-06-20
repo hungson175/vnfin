@@ -18,6 +18,22 @@ from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import validate_date_range, validate_non_empty_string
 from .base import VN_TZ, PriceSource
 
+# Issue #186: quarantine-and-warn for isolated bad upstream bars. A single per-bar
+# data-quality failure (OHLC invariant, non-positive/non-finite price, bad volume,
+# conflicting/duplicate timestamp, malformed scalar) drops THAT bar and keeps the rest,
+# disclosing it via this never-silent warning token — instead of raising and aborting the
+# whole response (which made one bad bar in a 10y window block the entire VN-Index chart).
+QUARANTINED_INVALID_BARS = "quarantined_invalid_bars"
+
+# A systematically-broken source must still fail over: raise (→ failover) when the number
+# of quarantined rows exceeds ``max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION * n)``.
+# The FRACTION fails a mostly-bad response; the absolute FLOOR guarantees a few isolated
+# glitches NEVER block ANY window — without it a short window would fail on a single bad
+# bar (1 of 5 = 20% > 10%), re-creating the very bug #186 fixes. (Mirrors the gold-leg
+# coverage gate: a few isolated glitches quarantine, a mostly-bad response fails over.)
+_QUARANTINE_FRACTION = 0.10
+_QUARANTINE_ABS_FLOOR = 3
+
 
 class UDFSource(HttpDataSource, PriceSource):
     # --- per-adapter configuration (override in subclasses) ---
@@ -30,10 +46,12 @@ class UDFSource(HttpDataSource, PriceSource):
     PRICE_SCALE = 1.0  # multiply feed price to reach VND (e.g. 1000 if feed is in thousands)
     VOLUME_SCALE = 1.0
     EXCHANGE = None
-    # Issue #162: duplicate-timestamp policy. Default (equity, #66): ANY duplicate
-    # timestamp is conflicting provider data -> raise. Index sources opt in to
-    # deduping an IDENTICAL-OHLCV same-date duplicate (keep first) while still raising
-    # on a CONFLICTING one (see _IndexUDFMixin). Equity behavior is unchanged when False.
+    # Issue #162/#186: duplicate-timestamp policy. Default (equity, #66): ANY duplicate
+    # timestamp is conflicting provider data -> the timestamp is dropped entirely
+    # (#186 quarantine; was a hard raise). Index sources opt in to deduping an
+    # IDENTICAL-OHLCV same-date duplicate (keep first) while a CONFLICTING same-date bar
+    # drops that date entirely (#186; was a hard raise) — see _IndexUDFMixin. Equity
+    # behavior is unchanged when False (no identical-dedupe symmetry).
     _DEDUPE_IDENTICAL_DUPLICATE_BARS = False
     unit = "VND"  # equity UDF prices are money in VND (failover unit guard)
 
@@ -145,6 +163,23 @@ class UDFSource(HttpDataSource, PriceSource):
             exchange=self.EXCHANGE,
             provider_symbol=psym,
             fetched_at_utc=datetime.now(timezone.utc),
+            warnings=self._quarantine_warnings(),
+        )
+
+    def _quarantine_warnings(self) -> tuple[str, ...]:
+        """Issue #186: build the never-silent ``quarantined_invalid_bars`` warning (or no
+        warning) from the rows ``_build_bars`` dropped. ``self._quarantined`` is one entry
+        per dropped ROW; the human tail lists each dropped (date, reason) once."""
+        quarantined = getattr(self, "_quarantined", None)
+        if not quarantined:
+            return ()
+        seen_pairs: list[tuple[str, str]] = []
+        for pair in quarantined:
+            if pair not in seen_pairs:
+                seen_pairs.append(pair)
+        detail = "; ".join(f"{label}: {reason}" for label, reason in seen_pairs)
+        return (
+            f"{QUARANTINED_INVALID_BARS}: dropped {len(quarantined)} bar(s) — {detail}",
         )
 
     def _build_bars(self, data, interval) -> list[PriceBar]:
@@ -191,6 +226,13 @@ class UDFSource(HttpDataSource, PriceSource):
         seen: dict = {}  # key (calendar date | exact timestamp) -> PriceBar
         dedup_by_date = self._DEDUPE_IDENTICAL_DUPLICATE_BARS and interval is Interval.D1
         self._dedup_occurred = False  # Issue #162: set if an identical same-date dup was deduped
+        # Issue #186: per-bar data-quality failures QUARANTINE the offending row (keep the
+        # rest) instead of raising and aborting the whole response. ``quarantined`` records
+        # one (label, reason) per dropped ROW (drives both the warning and the threshold);
+        # ``poisoned`` holds keys dropped ENTIRELY (conflicting/duplicate — can't pick).
+        # Structural/array-shape failures above this loop still HARD-RAISE.
+        quarantined: list[tuple[str, str]] = []
+        poisoned: set = set()
         for i in range(n):
             try:
                 ts = parse_provider_int(t[i], label=f"timestamp at row {i}", source=self.name)
@@ -200,34 +242,50 @@ class UDFSource(HttpDataSource, PriceSource):
                 lp = parse_provider_float(l[i], label=f"low at row {i}", source=self.name) * self.PRICE_SCALE
                 cp = parse_provider_float(c[i], label=f"close at row {i}", source=self.name) * self.PRICE_SCALE
                 raw_vol = parse_provider_float(v[i], label=f"volume at row {i}", source=self.name) * self.VOLUME_SCALE
-            except (TypeError, ValueError, OverflowError) as exc:
-                # Malformed scalar (null, garbage string, overflow) must surface as a
-                # SourceError so FailoverPriceClient fails over instead of crashing.
-                raise InvalidData(f"{self.name}: malformed scalar at row {i}") from exc
+            except (InvalidData, TypeError, ValueError, OverflowError, OSError):
+                # Issue #186: a single unparseable scalar is a per-ROW failure (the array
+                # SHAPE is fine) -> quarantine that row, labelled by index (the timestamp is
+                # unknown). The coerce helpers raise InvalidData for null/NaN/bool/garbage
+                # scalars; datetime.fromtimestamp raises Overflow/OSError for an out-of-range
+                # epoch. All are this-row-only — a systematically-bad column trips the
+                # threshold below -> failover. A structural array-shape error still hard-raises
+                # above this loop (it never reaches here).
+                quarantined.append((f"row {i}", "malformed scalar"))
+                continue
             if not all(math.isfinite(x) for x in (op, hp, lp, cp, raw_vol)):
-                raise InvalidData(f"{self.name}: non-finite OHLCV at row {i}")
-            # Issue #13: zero price observations are not valid market data for an
-            # equity/index series; reject them as provider/parse drift.
+                quarantined.append((tm.date().isoformat(), "non-finite OHLCV"))
+                continue
+            # Issue #13: zero/negative price observations are not valid market data.
             if not all(x > 0 for x in (op, hp, lp, cp)):
-                raise InvalidData(f"{self.name}: non-positive price at row {i}")
+                quarantined.append((tm.date().isoformat(), "non-positive price"))
+                continue
             if raw_vol < 0:
-                raise InvalidData(f"{self.name}: negative volume at row {i}")
-            # Issue #120: equity/index volume must be whole after VOLUME_SCALE. A fractional
-            # value is provider/parse drift; reject it rather than silently rounding.
+                quarantined.append((tm.date().isoformat(), "negative volume"))
+                continue
+            # Issue #120: equity/index volume must be whole after VOLUME_SCALE.
             if not raw_vol.is_integer():
-                raise InvalidData(f"{self.name}: fractional volume {raw_vol!r} at row {i}")
+                quarantined.append((tm.date().isoformat(), "fractional volume"))
+                continue
             vol = int(raw_vol)
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
-                raise InvalidData(f"{self.name}: OHLC invariant violated at {tm.date()}")
+                quarantined.append((tm.date().isoformat(), "OHLC invariant violated"))
+                continue
             bar = PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol)
-            # Issue #66/#162: handle a duplicate observation. Equity (default): ANY duplicate
-            # EXACT timestamp is conflicting provider data -> raise. Index sources reduce to
-            # one bar per CALENDAR DATE: an IDENTICAL same-date bar (same OHLCV+volume, even at
-            # a different intraday timestamp e.g. 07:00 vs 14:00) is deduped (keep first) and
-            # flagged; a CONFLICTING same-date bar always raises here in the source path so a
-            # failover client records the attempt and tries the next source (never a silent
-            # conflicting-row selection).
+            # Issue #66/#162/#186: duplicate handling. dedup_by_date (index D1): an IDENTICAL
+            # same-date bar (same OHLCV, even at a different intraday timestamp) dedupes
+            # (keep first, #162); a CONFLICTING same-date bar drops the date ENTIRELY (#186 —
+            # can't pick which is right). Equity / intraday (exact-timestamp key, #66): ANY
+            # duplicate timestamp drops that timestamp entirely (#186 generalizes #66's
+            # never-silently-pick intent to quarantine+drop rather than abort the whole fetch).
+            # Each dropped row counts toward the threshold; the #162 identical dedupe does NOT.
             key = tm.date() if dedup_by_date else tm
+            reason = (
+                "conflicting same-date bars" if dedup_by_date
+                else "duplicate observation timestamp"
+            )
+            if key in poisoned:
+                quarantined.append((tm.date().isoformat(), reason))
+                continue
             if key in seen:
                 if dedup_by_date:
                     prev = seen[key]
@@ -235,14 +293,35 @@ class UDFSource(HttpDataSource, PriceSource):
                         op, hp, lp, cp, vol
                     ):
                         self._dedup_occurred = True
-                        continue  # identical same-date bar -> dedupe (keep first)
-                    raise InvalidData(
-                        f"{self.name}: conflicting index bars for date {tm.date().isoformat()}"
-                    )
-                raise InvalidData(f"{self.name}: duplicate observation timestamp {tm.isoformat()}")
+                        continue  # identical same-date bar -> dedupe (keep first, #162)
+                # conflicting (index) or any duplicate (equity/intraday) -> poison the key:
+                # count the prior kept row + this row; the prior is removed from bars below.
+                poisoned.add(key)
+                quarantined.append((seen[key].time.date().isoformat(), reason))
+                quarantined.append((tm.date().isoformat(), reason))
+                continue
             seen[key] = bar
             bars.append(bar)
 
+        # Drop any already-kept bar whose key was later poisoned (conflicting/duplicate).
+        if poisoned:
+            bars = [
+                b for b in bars
+                if (b.time.date() if dedup_by_date else b.time) not in poisoned
+            ]
+
+        # Issue #186: a systematically-broken response still fails over. Raise (-> failover)
+        # when quarantined rows exceed max(absolute floor, fraction x n) over ALL provider
+        # rows n (before range filtering). The floor guarantees a few isolated glitches never
+        # block ANY window; the fraction fails a mostly-bad source.
+        if n and len(quarantined) > max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION * n):
+            raise InvalidData(
+                f"{self.name}: {len(quarantined)}/{n} bars failed data-quality checks "
+                f"(> max(floor={_QUARANTINE_ABS_FLOOR}, "
+                f"{int(_QUARANTINE_FRACTION * 100)}%)) — source systematically broken"
+            )
+
+        self._quarantined = quarantined
         bars.sort(key=lambda b: b.time)
         return bars
 

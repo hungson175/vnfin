@@ -215,12 +215,14 @@ def test_empty_rows_raise_empty():
         s.get_history("VNINDEX", Interval.D1, *WIDE)
 
 
-def test_malformed_scalar_raises_invalid():
+def test_malformed_scalar_quarantined_lone_row_empty():
+    # #186: a malformed scalar (null close) is quarantined (the row is dropped), never
+    # served. A lone bad row leaves zero bars → EmptyData (a SourceError → failover-safe).
     payload = json.dumps(
         {"symbol": "VNINDEX", "s": "ok", "t": [_ts("2024-06-10")], "o": [1000.0],
          "h": [1010.0], "l": [995.0], "c": [None], "v": [100]}
     )
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         VPSIndexSource(http_get=_get(payload)).get_history("VNINDEX", Interval.D1, *WIDE)
 
 
@@ -230,11 +232,14 @@ def test_transport_error_wrapped_unavailable():
         s.get_history("VNINDEX", Interval.D1, *WIDE)
 
 
-# ----- Issue #162: one public bar per calendar date for a D1 index source -----
+# ----- Issue #162 (+ #186): one public bar per calendar date for a D1 index source -----
 # An index D1 source result must expose exactly one bar per calendar date. Identical
-# same-date OHLCV duplicates dedupe deterministically (keep first) + a warning token;
-# a CONFLICTING same-date bar raises InvalidData inside the source path so failover can
-# try the next source (never a silent conflicting-row selection).
+# same-date OHLCV duplicates dedupe deterministically (keep first) + a warning token.
+# #186: a CONFLICTING same-date bar is no longer a hard raise — the whole date is
+# QUARANTINED (dropped entirely, both bars removed; we can't tell which is right) and the
+# rest of the series is served + a quarantine warning. The source only fails over when
+# quarantined rows exceed the #186 threshold (systematically broken). Never a silent
+# conflicting-row selection either way.
 
 # Same date as the second _INDEX_ROWS bar, IDENTICAL OHLCV -> must dedupe to one bar.
 _INDEX_ROWS_IDENTICAL_DUP = [
@@ -244,12 +249,21 @@ _INDEX_ROWS_IDENTICAL_DUP = [
     ("2024-06-12", 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
 ]
 
-# Same date, DIFFERENT OHLCV -> conflicting, must raise InvalidData in the source path.
+# Same date, DIFFERENT OHLCV -> conflicting; #186 quarantines the whole 06-11 date.
 _INDEX_ROWS_CONFLICTING_DUP = [
     ("2024-06-10", 1000.0, 1010.0, 995.0, 1005.0, 100_000_000),
     ("2024-06-11", 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
     ("2024-06-11", 1007.0, 1016.0, 1003.0, 1013.0, 111_000_000),  # conflicting same date
     ("2024-06-12", 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
+]
+
+# Every row non-positive -> quarantined count exceeds the #186 threshold -> the source is
+# deemed systematically broken (InvalidData in the source path -> failover).
+_INDEX_ROWS_SYSTEMICALLY_BAD = [
+    ("2024-06-10", -1.0, -1.0, -1.0, -1.0, 100_000_000),
+    ("2024-06-11", -1.0, -1.0, -1.0, -1.0, 110_000_000),
+    ("2024-06-12", -1.0, -1.0, -1.0, -1.0, 120_000_000),
+    ("2024-06-13", -1.0, -1.0, -1.0, -1.0, 130_000_000),
 ]
 
 
@@ -274,10 +288,15 @@ def test_index_no_duplicate_has_no_dedup_warning():
     assert "deduped_duplicate_daily_index_bars" not in h.warnings
 
 
-def test_index_conflicting_same_date_duplicate_raises_in_source():
+def test_index_conflicting_same_date_duplicate_quarantined_with_warning():
+    # #186: an isolated conflicting same-date pair drops the WHOLE date (06-11); the other
+    # two dates survive and a quarantine warning is surfaced. The #162 identical-dedupe
+    # token must NOT fire (this is a conflict, not an identical duplicate).
     s = VPSIndexSource(http_get=_get(_bare_udf(rows=_INDEX_ROWS_CONFLICTING_DUP)))
-    with pytest.raises(InvalidData):
-        s.get_history("VNINDEX", Interval.D1, *WIDE)
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 10), date(2024, 6, 12)]
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)
+    assert "deduped_duplicate_daily_index_bars" not in h.warnings
 
 
 def _udf_explicit_times(rows):
@@ -312,15 +331,18 @@ def test_index_same_date_different_timestamp_identical_ohlcv_deduped():
     assert "deduped_duplicate_daily_index_bars" in h.warnings
 
 
-def test_index_same_date_different_timestamp_conflicting_raises():
-    # Same calendar date, different timestamps, CONFLICTING OHLCV -> InvalidData in source path.
+def test_index_same_date_different_timestamp_conflicting_dropped_with_warning():
+    # #186: same calendar date, different timestamps, CONFLICTING OHLCV -> the whole 06-11
+    # date is quarantined (both intraday timestamps dropped); a clean other date survives.
     rows = [
         (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
         (_T_0611_B, 1007.0, 1016.0, 1003.0, 1013.0, 111_000_000),  # same date, conflicting
+        (_T_0612, 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),    # clean other date survives
     ]
     s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
-    with pytest.raises(InvalidData, match="conflicting index bars for date"):
-        s.get_history("VNINDEX", Interval.D1, *WIDE)
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 12)]  # 06-11 dropped entirely
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)
 
 
 def test_index_h1_same_date_different_timestamp_not_collapsed():
@@ -336,20 +358,27 @@ def test_index_h1_same_date_different_timestamp_not_collapsed():
     assert "deduped_duplicate_daily_index_bars" not in h.warnings
 
 
-def test_index_h1_exact_duplicate_timestamp_raises():
-    # Non-D1 keeps exact-timestamp keying + #66 raise-on-any-duplicate (no date dedupe).
+def test_index_h1_exact_duplicate_timestamp_dropped_with_warning():
+    # Non-D1 keeps exact-timestamp keying (no date dedupe). #186: an exact-timestamp
+    # duplicate drops that timestamp ENTIRELY (both rows quarantined); a distinct-hour bar
+    # on the same date survives.
     rows = [
         (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
-        (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),  # exact same timestamp
+        (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),  # exact same timestamp -> dropped
+        (_T_0611_B, 1008.0, 1018.0, 1004.0, 1016.0, 115_000_000),  # distinct hour survives
     ]
     s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
-    with pytest.raises(InvalidData, match="duplicate observation timestamp"):
-        s.get_history("VNINDEX", Interval.H1, *WIDE)
+    h = s.get_history("VNINDEX", Interval.H1, *WIDE)
+    assert len(h.bars) == 1  # the duplicated timestamp dropped; the distinct-hour bar kept
+    assert h.bars[0].time.date() == date(2024, 6, 11)
+    assert h.bars[0].time.hour == 13  # _T_0611_B = 06:00 UTC = 13:00 VN (UTC+7)
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)
 
 
-def test_index_conflicting_duplicate_triggers_failover_to_next_source():
-    # vps returns a CONFLICTING-duplicate payload (-> InvalidData in the source path);
-    # the failover client must record that failed attempt and serve the clean ssi source.
+def test_index_isolated_conflict_quarantined_and_served_no_failover():
+    # #186: an ISOLATED conflicting-duplicate date is quarantined (06-11 dropped) and the
+    # rest of the vps series is served DIRECTLY — no failover (the source is not
+    # systematically broken). The dropped date is surfaced via a quarantine warning.
     def router(url, params, headers):
         if "vps.com.vn" in url:
             return _bare_udf(rows=_INDEX_ROWS_CONFLICTING_DUP)
@@ -357,8 +386,25 @@ def test_index_conflicting_duplicate_triggers_failover_to_next_source():
 
     c = IndexClient(http_get=router)
     h = c.index_history("VNINDEX", date(2024, 6, 1), date(2024, 6, 30))
+    assert h.source == "vps_index"  # served from vps, NOT failed over to ssi
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 10), date(2024, 6, 12)]
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)
+    assert "deduped_duplicate_daily_index_bars" not in h.warnings
+
+
+def test_index_systematically_broken_source_fails_over_to_next():
+    # #186 threshold: when quarantined rows exceed max(_QUARANTINE_ABS_FLOOR,
+    # _QUARANTINE_FRACTION * n) the source is deemed systematically broken — it raises
+    # InvalidData in the source path and the failover client records that failed attempt
+    # and serves the clean ssi source (never a silent partial-garbage selection).
+    def router(url, params, headers):
+        if "vps.com.vn" in url:
+            return _bare_udf(rows=_INDEX_ROWS_SYSTEMICALLY_BAD)
+        return _ssi_envelope()
+
+    c = IndexClient(http_get=router)
+    h = c.index_history("VNINDEX", date(2024, 6, 1), date(2024, 6, 30))
     assert h.source == "ssi_index"
-    # the conflicting vps attempt is recorded as a failed attempt (not silently selected)
     assert any(a.name == "vps_index" and not a.ok for a in h.attempts)
     assert "deduped_duplicate_daily_index_bars" not in h.warnings
 

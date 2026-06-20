@@ -7,6 +7,15 @@ points/points/RAW/canonical-symbol enforcement, seam dedup) is the delivered fix
 strict `index_history` is unchanged. **Option 1 (diagnostic) and Option 3 (lenient quarantine) are
 deferred** — not in this batch. The original analysis/options are retained below for context.
 
+> **Superseded note (#186):** the root cause described in *Problem* below — "the strict per-row guard
+> raises `InvalidData` on one bad day, failing the whole source" — was fixed at the source by #186:
+> `UDFSource._build_bars` now **quarantines** isolated bad bars (drops + `quarantined_invalid_bars`
+> warning) instead of raising, with a threshold guard for systematically-broken sources. This is
+> effectively a built-in form of Option 3, now the **default** for both `index_history` and
+> `prices.history` (the "strict raise on one bad day" default no longer exists). `index_history_stitched`
+> remains the multi-source long-window stitcher; the two are complementary. See
+> `docs/architecture/failover-and-validation.md` → "Source-side bad-bar quarantine".
+
 ## Problem
 
 `vnfin.indices.index_history("VNINDEX", 2016-01-01, 2026-06-01)` fails with `AllSourcesFailed`

@@ -141,10 +141,12 @@ def test_missing_volume_array_defaults_to_zero(synth):
     assert h.bars[0].volume == 0
 
 
-def test_ohlc_invariant_violation_raises_invalid(synth):
-    # low (99) > high (72.5) -> invalid
+def test_ohlc_invariant_violation_quarantined_lone_row_empty(synth):
+    # #186: low (99) > high (72.5) is a per-row value-quality failure → the row is
+    # quarantined (dropped), never served. A lone bad row leaves zero bars → EmptyData
+    # (a SourceError → failover-safe). Keep-the-rest is covered in test_quarantine_bad_bars.py.
     bad = [("2024-01-02", 72.0, 72.5, 99.0, 72.3, 1000)]
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(synth.bare(rows=bad)).get_history("FPT", Interval.D1, *WIDE)
 
 
@@ -171,44 +173,48 @@ def test_envelope_unwrap(synth):
     assert h.source == "dummy_env"
 
 
-# --- P1: malformed scalars must raise InvalidData (failover-safe), not raw exceptions ---
+# --- P1: malformed scalars stay failover-safe (a SourceError), never a raw exception.
+# Under #186 a lone bad row is quarantined (dropped) → zero bars → EmptyData (still a
+# SourceError, so failover behaviour is unchanged). Keep-the-rest + the warning are
+# covered in test_quarantine_bad_bars.py. ---
 
 
-def test_none_close_raises_invalid(synth):
+def test_none_close_quarantined_lone_row_empty(synth):
     payload = json.dumps(
         {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [72.5], "l": [71.8], "c": [None], "v": [1000]}
     )
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(payload).get_history("FPT", Interval.D1, *WIDE)
 
 
-def test_garbage_timestamp_raises_invalid():
+def test_garbage_timestamp_quarantined_lone_row_empty():
     payload = json.dumps(
         {"s": "ok", "t": ["not-a-ts"], "o": [72.0], "h": [72.5], "l": [71.8], "c": [72.0], "v": [1000]}
     )
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(payload).get_history("FPT", Interval.D1, *WIDE)
 
 
-def test_nan_price_raises_invalid(synth):
-    # json.loads parses bare NaN by default -> float('nan') -> non-finite guard
+def test_nan_price_quarantined_lone_row_empty(synth):
+    # json.loads parses bare NaN by default -> float('nan'); the malformed scalar is
+    # quarantined at parse. A lone bad row leaves zero bars → EmptyData.
     payload = '{"s":"ok","t":[%d],"o":[72.0],"h":[72.5],"l":[71.8],"c":[NaN],"v":[1000]}' % synth.ts("2024-01-02")
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(payload).get_history("FPT", Interval.D1, *WIDE)
 
 
-def test_negative_volume_raises_invalid(synth):
+def test_negative_volume_quarantined_lone_row_empty(synth):
     bad = [("2024-01-02", 72.0, 72.5, 71.8, 72.3, -5)]
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(synth.bare(rows=bad)).get_history("FPT", Interval.D1, *WIDE)
 
 
-def test_fractional_volume_raises_invalid(synth):
+def test_fractional_volume_quarantined_lone_row_empty(synth):
     # Issue #120: equity/index UDF volume must be a whole number after VOLUME_SCALE. A
-    # fractional volume is provider/parse drift and must raise InvalidData instead of being
-    # silently rounded via int(round(...)).
+    # fractional volume is provider/parse drift; under #186 the row is quarantined (never
+    # silently rounded via int(round(...))). A lone bad row leaves zero bars → EmptyData.
     bad = [("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000.5)]
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(synth.bare(rows=bad)).get_history("FPT", Interval.D1, *WIDE)
 
 
@@ -218,27 +224,32 @@ def test_whole_float_volume_accepted(synth):
     assert hist.bars[0].volume == 1000
 
 
-def test_duplicate_observation_timestamp_raises_invalid(synth):
-    # Issue #66: two rows sharing one observation timestamp are conflicting provider data
-    # and must raise InvalidData, not be returned as an ambiguous duplicate-keyed series.
+def test_duplicate_observation_timestamp_quarantined_lone_pair_empty(synth):
+    # Issue #66 + #186: two rows sharing one observation timestamp are conflicting provider
+    # data; we never silently pick one. Under #186 the timestamp is dropped ENTIRELY (both
+    # rows quarantined) instead of raising on sight. A lone conflicting pair leaves zero
+    # bars → EmptyData (a SourceError → failover-safe). See test_quarantine_bad_bars.py for
+    # the keep-the-rest + warning behaviour.
     rows = [
         ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000),
         ("2024-01-02", 73.0, 74.0, 72.0, 73.5, 2000),
     ]
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(synth.bare(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
 
 
-def test_equity_identical_duplicate_timestamp_still_raises(synth):
+def test_equity_identical_duplicate_timestamp_quarantined_lone_pair_empty(synth):
     # Issue #162 must NOT leak into equity: the index dedupe-identical opt-in is gated by
-    # _DEDUPE_IDENTICAL_DUPLICATE_BARS (default False). An equity adapter must still raise
-    # on ANY duplicate timestamp — even an identical one (#66 behavior unchanged).
+    # _DEDUPE_IDENTICAL_DUPLICATE_BARS (default False). With it off, an equity adapter has
+    # NO identical-dedupe symmetry — even an identical duplicate timestamp is treated as a
+    # duplicate observation and the timestamp is dropped (#186 quarantine), never served as
+    # an ambiguous duplicate-keyed bar. A lone identical pair → zero bars → EmptyData.
     rows = [
         ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000),
         ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000),  # identical duplicate
     ]
     assert DummyBare._DEDUPE_IDENTICAL_DUPLICATE_BARS is False
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(synth.bare(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
 
 
@@ -323,14 +334,16 @@ def test_response_symbol_mismatch_raises_invalid(synth):
         src_with(payload).get_history("FPT", Interval.D1, *WIDE)
 
 
-# --- Issue #13: price parsers must reject zero-valued market observations
+# --- Issue #13: price parsers must reject zero-valued market observations (never serve them)
 
 @pytest.mark.parametrize("zero_field", ["o", "h", "l", "c"])
-def test_zero_price_rejected_as_invalid(synth, zero_field):
+def test_zero_price_quarantined_lone_row_empty(synth, zero_field):
+    # #186: a non-positive price is a per-row value-quality failure → the row is
+    # quarantined (dropped), never served. A lone bad row leaves zero bars → EmptyData.
     row = {"t": [synth.ts("2024-01-02")], "o": [72.0], "h": [73.0], "l": [71.0], "c": [72.0], "v": [1000]}
     row[zero_field] = [0.0]
     payload = json.dumps({"s": "ok", **row})
-    with pytest.raises(InvalidData):
+    with pytest.raises(EmptyData):
         src_with(payload).get_history("FPT", Interval.D1, *WIDE)
 
 

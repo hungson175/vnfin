@@ -141,6 +141,37 @@ Coverage warnings (soft, non-failing) are appended in `_finalize`:
   phantom tail. Bars are kept, not dropped (warn-only); intraday is exempt (zero-volume bars are normal
   off-hours). Inherited by `LiquidityProfile.warnings`
 
+## Source-side bad-bar quarantine (`UDFSource._build_bars`, #186)
+
+The list above is the **client-side** backstop (`_validate_price_result`) over a *returned*
+`PriceHistory`. The **source-side** UDF parse — `UDFSource._build_bars`, shared by every UDF adapter
+behind both `prices.history` and `index_history` — used to `raise InvalidData` on the **first**
+bad bar, aborting the whole response. Since one bad bar appears in *every* source for the same date,
+that meant a single bad day anywhere in a 10-year window blocked the entire chart (the original #186
+report). The parse now **quarantines** instead:
+
+- **Per-row value-quality failures are dropped (kept out of the series) and recorded**, never served:
+  unparseable scalar, non-finite OHLCV (post-scale overflow), non-positive price, negative volume,
+  fractional volume, OHLC-order violation. Each dropped row is one `(label, reason)` entry in
+  `self._quarantined`.
+- **Conflicting / duplicate keys drop the WHOLE key, not just the later row** — for a D1 index
+  (`_DEDUPE_IDENTICAL_DUPLICATE_BARS`) an *identical* same-date duplicate still dedupes keep-first
+  (`deduped_duplicate_daily_index_bars`, not a quarantine); a *conflicting* same-date bar removes the
+  entire date (both bars — we cannot tell which is right). For equity / intraday (exact-timestamp
+  keying) any duplicate timestamp drops that timestamp entirely. (Generalizes #66/#162's
+  never-silently-pick intent from a hard raise to drop-and-record.)
+- **The result self-discloses** via a `quarantined_invalid_bars` warning naming the dropped dates +
+  reasons, attached in the shared `UDFSource.get_history` (so both equity and index carry it; the
+  index dedupe token is appended *after* it).
+- **A systematically-broken source still fails over.** If `len(quarantined) > max(_QUARANTINE_ABS_FLOOR,
+  _QUARANTINE_FRACTION × n)` over the `n` provider rows (before range filtering), the parse raises
+  `InvalidData` (a `SourceError`) → the failover client tries the next source; all-sources-bad →
+  `AllSourcesFailed`. Constants: `_QUARANTINE_ABS_FLOOR = 3` (a few isolated glitches never block any
+  window), `_QUARANTINE_FRACTION = 0.10` (a mostly-bad source is untrustworthy). A lone all-bad row
+  drops below the floor → zero bars → `EmptyData` (still a `SourceError`).
+- **Structural / array-shape faults still HARD-RAISE** (they reach this point as an untrustworthy whole
+  response): missing/misaligned/non-sequence arrays, malformed envelope / non-object data / bad status.
+
 ## Transport layer (`vnfin/transport.py`)
 
 `HttpDataSource` is the shared HTTP transport base used by every adapter:

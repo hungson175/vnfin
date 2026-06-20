@@ -104,6 +104,14 @@ subclass — data ends before the requested window), `InvalidData`,
 `UnsupportedInterval`, `UnitMismatchError`, `AllSourcesFailed` (carries per-source `.attempts`).
 Bad input (missing/inverted dates, malformed currency) raises before any network call.
 
+**Bad bars are quarantined, not fatal (#186).** In `prices.history` / `index_history`, an
+*isolated* corrupt bar (OHLC-invariant violation, non-positive/non-finite price, bad volume,
+unparseable scalar, or a conflicting same-date duplicate) is **dropped from the series, never
+served** — the rest of the window is returned and the result carries a `quarantined_invalid_bars`
+warning naming the dropped dates + reasons (so one bad day no longer blocks a 10-year chart). A
+*systematically* broken source (too many bad rows) still fails the source → failover. Structural
+faults (misaligned/missing arrays, malformed envelope) still hard-raise `InvalidData`.
+
 ## Full reference
 
 For every domain — all factory verbs, signatures, result fields, gotchas, and verified examples —
