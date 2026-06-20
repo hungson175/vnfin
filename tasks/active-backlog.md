@@ -427,7 +427,20 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Next
 
-- _(none)_
+- **#185 annual world-gold source (unblocks vf-advisor's LIVE gold chart) — queued AFTER #183 ships.**
+  Reviewer spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606210205-issue185-annual-world-gold-source.md`.
+  Follow-up to closed #178: from a datacenter host the daily world-gold leg (CurrencyApi→Stooq) is
+  unfetchable (sparse/anti-bot), so the ANNUAL `world_reference_history_vnd` gold leg needs an annual
+  source. RECOMMENDED: **World Bank CMO "Pink Sheet" annual xlsx** (keyless, CC-BY 4.0, server-reachable,
+  1960–2025 no gaps; match gold col BY HEADER `Gold ($/troy oz)`, never fixed index). Process: **builder
+  DESIGN NOTE first** (resolve the 2 open Qs → reviewer LEAD GATE → TDD → Codex×2). Open design Qs:
+  (1) xlsx-parse dep — stdlib `zipfile`+`xml.etree` (no dep) vs optional `vnfin[gold-history]`→openpyxl
+  vs core openpyxl (reviewer leans a/b, lean-core); (2) vintage-coded URL robustness — pin current +
+  fallback list, clean `SourceUnavailable`/`InvalidData` on 404/anti-bot/parse-fail. Rewire ONLY the
+  annual synthesis to CMO (`gold_annual[y]=CMO[y]×fx_annual[y]×37.5/31.1035`); preserve #178's
+  intersection + premium/annual-basis/partial-coverage warnings + `world_reference_trailing_year_incomplete`
+  guard; leave `gold.world()` daily path on CurrencyApi→Stooq. Attribution: credit WB Commodity Markets
+  (Pink Sheet) in `docs/sources/`. On APPROVE+push+close → ping vf-advisor to flip gold line mock→real.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
