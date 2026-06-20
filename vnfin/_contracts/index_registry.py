@@ -64,6 +64,10 @@ _KNOWN_INDEX_IDENTIFIERS: frozenset[str] = _VALUE_HISTORY_INDICES | frozenset(
         "VNFINSELECT",
         "VNXALL",
         "VNXALLSHARE",
+        # UPCOM provider-form alias attested in docs/research/2026-06-18-indices.md
+        # (HNXUpcomIndex). Deny-only: rejected from the price path; NOT value-history
+        # allow-listed (no per-symbol value-history test). (#168 review-202606201352)
+        "HNXUPCOMINDEX",
         # 10 HOSE sector indices (docs/research/2026-06-18-indices.md)
         "VNCOND",
         "VNCONS",
