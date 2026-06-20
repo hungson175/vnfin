@@ -24,8 +24,17 @@ nav = fund_src.nav_history(first.id)
 holdings = fund_src.holdings(first.id)
 
 print(nav.value_unit, nav.points[-1])
+# holdings merges equities and bonds; each row is tagged with instrument_type
+# ("STOCK"/"BOND") and an optional as_of_utc freshness stamp. A pure-bond fund
+# returns its bond positions (it no longer raises EmptyData).
 for h in holdings[:10]:
-    print(h.stock_code, h.weight_pct)  # FundHolding: stock_code, weight_pct (0-100)
+    print(h.stock_code, h.weight_pct, h.instrument_type)  # FundHolding fields
+
+# The top-level asset-class split (equity/bond/cash) is a separate accessor:
+alloc = fund_src.asset_allocation(first.id)   # AssetAllocation
+for c in alloc:
+    print(c.asset_class, c.weight_pct)        # AssetClassWeight: asset_class, weight_pct
+print(alloc.as_of_utc)                        # freshest provider updateAt, or None
 ```
 
 ## Index levels

@@ -96,7 +96,7 @@ def test_documented_history_entrypoints_exist():
     assert callable(vnfin.fundamentals.get_financials)
     assert callable(fx.get_rate)
     assert callable(macro.get_indicator)
-    for verb in ("list_funds", "nav_history", "holdings"):
+    for verb in ("list_funds", "nav_history", "holdings", "asset_allocation"):
         assert hasattr(vnfin.funds.source(), verb)
     assert hasattr(vnfin.gold.vn("btmc"), "get_quotes")
     assert hasattr(vnfin.gold.world(), "get_history")
@@ -170,11 +170,17 @@ def test_skill_files_present_and_have_frontmatter():
 # Issue #148 — funds/indices tutorial must use real model fields, not non-existent attrs.
 def test_funds_indices_tutorial_uses_real_model_fields():
     import dataclasses
-    from vnfin.funds.models import FundHolding
+    from vnfin.funds.models import AssetAllocation, AssetClassWeight, FundHolding
     from vnfin.indices.models import IndexConstituents, IndexMember
 
     fh = {f.name for f in dataclasses.fields(FundHolding)}
-    assert {"stock_code", "weight_pct"} <= fh and "symbol" not in fh and "weight" not in fh
+    assert {"stock_code", "weight_pct", "instrument_type", "as_of_utc"} <= fh
+    assert "symbol" not in fh and "weight" not in fh
+    # #173 asset-allocation model fields the tutorial/skill examples rely on.
+    acw = {f.name for f in dataclasses.fields(AssetClassWeight)}
+    assert {"asset_class", "weight_pct"} <= acw
+    aa = {f.name for f in dataclasses.fields(AssetAllocation)}
+    assert {"classes", "as_of_utc"} <= aa
     ic = {f.name for f in dataclasses.fields(IndexConstituents)}
     assert "members" in ic and "constituents" not in ic
     im = {f.name for f in dataclasses.fields(IndexMember)}
@@ -183,6 +189,8 @@ def test_funds_indices_tutorial_uses_real_model_fields():
     tut = _read("docs/tutorials/funds-and-indices.md")
     # correct fields present
     assert "h.stock_code" in tut and "h.weight_pct" in tut
+    assert "h.instrument_type" in tut and "asset_allocation" in tut
+    assert "c.asset_class" in tut and "c.weight_pct" in tut
     assert "members.members" in tut
     # non-existent / wrong attrs absent
     assert "h.symbol" not in tut and "h.weight)" not in tut

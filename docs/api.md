@@ -72,6 +72,9 @@ reports = vnfin.fundamentals.get_financials("FAKECORP", "income", "annual")  # u
 # funds — mutual-fund NAV (VND/unit). No clean no-auth backup exists -> single-source (v0.1).
 src   = vnfin.funds.client()                 # FmarketFundSource (accepted single-source; client() == source())
 funds = src.list_funds()
+holds = src.holdings(funds[0].id)            # tuple[FundHolding] — equities + bonds merged; each has
+                                             # .instrument_type ("STOCK"/"BOND") + .as_of_utc
+alloc = src.asset_allocation(funds[0].id)    # AssetAllocation — asset-class split (equity/bond/cash)
 
 # indices — index value (points) + members.
 ic   = vnfin.indices.client()                # IndexClient

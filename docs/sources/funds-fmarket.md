@@ -17,7 +17,8 @@ required fund data types:
 
 1. **Fund list** — code, name, internal id, latest NAV, manager, asset type.
 2. **NAV history** — daily/business-day NAV time series (VND per unit).
-3. **Holdings / allocation** — top disclosed holdings with per-stock weight + industry.
+3. **Holdings / allocation** — top disclosed holdings (equities **and** bonds, each tagged with an
+   `instrument_type`) with per-line-item weight + industry, plus an `asset_allocation()` class split.
 
 ETF iNAV for HOSE-listed ETFs is a known gap (not on Fmarket); out of scope here.
 
@@ -27,11 +28,12 @@ ETF iNAV for HOSE-listed ETFs is a known gap (not on Fmarket); out of scope here
 |--------|------|---------|
 | `POST` | `https://api.fmarket.vn/res/products/filter` | fund list (filterable) |
 | `POST` | `https://api.fmarket.vn/res/product/get-nav-history` | NAV history for one fund |
-| `GET`  | `https://api.fmarket.vn/res/products/{id}` | fund detail incl. holdings |
+| `GET`  | `https://api.fmarket.vn/res/products/{id}` | fund detail incl. holdings + asset allocation |
 
 `{id}` is the provider's internal product id returned by the filter endpoint
 (e.g. `20` = VEOF, `38` = VNDAF). It is used as `productId` for NAV history and as
-the path id for holdings.
+the path id for holdings. `holdings()` and `asset_allocation()` both read this one
+detail document (and both enforce the #21 fund-identity guard on it).
 
 ### Fund list request body
 
@@ -127,10 +129,13 @@ sorted ascending by date.
     "code": "VEOF",
     "nav": 34942.66,
     "productTopHoldingList": [
-      {"stockCode": "MBB", "netAssetPercent": 7.99, "industry": "Ngân hàng", "price": 25.2, "type": "STOCK"}
+      {"stockCode": "MBB", "netAssetPercent": 7.99, "industry": "Ngân hàng", "price": 25.2, "type": "STOCK", "updateAt": 1700000000000}
+    ],
+    "productTopHoldingBondList": [
+      {"stockCode": "BAF126003", "netAssetPercent": 11.59, "industry": "Trái phiếu", "price": null, "type": "BOND", "updateAt": 1700000000000}
     ],
     "productAssetHoldingList": [
-      {"assetType": {"code": "STOCK"}, "assetPercent": 97.44}
+      {"assetType": {"code": "STOCK"}, "assetPercent": 97.44, "updateAt": 1700000000000}
     ],
     "productIndustriesHoldingList": [
       {"industry": "Ngân hàng", "assetPercent": 33.36}
@@ -139,10 +144,27 @@ sorted ascending by date.
 }
 ```
 
-Mapping (MVP exposes top holdings): `productTopHoldingList[].stockCode`→
-`FundHolding.stock_code`, `netAssetPercent`→`FundHolding.weight_pct` (0–100),
-`industry`→`FundHolding.industry`, `price`→`FundHolding.price`. Asset-class and
-industry allocation lists are present in the payload and can be exposed later.
+The detail document carries **two** per-line-item holdings arrays with the **same row shape** —
+`productTopHoldingList` (equities) and `productTopHoldingBondList` (bonds; `stockCode` is the bond code
+e.g. `BAF126003`, `price` is typically `null`, `type:"BOND"`). A pure-bond fund populates **only** the
+bond list. (There is no `productBondHoldingList` key — the bond array is `productTopHoldingBondList`.)
+
+`holdings(product_id)` mapping (equity rows first, then bond rows, merged into one tuple):
+
+| Provider field | Model field | Notes |
+|----------------|-------------|-------|
+| `stockCode` | `FundHolding.stock_code` | canonical ticker / bond code |
+| `netAssetPercent` | `FundHolding.weight_pct` | percent of NAV, 0–100 |
+| `industry` | `FundHolding.industry` | nullable |
+| `price` | `FundHolding.price_raw` (+ `price_unit="raw"`) | unverified scale, kept RAW; bonds usually `null` |
+| `type` | `FundHolding.instrument_type` | `{STOCK, BOND}`; present-but-unknown fails closed; absent → per-list default |
+| `updateAt` | `FundHolding.as_of_utc` | epoch-**ms** → UTC; absent/malformed → `None` (never fabricated) |
+
+`asset_allocation(product_id)` reads `productAssetHoldingList` off the same document:
+`assetType.code` (∈ `{STOCK, BOND, CASH}`, fail-closed on unknown) → `AssetClassWeight.asset_class`,
+`assetPercent` (0–100) → `AssetClassWeight.weight_pct`. `AssetAllocation.as_of_utc` is the freshest row
+`updateAt`. Disclosed class weights are **not** required to sum to 100% (partial disclosure allowed).
+The industry allocation list is present in the payload and may be exposed later.
 
 ## Authentication
 

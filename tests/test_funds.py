@@ -1403,6 +1403,11 @@ def test_asset_allocation_malformed_row_raises_invalid(bad_row):
         _src(_holdings_payload_with(productAssetHoldingList=[bad_row])).asset_allocation(FAKE_ID_A)
 
 
+def test_asset_allocation_non_object_row_raises_invalid():
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(productAssetHoldingList=["not-a-dict"])).asset_allocation(FAKE_ID_A)
+
+
 def test_asset_allocation_unknown_class_raises_invalid():
     # A present-but-unrecognized asset class fails closed (not STOCK/BOND/CASH).
     asset = [{"assetType": {"code": "DERIVATIVE"}, "assetPercent": 50.0}]

@@ -7,6 +7,18 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Fund bond holdings + asset allocation** (#173) — `vnfin.funds` `holdings(product_id)` now merges
+  per-security **equity** (`productTopHoldingList`) **and bond** (`productTopHoldingBondList`) rows into
+  one `tuple[FundHolding]`, so a bond or balanced fund returns its real positions instead of a bare
+  `EmptyData` (a category-wide blind spot: 22 BOND funds + at-par BALANCED funds). Each `FundHolding`
+  gains two **appended, defaulted** (additive) fields: `instrument_type` (`"STOCK"`/`"BOND"`; an
+  unrecognized provider type fails closed) and `as_of_utc` (the row's `updateAt`, epoch-ms → UTC, or
+  `None` — never fabricated). A new sibling accessor **`asset_allocation(product_id)` → `AssetAllocation`**
+  (with `AssetClassWeight`) exposes the typed equity/bond/cash split (class codes `{STOCK, BOND, CASH}`,
+  weights 0–100 not forced to sum to 100%, `as_of_utc` from `updateAt`). All changes are additive.
+  See [`docs/sources/funds-fmarket.md`](docs/sources/funds-fmarket.md),
+  [`docs/tutorials/funds-and-indices.md`](docs/tutorials/funds-and-indices.md).
+  ([#173](https://github.com/hungson175/vnfin/issues/173))
 - **`vnfin.exceptions.StaleData`** (#172) — a subclass of `EmptyData` raised when a source's history
   exists but ends before the requested window (a stale or closed feed). Backward compatible: existing
   `except EmptyData` / `except SourceError` handlers still catch it.

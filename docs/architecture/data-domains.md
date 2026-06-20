@@ -109,9 +109,11 @@ period (newest first). Money values are **raw VND** (unscaled). Banks use VNDire
 an alias of `source()` (accepted single-source in v0.2 — no clean no-auth backup for fund
 NAV data currently exists).
 
-**Capabilities:** `list_funds(asset_type)`, `nav_history(fund_id)`, `holdings(fund_id)`.
+**Capabilities:** `list_funds(asset_type)`, `nav_history(fund_id)`, `holdings(fund_id)` (equities +
+bonds merged), `asset_allocation(fund_id)` (asset-class split).
 
-**Result containers:** `Fund`, `NavPoint`, `NavHistory`, `FundHolding`.
+**Result containers:** `Fund`, `NavPoint`, `NavHistory`, `FundHolding` (with `instrument_type` +
+`as_of_utc`), `AssetAllocation`, `AssetClassWeight`.
 
 **Key contract enforcements (Phase 4 migration):**
 - `stockCode` / `fundCode` validated via `canonical_security_symbol` / `canonical_fund_code`.

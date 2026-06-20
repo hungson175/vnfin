@@ -1,10 +1,11 @@
 # Design — Fmarket fund coverage & holdings diagnostics (#172 + #173)
 
-**Status:** APPROVED (reviewer gate review-202606201506, APPROVE_WITH_NOTES). #172 = option A
-(`StaleData(EmptyData)`, defer C). #173 = option B **reframed allocation-aware** (premise corrected
-below — no second gate needed). Two separate commits/reviews (Q3). A **batch** of two related Fmarket
+**Status:** SHIPPED. #172 = option A (`StaleData(EmptyData)`, defer C) — shipped. #173 = **option A**
+(live-probe flip, review-202606201528: `productTopHoldingBondList` exists → `holdings()` merges equity +
+bond rows + `asset_allocation()` accessor; the earlier "option B reframed" / `NonEquityHoldings` was
+dropped) — shipped, micro-decisions approved review-202606201557. A **batch** of two related Fmarket
 fund-data-quality bugs the reviewer asked to design together **before** the large #157 feature.
-**Reviewer specs:** review-202606201432 (#172 NAV staleness) + review-202606201436 (#173 bond holdings).
+**Reviewer specs:** review-202606201432 (#172 NAV staleness) + review-202606201436/...1528 (#173 bond holdings).
 **Clean-room:** VNStock/vnstock excluded. **No HTML scraping** — only the documented/official Fmarket
 endpoints already used by `vnfin/funds/fmarket.py`. Default tests synthetic/offline; any live probe gated.
 **Preserve:** all existing #144 (wide-fetch + client-filter), #158 (dup-navDate), #21 (product-id/code)
@@ -81,64 +82,65 @@ this keeps pre-inception windows and the sparse/weekend straddle (`lo <= max_nav
 
 ---
 
-## #173 — bond fund holdings coverage / model gap
+## #173 — bond fund holdings coverage / model gap  — SHIPPED (Option A)
 
-### Current behavior (recon)
+### Original behavior (recon)
 
-`FMarketSource.holdings(product_id)` (`fmarket.py:256`) parses only `data.productTopHoldingList` into
+`FmarketSource.holdings(product_id)` parsed **only** `data.productTopHoldingList` into
 `FundHolding(stock_code, weight_pct, …)` — an **equity** shape (`stockCode`, `netAssetPercent`). A
-**bond fund** with empty `productTopHoldingList` (but non-empty bond holdings / asset allocation under
-other provider fields) → `EmptyData`, indistinguishable from "no holdings". `FundSummary.asset_type`
-already records the provider class (`STOCK`/`BOND`/…), so the entity type is known.
+**bond fund** (empty `productTopHoldingList`) → `EmptyData`, indistinguishable from "no holdings". This
+was a **category-wide blind spot** (22 BOND funds + at-par BALANCED funds returned bare `EmptyData`).
 
-### Premise correction (reviewer review-202606201506 — MUST fold in before code)
+### Premise correction — Option A (reviewer live-probe, review-202606201528)
 
-The original design's premise ("non-empty **bond holdings** under other provider fields") is **not
-supported by the blessed recon.** `docs/sources/funds-fmarket.md:121-139` documents the
-`/res/products/{id}` detail payload as exactly three arrays:
+The earlier recon premise ("no per-bond list; bond funds expose only a BOND allocation %") was **WRONG**.
+A reviewer live-probe of `/res/products/{id}` showed the detail payload carries **a fourth array**:
 
-- `productTopHoldingList` — **equity** rows (`stockCode`, `netAssetPercent`, `industry`, …)
+- `productTopHoldingList` — **equity** rows (`stockCode`, `netAssetPercent`, `industry`, `price`, `type`, `updateAt`)
+- **`productTopHoldingBondList`** — **per-bond** rows with the SAME shape (`stockCode` = bond code e.g.
+  `BAF126003`, `netAssetPercent`, `industry`, `price` null, `type:"BOND"`, `updateAt`)
 - `productAssetHoldingList` — **asset-class split** (`assetType.code` ∈ {STOCK, CASH, BOND}, `assetPercent`)
 - `productIndustriesHoldingList` — sector split
 
-There is **NO `productBondHoldingList`** — no per-bond issuer/code/name/weight rows on this endpoint.
-A bond fund exposes a **BOND allocation %**, not a typed list of bond securities. Therefore option A
-(full typed per-bond `Holding`/`kind` model) is **over-scoped/speculative** (nothing to populate) →
-**DEFERRED** (a real per-bond source, if ever found + license-cleared, is a separate clean-room design).
+So per-bond holdings ARE disclosed under `productTopHoldingBondList`. **There is NO
+`productBondHoldingList`** key (the bond list key is `productTopHoldingBondList`) — do not look for the
+former name. The full typed per-security model (Option A) is therefore buildable from this source.
 
-### Approved model (option B reframed, allocation-aware — the v1 contract)
+### Shipped model (Option A — the v1 contract)
 
-1. **Kill the silent `EmptyData`** on the bond/empty path. When `productTopHoldingList` is empty/absent
-   **AND** `productAssetHoldingList` shows a non-STOCK class (`BOND`/`CASH`) > 0% → raise
-   `NonEquityHoldings(EmptyData)` (mirror the #172 `StaleData(EmptyData)` idiom for a consistent,
-   backward-compatible signal) naming the non-equity allocation, e.g. `"fmarket: product {id} discloses
-   asset-class allocation (BOND {x}%, CASH {y}%) but no per-security equity holdings; this source
-   exposes no per-bond holdings list — see asset_allocation()"`.
-2. **Expose the asset-class split as a primitive** via a **NEW sibling accessor**
-   `funds.source().asset_allocation(product_id) -> AssetAllocation`, typed (class code + percent 0-100
-   + as-of from `updateAt`), read directly from the source. **Do NOT mutate `holdings()`'s return
-   type** (`tuple[FundHolding, ...]` must stay stable — changing it is a BREAKING surface change).
-3. **Detect from the detail response itself**, NOT `Fund.asset_type` (`holdings(product_id)` takes only
-   an int id and never sees `Fund.asset_type`, which comes from `list_funds`).
-4. **Preserve genuine `EmptyData`** when `productTopHoldingList` AND `productAssetHoldingList` are both
-   empty/absent (no false-positive diagnostic).
-5. **Balanced/mixed funds** populate `productTopHoldingList` (equity rows) AND show BOND% — they already
-   return equity holdings today; the new path is in the rows-empty branch only, so it does NOT fire.
-6. **Update `docs/sources/funds-fmarket.md`** mapping table: `productAssetHoldingList`
-   (`assetType.code`→class / `assetPercent`→percent 0-100), `updateAt` as-of semantics, a note that
-   BOND appears only as an allocation % (no per-security disclosure), and the `NonEquityHoldings` error
-   row. Same already-used endpoint — no scraping, no new endpoint, clean-room intact.
+1. **`holdings()` merges both line-item lists.** It now parses `productTopHoldingList` (equity, first)
+   **and** `productTopHoldingBondList` (bonds), reusing one row parser. The return type stays
+   `tuple[FundHolding, ...]` (no breaking change). A bond/balanced fund now returns its real positions.
+2. **`FundHolding.instrument_type`** (`"STOCK"`/`"BOND"`, appended field, default `"STOCK"`) tags each
+   row. A row's own `type` is validated against `{STOCK, BOND}` and **fails closed if unrecognized**
+   (a holdings tuple has no per-row warning channel — never silently mislabel); an absent `type` falls
+   back to the per-list default (equity list → STOCK, bond list → BOND).
+3. **`FundHolding.as_of_utc`** (appended, default `None`) carries the provider's per-row `updateAt`
+   (epoch-**ms** → tz-aware UTC; absent/malformed → `None`, never a fabricated `now()`), so a holdings
+   tuple is no longer freshness-blind.
+4. **One dedup set + combined weight guard span BOTH lists.** The same code in equity and bond is a
+   provider self-inconsistency → `InvalidData`; aggregate weight > 100% (equity + bond) → `InvalidData`.
+5. **`EmptyData` fires only when BOTH lists are empty/absent** (the fund has published no holdings yet).
+6. **New sibling accessor** `funds.source().asset_allocation(product_id) -> AssetAllocation` exposes the
+   asset-class split (`productAssetHoldingList`) typed (class code ∈ {STOCK, BOND, CASH} fail-closed,
+   percent 0-100, `as_of_utc` = freshest row `updateAt`). Disclosed weights are **not** forced to sum to
+   100% (partial disclosure allowed). New `AssetAllocation` + `AssetClassWeight` models.
+7. **#21 identity guard** (the detail doc must identify the requested fund) is shared by both accessors
+   via `_fetch_detail_data`. Same already-used endpoint — no scraping, no new endpoint, clean-room intact.
 
 ### #173 tests (synthetic, offline)
 
-- bond fund: empty `productTopHoldingList` + `productAssetHoldingList` BOND>0% → `NonEquityHoldings`
-  (an `EmptyData` subclass), NOT bare `EmptyData`; `asset_allocation()` returns the typed split.
-- equity fund holdings unchanged; balanced fund (equity rows + BOND%) → `holdings()` returns equity
-  rows as today (the new diagnostic does NOT fire).
-- truly empty (no top-holdings AND no allocation) → `EmptyData` (unchanged, no false positive).
-- malformed allocation rows/percent → fail closed (`InvalidData`).
-- as-of/`updateAt` parsed or explicitly diagnosed if absent. Public-API additive (new exception +
-  `AssetAllocation` model + accessor); snapshot regenerated additively.
+- bond-only fund (equity `[]` + bond list populated) → `holdings()` returns the bond rows, all
+  `instrument_type == "BOND"`, `price_raw is None`.
+- balanced fund (equity + bond rows) → combined, equity first, types tagged correctly.
+- equity fund holdings unchanged + now carry `instrument_type == "STOCK"`.
+- both lists empty/absent → `EmptyData`; malformed bond row / non-array bond list → `InvalidData`;
+  combined weight > 100% → `InvalidData`; same code across lists → `InvalidData`.
+- per-holding `as_of_utc` from `updateAt`; malformed `updateAt` → `None` (no fabricated now()).
+- `asset_allocation()` returns typed split, uses `/res/products/{id}`, `as_of_utc` = max row `updateAt`,
+  empty/absent → `EmptyData`, unknown class / malformed percent → `InvalidData`, partial sum < 100% ok.
+- Public-API **additive** (two appended `FundHolding` fields + `AssetAllocation`/`AssetClassWeight`
+  models + `asset_allocation` method); snapshot regenerated additively at release time only.
 
 ---
 
@@ -154,8 +156,10 @@ A bond fund exposes a **BOND allocation %**, not a typed list of bond securities
 ## Resolved (reviewer picks, review-202606201506)
 
 1. **#172 contract → A.** `StaleData(EmptyData)` typed exception naming the gap. C deferred.
-2. **#173 v1 scope → B reframed (allocation-aware).** `NonEquityHoldings(EmptyData)` diagnostic +
-   `asset_allocation()` accessor; full typed per-bond model A deferred (unbuildable from this source).
-3. **Two separate commits/reviews** (disjoint paths: `nav_history` vs `holdings`/`asset_allocation`).
-4. **Yes** — a `StaleData` exception subclass in public exceptions is acceptable (additive); use an
-   `EmptyData` subclass for #173's diagnostic too.
+2. **#173 v1 scope → A (live-probe flip, review-202606201528).** `productTopHoldingBondList` exists, so
+   `holdings()` merges equity + bond rows into the typed `FundHolding` model (with `instrument_type` +
+   `as_of_utc`), plus a sibling `asset_allocation()` accessor. The earlier B-reframe / `NonEquityHoldings`
+   diagnostic was **dropped** — Option A returns the real bond rows, so no diagnostic exception is needed.
+3. **One combined #173 change** (`holdings()` + `asset_allocation()` share the detail endpoint + identity
+   guard); reviewer Codex×2 on the diff.
+4. **Yes** — a `StaleData` exception subclass in public exceptions is acceptable (additive).

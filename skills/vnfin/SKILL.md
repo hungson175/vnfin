@@ -51,7 +51,7 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 |------|------|---------------|
 | Stock OHLCV | `vnfin.prices.history(sym, start=, end=)` | `PriceHistory` · VND |
 | Financials | `vnfin.fundamentals.get_financials(sym, stmt, period)` | `tuple[FinancialReport]` · raw VND |
-| Fund NAV/holdings | `vnfin.funds.source().nav_history(fund_id, ...)` | `NavHistory` · VND/unit |
+| Fund NAV/holdings | `vnfin.funds.source().nav_history(fund_id, ...)` · `.holdings(fund_id)` (stocks+bonds) · `.asset_allocation(fund_id)` | `NavHistory` · `tuple[FundHolding]` · `AssetAllocation` |
 | Index value | `vnfin.indices.index_history(idx, start, end)` | `PriceHistory` · **points** |
 | Index members | `vnfin.indices.index_constituents(idx)` | `IndexConstituents` (no weights) |
 | VN gold spot | `vnfin.gold.vn("btmc").get_quotes()` | `GoldQuote` · VND/lượng |
