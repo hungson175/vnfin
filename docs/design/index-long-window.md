@@ -1,6 +1,11 @@
 # Design — long index-history windows (#147)
 
-**Status:** design-first proposal for `vnfin-oss-reviewer` review. No code yet.
+**Status: IMPLEMENTED — Option 2 v1 shipped** (reviewer-approved spec review-202606200913).
+`vnfin.indices.index_history_stitched` (opt-in, D1, calendar-year segments via the failover chain,
+`source="stitched_index_history"`, `stitched_multi_source` + per-segment warnings, absolute
+points/points/RAW/canonical-symbol enforcement, seam dedup) is the delivered fix; the default
+strict `index_history` is unchanged. **Option 1 (diagnostic) and Option 3 (lenient quarantine) are
+deferred** — not in this batch. The original analysis/options are retained below for context.
 
 ## Problem
 
@@ -47,12 +52,13 @@ explicit warning listing the dropped date(s)**; strict-raise stays the default. 
 source still has the gap (doesn't use other sources' clean data for that day); closest to the
 "silent drop" the tech-lead is wary of (mitigated only by opt-in + explicit dropped-date warning).
 
-## Recommendation
+## Outcome (what shipped)
 
-Ship **Option 1 (diagnostic) + Option 2 (stitching)** — diagnostic for immediate explainability,
-stitching as the real fix with explicit multi-source provenance. Keep the strict single-source
-`index_history` semantics unchanged by exposing stitching as an **opt-in entrypoint/mode** (not a
-silent default behavior change). Option 3 only if the team wants a single-source lenient mode too.
+The reviewer approved **Option 2 v1 only** as the fix: opt-in `index_history_stitched`, calendar-year
+D1 segments, explicit multi-source provenance (`stitched_multi_source` + per-segment warnings),
+absolute points/points/RAW/canonical-symbol enforcement, seam dedup with conflict → `InvalidData`;
+the strict default `index_history` is unchanged. **Option 1 (diagnostic) and Option 3 (lenient
+quarantine) were deferred** to possible later batches. The options analysis below is kept for record.
 
 ## Open questions for reviewer
 

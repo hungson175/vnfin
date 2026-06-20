@@ -691,8 +691,31 @@ def test_index_history_stitched_homogeneity_violation_raises(monkeypatch):
         return _idx_ph(symbol, (_pb(date(start.year, 6, 1), 100.0),), "src", adj=pol)
 
     monkeypatch.setattr(c, "index_history", fake)
-    with pytest.raises(InvalidData, match="cannot stitch heterogeneous"):
+    with pytest.raises(InvalidData, match="is not RAW"):
         c.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2017, 12, 31))
+
+
+def test_index_history_stitched_rejects_consistently_wrong_unit(monkeypatch):
+    # B1: segments that are mutually CONSISTENT but uniformly WRONG (e.g. VND, not
+    # points) must still fail — enforcement is absolute (points/points), not relative.
+    c = IndexClient(http_get=_no_http)
+
+    def fake(symbol, start, end, interval=Interval.D1):
+        return _idx_ph(symbol, (_pb(date(start.year, 6, 1), 100.0),), "src",
+                       value_unit="VND", currency="VND")
+
+    monkeypatch.setattr(c, "index_history", fake)
+    with pytest.raises(InvalidData, match="not index points"):
+        c.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2017, 12, 31))
+
+
+def test_index_history_stitched_has_multi_source_warning():
+    # B2: the result carries the explicit stitched_multi_source token.
+    a = _FakeIdxSource("idx_a", bad_year=2018)
+    b = _FakeIdxSource("idx_b")
+    h = IndexClient(sources=[a, b]).index_history_stitched(
+        "VNINDEX", date(2016, 1, 1), date(2019, 12, 31))
+    assert "stitched_multi_source" in h.warnings
 
 
 def test_index_history_stitched_conflicting_seam_raises(monkeypatch):

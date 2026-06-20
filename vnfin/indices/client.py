@@ -16,7 +16,7 @@ from typing import Optional, Union
 
 from ..client import FailoverPriceClient
 from ..exceptions import InvalidData, VnfinError
-from ..models import Interval, PriceHistory
+from ..models import AdjustmentPolicy, Interval, PriceHistory
 from .._contracts import canonical_security_symbol
 from ..validation import validate_date_range, validate_non_empty_string
 from .models import IndexConstituents
@@ -118,18 +118,26 @@ class IndexClient:
         bars: list = []
         warnings: list[str] = []
         seen: dict = {}  # date -> PriceBar (seam dedup / conflict detection)
-        homo = None  # (value_unit, currency, adjustment_policy)
         for year in range(lo.year, hi.year + 1):
             seg_lo = max(lo, date(year, 1, 1))
             seg_hi = min(hi, date(year, 12, 31))
             seg = self.index_history(symbol, seg_lo, seg_hi, interval)
-            key = (seg.value_unit, seg.currency, seg.adjustment_policy)
-            if homo is None:
-                homo = key
-            elif key != homo:
+            # B1: enforce each segment is EXACTLY the required index shape (D1 + index
+            # points + RAW + canonical symbol) — absolute, not merely mutually
+            # consistent, so a consistently-WRONG metadata set cannot stitch.
+            if seg.interval is not Interval.D1:
                 raise InvalidData(
-                    f"index_history_stitched: segment {year} unit/policy {key} "
-                    f"!= {homo}; cannot stitch heterogeneous segments"
+                    f"index_history_stitched: segment {year} interval {seg.interval} is not D1"
+                )
+            if seg.value_unit != "points" or seg.currency != "points":
+                raise InvalidData(
+                    f"index_history_stitched: segment {year} unit "
+                    f"{seg.value_unit!r}/{seg.currency!r} is not index points"
+                )
+            if seg.adjustment_policy is not AdjustmentPolicy.RAW:
+                raise InvalidData(
+                    f"index_history_stitched: segment {year} adjustment_policy "
+                    f"{seg.adjustment_policy} is not RAW"
                 )
             if seg.symbol != symbol:
                 raise InvalidData(
@@ -149,16 +157,17 @@ class IndexClient:
                 seen[d] = bar
                 bars.append(bar)
         bars.sort(key=lambda b: b.time)
-        value_unit, currency, adjustment_policy = homo
         return PriceHistory(
             symbol=symbol,
             interval=interval,
-            adjustment_policy=adjustment_policy,
+            adjustment_policy=AdjustmentPolicy.RAW,
             source="stitched_index_history",
             bars=tuple(bars),
-            currency=currency,
-            value_unit=value_unit,
-            warnings=tuple(warnings),
+            currency="points",
+            value_unit="points",
+            # B2: explicit token that this series is stitched across (potentially)
+            # multiple sources, followed by the per-segment provenance warnings.
+            warnings=("stitched_multi_source",) + tuple(warnings),
         )
 
     def constituents(self, index: str) -> IndexConstituents:
