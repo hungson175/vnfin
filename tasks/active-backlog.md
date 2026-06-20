@@ -144,47 +144,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#159 FX history — BLOCKs FIXED (code B1-B3 APPROVED; B4 docs completed), AWAITING RE-REVIEW #2**
-  (BLOCK#1 review-202606201054 → fix `aa42040`; BLOCK#2 docs-only review-202606201108 → fix `b9eaba1`).
-  Re-review#1 APPROVED code B1-B3 (source boundary USD/VND+ISO; date preflight; `rate_on` plain-date /
-  `rate_for_year` int-non-bool) but BLOCKed on B4 residual stale docs. B4 now finished (`b9eaba1`):
-  `skills/vnfin/SKILL.md` 'FX has no history' → spot-vs-history distinction; docs-contract guard
-  broadened (now scans SKILL.md + forbids literal 'FX has no history'); `docs/design/fx-history.md`
-  Status→IMPLEMENTED + resolved open-Qs; `fx-sources.md` stale TimeSeriesResult open-Q→resolved;
-  `diagnostics.py` docstring notes FX coverage.
-  Re-review#2 (review-202606201115) APPROVED guard but BLOCKed on 3 more residuals — now fixed
-  (`4fe275b`/`e911bb4`/`e0e1e1f`): **B4.4** ai-usage 'fx.history requires dates' → optional/allow_none
-  (split from prices/indices/gold); **B4.5** api.md + data-domains source_capabilities text now names
-  FX leg + data-domains adds explain_fx_coverage to fn list; **B4.6** diagnostics.py dataclass comments
-  add fx/history/worldbank_fx + unsupported_pair/unsupported_frequency statuses; new guard
-  `test_diagnostics_docs_enumerate_fx_coverage`; proactive sweep added fx-history to llms.txt + reworded
-  api.md get_rate 'spot/current quote'.
-  Re-review#3 (review-202606201124) BLOCKed on `macro-and-fx.md` 'FX is spot/current in v0.2' +
-  guards not covering it. **Round-3 fix `eb746d6`:** fixed the tutorial; **redesigned the stale-FX
-  guard to scan REPO-WIDE** (docs/**, skills/**, vnfin/fx/*, diagnostics, llms.txt, README) instead
-  of a curated list (the recurring root cause); diagnostics guard now covers source-diagnostics.md;
-  reworded accurate per-source 'Spot/current only' notes to point at fx.history.
-  Re-review#4 (review-202606201132) BLOCKed on CHANGELOG.md (FX spot/current only + history deferred
-  to BYOK) + fx-sources.md top scope + guard not scanning root markdown. **Round-4 fix `42348b9`:**
-  added Unreleased CHANGELOG entry for `fx.history` #159 (public-API change ⇒ CHANGELOG) + reworded
-  old 0.2.0 FX line to historically-accurate forward-pointer; fx-sources.md Status/Scope→IMPLEMENTED;
-  **guard now scans ALL root markdown** (`root.glob('*.md')` → CHANGELOG/README/…).
-  **Re-integration verified ON MERGED TREE:** full suite **2811 passed**, gate trio green, coverage
-  **95%**, diff/clean-room clean, **reviewer's full B4 grep (incl CHANGELOG) now CLEAN**.
-  NEXT: reviewer re-review#5 (range `ca1ae7b..42348b9`) → push+close #159 + advance watermark on APPROVE.
-  _Prior state:_ IMPLEMENTED + integrated green (design APPROVE_WITH_NOTES
-  review-202606201033; design `ca1ae7b`; impl sub-agent commit `167c622`). v1 = WB `PA.NUS.FCRF`
-  annual USD/VND via `WorldBankFXHistorySource` (composes WorldBankMacroSource); `FXHistory`/`FXPoint`
-  + `fx.history()` + `explain_fx_coverage`. All P1/P2 gates addressed (rate>0/finite/non-bool guard;
-  year-inclusive start/end incl. mid-year-start-keeps-Jan-1; `coverage_start=1983`; runtime-fetch-only
-  docs; additive snapshot +5/0-breaking; freq str|enum normalize; docs sources/api/tutorial/
-  source-diagnostics/index).
-  **Integration verified ON MERGED TREE by main agent:** full suite **2776 passed**, gate trio
-  66 passed (public-API additive / docs-contract / no-secrets), coverage **95%** (≥85), clean-room
-  grep clean (blacklist wording only), `git diff --check` clean, offline public-API smoke OK.
-  NEXT: reviewer code review (range `ca1ae7b..167c622`) → push+close #159 + advance watermark on APPROVE.
-
-  (Design-first spec `review-202606201018` delivered as the design doc; now in implementation.)
+- _(none — #159 shipped; 0 open bugs. Parked design-first queue awaits reviewer specs.)_
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -211,6 +171,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Done today (trim periodically)
 
+- **#159 FX history — COMPLETE, pushed `5e4563d..ad83521`, CLOSED** (final APPROVE review-202606201140,
+  2 Codex sub-reviews APPROVE). First historical FX in vnfin: `vnfin.fx.history()` → `FXHistory`
+  (annual USD/VND via no-key World Bank `PA.NUS.FCRF`, `source="worldbank_fx"`) + `FXPoint` +
+  `rate_on`/`rate_for_year` (exact, no fill) + offline `explain_fx_coverage`. Spot `get_rate`
+  unchanged; monthly/cross-quotes = v2. Design-first → impl sub-agent `167c622` → fix `aa42040`
+  (B1-B3 source-boundary/date/accessor fail-closed) → 4 B4 doc rounds (root cause: ~10 files repo-wide
+  asserted FX spot-only; fixed all + added repo-wide docs-contract guards scanning docs/skills/root-md/
+  fx/diagnostics/llms.txt). Full suite 2811 green, coverage 95%, public-API additive. Watermark →
+  `2026-06-20T04:38:31Z`. **0 OPEN BUGS.** _Process lesson:_ when a feature flips a long-standing
+  "X unsupported" fact, grep the WHOLE repo for that claim in pass 1 + add a repo-wide guard up front.
 - **#141 — COMPLETE, pushed `b0037c0..7df59e8`, closed.** `f8ff403` — VNDirect statement
   non-object row → InvalidData (mirrors ratios path). APPROVE_WITH_NOTES. Suite 2082 green.
 - **#66 + #26 batch (reopen) — COMPLETE, pushed `7915596..c6eb733`, closed.** #66 `266d7c0`
