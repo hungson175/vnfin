@@ -244,9 +244,71 @@ class MetricReport:
                 return mv
         return None
 
-    def to_dataframe(self) -> "pd.DataFrame":  # pragma: no cover - stage C
-        """One row per metric (implemented in stage C)."""
-        raise NotImplementedError("MetricReport.to_dataframe ships in stage C")
+    def to_dataframe(self) -> "pd.DataFrame":
+        """One row per metric (B6 — exact fixed columns; enum cols serialize
+        ``.value``; ``fiscal_date`` is ``isoformat``).
+
+        ``name``/``category``/``applies_to`` come from the metric DEFINITION
+        (the human label is definition-supplied, never a provider label);
+        ``input_*`` columns are comma-joined per-input lineage provenance
+        (``""`` when a value has no inputs). ``df.attrs`` carries
+        ``symbol/period/fiscal_date/is_bank/statement_sources`` and — per C2 —
+        MUST NOT set ``df.attrs["source"]`` (there is no single report source).
+        """
+        import pandas as pd
+
+        # Lazy import avoids a circular import (metric_api imports this module).
+        from .metric_api import _CATALOG_BY_ID
+
+        rows = []
+        for mv in self.metrics:
+            defn = _CATALOG_BY_ID.get(mv.id.value)
+            rows.append(
+                {
+                    "metric_id": mv.id.value,
+                    "name": defn.name if defn is not None else mv.id.value,
+                    "value": mv.value,
+                    "value_unit": mv.value_unit,
+                    "kind": mv.kind.value,
+                    "availability": mv.availability.value,
+                    "reason": mv.reason,
+                    "category": defn.category.value if defn is not None else None,
+                    "applies_to": defn.applies_to.value if defn is not None else None,
+                    "fiscal_date": mv.fiscal_date.isoformat(),
+                    "input_codes": ",".join(i.item_code for i in mv.inputs),
+                    "input_sources": ",".join(i.source for i in mv.inputs),
+                    "input_names": ",".join(i.name for i in mv.inputs),
+                }
+            )
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "metric_id",
+                "name",
+                "value",
+                "value_unit",
+                "kind",
+                "availability",
+                "reason",
+                "category",
+                "applies_to",
+                "fiscal_date",
+                "input_codes",
+                "input_sources",
+                "input_names",
+            ],
+        )
+        df.attrs.update(
+            symbol=self.symbol,
+            period=self.period.value,
+            fiscal_date=self.fiscal_date.isoformat(),
+            is_bank=self.is_bank,
+            statement_sources=tuple(
+                (sp.statement.value, sp.status.value, sp.source, sp.detail)
+                for sp in self.statement_sources
+            ),
+        )
+        return df
 
 
 @dataclass(frozen=True)
@@ -273,6 +335,38 @@ class PeriodCoverage:
     unmapped_codes: tuple[str, ...]
     ratio_status: RatioCoverageStatus = RatioCoverageStatus.NOT_REQUESTED
 
+    def to_dataframe(self) -> "pd.DataFrame":
+        """One row per metric for this fiscal period; enum cols serialize
+        ``.value``; ``fiscal_date`` is ``isoformat``. Per-period scalars +
+        per-statement provenance live in ``df.attrs``."""
+        import pandas as pd
+
+        rows = [
+            {
+                "metric_id": i.metric_id.value,
+                "availability": i.availability.value,
+                "reason": i.reason,
+                "fiscal_date": i.fiscal_date.isoformat(),
+            }
+            for i in self.per_metric
+        ]
+        df = pd.DataFrame(
+            rows, columns=["metric_id", "availability", "reason", "fiscal_date"]
+        )
+        df.attrs.update(
+            fiscal_date=self.fiscal_date.isoformat(),
+            is_bank=self.is_bank,
+            named_item_count=self.named_item_count,
+            generic_item_count=self.generic_item_count,
+            unmapped_codes=tuple(self.unmapped_codes),
+            ratio_status=self.ratio_status.value,
+            statement_provenance=tuple(
+                (sp.statement.value, sp.status.value, sp.source, sp.detail)
+                for sp in self.statement_provenance
+            ),
+        )
+        return df
+
 
 @dataclass(frozen=True)
 class MetricCoverage:
@@ -283,3 +377,31 @@ class MetricCoverage:
     period: Period
     periods: tuple[PeriodCoverage, ...]
     notes: tuple[str, ...] = ()
+
+    def to_dataframe(self) -> "pd.DataFrame":
+        """One row per (fiscal_period, metric); enum cols serialize ``.value``;
+        ``fiscal_date`` is ``isoformat``. ``symbol``/``period``/``notes`` live in
+        ``df.attrs``."""
+        import pandas as pd
+
+        rows = []
+        for pc in self.periods:
+            for i in pc.per_metric:
+                rows.append(
+                    {
+                        "fiscal_date": i.fiscal_date.isoformat(),
+                        "metric_id": i.metric_id.value,
+                        "availability": i.availability.value,
+                        "reason": i.reason,
+                    }
+                )
+        df = pd.DataFrame(
+            rows,
+            columns=["fiscal_date", "metric_id", "availability", "reason"],
+        )
+        df.attrs.update(
+            symbol=self.symbol,
+            period=self.period.value,
+            notes=tuple(self.notes),
+        )
+        return df
