@@ -81,8 +81,22 @@ _Last synced: 2026-06-21 00:40 +07_
 > (2) quarantine constants module-level not per-adapter. Dev-box note: `~/.local` vnfin is a STALE pre-#186
 > build that shadows naive `python -c` probes — `pip install -e .` before #185 dev to avoid false probes.
 >
-> **NOW: #185 annual world-gold source — CODE IN PROGRESS (build delegated, TDD red-first).**
-> **Acquisition DONE + committed `a23ac15`:** primary-source agent resolved the real current vintage and
+> **NOW: #185 annual world-gold source — CODE COMPLETE + SELF-VERIFIED, awaiting Codex×2.**
+> Build integrated on merged tree (commits `456d8d4` D3 binary transport, `0324ab6` source+parser,
+> `4c13289` synthesis D5, `479d908` docs/CHANGELOG). **Adversarial-verify (5-lens wf + per-finding
+> refute) found+fixed 2 defects, TDD-first:** (1) CRITICAL `57ecb86` — binary transport routed on a
+> bound-method `is` check (always False at runtime) so `binary=` was never forwarded to the default
+> fetcher → CMO silently failed server-side; fixed via a construction-time `_http_get_is_default` flag.
+> (2) `c4d269b` — xlsx worksheet resolver didn't normalize the rels Target, so a `../` Target could
+> divert the read to a differently-named member; fixed via `posixpath.normpath` (defense-in-depth +
+> spec-correct). Two other findings REFUTED as false positives (`fetched_at_utc=now()` is library-wide
+> convention; no other real issues across error-discipline/synthesis/clean-room lenses). Full suite
+> **3377 green**, snapshot FROZEN, no-secrets green, tree clean (8 commits `a23ac15..c4d269b`, NOT
+> pushed). Handoff `/tmp/vnfin-185-codex-review-handoff-20260621.md`. Next: Codex×2 → on APPROVE +
+> green push master + close #185 (reviewer owns watermark) → ping vf-advisor.
+> _(Original acquisition/design summary below.)_
+>
+> **#185 acquisition DONE + committed `a23ac15`:** primary-source agent resolved the real current vintage and
 > committed the real xlsx regression fixture (`tests/fixtures/cmo/CMO-Historical-Data-Annual.xlsx`, 3.18 MB,
 > SHA256 `9fbcb348…af51`). **2 material code-time findings folded into the design note (D2/D4/§2/§6):**
 > (1) full 32-char vintage hash `74e8be41ceb20fa0da750cda2f6b9e4e` (truncated `74e8be41` 404s); (2) the gold
