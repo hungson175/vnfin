@@ -118,11 +118,14 @@ r = vnfin.fx.get_rate("USD"); print(r.rate, r.unit)   # 26111.0 'VND per 1 USD'
 
 ## macro — cross-country indicators
 
-- **Entry:** `vnfin.macro.client()` → `MacroClient` with `.get_indicator(country_iso3, indicator)` (**no extra kwargs**); module `vnfin.macro.get_indicator(country_iso3, indicator, *, sources=..., max_attempts=..., http_get=..., timeout=...)`; `vnfin.macro.source()` → `WorldBankMacroSource`. `MacroIndicator`: `GDP, GDP_GROWTH, CPI, INFLATION, UNEMPLOYMENT` (the only 5).
-- **Failover:** World Bank → IMF → DBnomics (all no-key). `FREDMacroSource(api_key=...)` is **BYOK-only** (`FRED_API_KEY`), excluded from the default chain. No BEA/BLS sources.
+- **Entry:** `vnfin.macro.client()` → `MacroClient` with `.get_indicator(country_iso3, indicator)` (**no extra kwargs**); module `vnfin.macro.get_indicator(country_iso3, indicator, *, sources=..., max_attempts=..., http_get=..., timeout=...)`; `vnfin.macro.source()` → `WorldBankMacroSource`. `MacroIndicator` (7): `GDP, GDP_GROWTH, CPI, INFLATION, UNEMPLOYMENT` + `CPI_YOY, POLICY_RATE` (#179).
+- **CPI three-way (do not conflate):** `CPI` = index level, **annual**, World Bank; `INFLATION` = annual %, **annual**, World Bank; `CPI_YOY` = % vs same month prior year, **monthly**, DBnomics-only. Distinct indicators, distinct chains — pick by what you need (level vs annual-% vs monthly-%).
+- **Failover:** World Bank → IMF → DBnomics (all no-key). `FREDMacroSource(api_key=...)` is **BYOK-only** (`FRED_API_KEY`), excluded from the default chain. No BEA/BLS sources. **`CPI_YOY`/`POLICY_RATE` are DBnomics-only** → each resolves to a single-source **monthly** chain (the unit pre-filter drops WB/IMF, which don't serve them).
 - **Result:** `IndicatorSeries(country, indicator_code, indicator_name, points: tuple[(date, float)] oldest-first, source, unit, value_unit, currency, frequency, projection_from_year, warnings)` + `.latest()`, `.latest_including_projections()`, `.actual_points`, `.to_dataframe()`.
-- **Units (pinned):** GDP = `current US$` (USD); CPI = `index`; GDP_GROWTH/INFLATION/UNEMPLOYMENT = `%`. Never relabeled.
-- **Gotchas:** `client.get_indicator(country, indicator)` takes no kwargs; the **module** function does. `latest()` excludes IMF WEO projections. Unknown indicator → `ValueError`; empty country → `InvalidData`; annual points stamped Jan 1.
+- **Units (pinned):** GDP = `current US$` (USD); CPI = `index`; GDP_GROWTH/INFLATION/UNEMPLOYMENT/`CPI_YOY` = `%`; `POLICY_RATE` = `% per annum`. Never relabeled.
+- **POLICY_RATE is a proxy:** IMF/IFS `FPOLM_PA`, not the announced SBV rate — `indicator_name` discloses this (`"Policy Rate (SBV refinancing-rate proxy, IMF IFS FPOLM_PA)"`); the **canonical** code/name stay `policy_rate`/`Policy Rate`. Official rate: sbv.gov.vn; CPI authority: gso.gov.vn.
+- **Monthly staleness warning (#179):** monthly results (`CPI_YOY`, `POLICY_RATE`, and DBnomics-served `CPI`) carry a `series_end_gap` warning in `series.warnings` when the latest observation is far past the series' own cadence (IMF/IFS lags ~2–6 months; values kept, never dropped). Annual series never warn.
+- **Gotchas:** `client.get_indicator(country, indicator)` takes no kwargs; the **module** function does. `latest()` excludes IMF WEO projections. Unknown indicator → `ValueError`; empty country → `InvalidData`; annual points stamped Jan 1; monthly points stamped month-start.
 
 ```python
 import vnfin.macro as macro

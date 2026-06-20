@@ -18,11 +18,16 @@ Provider contract (verified):
   observations are ``null`` or the string ``"NA"``.
 
 Indicator coverage (canonical -> IFS series template, unit DBnomics emits):
-- GDP -> ``A.{CC}.NGDP_XDC``  (GDP, *national currency* — NOT canonical USD level)
-- CPI -> ``M.{CC}.PCPI_IX``   (CPI index level)
+- GDP         -> ``A.{CC}.NGDP_XDC``         (GDP, *national currency* — NOT canonical USD level)
+- CPI         -> ``M.{CC}.PCPI_IX``          (CPI index level)
+- CPI_YOY     -> ``M.{CC}.PCPI_PC_CP_A_PT``  (#179: CPI % change vs same month prior year)
+- POLICY_RATE -> ``M.{CC}.FPOLM_PA``         (#179: monetary-policy-related rate, % p.a. — SBV proxy)
 
-Both DBnomics units differ from the WB-USD GDP level / WB percent indicators, so
-the per-indicator unit guard keeps them in their own homogeneous chains.
+These DBnomics units differ from the WB-USD GDP level / WB percent indicators, so
+the per-indicator unit guard keeps each in its own homogeneous chain. CPI_YOY and
+POLICY_RATE are DBnomics-only, so each resolves to a single-source monthly chain by
+default (no ordering ambiguity with the WB-annual CPI/INFLATION). #179: monthly
+results also carry a cadence-relative ``series_end_gap`` staleness warning.
 
 Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - transport/network error            -> ``SourceUnavailable``
@@ -36,6 +41,7 @@ from __future__ import annotations
 
 import math
 import re
+import statistics
 from datetime import date, datetime, timezone
 
 from ..coerce import parse_provider_float
@@ -55,13 +61,82 @@ from .models import IndicatorSeries
 _ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Canonical indicator -> (IFS frequency code, IFS concept code, unit DBnomics
-# emits, result frequency). GDP NGDP_XDC is annual national currency (the actual
-# currency varies by country, so the result carries no fixed currency); CPI
-# PCPI_IX is a monthly index level (no currency).
-_DBN_MAP: dict[MacroIndicator, tuple[str, str, str, Frequency]] = {
-    MacroIndicator.GDP: ("A", "NGDP_XDC", "national currency", Frequency.ANNUAL),
-    MacroIndicator.CPI: ("M", "PCPI_IX", "index", Frequency.MONTHLY),
+# emits, result frequency, display-name override). GDP NGDP_XDC is annual national
+# currency (the actual currency varies by country, so the result carries no fixed
+# currency); CPI PCPI_IX is a monthly index level (no currency).
+#
+# #179: CPI_YOY (PCPI_PC_CP_A_PT, % YoY) and POLICY_RATE (FPOLM_PA, % per annum)
+# are monthly. The 5th tuple element is an optional DISPLAY-name override carried
+# on the result's ``indicator_name``; ``None`` keeps the default "{value} ({concept})".
+# POLICY_RATE uses it for an HONEST proxy disclosure — FPOLM_PA is the IMF/IFS
+# monetary-policy-related rate, a *proxy* for the announced SBV refinancing rate,
+# never the exact announced figure. N-a: this is a display label only; the stable
+# identity stays the canonical code "policy_rate" / name "Policy Rate".
+_DBN_MAP: dict[MacroIndicator, tuple[str, str, str, Frequency, str | None]] = {
+    MacroIndicator.GDP: ("A", "NGDP_XDC", "national currency", Frequency.ANNUAL, None),
+    MacroIndicator.CPI: ("M", "PCPI_IX", "index", Frequency.MONTHLY, None),
+    MacroIndicator.CPI_YOY: ("M", "PCPI_PC_CP_A_PT", "%", Frequency.MONTHLY, None),
+    MacroIndicator.POLICY_RATE: (
+        "M", "FPOLM_PA", "% per annum", Frequency.MONTHLY,
+        "Policy Rate (SBV refinancing-rate proxy, IMF IFS FPOLM_PA)",
+    ),
 }
+
+
+# #179: success-path staleness warning for MONTHLY DBnomics/IMF-IFS series. Mirrors
+# the funds #172 ``nav_end_gap`` pattern (pure, injected ``today``, cadence-relative
+# threshold) but calibrated for monthly macro data.
+_SERIES_END_GAP = "series_end_gap"          # mechanical token (cause goes in the human tail)
+_SERIES_END_GAP_FACTOR = 2                   # threshold = max(FACTOR * typical_gap, FLOOR)
+# Floor set ABOVE IMF/IFS's NORMAL publication lag (a healthy monthly series is
+# routinely 2-6 months / ~180d behind), so healthy series never warn but a
+# genuinely delayed/discontinued series does (e.g. FPOLM_PA ends ~Dec 2023). #172
+# parity: keep max(FACTOR*cadence, FLOOR) — for monthly the floor dominates.
+# Re-derive per frequency if this warning is ever extended beyond monthly.
+_SERIES_END_GAP_FLOOR_DAYS = 210
+_SERIES_END_GAP_CADENCE_WINDOW = 8           # most-recent inter-point diffs feeding the median
+
+
+def _today() -> date:
+    """The current UTC calendar date — the injected ``today`` for end-gap freshness.
+
+    A ``date`` (not a ``datetime``): the warning judges a calendar gap, never a fetch
+    timestamp. Tests pin this for determinism; it never leaks into
+    ``IndicatorSeries.fetched_at_utc`` (which stays the real ``datetime.now(...)``).
+    """
+    return datetime.now(timezone.utc).date()
+
+
+def _series_end_gap_warning(points, today: date) -> tuple[str, ...]:
+    """Cadence-relative end-gap warning for a SUCCESSFUL monthly indicator series.
+
+    ``points`` is a non-empty, ascending ``list[tuple[date, float]]`` (the caller
+    guarantees this). ``today`` is a REQUIRED injected ``date`` — this function MUST
+    NOT call ``datetime.now()`` / ``date.today()`` so it is fully deterministic.
+
+    Returns a one-element tuple naming the gap/cadence/threshold when the latest
+    observation is older than the series' own (trailing) cadence allows, else ``()``.
+    Never raises.
+    """
+    last_day = points[-1][0]
+    gap_days = (today - last_day).days
+    if gap_days <= 0:
+        return ()  # series reaches today -> fresh
+    if len(points) >= 2:
+        diffs = [(points[i + 1][0] - points[i][0]).days for i in range(len(points) - 1)]
+        window = diffs[-_SERIES_END_GAP_CADENCE_WINDOW:]  # last N (all if fewer) — CURRENT regime
+        typical_gap = max(1, int(statistics.median(window)))  # robust to a single skipped month
+    else:
+        typical_gap = 31  # single point: assume a monthly cadence
+    threshold = max(_SERIES_END_GAP_FACTOR * typical_gap, _SERIES_END_GAP_FLOOR_DAYS)
+    if gap_days > threshold:
+        return (
+            f"{_SERIES_END_GAP}: latest observation {last_day.isoformat()} is {gap_days}d "
+            f"before {today.isoformat()} (monthly series, typical cadence ~{typical_gap}d; "
+            f"threshold {threshold}d) — IMF/IFS publication lags the source authority by "
+            f"~2-6 months; this series may be delayed or discontinued upstream",
+        )
+    return ()
 
 # Minimal ISO3 -> IMF/IFS 2-letter country code map for the documented coverage
 # (US, China, Japan, Germany, Vietnam) plus an obviously-fake ``ZZZ`` used by the
@@ -118,10 +193,12 @@ class DBnomicsSource(HttpDataSource):
         """Issue #78: expected returned identity (code, name) for ``indicator``,
         mirroring :meth:`get_indicator`. The code is the country-specific IFS
         series id ``"{freq}.{cc}.{concept}"`` (hence country_iso3 is required);
-        the name is ``"{indicator} ({concept})"``."""
+        the name is the ``_DBN_MAP`` display override when present (#179), else the
+        default ``"{indicator} ({concept})"`` — kept identical to ``get_indicator``
+        so the returned-identity guard always matches the stamped name."""
         ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
         try:
-            freq, concept, _unit, _result_freq = _DBN_MAP[ind]
+            freq, concept, _unit, _result_freq, display = _DBN_MAP[ind]
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
         # #32 + #21(macro): validate the country and require a mapped IFS code so we
@@ -130,7 +207,8 @@ class DBnomicsSource(HttpDataSource):
         cc = _ISO3_TO_IFS_CC.get(country)
         if cc is None:
             raise InvalidData(f"{self.NAME}: no IFS country code for ISO3 {country}")
-        return (f"{freq}.{cc}.{concept}", f"{ind.value} ({concept})")
+        name = display if display is not None else f"{ind.value} ({concept})"
+        return (f"{freq}.{cc}.{concept}", name)
 
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one IMF/IFS series for one country via DBnomics."""
@@ -139,7 +217,7 @@ class DBnomicsSource(HttpDataSource):
         # InvalidData, not a raw AttributeError or a silent None series id).
         country = canonical_country_iso3(country_iso3, self.NAME)
         try:
-            freq, concept, unit, result_freq = _DBN_MAP[ind]
+            freq, concept, unit, result_freq, display = _DBN_MAP[ind]
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
         cc = _ISO3_TO_IFS_CC.get(country)
@@ -158,10 +236,22 @@ class DBnomicsSource(HttpDataSource):
         # indicators may be negative.
         validate_indicator_values(ind, points, self.NAME)
 
+        # #179: honest display name (e.g. the SBV-proxy disclosure for POLICY_RATE);
+        # falls back to the default "{value} ({concept})" when no override is set.
+        name = display if display is not None else f"{ind.value} ({concept})"
+        # #179: success-path staleness warning, MONTHLY-scoped (v1). The IMF/IFS feed
+        # routinely lags ~2-6 months; we warn only when the latest observation is far
+        # enough past the series' own cadence to suggest a delayed/discontinued feed.
+        warnings = (
+            _series_end_gap_warning(points, _today())
+            if result_freq == Frequency.MONTHLY
+            else ()
+        )
+
         return IndicatorSeries(
             country=country,
             indicator_code=series_id,
-            indicator_name=f"{ind.value} ({concept})",
+            indicator_name=name,
             points=tuple(points),
             source=self.NAME,
             unit=unit,
@@ -170,6 +260,7 @@ class DBnomicsSource(HttpDataSource):
             currency=None,
             frequency=result_freq,
             fetched_at_utc=datetime.now(timezone.utc),
+            warnings=warnings,
         )
 
     # --- parsing helpers ------------------------------------------------- #

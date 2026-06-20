@@ -1078,3 +1078,57 @@ def test_declared_source_name_none_is_code_only_but_requires_nonempty_name():
     bad = _DeclaredSource("wb", "NY.GDP.MKTP.CD", "", declared_code="NY.GDP.MKTP.CD", declared_name=None)
     with pytest.raises(AllSourcesFailed):
         get_indicator("ZZZ", MacroIndicator.GDP, sources=[bad])
+
+
+# --- #179: monthly CPI YoY + SBV policy rate single-source chains -----------
+
+def _dbn_monthly(series_code, periods, values):
+    return json.dumps({"series": {"docs": [{
+        "series_code": series_code,
+        "period_start_day": periods,
+        "period": [p[:4] for p in periods],
+        "value": values,
+    }]}})
+
+
+def test_cpi_yoy_resolves_dbnomics_only_monthly():
+    # only DBnomics maps CPI_YOY -> eligible_sources reduces the default chain to
+    # DBnomics -> monthly % YoY by default, no unit-mismatch with the WB/IMF chain.
+    dbn_text = _dbn_monthly("M.ZZ.PCPI_PC_CP_A_PT", ["2024-01-01", "2024-02-01"], [3.1, 3.2])
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: json.dumps([{"total": 0}, None]))
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: json.dumps({"values": {}}))
+    dbn = DBnomicsSource(http_get=lambda u, p, h: dbn_text)
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.CPI_YOY)
+    assert res.source == "dbnomics"
+    assert res.unit == "%"
+    assert res.currency is None
+    assert res.frequency.value == "monthly"
+
+
+def test_policy_rate_resolves_dbnomics_only_monthly():
+    dbn_text = _dbn_monthly("M.ZZ.FPOLM_PA", ["2024-01-01", "2024-02-01"], [5.0, 4.5])
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: json.dumps([{"total": 0}, None]))
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: json.dumps({"values": {}}))
+    dbn = DBnomicsSource(http_get=lambda u, p, h: dbn_text)
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.POLICY_RATE)
+    assert res.source == "dbnomics"
+    assert res.unit == "% per annum"
+    assert res.frequency.value == "monthly"
+
+
+def test_inflation_still_worldbank_annual_after_179():
+    # Regression: adding CPI_YOY must NOT divert INFLATION; it still resolves to
+    # WorldBank annual % (chain position #1) by default.
+    wb_text = json.dumps([
+        {"page": 1, "pages": 1, "per_page": 50, "total": 1},
+        [{"indicator": {"id": "FP.CPI.TOTL.ZG", "value": "Inflation"},
+          "country": {"id": "ZZ", "value": "Fakeland"}, "countryiso3code": "ZZZ",
+          "date": "2022", "value": 3.3, "unit": "%", "obs_status": "", "decimal": 1}],
+    ])
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: wb_text)
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: json.dumps({"values": {}}))
+    dbn = DBnomicsSource(http_get=lambda u, p, h: json.dumps({"series": {"docs": []}}))
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.INFLATION)
+    assert res.source == "worldbank"
+    assert res.unit == "%"
+    assert res.frequency.value == "annual"

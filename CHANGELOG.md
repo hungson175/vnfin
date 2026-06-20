@@ -7,6 +7,22 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Monthly CPI YoY + SBV policy-rate indicators** (#179) — two new `MacroIndicator` members,
+  both served via the existing keyless DBnomics/IMF-IFS path (no new adapter): `CPI_YOY`
+  (consumer-price inflation, **% vs the same month a year earlier**, monthly, `PCPI_PC_CP_A_PT`)
+  and `POLICY_RATE` (the monetary-policy rate, **% per annum**, monthly, `FPOLM_PA`). Both are
+  **DBnomics-only**, so each resolves to a single-source monthly chain — distinct from the annual
+  World Bank `CPI` (index level) and `INFLATION` (annual %). `POLICY_RATE` is an **honest proxy**
+  for the announced State Bank of Vietnam refinancing rate: the result's `indicator_name` discloses
+  this (`"Policy Rate (SBV refinancing-rate proxy, IMF IFS FPOLM_PA)"`) while the **canonical**
+  code/name stay `policy_rate`/`Policy Rate` (stable identity). Monthly results also gain an
+  additive, cadence-relative **`series_end_gap`** staleness warning in `IndicatorSeries.warnings`
+  when the latest observation lags the series' own cadence by more than `max(2 × typical_gap, 210d)`
+  — the 210-day floor sits above IMF/IFS's normal ~2–6-month publication lag, so healthy series
+  never warn (values are kept, never dropped). All changes are additive. See
+  [`docs/sources/macro-dbnomics.md`](docs/sources/macro-dbnomics.md),
+  [`docs/tutorials/macro-and-fx.md`](docs/tutorials/macro-and-fx.md).
+  ([#179](https://github.com/hungson175/vnfin/issues/179))
 - **Delisted/suspended phantom-tail warning** (#176) — `vnfin.prices` `get_history(...)` now appends a
   soft `trailing_zero_volume_tail` warning to `PriceHistory.warnings` when a **D1** series ends in a run
   of **≥10** trailing *phantom* bars — each `volume == 0` and `open == high == low == close` (a flat

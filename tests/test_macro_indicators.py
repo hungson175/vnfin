@@ -5,6 +5,8 @@ real macro values.
 """
 import pytest
 
+from datetime import date
+
 from vnfin.macro.indicators import (
     CANONICAL_CURRENCY,
     CANONICAL_UNIT,
@@ -12,15 +14,59 @@ from vnfin.macro.indicators import (
     MacroIndicator,
     MacroIndicatorSpec,
     canonical_currency,
+    canonical_indicator_code,
+    canonical_indicator_name,
     canonical_unit,
     eligible_sources,
+    is_level_indicator,
     normalize_indicator,
+    validate_indicator_values,
 )
 
 
 def test_enum_members_present():
     names = {m.name for m in MacroIndicator}
-    assert names == {"GDP", "GDP_GROWTH", "CPI", "INFLATION", "UNEMPLOYMENT"}
+    assert names == {
+        "GDP",
+        "GDP_GROWTH",
+        "CPI",
+        "INFLATION",
+        "UNEMPLOYMENT",
+        "CPI_YOY",
+        "POLICY_RATE",
+    }
+
+
+# --- #179: monthly CPI YoY + SBV policy rate (DBnomics-only) ----------------
+
+def test_cpi_yoy_canonical_maps():
+    # #179 D1: a NEW dedicated indicator (not an overload of CPI/INFLATION).
+    assert canonical_unit(MacroIndicator.CPI_YOY) == "%"
+    assert canonical_currency(MacroIndicator.CPI_YOY) is None
+    assert canonical_indicator_code(MacroIndicator.CPI_YOY) == "cpi_yoy"
+    assert canonical_indicator_name(MacroIndicator.CPI_YOY) == "CPI Year-over-Year"
+
+
+def test_policy_rate_canonical_maps():
+    # #179 D2 + N-a: canonical identity stays the SHORT stable strings; the verbose
+    # SBV-proxy disclosure is a DISPLAY label carried only on the DBnomics result.
+    assert canonical_unit(MacroIndicator.POLICY_RATE) == "% per annum"
+    assert canonical_currency(MacroIndicator.POLICY_RATE) is None
+    assert canonical_indicator_code(MacroIndicator.POLICY_RATE) == "policy_rate"
+    assert canonical_indicator_name(MacroIndicator.POLICY_RATE) == "Policy Rate"
+
+
+def test_new_monthly_indicators_not_level_or_bounded():
+    # CPI_YOY may deflate (negative); a policy rate is a rate, not a >0 level, and
+    # we deliberately do not hard-bound it. validate_indicator_values is a no-op.
+    for ind in (MacroIndicator.CPI_YOY, MacroIndicator.POLICY_RATE):
+        assert is_level_indicator(ind) is False
+    validate_indicator_values(
+        MacroIndicator.CPI_YOY, [(date(2023, 1, 1), -0.5)], "x"
+    )  # deflation negative accepted
+    validate_indicator_values(
+        MacroIndicator.POLICY_RATE, [(date(2023, 1, 1), 4.5)], "x"
+    )  # rate accepted unbounded
 
 
 def test_percent_indicators_have_percent_unit():

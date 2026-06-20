@@ -48,6 +48,8 @@ class MacroIndicator(str, Enum):
     CPI = "cpi"                    # consumer price index (level)
     INFLATION = "inflation"       # CPI inflation, % YoY
     UNEMPLOYMENT = "unemployment"  # unemployment rate, % of labor force
+    CPI_YOY = "cpi_yoy"            # #179: CPI year-over-year %, monthly (DBnomics/IMF-IFS)
+    POLICY_RATE = "policy_rate"    # #179: monetary policy rate, % p.a., monthly (SBV proxy via IMF-IFS)
 
 
 class Frequency(str, Enum):
@@ -97,6 +99,12 @@ CANONICAL_UNIT: dict[MacroIndicator, str] = {
     MacroIndicator.CPI: "index",              # CPI index level (2010=100 class)
     MacroIndicator.INFLATION: "%",
     MacroIndicator.UNEMPLOYMENT: "%",
+    # #179: dedicated DBnomics-only monthly indicators. CPI_YOY ("%") is distinct
+    # from the CPI index ("index") and from the WB-annual INFLATION ("%"); pinning
+    # a single source keeps it monthly-by-default. POLICY_RATE is a rate in
+    # "% per annum" (its own unit so it never shares a chain with percent YoY).
+    MacroIndicator.CPI_YOY: "%",
+    MacroIndicator.POLICY_RATE: "% per annum",
 }
 
 
@@ -109,6 +117,8 @@ CANONICAL_CURRENCY: dict[MacroIndicator, Optional[str]] = {
     MacroIndicator.CPI: None,           # index level, no currency
     MacroIndicator.INFLATION: None,
     MacroIndicator.UNEMPLOYMENT: None,
+    MacroIndicator.CPI_YOY: None,       # #179: percent YoY, no currency
+    MacroIndicator.POLICY_RATE: None,   # #179: rate, no currency
 }
 
 
@@ -122,6 +132,8 @@ CANONICAL_INDICATOR_CODE: dict[MacroIndicator, str] = {
     MacroIndicator.CPI: "cpi",
     MacroIndicator.INFLATION: "inflation",
     MacroIndicator.UNEMPLOYMENT: "unemployment",
+    MacroIndicator.CPI_YOY: "cpi_yoy",
+    MacroIndicator.POLICY_RATE: "policy_rate",
 }
 
 CANONICAL_INDICATOR_NAME: dict[MacroIndicator, str] = {
@@ -130,6 +142,12 @@ CANONICAL_INDICATOR_NAME: dict[MacroIndicator, str] = {
     MacroIndicator.CPI: "Consumer Price Index",
     MacroIndicator.INFLATION: "Inflation",
     MacroIndicator.UNEMPLOYMENT: "Unemployment",
+    MacroIndicator.CPI_YOY: "CPI Year-over-Year",
+    # #179 N-a: the SHORT, STABLE canonical name. The verbose SBV-proxy disclosure
+    # is a DISPLAY label carried only on the DBnomics result (so the disclosure text
+    # can change without destabilizing identity or the cross-collision guard, which
+    # checks BOTH canonical code and canonical name).
+    MacroIndicator.POLICY_RATE: "Policy Rate",
 }
 
 

@@ -38,6 +38,38 @@ print(cpi.unit, cpi.latest())
 The no-key macro chain is World Bank → IMF DataMapper → DBnomics. Indicator units differ; read
 `series.unit` and `series.currency`.
 
+### Monthly inflation (CPI YoY) and the policy rate
+
+`CPI_YOY` (consumer-price inflation, % vs the same month a year earlier) and `POLICY_RATE`
+(the monetary-policy rate, % per annum) are **monthly** series. Both are served **only** by the
+DBnomics/IMF-IFS source, so each resolves to a single-source monthly chain — distinct from the
+annual World Bank `CPI` (index level) and `INFLATION` (annual %).
+
+```python
+cpi_yoy = vnfin.macro.get_indicator("VNM", MacroIndicator.CPI_YOY)
+policy = vnfin.macro.get_indicator("VNM", MacroIndicator.POLICY_RATE)
+
+print(cpi_yoy.unit, cpi_yoy.latest())   # '%' , e.g. ~3.0
+print(policy.unit, policy.latest())     # '% per annum', e.g. ~4.5
+print(policy.indicator_name)            # honest proxy disclosure (see below)
+for w in policy.warnings:
+    print("warning:", w)
+```
+
+Honest-disclosure caveats — read these before relying on the values:
+
+- **`POLICY_RATE` is a proxy, not the announced rate.** The series is IMF/IFS `FPOLM_PA`, a
+  monetary-policy-related rate; `indicator_name` says so explicitly
+  (`"Policy Rate (SBV refinancing-rate proxy, IMF IFS FPOLM_PA)"`). For the *official* announced
+  refinancing/discount rate, consult the State Bank of Vietnam directly: <https://sbv.gov.vn>.
+- **`CPI_YOY` source authority.** The headline monthly CPI is published by the General Statistics
+  Office: <https://gso.gov.vn>. The DBnomics figure is the IMF/IFS re-publication.
+- **Publication lag + staleness warning.** IMF/IFS routinely lags the source authority by ~2–6
+  months. When the latest observation is far enough past the series' own cadence to suggest a
+  delayed or discontinued feed, the result carries a `series_end_gap` entry in `series.warnings`
+  (the values are kept, never dropped). Always check `series.warnings` and `series.points[-1][0]`
+  (the latest observation date) for monthly series.
+
 ## Optional FRED key
 
 FRED is opt-in and excluded from the no-key default chain. See [Use FRED BYOK](../how-to/byok-fred.md).

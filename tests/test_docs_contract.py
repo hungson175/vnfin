@@ -116,6 +116,8 @@ def test_documented_enums_and_units():
         "CPI",
         "INFLATION",
         "UNEMPLOYMENT",
+        "CPI_YOY",
+        "POLICY_RATE",
     }
     assert macro.canonical_unit(macro.MacroIndicator.GDP) == "current US$"
 
