@@ -7,6 +7,27 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **World/US equity index (S&P 500) accessor** (#177) — new `vnfin.indices.world(symbol="SPY",
+  start=None, end=None, *, interval=Interval.D1)` returning the shared `PriceHistory` over its **own**
+  2-source failover chain, separate from the VN HOSE/HNX index path (which is untouched).
+  `AlphaVantageIndexSource` is the **PRIMARY**, bring-your-own-key source (Alpha Vantage
+  `TIME_SERIES_DAILY` for the **SPY ETF**, an S&P 500 proxy; reuses the existing `ALPHAVANTAGE_API_KEY`;
+  keyless → skipped with **no network call**; the key is **redacted** from every error; free-tier
+  `Note`/`Information` throttle → `SourceUnavailable` so the chain falls over; in-memory `cache_ttl`
+  defaults to 6h). `StooqIndexSource` is the keyless best-effort **FALLBACK** (Stooq `^SPX` daily CSV,
+  the S&P 500 **index level** in points; anti-bot HTML → `SourceUnavailable`). The two legs are
+  **different instruments** (SPY `USD/share` ~600 vs ^SPX `index points` ~6000, ~10× magnitude), so the
+  chain is intentionally cross-instrument and **not** unit-homogeneous (only one disclosed leg is served
+  per call; the result self-discloses via `source`/`value_unit`/`provider_symbol`). Whenever the ^SPX
+  fallback is served instead of the requested SPY — covering both the AV-throttle and keyless-skip paths
+  — the result carries a mechanical **`fallback_instrument_served`** warning naming the ~10× substitution
+  (never silent; rebase before comparing). v1 supports **`symbol="SPY"` only** (any other symbol →
+  clear `InvalidData`). All changes are additive; SPY is fetched as a documented proxy (not the
+  proprietary `^GSPC`). New `AlphaVantageIndexSource`, `StooqIndexSource`, `default_world_index_sources`,
+  `default_world_index_client`, `FailoverWorldIndexClient` exports under `vnfin.indices`. See
+  [`docs/sources/indices-world.md`](docs/sources/indices-world.md),
+  [`docs/ai-usage.md`](docs/ai-usage.md).
+  ([#177](https://github.com/hungson175/vnfin/issues/177))
 - **Monthly CPI YoY + SBV policy-rate indicators** (#179) — two new `MacroIndicator` members,
   both served via the existing keyless DBnomics/IMF-IFS path (no new adapter): `CPI_YOY`
   (consumer-price inflation, **% vs the same month a year earlier**, monthly, `PCPI_PC_CP_A_PT`)

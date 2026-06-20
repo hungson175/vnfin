@@ -71,11 +71,14 @@ hist = src.nav_history(funds[0].id, from_date="2024-01-01", to_date="2024-12-31"
 - **Failover:** history VPS → SSI → VNDirect. Constituents single-source (SSI iBoard).
 - **Result:** `PriceHistory` with `value_unit='points'`/`currency='points'`. `IndexConstituents(index, source, members: tuple[IndexMember(symbol, exchange, company_name, isin, weight)], provider_group, as_of, ...)`, props `.symbols`, `.has_weights`, `len()/iter()`, `.to_dataframe()`.
 - **Gotchas:** values are **POINTS not VND** (read `value_unit`). `index_history` requires both dates (→ `VnfinError` up front). Constituents have **no weights** (`weight=None`, `has_weights=False`).
+- **World/US index (S&P 500) — separate accessor & chain (#177):** `vnfin.indices.world(symbol="SPY", start=None, end=None, *, interval=Interval.D1, sources=None, api_key=None, http_get=None, timeout=25.0, max_attempts=3)` → `PriceHistory`, over its **own** chain `[AlphaVantageIndexSource (BYOK SPY, primary) → StooqIndexSource (keyless ^SPX, fallback)]` (factories `default_world_index_sources()` / `default_world_index_client()`). v1 is **`symbol="SPY"` only** (else `InvalidData`). **Cross-instrument:** AV serves SPY in `value_unit="USD/share (SPY ETF, S&P 500 proxy)"` (~600); the Stooq fallback serves `^SPX` in `value_unit="index points"` (~6000), ~10× apart — only one disclosed leg per call (`source`/`value_unit`/`provider_symbol`). When ^SPX is served instead of SPY (AV throttled/keyless), the result carries a mechanical **`fallback_instrument_served`** warning — rebase before comparing. AV reads `ALPHAVANTAGE_API_KEY`; keyless → skipped with no network call; key redacted in errors. Provenance: `docs/sources/indices-world.md`.
 
 ```python
-from datetime import date; from vnfin.indices import index_history, index_constituents
+from datetime import date; from vnfin.indices import index_history, index_constituents, world
 h = index_history("VNINDEX", date(2024,1,1), date(2024,6,30)); print(h.value_unit)  # 'points'
 print(index_constituents("VN30").symbols)
+spy = world("SPY", start=date(2024,1,1), end=date(2024,6,30))
+print(spy.source, spy.provider_symbol, spy.value_unit, [w for w in spy.warnings])
 ```
 
 ## gold — VN domestic (VND/lượng) & world XAU (USD/oz) — no `client()`

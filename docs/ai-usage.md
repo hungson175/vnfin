@@ -22,10 +22,12 @@ Requires Python ≥ 3.10. No API key is needed for the default path of any domai
 
 ## 1. Five rules that apply to every domain
 
-1. **No key needed; BYOK is the rare exception.** 7 of 8 domains need **no API key and no env
-   var**. The *only* optional keys anywhere are `FRED_API_KEY` (macro — an opt-in source that is
-   *excluded* from the default chain) and `VNFIN_BTMC_WIDGET_KEY` (gold — overrides a public
-   token). **Never invent authentication.**
+1. **No key needed; BYOK is the rare exception.** Every domain's **default path is keyless**. The
+   only optional keys anywhere are `FRED_API_KEY` (macro — an opt-in source *excluded* from the
+   default chain), `VNFIN_BTMC_WIDGET_KEY` (gold — overrides a public token), and
+   `ALPHAVANTAGE_API_KEY` (the **primary** of `indices.world()` for the S&P 500 — but the keyless
+   Stooq `^SPX` fallback serves without it, so even `world()` works key-free). **Never invent
+   authentication.**
 2. **`client()` = failover chain, `source()` = single primary.** Every domain exposes
    `vnfin.<domain>.client()` (multi-source, ≤3 attempts, recommended) and
    `vnfin.<domain>.source()` (the primary adapter only). **Exception: `gold` has no `client()`** —
@@ -53,7 +55,7 @@ Requires Python ≥ 3.10. No API key is needed for the default path of any domai
 | `vnfin.prices` | `client()` / `source()` / `history()` | `PriceHistory` (OHLCV bars) | **VND** | ✅ |
 | `vnfin.fundamentals` | `client()` / `source()` / `get_financials()` | `tuple[FinancialReport]` | **raw VND** (ratios: dimensionless) | ✅ |
 | `vnfin.funds` | `source()` (single; `client` is an alias) | `FundList` / `NavHistory` / holdings | **VND/unit** | ✅ |
-| `vnfin.indices` | `client()` / `index_history()` / `index_constituents()` | `PriceHistory` (+ `IndexConstituents`) | **points** | ✅ |
+| `vnfin.indices` | `client()` / `index_history()` / `index_constituents()` / `world()` (S&P 500) | `PriceHistory` (+ `IndexConstituents`) | **points** (VN) · `USD/share` or `index points` (world) | ✅ |
 | `vnfin.gold` | `vn()` / `world()` / `source(provider)` (**no `client()`**) | `GoldQuote` / `GoldHistory` | **VND/lượng** or **USD/oz** | ✅ |
 | `vnfin.crypto` | `client()` / `source()` | `CryptoHistory` (OHLCV) | **USD** | ✅ |
 | `vnfin.fx` | `client()` / `source()` / `get_rate()` (spot); `history()` (annual USD/VND) | `FXRate` (spot) / `FXHistory` (history) | **VND per 1 base** | ✅ |
@@ -214,6 +216,33 @@ print(vn30.symbols, len(vn30), vn30.has_weights)   # (...), N, False
   for equities but index sources override to `points`). `index_history` requires both dates
   (→ `VnfinError` up front). Constituents carry **no weights** (`weight is None`, `has_weights`
   False) — official weighted baskets are never fabricated.
+
+#### World/US index (S&P 500) — `vnfin.indices.world()`
+
+A separate accessor for the **S&P 500** (a global benchmark for VN-vs-world comparisons), backed
+by its **own** 2-source failover chain — completely separate from the VN HOSE/HNX path above.
+
+```python
+from datetime import date
+import vnfin
+
+# default chain: Alpha Vantage SPY (BYOK primary) → Stooq ^SPX (keyless fallback)
+spy = vnfin.indices.world("SPY", start=date(2024, 1, 1), end=date(2024, 6, 30))
+print(spy.source, spy.provider_symbol, spy.value_unit)   # 'alphavantage' 'SPY' 'USD/share (SPY ETF, S&P 500 proxy)'
+for w in spy.warnings:                                    # 'fallback_instrument_served: ...' iff ^SPX served
+    print(w)
+```
+
+- **v1 is `symbol="SPY"` only** (any other symbol → clear `InvalidData`). SPY (the ETF) is a
+  documented **proxy** for the S&P 500 — not the proprietary `^GSPC`.
+- **Cross-instrument fallback — read `value_unit`!** The primary serves SPY in
+  `USD/share` (~600); the keyless Stooq fallback serves the `^SPX` **index level** in
+  `index points` (~6000), ~10× different. Only one disclosed leg is returned per call
+  (`source`/`value_unit`/`provider_symbol` say which). When the ^SPX fallback is served instead of
+  SPY (AV throttled or no key), the result carries a mechanical **`fallback_instrument_served`**
+  warning — **rebase before comparing** the two; never mix them un-rebased.
+- **BYOK:** the AV primary reads `ALPHAVANTAGE_API_KEY` (param or env); with no key it is skipped
+  with **no network call** and Stooq serves directly. The key is **redacted** from every error.
 
 ### 5.5 `vnfin.gold` — VN domestic (VND/lượng) & world XAU (USD/oz)
 
