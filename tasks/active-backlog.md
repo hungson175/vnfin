@@ -12,7 +12,11 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 ~16:40 +07_
+_Last synced: 2026-06-20 ~16:55 +07_
+
+> **State snapshot (16:55):** #157 RATIOS leg **DONE+PUSHED** (`9edad80`, #157 commented, stays OPEN).
+> #173-unlisted **integrated** on master local (`d522637`, 2958 green) → **in Codex×2 review**, push+re-close on approve.
+> #157 bank-mislabel **design doc written** (`c2bb4db`, `docs/design/bank-fundamentals-itemcodes.md`) → **in reviewer design gate** (5 open Qs). Next non-blocked: #176 phantom-tail design (HIGH).
 
 ---
 
@@ -172,8 +176,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   MetricCoverage. v2 (deferred/blocked): ROE/ROA/ROIC, FCF, valuation (P/E,P/B,...), EPS/BV. Non-goals:
   ranking/advice/screener-with-strategy, blind external ingestion, generic item_<code> as
   investor-ready, silent bank/non-bank mixing. Spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606201222-issue157-fundamentals-metrics.md`.
-  - **#157 BANK DATA-INTEGRITY INPUT (HIGH; reviewer-reproduced, review-202606201553) — FOLD IN
-    BEFORE the #157 bank mapping finalizes; do NOT switch from #173.** Reporter + reviewer
+  - **#157 BANK DATA-INTEGRITY INPUT (HIGH; reviewer-reproduced, review-202606201553) — 📐 DESIGN DOC
+    WRITTEN `c2bb4db` (`docs/design/bank-fundamentals-itemcodes.md`, local) → IN reviewer DESIGN GATE.**
+    No code until design converges (5 open Qs: validate-vs-more-banks, signature, cashflow, diagnostic
+    home, near-dup codes). Doc has verified anchor table (VCB/CTG/BID + official VCB + accounting
+    identity), model_type-keyed map (no corp fallback, raw-for-unmapped, never-wrong-label), test plan.
+    Reporter + reviewer
     independently reproduced a bank fundamentals mislabel in `get_financials` (VCB, is_bank=True,
     balance, annual): code `412000` is labeled 'Tổng tài sản'(Total assets)=1,648.5T but that is
     VCB's LOANS; the REAL total assets=2,442.3T sits under raw unlabeled code `12700`. Cross-statement
@@ -186,8 +194,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     NEVER a wrong human label on a value. #157 bank canonical metrics build on the corrected map +
     blocked/missing diagnostics. Verified anchors → synthetic offline tests. Codex x2 review against
     these anchors. Spec: `~/tools/vnfin-oss-reviewer/reviews/review-202606201553-issue157-bank-fundamentals-mislabel-VERIFIED.md`.
-  - **#157 RATIOS-GUARD INPUT (HIGH; reviewer-reproduced, review-202606201617) — group with the
-    bank-mislabel as "#157 fundamentals base-layer fixes"; do NOT interrupt current work.** Repro:
+  - **#157 RATIOS-GUARD INPUT — ✅ DONE + PUSHED `9edad80` (81a7b2a..9edad80), #157 commented (stays OPEN).**
+    Codex×2 BOTH APPROVE (review-202606201646); pre-push fixup (drop dead `MISSING` import cafef.py:42)
+    applied. Suite 2929 green; cov client 97%/cafef 93%; gate-trio+clean-room+diff-check clean. 3 parts
+    shipped: statement-type-aware unit guard, cafef present-null ReportType tolerance (ratio-only),
+    Period.UNKNOWN (no TTM-as-FY). Repro was:
     `get_financials('FPT','ratios','annual')` → `AllSourcesFailed` (vndirect: `currency None != chain
     unit VND`; cafef: `ratio ReportType: expected string got NoneType`) → ratios (P/E, P/B, ROE, ROA)
     fully unavailable. FIX (3 parts): (1) make the failover unit-consistency guard **statement-type-
@@ -231,8 +242,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     Suite 2917 green; funds cov 96%; all-additive. **Non-blocking nits (reviewer N1/N2, follow-up):**
     (N1) `asset_allocation` redundant `data.get("code")` re-read; (N2) unused `seen_codes=None`
     default branch — see Non-blocking follow-ups. N3 snapshot regen = release-time.
-    - **⚠️ #173 RE-OPENED — UNLISTED-bond residual (HIGH, regression-ish on shipped work; review-202606201628).
-      IN PROGRESS (parallel worktree fork).** My fail-closed `{STOCK,BOND}` whitelist hard-fails ~8
+    - **⚠️ #173 RE-OPENED — UNLISTED-bond residual (HIGH; review-202606201628). ✅ INTEGRATED on master
+      local `d522637` (parent 9edad80) → IN Codex×2 REVIEW (handoff /tmp/vnfin-173-unlisted-review-handoff-202606201652.md);
+      push+re-close #173 on approve.** Merged tree 2958 green; cov fmarket 96%/models 99%/keys 100%;
+      gate-trio+clean-room+diff-check clean. Implements reviewer option (i) (relax non-equity stock_code,
+      equities strict); refinements (a) fail-closed-on-garbage + (b) caller-gate docstring satisfied; new
+      `enum_tag_or_other` helper (unknown stringlike type→OTHER, malformed→InvalidData). Original bug:
+      my fail-closed `{STOCK,BOND}` whitelist hard-failed ~8
       UNLISTED-bond funds (defensive-credit sleeve = core use case): bond `type` is `BOND` **or**
       `UNLISTED_BOND` (ASBF id51 / VFF id21 / DCBF id27); my `canonical_enum_tag` turned their EmptyData
       into **InvalidData** (harder failure). Also ASBF has a descriptive `stockCode`
