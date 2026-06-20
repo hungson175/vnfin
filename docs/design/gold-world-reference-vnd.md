@@ -1,8 +1,8 @@
 # Design note — #178 `gold.world_reference_history_vnd()` (world-reference VND/lượng gold)
 
 - Date: 2026-06-21 (vnfin-oss). Concretizes reviewer spec `spec-202606201815-issue178`.
-- Status: **PRE-CODE — design-gate to vnfin-oss-reviewer.** Three decisions need convergence
-  (one is a correction to the spec formula). No code until the reviewer signs off.
+- Status: **APPROVED by vnfin-oss-reviewer (00:35, 2026-06-21) → in TDD.** All three decisions
+  locked below (§ "Reviewer decisions — LOCKED"). The spec's inverted factor is corrected.
 - Clean-room: composes only existing in-repo primitives + a physical constant. Zero VNStock.
 
 ## Goal (unchanged from spec)
@@ -85,3 +85,21 @@ half-result). Add positivity asserts on the synthesized value as a belt-and-susp
 Additive: new `gold.world_reference_history_vnd` + reserved `gold.domestic_history` in `gold/__init__`
 `__all__`. Surface test stays additive-green; **do NOT regen the snapshot** (release-time only). Docs +
 skill + CHANGELOG in the same change (provenance note in `docs/sources/`, ai-usage entry, skill row).
+
+## Reviewer decisions — LOCKED (00:35, 2026-06-21)
+1. **FACTOR (corrected):** `37.5 / 31.1035 ≈ 1.20566`. **Compute from NAMED constants**
+   `GRAMS_PER_LUONG = 37.5` and `GRAMS_PER_TROY_OZ = 31.1035` (auditable; never a hardcoded 1.206).
+   Reviewer re-derived + confirmed (`950 × 24000 × 1.206 ≈ 56.4M`). The "understates domestic" point holds.
+2. **GRANULARITY: ANNUAL output.** Daily-forward-filled FX is REJECTED as false precision (daily wiggles
+   would be gold-only over a step-function FX — a data-integrity anti-pattern). Align the gold aggregation
+   basis with the World Bank annual-FX basis: **annual-average gold × annual-average FX × factor**, one
+   VND/lượng point per calendar year (mirror FX's Jan-1 stamp). Document the basis. vf-advisor interpolates
+   for display parity itself; finer granularity needs a clean-room DAILY USD/VND source = a v2 follow-up.
+3. **DISCLOSURE: `premium_note` in `GoldHistory.warnings`** (additive-free). Make it a MECHANICAL token —
+   `world_reference_excludes_domestic_premium` — with the human tail "+10–21% time-varying; NOT the
+   SJC/BTMC domestic price". Keep disclosure **REDUNDANT**: the accessor name `world_reference_history_vnd`
+   + `value_unit="VND/luong"` + `source` must ALSO signal world-reference (never "domestic").
+4. **Errors:** FX-missing / world-gold-missing → propagate per the failover/result contract (no silent
+   half-result). `gold.domestic_history()` → clear source-gap diagnostic (→ #182), never the synthesis.
+5. Clean-room: existing world-gold failover (CurrencyApi→Stooq) + World Bank FX only. Zero VNStock.
+   Process: TDD red-first → bring CODE for Codex×2 → push only on APPROVE.
