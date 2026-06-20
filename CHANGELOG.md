@@ -34,6 +34,35 @@ All notable changes to `vnfin` are documented here. The format follows
 - **`vnfin.exceptions.StaleData`** (#172) — a subclass of `EmptyData` raised when a source's history
   exists but ends before the requested window (a stale or closed feed). Backward compatible: existing
   `except EmptyData` / `except SourceError` handlers still catch it.
+- **`vnfin.fundamentals.metrics(symbol, period="annual", *, is_bank=None, limit=8, ...)`** (#157) —
+  a canonical-metrics layer: an additive, **offline** transform over the existing `get_financials`
+  reports (no new source, no `ratios` fetch). It fetches income+balance+cashflow once each via the
+  same VNDirect→CafeF failover, then maps the verified **VNDirect** provider codes to a fixed **v1
+  catalog of 26 metrics** — 21 raw-mapped line items (corporate / bank / shared) + 5 derived ratios
+  (`gross_margin`, `net_margin`, `liabilities_to_equity`, `cash_to_assets`,
+  `operating_cash_flow_margin`) — returning one `MetricReport` per fiscal period (newest first).
+  Every report carries ALL 26 metrics: applicability and gaps are expressed by
+  `MetricValue.availability` (`available`/`missing`/`blocked`/`not_applicable`), never by omission, and
+  every unavailable value carries a stable `reason`. Bank metrics map **only the #157-verified bank
+  codes** (`net_interest_income`/`loans_to_customers`/`customer_deposits` + the shared metrics);
+  unverified bank lines are deliberately not guessed. Provenance is **per statement**
+  (`MetricReport.statement_sources`) — there is no single report `source` (income/balance/cashflow can
+  resolve to different sources; CafeF does not serve cashflow → `not_served`); a statement that failed
+  over to CafeF comes back `blocked` (`"metric map not available for source 'cafef'"`) since v1 maps
+  only the VNDirect namespace. Derived ratios are computed in-library with denominator guards
+  (zero/negative/non-finite → `missing`, never `inf`/`NaN`). Companion entry points:
+  `explain_metric_coverage(...)` → `MetricCoverage` (the same fetch, **non-fatal**, per-fiscal-date
+  diagnostics for a batch loop), and pure offline lookups `metric_catalog(applies_to=None)` →
+  `tuple[MetricDefinition]` and `explain_metric(metric_id)` → `MetricDefinition`. **Provider-native
+  valuation ratios (P/E, P/B, ROE/ROA/ROIC, EPS, book value, FCF) and extra bank lines are deferred to
+  v2** — the layer never fetches the `ratios` statement (`ratio_status` is always `not_requested`) and
+  these ids are absent from the v1 catalog. Result types `MetricReport` / `MetricValue` /
+  `MetricDefinition` / `MetricCoverage` / `PeriodCoverage` / `MetricInput` / `StatementProvenance`
+  (frozen dataclasses) and enums `MetricId` / `MetricKind` / `AppliesTo` / `MetricCategory` /
+  `MetricAvailability` / `StatementCoverageStatus` are all importable from `vnfin.fundamentals`. All
+  changes are additive. See [`docs/tutorials/fundamentals.md`](docs/tutorials/fundamentals.md),
+  [`docs/api.md`](docs/api.md), [`docs/design/fundamentals-metrics.md`](docs/design/fundamentals-metrics.md).
+  ([#157](https://github.com/hungson175/vnfin/issues/157))
 - **`vnfin.fx.history(base="USD", quote="VND", start=None, end=None, *, frequency=ANNUAL)`** (#159) —
   historical FX time series, the first historical FX in `vnfin` (spot `get_rate`/`FXRate` is
   unchanged). v1 serves **annual USD/VND** from the no-key World Bank `PA.NUS.FCRF` series

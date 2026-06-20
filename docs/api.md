@@ -135,6 +135,75 @@ the caller (a deliberate, separate design). See
 [tutorials/fx-history.md](tutorials/fx-history.md) and
 [sources/fx-history-worldbank.md](sources/fx-history-worldbank.md).
 
+## `vnfin.fundamentals.metrics` — canonical metrics (additive, offline transform)
+
+`vnfin.fundamentals.metrics(...)` (issue #157) is an additive, **offline** layer over the existing
+`get_financials(...)` reports. It fetches income+balance+cashflow once each through the same failover
+chain, then maps the verified VNDirect provider codes to a fixed **v1 catalog of 26 canonical
+metrics** — 21 raw-mapped line items + 5 derived ratios — returning one `MetricReport` per fiscal
+period (newest first). It **never fetches the `ratios` statement** (provider-native valuation ratios
+are deferred to v2) and per-statement failures are non-fatal.
+
+- `vnfin.fundamentals.metrics(symbol, period="annual", *, is_bank=None, limit=8, source=None,
+  sources=None, max_attempts=3, http_get=None, timeout=25.0) -> tuple[MetricReport, ...]` — newest
+  fiscal period first. Mirrors `get_financials`' injection knobs. `is_bank=None` (`AUTO`)
+  auto-detects bank vs corporate from the first OK report.
+- `vnfin.fundamentals.explain_metric_coverage(symbol, period="annual", *, is_bank=None, limit=8,
+  source=None, sources=None, max_attempts=3, http_get=None, timeout=25.0) -> MetricCoverage` — same
+  3-statement fetch, but **never raises** on a per-statement failure; one `PeriodCoverage` per fiscal
+  date with per-statement provenance, per-metric availability + reasons, named/generic item counts,
+  and unmapped codes. Designed for a batch loop over a universe.
+- `vnfin.fundamentals.metric_catalog(applies_to=None) -> tuple[MetricDefinition, ...]` — pure, no
+  network. `None` → all 26; `"bank"`/`AppliesTo.BANK` → `BANK`+`BOTH`; `"corporate"`/`"non_bank"`/
+  `AppliesTo.CORPORATE` → `CORPORATE`+`BOTH`. Any other string raises `VnfinError`.
+- `vnfin.fundamentals.explain_metric(metric_id) -> MetricDefinition` — pure lookup; accepts a
+  `MetricId` or its string value. An unknown id (including a v2-deferred metric like `"roe"`) raises
+  `VnfinError`.
+
+**Result types** (all frozen dataclasses, importable from `vnfin.fundamentals`):
+
+- `MetricReport(symbol, period, fiscal_date, is_bank, metrics: tuple[MetricValue, ...],
+  statement_sources: tuple[StatementProvenance, ...], warnings)` — `.get(metric_id)` returns the
+  `MetricValue` even when unavailable; `.to_dataframe()` is one row per metric (all 26). There is
+  deliberately **no single `source`** field (provenance is per statement, `df.attrs` has no
+  `"source"` key).
+- `MetricValue(id, value, value_unit, kind, availability, fiscal_date, inputs, reason, warnings)` —
+  `value` is `None` whenever `availability != "available"`; `reason` then carries the stable
+  diagnostic string. `inputs` is per-value lineage (`MetricInput(statement, item_code, value,
+  value_unit, fiscal_date, source, name)`).
+- `MetricDefinition(id, name, category, kind, applies_to, value_unit, statement, codes_by_source,
+  formula, inputs)` — a static catalog entry. v1 maps only the `"vndirect"` namespace.
+- `MetricCoverage(symbol, period, periods: tuple[PeriodCoverage, ...], notes)` and
+  `PeriodCoverage(fiscal_date, is_bank, statement_provenance, per_metric, named_item_count,
+  generic_item_count, unmapped_codes, ratio_status)` — `ratio_status` is always `not_requested` in
+  v1.
+
+**Enums** (`.value` strings): `MetricKind` = `raw_mapped` / `provider_native` / `derived`;
+`AppliesTo` = `corporate` / `bank` / `both`; `MetricCategory` = `profitability` / `liquidity` /
+`leverage` / `cashflow` / `size`.
+
+**`MetricValue.availability` statuses** (the per-value outcome):
+
+- `available` — resolved; `value` is set.
+- `missing` — line item / statement absent for this period (e.g. `"missing line item 11000 in income"`,
+  `"missing statement cashflow for 2022-12-31"`, `"missing input metric net_revenue"`,
+  `"denominator net_revenue is zero"`).
+- `blocked` — the succeeding source's namespace is not mapped in v1 (e.g. `"metric map not available
+  for source 'cafef'"`).
+- `not_applicable` — the metric does not apply to this entity type (e.g. `"metric 'net_revenue' does
+  not apply to bank entities"`).
+- `unsupported` — reserved for v2 valuation metrics absent from the v1 catalog.
+
+**`StatementProvenance.status` statuses** (per-statement, per-period): `ok` / `missing` /
+`source_error` / `not_served` (CafeF does not serve cashflow → `not_served`).
+
+The v1 catalog ships **21 raw-mapped** (corporate/bank/shared) + **5 derived** ratios (`gross_margin`,
+`net_margin`, `liabilities_to_equity`, `cash_to_assets`, `operating_cash_flow_margin`); bank metrics
+map only the #157-verified bank codes. Derived ratios are computed in-library with denominator guards
+(zero/negative/non-finite → `missing`, never `inf`/`NaN`). See
+[tutorials/fundamentals.md](tutorials/fundamentals.md#canonical-metrics--coverage) and
+[design/fundamentals-metrics.md](design/fundamentals-metrics.md).
+
 ## `vnfin.diagnostics` — source-coverage preflight (offline)
 
 `vnfin.diagnostics` is an additive, **offline** namespace for explaining source coverage

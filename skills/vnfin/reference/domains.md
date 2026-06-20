@@ -37,6 +37,22 @@ rep = get_financials("FPT", StatementType.INCOME, Period.ANNUAL)[0]
 print(rep.fiscal_date, rep.get("11000"))   # raw VND
 ```
 
+### fundamentals — canonical metrics (additive, offline transform; #157)
+
+- **Entry:** `vnfin.fundamentals.metrics(symbol, period="annual", *, is_bank=None, limit=8, source=None, sources=None, max_attempts=3, http_get=None, timeout=25.0)` → `tuple[MetricReport]` (newest first); `vnfin.fundamentals.explain_metric_coverage(...)` (same kwargs) → `MetricCoverage` (non-fatal diagnostics); `vnfin.fundamentals.metric_catalog(applies_to=None)` → `tuple[MetricDefinition]` (pure); `vnfin.fundamentals.explain_metric(metric_id)` → `MetricDefinition` (pure). All importable from `vnfin.fundamentals`.
+- **What it does:** fetches income+balance+cashflow once each via the same `get_financials` failover (NEVER `ratios`), then maps the verified **VNDirect** codes to a fixed **v1 catalog of 26 metrics** (21 raw-mapped + 5 derived ratios) — one `MetricReport` per fiscal period. Per-statement failures are non-fatal.
+- **Result:** `MetricReport(symbol, period, fiscal_date, is_bank, metrics: tuple[MetricValue], statement_sources: tuple[StatementProvenance], warnings)` — `.get(id)` (returns the `MetricValue` even when unavailable), `.to_dataframe()` (one row per metric, all 26; `df.attrs` has **no** `source` key). `MetricValue(id, value, value_unit, kind, availability, fiscal_date, inputs: tuple[MetricInput], reason, warnings)` — `value` is `None` unless `availability=='available'`; `reason` carries the stable diagnostic. `MetricCoverage(symbol, period, periods: tuple[PeriodCoverage], notes)` with `PeriodCoverage(fiscal_date, is_bank, statement_provenance, per_metric, named_item_count, generic_item_count, unmapped_codes, ratio_status)`.
+- **Enums (`.value`):** `MetricId` (e.g. `net_revenue`, `gross_margin`); `MetricKind` `raw_mapped`/`provider_native`/`derived`; `AppliesTo` `corporate`/`bank`/`both`; `MetricCategory` `profitability`/`liquidity`/`leverage`/`cashflow`/`size`; `MetricAvailability` `available`/`missing`/`blocked`/`not_applicable`/`unsupported`; `StatementCoverageStatus` `ok`/`missing`/`source_error`/`not_served`.
+- **Gotchas:** every report carries ALL 26 metrics — gaps are `availability`, never omission. v1 maps **VNDirect only**: a statement that failed over to CafeF comes back `blocked` (`"metric map not available for source 'cafef'"`), NOT `missing`. Provenance is **per statement** (`rep.statement_sources`) — there is no single `rep.source` (income/balance/cashflow may resolve to different sources; cashflow is VNDirect-only → CafeF cashflow is `not_served`). Bank metrics use only the **#157-verified** bank codes (`net_interest_income`/`loans_to_customers`/`customer_deposits` + shared); a corporate-only id on a bank → `not_applicable` (and vice-versa). Derived ratios are guarded (zero/negative/non-finite denominator → `missing`, never `inf`/`NaN`). **Ratios deferred to v2** — `ratio_status` is always `not_requested`; `explain_metric("roe")` raises `VnfinError`. `metric_catalog("bank")` → BANK+BOTH; `("corporate")`/`("non_bank")` → CORPORATE+BOTH; other string → `VnfinError`.
+
+```python
+import vnfin
+rep = vnfin.fundamentals.metrics("FPT", period="annual")[0]
+print(rep.get("net_revenue").value, rep.get("gross_margin").value)   # raw VND, ratio
+print(rep.get("net_interest_income").availability.value)             # 'not_applicable' (corporate)
+cov = vnfin.fundamentals.explain_metric_coverage("FPT", period="annual")  # never raises
+```
+
 ## funds — mutual-fund NAV (VND/unit) — single-source
 
 - **Entry:** `vnfin.funds.source()` → `FmarketFundSource` (`vnfin.funds.client` is an alias). Verbs are **methods on the source**: `.list_funds(asset_type=None, search='', page_size=100)` → `FundList`; `.nav_history(product_id: int, from_date=None, to_date=None)` → `NavHistory`; `.holdings(product_id: int)` → `tuple[FundHolding]` (equities + bonds merged); `.asset_allocation(product_id: int)` → `AssetAllocation`. No module-level `list_funds`.

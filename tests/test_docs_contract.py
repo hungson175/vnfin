@@ -352,3 +352,130 @@ def test_diagnostics_docs_enumerate_fx_coverage():
         "diagnostics docs enumerate source_capabilities but omit FX coverage "
         "(explain_fx_coverage / worldbank_fx): " + ", ".join(missing)
     )
+
+
+# Issue #157 — canonical-metrics layer public surface + docs (Stage D). The four
+# documentation surfaces (tutorial, api.md, skill domains.md, CHANGELOG) and the docs-
+# contract guard must stay pinned to the REAL surface so the documented examples/enum
+# values/result fields cannot silently rot.
+def test_metrics_layer_public_surface_offline():
+    """The documented metrics entry points + result types are importable OFFLINE and the
+    exact enum ``.value`` strings / dataclass field names the docs cite really exist."""
+    import dataclasses
+
+    from vnfin.fundamentals import (
+        AppliesTo,
+        MetricAvailability,
+        MetricCategory,
+        MetricCoverage,
+        MetricDefinition,
+        MetricId,
+        MetricKind,
+        MetricReport,
+        MetricValue,
+        StatementCoverageStatus,
+        explain_metric,
+        explain_metric_coverage,
+        metric_catalog,
+        metrics,
+    )
+
+    # documented callables
+    for fn in (metrics, explain_metric_coverage, metric_catalog, explain_metric):
+        assert callable(fn), fn
+
+    # documented enum .value strings the docs/skill examples cite verbatim
+    assert MetricKind.RAW_MAPPED.value == "raw_mapped"
+    assert MetricKind.DERIVED.value == "derived"
+    assert {a.value for a in AppliesTo} == {"corporate", "bank", "both"}
+    assert {a.value for a in MetricAvailability} >= {
+        "available",
+        "missing",
+        "blocked",
+        "not_applicable",
+    }
+    assert {s.value for s in StatementCoverageStatus} == {
+        "ok",
+        "missing",
+        "source_error",
+        "not_served",
+    }
+    assert {c.value for c in MetricCategory} == {
+        "profitability",
+        "liquidity",
+        "leverage",
+        "cashflow",
+        "size",
+    }
+    # a documented metric id + a documented derived id really exist
+    assert MetricId.NET_REVENUE.value == "net_revenue"
+    assert MetricId.GROSS_MARGIN.value == "gross_margin"
+
+    # the v1 catalog the docs describe: 26 metrics, offline, immutable tuple
+    cat = metric_catalog()
+    assert isinstance(cat, tuple) and len(cat) == 26
+    # documented filter behavior (bank => BANK + BOTH; net_interest_income is bank-only)
+    bank_ids = {d.id.value for d in metric_catalog("bank")}
+    assert "net_interest_income" in bank_ids and "net_revenue" not in bank_ids
+
+    # explain_metric returns a MetricDefinition with the documented derived formula
+    gm = explain_metric("gross_margin")
+    assert isinstance(gm, MetricDefinition)
+    assert gm.formula == "gross_profit / net_revenue"
+
+    # documented result-type fields the docs/skill examples read
+    mv_fields = {f.name for f in dataclasses.fields(MetricValue)}
+    assert {"id", "value", "value_unit", "kind", "availability", "reason", "inputs"} <= mv_fields
+    mr_fields = {f.name for f in dataclasses.fields(MetricReport)}
+    assert {"symbol", "period", "fiscal_date", "is_bank", "metrics", "statement_sources"} <= mr_fields
+    assert hasattr(MetricReport, "get") and hasattr(MetricReport, "to_dataframe")
+    cov_fields = {f.name for f in dataclasses.fields(MetricCoverage)}
+    assert {"symbol", "period", "periods"} <= cov_fields
+
+
+def test_metrics_layer_documented_everywhere():
+    """Public-API change ⇒ docs + skill + CHANGELOG in the SAME change. Each of the four
+    documentation surfaces must document the new metrics entry points (so dropping any one
+    fails the suite)."""
+    # 1) tutorial — the canonical-metrics section with runnable examples
+    tut = _read("docs/tutorials/fundamentals.md")
+    assert "Canonical metrics" in tut
+    for needle in (
+        "vnfin.fundamentals.metrics(",
+        "explain_metric_coverage(",
+        "metric_catalog(",
+        "explain_metric(",
+        "not_applicable",
+        "blocked",
+    ):
+        assert needle in tut, f"fundamentals tutorial missing {needle!r}"
+
+    # 2) api.md — a reference section for the new functions + result types
+    api = _read("docs/api.md")
+    assert "vnfin.fundamentals.metrics" in api
+    for needle in (
+        "explain_metric_coverage",
+        "metric_catalog",
+        "explain_metric(",
+        "MetricReport",
+        "MetricValue",
+        "MetricCoverage",
+    ):
+        assert needle in api, f"docs/api.md missing {needle!r}"
+
+    # 3) skill domains.md — the fundamentals section expanded with the metrics entries
+    dom = _read("skills/vnfin/reference/domains.md")
+    for needle in (
+        "vnfin.fundamentals.metrics(",
+        "explain_metric_coverage(",
+        "metric_catalog(",
+        "MetricReport",
+    ):
+        assert needle in dom, f"skill domains.md missing {needle!r}"
+
+    # 4) CHANGELOG — an Unreleased entry linking the issue
+    changelog = _read("CHANGELOG.md")
+    assert "vnfin.fundamentals.metrics" in changelog
+    assert "https://github.com/hungson175/vnfin/issues/157" in changelog
+    # the entry must state the v1 scope the docs describe
+    assert "26" in changelog and "deferred to v2" in changelog.lower()
