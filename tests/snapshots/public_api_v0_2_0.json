@@ -996,7 +996,8 @@
         "RequestDiagnostic",
         "source_capabilities",
         "explain_world_gold_history",
-        "explain_index_constituents"
+        "explain_index_constituents",
+        "explain_fx_coverage"
       ],
       "members": {
         "RequestDiagnostic": {
@@ -1124,6 +1125,42 @@
           ],
           "frozen": true,
           "kind": "dataclass"
+        },
+        "explain_fx_coverage": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": "'USD'",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "base"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "quote"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "start"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "end"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "frequency"
+            }
+          ],
+          "returns": "RequestDiagnostic"
         },
         "explain_index_constituents": {
           "kind": "function",
@@ -2302,16 +2339,98 @@
       "all": [
         "FXRate",
         "FXSource",
+        "FXHistory",
+        "FXPoint",
         "OpenErApiFXSource",
         "VietcombankFXSource",
+        "WorldBankFXHistorySource",
         "FailoverFXClient",
         "default_fx_sources",
         "default_fx_client",
         "client",
         "source",
-        "get_rate"
+        "get_rate",
+        "history"
       ],
       "members": {
+        "FXHistory": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "base",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "quote",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "points",
+              "type": "tuple[FXPoint, ...]"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "unit",
+              "type": "str"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "frequency",
+              "type": "Frequency"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "source",
+              "type": "str"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "value_unit",
+              "type": "Optional[str]"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "name": "fetched_at_utc",
+              "type": "Optional[datetime]"
+            },
+            {
+              "default_repr": null,
+              "has_default": true,
+              "name": "warnings",
+              "type": "tuple[str, ...]"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
+        "FXPoint": {
+          "fields": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "date",
+              "type": "date"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "name": "rate",
+              "type": "float"
+            }
+          ],
+          "frozen": true,
+          "kind": "dataclass"
+        },
         "FXRate": {
           "fields": [
             {
@@ -2651,6 +2770,72 @@
             }
           }
         },
+        "WorldBankFXHistorySource": {
+          "constructor": {
+            "params": [
+              {
+                "default_repr": null,
+                "has_default": false,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "self"
+              },
+              {
+                "default_repr": "None",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "http_get"
+              },
+              {
+                "default_repr": "25.0",
+                "has_default": true,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "timeout"
+              }
+            ],
+            "returns": null
+          },
+          "kind": "class",
+          "methods": {
+            "get_history": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": "'USD'",
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "base"
+                },
+                {
+                  "default_repr": "'VND'",
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "quote"
+                },
+                {
+                  "default_repr": "None",
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": "None",
+                  "has_default": true,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                }
+              ],
+              "returns": "FXHistory"
+            },
+            "name": {
+              "property": true
+            }
+          }
+        },
         "client": {
           "kind": "function",
           "params": [
@@ -2746,6 +2931,54 @@
             }
           ],
           "returns": "FXRate"
+        },
+        "history": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": "'USD'",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "base"
+            },
+            {
+              "default_repr": "'VND'",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "quote"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "start"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "end"
+            },
+            {
+              "default_repr": "'annual'",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "frequency"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "default_repr": "25.0",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            }
+          ],
+          "returns": "FXHistory"
         },
         "source": {
           "kind": "function",

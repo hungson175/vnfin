@@ -225,3 +225,30 @@ def test_docs_prices_history_uses_keyword_dates():
             if "start=" not in ln and bad.search(ln):
                 offenders.append(f"{md.relative_to(root)}: {ln.strip()}")
     assert not offenders, "positional-date prices.history in docs: " + "; ".join(offenders)
+
+
+# Issue #159 — historical FX (annual USD/VND) public surface + docs.
+def test_fx_history_entrypoints_and_docs():
+    from vnfin.fx import FXHistory, FXPoint
+
+    assert callable(vnfin.fx.history)
+    assert callable(vnfin.diagnostics.explain_fx_coverage)
+    # exact-match accessors exist (no-fill contract)
+    assert hasattr(FXHistory, "rate_on") and hasattr(FXHistory, "rate_for_year")
+    # docs present + period-average caveat stated; tutorial uses keyword start=/end=
+    tut = _read("docs/tutorials/fx-history.md")
+    assert "period-average" in tut
+    assert "start=date(" in tut and "vnfin.fx.history(" in tut
+    src = _read("docs/sources/fx-history-worldbank.md")
+    assert "PA.NUS.FCRF" in src and "CC-BY 4.0" in src
+    assert "runtime-fetch only" in src.lower()
+    # fx.history(...) examples in docs must never pass a positional date (mirrors #164)
+    import pathlib, re
+    bad = re.compile(r"fx\.history\([^)]*,\s*date\(")
+    root = pathlib.Path(__file__).resolve().parent.parent
+    offenders = []
+    for md in list(root.glob("docs/**/*.md")) + [root / "README.md"]:
+        for ln in md.read_text().splitlines():
+            if "start=" not in ln and bad.search(ln):
+                offenders.append(f"{md.relative_to(root)}: {ln.strip()}")
+    assert not offenders, "positional-date fx.history in docs: " + "; ".join(offenders)

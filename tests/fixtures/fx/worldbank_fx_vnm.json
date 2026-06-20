@@ -1,0 +1,72 @@
+[
+  {
+    "page": 1,
+    "pages": 1,
+    "per_page": 20000,
+    "total": 6,
+    "sourceid": "2",
+    "lastupdated": "2025-07-01"
+  },
+  [
+    {
+      "indicator": { "id": "PA.NUS.FCRF", "value": "Official exchange rate (LCU per US$, period average)" },
+      "country": { "id": "VN", "value": "Viet Nam" },
+      "countryiso3code": "VNM",
+      "date": "2024",
+      "value": 25000.0,
+      "unit": "",
+      "obs_status": "",
+      "decimal": 0
+    },
+    {
+      "indicator": { "id": "PA.NUS.FCRF", "value": "Official exchange rate (LCU per US$, period average)" },
+      "country": { "id": "VN", "value": "Viet Nam" },
+      "countryiso3code": "VNM",
+      "date": "2023",
+      "value": 24500.0,
+      "unit": "",
+      "obs_status": "",
+      "decimal": 0
+    },
+    {
+      "indicator": { "id": "PA.NUS.FCRF", "value": "Official exchange rate (LCU per US$, period average)" },
+      "country": { "id": "VN", "value": "Viet Nam" },
+      "countryiso3code": "VNM",
+      "date": "2022",
+      "value": 24000.0,
+      "unit": "",
+      "obs_status": "",
+      "decimal": 0
+    },
+    {
+      "indicator": { "id": "PA.NUS.FCRF", "value": "Official exchange rate (LCU per US$, period average)" },
+      "country": { "id": "VN", "value": "Viet Nam" },
+      "countryiso3code": "VNM",
+      "date": "2021",
+      "value": 23500.0,
+      "unit": "",
+      "obs_status": "",
+      "decimal": 0
+    },
+    {
+      "indicator": { "id": "PA.NUS.FCRF", "value": "Official exchange rate (LCU per US$, period average)" },
+      "country": { "id": "VN", "value": "Viet Nam" },
+      "countryiso3code": "VNM",
+      "date": "2020",
+      "value": 23000.0,
+      "unit": "",
+      "obs_status": "",
+      "decimal": 0
+    },
+    {
+      "indicator": { "id": "PA.NUS.FCRF", "value": "Official exchange rate (LCU per US$, period average)" },
+      "country": { "id": "VN", "value": "Viet Nam" },
+      "countryiso3code": "VNM",
+      "date": "2019",
+      "value": null,
+      "unit": "",
+      "obs_status": "",
+      "decimal": 0
+    }
+  ]
+]

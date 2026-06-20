@@ -54,5 +54,24 @@ print(d.notes)             # membership only, no weights, no clean no-auth fallb
 The selector is validated/canonicalized with the same identifier contract as the live
 call, so a malformed selector raises before any work.
 
+## Preflight historical FX coverage
+
+```python
+import vnfin
+from datetime import date
+
+d = vnfin.diagnostics.explain_fx_coverage("USD", "VND", date(1970, 1, 1), date(1975, 12, 31))
+print(d.status)            # "ok" | "coverage_gap" | "unsupported_pair" | "unsupported_frequency"
+print(d.notes)
+print(d.suggested_actions)
+```
+
+FX history v1 (`vnfin.fx.history`) serves annual USD/VND only, from the no-key World Bank
+`PA.NUS.FCRF` series. `explain_fx_coverage` (offline) reports `unsupported_pair` for anything but
+USD/VND, `unsupported_frequency` for anything but annual, `coverage_gap` for a window entirely
+before the known coverage start (`1983`), otherwise `ok`. `base`/`quote` are validated with the
+same ISO-4217 contract as the live call, so a malformed code raises before any work. (Note: the
+`window_too_wide` status does not apply to FX — only to world-gold history.)
+
 > See also: [Handle errors and failover](errors.md), and the internal
 > [provider-contracts architecture](../architecture/provider-contracts.md).

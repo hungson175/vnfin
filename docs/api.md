@@ -97,6 +97,7 @@ src = vnfin.crypto.source()                  # BinanceCryptoSource (primary only
 c   = vnfin.fx.client()                       # FailoverFXClient (open.er-api -> Vietcombank)
 src = vnfin.fx.source()                       # OpenErApiFXSource (primary only)
 r   = vnfin.fx.get_rate("USD")                # one-shot FXRate; rate = VND per 1 USD (spot/current only)
+h   = vnfin.fx.history(start=date(2010, 1, 1), end=date(2024, 12, 31))  # FXHistory; annual USD/VND (period-average)
 
 # macro — cross-country indicators. No-key failover World Bank -> IMF -> DBnomics.
 c   = vnfin.macro.client()                   # MacroClient (World Bank -> IMF DataMapper -> DBnomics, no-key)
@@ -109,6 +110,27 @@ Gold spans two unit families — VN domestic (**VND/lượng**) and world XAU (*
 so there is no single cross-unit default. `vnfin.gold.vn(...)`, `vnfin.gold.world(...)`,
 and `vnfin.gold.source(provider=...)` make the choice explicit. Unknown provider names
 raise `ValueError`.
+
+## `vnfin.fx.history` — historical FX (annual USD/VND)
+
+`vnfin.fx.history(...)` (issue #159) returns an `FXHistory` time series of `FXPoint`
+(`date`, `rate` = quote per 1 base) — distinct from the spot `FXRate`, which is unchanged.
+
+- `vnfin.fx.history(base="USD", quote="VND", start=None, end=None, *, frequency=Frequency.ANNUAL,
+  http_get=None, timeout=25.0) -> FXHistory` — annual USD/VND from the no-key World Bank WDI
+  `PA.NUS.FCRF` series. `start`/`end` are an inclusive **calendar-year** window (filtered by
+  `.year`, so a mid-year `start` never drops that year's Jan-1-stamped point). v1 supports
+  USD/VND + annual only — any other pair/frequency raises `InvalidData` (monthly and non-USD
+  cross-quotes are deferred to v2).
+- `FXHistory.rate_on(date) -> float` / `FXHistory.rate_for_year(year) -> float` — **exact-match
+  or raise**; they never forward-fill, interpolate, or pick a nearest date.
+- `FXHistory.to_dataframe()` — indexed by `date`, column `rate`, provenance in `df.attrs`.
+
+The annual value is an annual **period-average** rate (not year-end, not the SBV central rate).
+There is no asset-join/`normalize_to_vnd` helper — converting an asset series to VND is left to
+the caller (a deliberate, separate design). See
+[tutorials/fx-history.md](tutorials/fx-history.md) and
+[sources/fx-history-worldbank.md](sources/fx-history-worldbank.md).
 
 ## `vnfin.diagnostics` — source-coverage preflight (offline)
 
@@ -126,6 +148,10 @@ never fabricated data:
   `InvalidData` for a window wider than `_MAX_DAYS`; the diagnostic reports both blockers).
 - `vnfin.diagnostics.explain_index_constituents(index) -> RequestDiagnostic` — canonicalize
   the selector and report the `single_source` (membership-only, no-weights) limitation.
+- `vnfin.diagnostics.explain_fx_coverage(base="USD", quote="VND", start=None, end=None, *,
+  frequency=None) -> RequestDiagnostic` (issue #159) — classify a historical-FX request as
+  `unsupported_pair` / `unsupported_frequency` / `coverage_gap` / `ok` vs the only v1 source
+  (World Bank `PA.NUS.FCRF`, annual USD/VND, `window_too_wide` is not applicable here).
 
 `SourceCapability` and `RequestDiagnostic` are frozen dataclasses. This is preflight
 metadata, not a live health monitor (use `scripts/healthcheck.py` for live checks). See

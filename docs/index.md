@@ -20,6 +20,7 @@ Task-based guides with copy-paste examples:
 - **[Fundamentals](tutorials/fundamentals.md)** — income/balance/cashflow/ratios, raw VND units.
 - **[Funds and indices](tutorials/funds-and-indices.md)** — Fmarket funds, NAV, VNINDEX, constituents.
 - **[Macro and FX](tutorials/macro-and-fx.md)** — GDP/CPI/inflation plus VND FX rates.
+- **[Historical FX](tutorials/fx-history.md)** — annual USD/VND time series (World Bank, no-key).
 - **[Gold and crypto](tutorials/gold-and-crypto.md)** — VN gold, world gold, BTC/ETH OHLCV.
 
 ## How-to guides

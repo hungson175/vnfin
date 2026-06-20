@@ -75,12 +75,12 @@ unit-aligned to our canonical convention, and the most permissive on terms (CC-B
 must be independently verified clean-room before we trust a monthly series — out of v1's safe core.
 
 > **Provenance / legal (must appear in `docs/sources/fx-history-worldbank.md`):** World Bank WDI is
-> **CC-BY 4.0** — redistribution permitted **with attribution** ("Source: World Bank"). This is a
-> *looser* posture than the spot FX sources (open.er-api prohibits raw redistribution), so the
-> bundled-data rule can be relaxed for WB *if ever needed*; v1 stays **runtime-fetch only** for
-> consistency and to avoid stale snapshots. Annual `PA.NUS.FCRF` is a **period-average** rate, not a
-> year-end or central rate — this must be stated in field docs and the tutorial so no one mistakes it
-> for a point-in-time or SBV central rate.
+> **CC-BY 4.0** — redistribution permitted **with attribution** ("Source: World Bank"). Even so, v1
+> is **runtime-fetch only — no bundled provider rows** (consistent with every other domain and
+> avoiding stale snapshots); any future bundling/caching of raw rows would require a **separate
+> design approval**, not an inline relaxation. Annual `PA.NUS.FCRF` is a **period-average** rate, not
+> a year-end or central rate — this must be stated in field docs and the tutorial so no one mistakes
+> it for a point-in-time or SBV central rate.
 
 ---
 

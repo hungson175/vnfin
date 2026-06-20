@@ -24,10 +24,12 @@ daily history and index constituents.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date
 
 from ._contracts import canonical_security_symbol
+from .exceptions import InvalidData
 from .gold.currency_api import (
     COVERAGE_START as _WORLD_GOLD_COVERAGE_START,
     _MAX_DAYS as _WORLD_GOLD_MAX_DAYS,
@@ -40,7 +42,22 @@ __all__ = [
     "source_capabilities",
     "explain_world_gold_history",
     "explain_index_constituents",
+    "explain_fx_coverage",
 ]
+
+# World Bank VNM PA.NUS.FCRF: the official API currently returns its first non-null
+# observation at 1983 (reviewer-confirmed live). Use a conservative documented lower
+# bound, NOT a generic 1960 promise.
+_FX_HISTORY_COVERAGE_START = date(1983, 1, 1)
+
+_ISO4217 = re.compile(r"[A-Za-z]{3}")
+
+
+def _normalize_fx_ccy(code, label: str) -> str:
+    """Validate an ISO-4217 alphabetic code (3 letters) and upper-case it (offline)."""
+    if not isinstance(code, str) or not _ISO4217.fullmatch(code.strip()):
+        raise InvalidData(f"explain_fx_coverage: invalid ISO-4217 {label} currency code {code!r}")
+    return code.strip().upper()
 
 
 @dataclass(frozen=True)
@@ -138,9 +155,33 @@ _INDEX_CONSTITUENTS_CAPS: tuple[SourceCapability, ...] = (
 )
 
 
+_FX_HISTORY_CAPS: tuple[SourceCapability, ...] = (
+    SourceCapability(
+        domain="fx",
+        endpoint="history",
+        source="worldbank_fx",
+        instruments=("USD/VND",),
+        granularity="annual",
+        coverage_start=_FX_HISTORY_COVERAGE_START,
+        coverage_end=None,  # rolling / unknown end
+        is_default=True,
+        is_opt_in=False,
+        is_single_source=True,
+        limitations=(
+            "annual period-average rate (World Bank WDI PA.NUS.FCRF) — not year-end, "
+            "not the SBV central rate",
+            "annual frequency only; no monthly/daily no-key source configured in v1",
+            "USD/VND only in v1; non-USD cross-quotes are deferred to v2",
+            f"no known coverage before {_FX_HISTORY_COVERAGE_START.isoformat()}",
+        ),
+        suggested_action="request an annual USD/VND window on/after the known coverage start",
+    ),
+)
+
+
 def source_capabilities() -> tuple[SourceCapability, ...]:
     """Return immutable coverage metadata for the source-limited legs (offline)."""
-    return _WORLD_GOLD_CAPS + _INDEX_CONSTITUENTS_CAPS
+    return _WORLD_GOLD_CAPS + _INDEX_CONSTITUENTS_CAPS + _FX_HISTORY_CAPS
 
 
 def explain_world_gold_history(start, end) -> RequestDiagnostic:
@@ -223,4 +264,104 @@ def explain_index_constituents(index) -> RequestDiagnostic:
             "treat the membership basket as point-in-time",
             "do not expect constituent weights from this endpoint",
         ),
+    )
+
+
+def explain_fx_coverage(
+    base="USD", quote="VND", start=None, end=None, *, frequency=None
+) -> RequestDiagnostic:
+    """Diagnose a historical-FX request vs known coverage (issue #159; no network).
+
+    Mirrors :func:`explain_world_gold_history`: canonicalizes ``base``/``quote`` with the
+    same ISO-4217 contract as the live ``vnfin.fx.history`` call, validates the date range,
+    then reports the supported-pair / supported-frequency / coverage status of the only v1
+    source (World Bank ``PA.NUS.FCRF``, annual USD/VND). Offline — no provider call.
+
+    Statuses: ``unsupported_pair`` (non-USD base or non-VND quote), ``unsupported_frequency``
+    (anything but annual), ``coverage_gap`` (window entirely before the known coverage start),
+    otherwise ``ok``.
+    """
+    from .macro.indicators import Frequency
+
+    b = _normalize_fx_ccy(base, "base")
+    q = _normalize_fx_ccy(quote, "quote")
+    lo, hi = validate_date_range(start, end, allow_none=True, name="explain_fx_coverage")
+
+    if frequency is None:
+        freq = Frequency.ANNUAL
+    elif isinstance(frequency, Frequency):
+        freq = frequency
+    else:
+        try:
+            freq = Frequency(str(frequency).strip().lower())
+        except ValueError:
+            freq = None  # unknown -> treated as unsupported below
+
+    request = {
+        "base": b,
+        "quote": q,
+        "frequency": freq.value if isinstance(freq, Frequency) else str(frequency),
+        "start": lo.isoformat() if lo is not None else None,
+        "end": hi.isoformat() if hi is not None else None,
+    }
+    cov = _FX_HISTORY_COVERAGE_START
+
+    if b != "USD" or q != "VND":
+        return RequestDiagnostic(
+            domain="fx",
+            endpoint="history",
+            request=request,
+            status="unsupported_pair",
+            sources=_FX_HISTORY_CAPS,
+            notes=(
+                f"FX history v1 supports USD/VND only; {b}/{q} has no no-key source "
+                "(non-USD cross-quotes are deferred to v2)",
+            ),
+            suggested_actions=("request USD/VND",),
+        )
+
+    if freq is not Frequency.ANNUAL:
+        return RequestDiagnostic(
+            domain="fx",
+            endpoint="history",
+            request=request,
+            status="unsupported_frequency",
+            sources=_FX_HISTORY_CAPS,
+            notes=(
+                "FX history v1 is annual only (World Bank PA.NUS.FCRF, period average); "
+                "no monthly/daily no-key source is configured",
+            ),
+            suggested_actions=("request annual frequency",),
+        )
+
+    if hi is not None and hi < cov:
+        return RequestDiagnostic(
+            domain="fx",
+            endpoint="history",
+            request=request,
+            status="coverage_gap",
+            sources=_FX_HISTORY_CAPS,
+            notes=(
+                f"requested window ends before the known coverage start {cov.isoformat()}; "
+                "no annual USD/VND data is expected",
+            ),
+            suggested_actions=(f"request a window on/after {cov.isoformat()}",),
+        )
+
+    notes = [
+        "annual USD/VND via the no-key World Bank PA.NUS.FCRF series (period-average rate)"
+    ]
+    if lo is not None and lo < cov:
+        notes.append(
+            f"window starts before the known coverage start {cov.isoformat()}; the "
+            "pre-coverage years may be absent"
+        )
+    return RequestDiagnostic(
+        domain="fx",
+        endpoint="history",
+        request=request,
+        status="ok",
+        sources=_FX_HISTORY_CAPS,
+        notes=tuple(notes),
+        suggested_actions=(),
     )
