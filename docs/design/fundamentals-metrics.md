@@ -1,10 +1,10 @@
 # Design — fundamentals metrics & coverage diagnostics (#157)
 
-**Status:** DESIGN (rev 2.5 — five review rounds resolved: …201230 (8), …201245 (7), …201300 (6),
-…201310 (4), …201324 (label/statement-semantics addendum). Adds: label-provenance contract —
-identity = requested statement + source namespace + item code (NEVER the human label); raw
-`MetricInput.name` provenance + `input_names` DataFrame column; labels are provenance-only (no
-label-mismatch diagnostic). Prior decisions intact. Implementation-ready; APPROVE before code.
+**Status:** DESIGN (rev 2.6 — six review rounds resolved: …201230 (8), …201245 (7), …201300 (6),
+…201310 (4), …201324 (label addendum, APPROVED), …201338 (role-source prose cleanup). Label-provenance
+contract: identity = requested statement + source namespace + item code (NEVER the human label); raw
+`MetricInput.name` + `input_names` provenance; labels provenance-only. All "succeeding source" prose
+now states the `StatementProvenance` role rule. Implementation-ready; APPROVE before code.
 **Scope:** an **additive, offline** canonical-metrics + coverage-diagnostics layer on top of the
 existing `vnfin.fundamentals` reports — fundamental **data primitives and diagnostics** for
 long-term investors, *not* an advice/ranking/screener layer.
@@ -87,8 +87,9 @@ cov = fundamentals.explain_metric_coverage("FPT", period="annual")   # MetricCov
 - `metric_catalog()` / `explain_metric()` are **fully offline** (no network) — pure registry.
 - `metrics()` / `explain_metric_coverage()` call `get_financials()` for the income+balance+cashflow
   statements only (no `ratios` in v1, B7), then transform offline. They reuse the existing failover
-  chain and surface each statement's `warnings` and its **succeeding source** — **not** a failed-
-  attempt trail (the public `get_financials` does not expose attempts; C1/B2).
+  chain and surface each statement's `warnings` and its **source per the `StatementProvenance` role
+  rule** (OK→succeeding, NOT_SERVED→responsible, SOURCE_ERROR/MISSING→None) — **not** a failed-attempt
+  trail (the public `get_financials` does not expose attempts; C1/B2).
 - All names are additive; **spot/existing `get_financials` is unchanged**. Exported via
   `vnfin.fundamentals.__all__` and captured additively in the public-API snapshot.
 
@@ -330,8 +331,9 @@ class MetricReport:                  # all metrics for one symbol + one fiscal p
     #   category (MetricCategory.value), applies_to (AppliesTo.value), fiscal_date (date.isoformat()),
     #   input_codes (comma-joined str, "" if none), input_sources (comma-joined str, "" if none),
     #   input_names (comma-joined raw LineItem.name provenance, "" if none — REV2.5 label addendum).
-    #   `name` column = the metric DEFINITION's human label; `input_names` = the raw provider labels
-    #   of the source lines (provenance; never used for identity).
+    #   `name` column = the metric DEFINITION's human label; `input_names` = the source lines'
+    #   `LineItem.name` provenance (which may be the clean-room itemcodes.py fallback name, not
+    #   necessarily a provider-supplied label; never used for identity).
     # EXACT df.attrs value types (B6):
     #   symbol=str, period=Period.value, fiscal_date=date.isoformat(), is_bank=bool,
     #   statement_sources = tuple of (statement.value, status.value, source|None, detail|None).
@@ -376,8 +378,10 @@ need `TimeSeriesResult` (it is one period; the *tuple* of reports is the series 
 1. Resolve bank vs corporate via the existing `is_bank` AUTO detection in `get_financials`.
 2. Fetch income+balance+cashflow `FinancialReport`s **separately** (each its own failover), newest-
    first, shared `limit`. Record each statement's outcome as a `StatementProvenance` (status +
-   **succeeding source**; C1/C2). A statement that raises a recoverable `SourceError` →
-   `status="source_error"` (not a crash); cashflow via CafeF → `status="not_served"`.
+   **source per the role rule**: OK→succeeding, NOT_SERVED→responsible, SOURCE_ERROR/MISSING→None;
+   C1/C2). A statement that raises a recoverable `SourceError`/`AllSourcesFailed` →
+   `status="source_error", source=None` (not a crash); cashflow via CafeF → `status="not_served",
+   source="cafef"`.
 3. Align reports by `fiscal_date` → one `MetricReport` per period, carrying its `statement_sources`.
    For each statement build a **`code -> LineItem` index** from `report.items` (B8 — `LineItem`
    carries `value` + `value_unit`; `FinancialReport.get()` returns only `float` and is **not** used
@@ -561,13 +565,13 @@ reason (never silently MISSING). Needs its own clean-room derivation from CafeF'
 
 | Requirement | Where |
 |-------------|-------|
-| statement availability by source/type/period/fiscal_date | `PeriodCoverage.statement_provenance` (per fiscal_date, B1) with succeeding source |
+| statement availability by source/type/period/fiscal_date | `PeriodCoverage.statement_provenance` (per fiscal_date, B1) with source per the `StatementProvenance` role rule |
 | ratio failures separate from statement failures | `PeriodCoverage.ratio_status` (distinct field; v1 = constant `"not_requested"`, B7 — no ratio fetch until a provider-native metric ships) |
 | item-label coverage: named vs generic + unmapped codes | `PeriodCoverage.named_item_count` / `generic_item_count` / `unmapped_codes` |
 | missing inputs per metric with stable reason | `MetricValue.reason` + `PeriodCoverage.per_metric` |
 | not-applicable for bank vs non-bank | `MetricAvailability.NOT_APPLICABLE` via `applies_to` |
 | unmapped source namespace (e.g. CafeF) | `MetricAvailability.BLOCKED` + reason (C3) — never silent MISSING |
-| source provenance (succeeding source per statement) | `StatementProvenance.source` + `MetricInput.source` lineage (C1: no failed-attempt trail in v1) |
+| source provenance (source per `StatementProvenance` role rule) | `StatementProvenance.source` + `MetricInput.source` lineage (C1: no failed-attempt trail in v1) |
 | batch mode without aborting a universe | non-fatal `explain_metric_coverage`, per-symbol loop (§5) |
 
 ---
@@ -627,6 +631,10 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
   metrics are `BLOCKED` with reason `"metric map not available for source 'cafef'"`, **not** MISSING.
 - **per-fiscal-date coverage (B1):** multi-period fixture → `MetricCoverage.periods` has one
   `PeriodCoverage` per fiscal_date, each with its own statement_provenance + per_metric.
+- **per-period missing statement (review-202606201338 note):** a fixture where one successful
+  statement (e.g. cashflow) lacks a fiscal_date that income/balance have → at that date the union
+  alignment yields `StatementProvenance(status=MISSING, source=None)` for the absent statement, and
+  that statement's metrics are `MISSING` (not silently dropped); the date still appears in `periods`.
 - **not-applicable:** bank report → `gross_margin` `NOT_APPLICABLE`; corporate → bank-only ids
   `NOT_APPLICABLE`.
 - **AllSourcesFailed → status classification (B4), capability-based, deterministic:**
@@ -665,7 +673,10 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
   C1 status list, exact quoted source-map reason, deterministic capability-based predicate + matrix.
 - [x] **rev2.5:** label/statement-semantics addendum (review-202606201324) — identity invariant
   (statement+namespace+code, never label), `MetricInput.name` + `input_names` provenance,
-  labels provenance-only, label-provenance tests; shorthand cleanup.
+  labels provenance-only, label-provenance tests.
+- [x] **rev2.6:** (review-202606201338) replaced all stale "succeeding source" prose with the
+  `StatementProvenance` role rule; "raw provider labels"→`LineItem.name` provenance; +per-period
+  missing-statement test. Label addendum already APPROVED.
 - [ ] **No implementation code** until the reviewer approves this revised design.
 
 ## 11. Blocker resolutions (review-202606201230) + reviewer-answered questions
@@ -712,8 +723,8 @@ remain — implementation-ready):
   in a VNDirect slot; `explain_metric()` surfaces the namespaced mapping (§4/§5).
 - **B4 exact reasons:** added the exact availability + reason-string table; all examples/tests bind
   to it verbatim (§5).
-- **B5 stale attempts phrase:** §3 now says "warnings + succeeding source only; no failed-attempt
-  trail in v1" (rev2.1).
+- **B5 stale attempts phrase:** §3 now says "warnings + source per the `StatementProvenance` role
+  rule; no failed-attempt trail in v1" (rev2.1).
 - **B6 dataframe contract:** exact fixed columns + exact `df.attrs` (`symbol, period, fiscal_date,
   is_bank, statement_sources`); **`df.attrs["source"]` explicitly forbidden** (C2) (§4).
 - **B7 cash id:** reviewer approved `cash_end_of_period` (VNDirect `35000`) — **resolved, no open
@@ -751,9 +762,10 @@ into the public contract:
    item code*, **never** by the provider human label (§5 step 4).
 2. **Raw label provenance:** `MetricInput.name: str` carries the original `LineItem.name` used to
    compute each input (§4).
-3. **DataFrame label provenance:** new `input_names` column (comma-joined raw labels) beside
-   `input_codes`/`input_sources`; the `name` column is the metric DEFINITION label, `input_names` is
-   the raw provider labels (§4).
+3. **DataFrame label provenance:** new `input_names` column (comma-joined `LineItem.name` provenance)
+   beside `input_codes`/`input_sources`; the `name` column is the metric DEFINITION label,
+   `input_names` is the source lines' `LineItem.name` (which may be the clean-room itemcodes.py
+   fallback name, not necessarily a provider label) (§4).
 4. **Coverage/test contract:** generic (`item_<code>`) or surprising labels keep the metric computable
    by code with the raw label preserved + surfaced via named/generic counts (§9).
 5. **Warning/reason semantics:** **labels are provenance-only and NOT used for metric identity** —
