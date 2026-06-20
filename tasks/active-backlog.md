@@ -38,30 +38,22 @@ _Last synced: 2026-06-21 00:40 +07_
 > green**, surface additive (snapshot FROZEN), no-secrets green. Watermark/state left to reviewer;
 > reviewer pinging vf-advisor to flip the gold line mock→real. Memory: [[compose-daily-and-annual-legs-align-calendar-year]].
 >
-> **NOW: #174 sector-index routing BUG — CODE DONE (TDD GREEN), IN reviewer LEAD review (NOT Codex×2);
-> NOT pushed.** Commit `83223ed`; handoff `/tmp/vnfin-174-leadreview-handoff-20260621.md`. Shared
-> `_unservable_index_error()` branches on `is_known_index()` at BOTH guard sites — recognised-but-
-> unservable index → terminal diagnostic (no prices.history/for-stocks), unknown/equity → unchanged
-> route-to-prices. No registry-set change. TDD matrix locked to registry diff (19 deny-only ids), full
-> suite **3260 green**, surface frozen. On APPROVE: push `e48e56a..83223ed` + close #174 (serving
-> sector-index HISTORY = tracked enhancement, note in close comment). Spec
-> `spec-202606202230`. BUG: `prices.history(VNFIN)` correctly rejects (deny-list) but
-> `index_history(VNFIN)` wrongly says "not a known market index; use prices.history()" (allow-list
-> miss) → user dead-ends. FIX (minimal, NO registry-data/new-source): in BOTH `index_history` +
-> `index_history_stitched` (`indices/client.py` ~101 and ~141), after alias resolution, when a symbol
-> is NOT value-history-servable, branch on `is_known_index(symbol)`: True → terminal "recognized
-> market index but value-history not supported in this version" diagnostic (NO "use prices.history()"
-> text); else → keep existing route-to-prices message. GENERAL — covers ALL deny-only ids (10 sector +
-> VN100/VNMID/VNSML/VNDIAMOND/VNFINLEAD/VNFINSELECT/VNXALL). Tests: each sector idx → prices rejects
-> (unchanged) + both index fns give new diagnostic asserting NO "prices.history"/"for stocks";
-> headline indices still serve (regression); HNX alias still serves; unknown symbol still routes to
-> prices; add the 10 to the routing regression matrix. Serving sector-index HISTORY = separate
-> deferred feature (note in close comment). TDD → reviewer LEAD review.
-> **#183 = NEW, QUEUED LAST** (reviewer-accepted 00:04): optional interval/resample on `prices.history` +
-> `indices.index_history`; **design-note-first**; lowest priority (advisor has a client-side workaround);
-> has an `Interval.M1` minute-vs-month enum wrinkle (see #183 GitHub triage). Reviewer specs/gates when up.
-> state/ watermark = reviewer. Clean-room: zero VNStock. Specs: spec-202606201815-issue177/-issue178;
-> TL handoff handoff-202606202209.
+> **#174 sector-index routing BUG — ✅ DONE + PUSHED + CLOSED.** Pushed master `21f47cd..17b3f5d`;
+> #174 commented + CLOSED. Reviewer LEAD review APPROVE, no must-fix (review-202606210145).
+> `_unservable_index_error()` branches on `is_known_index()` at BOTH `index_history` +
+> `index_history_stitched` — recognised-but-unservable index → terminal diagnostic (no
+> prices.history/for-stocks, loop broken), unknown/equity → unchanged route-to-prices. No registry-set
+> change; routing-regression matrix locked to the registry diff (19 deny-only ids) so a future set edit
+> can't re-open the loop. Full suite **3260 green**. Close comment carries the tracked-enhancement note
+> (serving sector-index HISTORY = separate feature needing a clean source + per-symbol tests).
+> Watermark/state left to reviewer.
+>
+> **NOW: #183 optional interval/resample — DESIGN-NOTE-FIRST (no code yet).** Flow: SHORT design note →
+> reviewer LEAD gate → TDD → Codex×2. Scope: optional interval/resample on `prices.history` +
+> `indices.index_history`. Reviewer lean (01:46): Interval-primary `D1/W1/MN1/Q1/Y1` + pandas
+> `'D'/'W'/'M'/'Q'/'Y'` aliases; index = period-end, prices = OHLC per period; resolve the `Interval.M1`
+> minute-vs-month enum wrinkle (see #183 GitHub triage). Lowest priority (advisor has a client-side
+> workaround). Clean-room: zero VNStock. state/ watermark = reviewer.
 >
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
