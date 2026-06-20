@@ -1,6 +1,8 @@
 # Design — Fmarket fund coverage & holdings diagnostics (#172 + #173)
 
-**Status:** DESIGN — reviewer gate (must be APPROVED before code). A **batch** of two related Fmarket
+**Status:** APPROVED (reviewer gate review-202606201506, APPROVE_WITH_NOTES). #172 = option A
+(`StaleData(EmptyData)`, defer C). #173 = option B **reframed allocation-aware** (premise corrected
+below — no second gate needed). Two separate commits/reviews (Q3). A **batch** of two related Fmarket
 fund-data-quality bugs the reviewer asked to design together **before** the large #157 feature.
 **Reviewer specs:** review-202606201432 (#172 NAV staleness) + review-202606201436 (#173 bond holdings).
 **Clean-room:** VNStock/vnstock excluded. **No HTML scraping** — only the documented/official Fmarket
@@ -42,20 +44,33 @@ After a correct wide fetch, classify a bounded request with **zero in-window poi
   (data exists, just ends before the window) → **DO NOT** return a silent `EmptyData`. Instead
   surface an explicit staleness signal naming the gap.
 
-**Decision needed (pick one):**
-- **(A) typed staleness exception** — a distinct error (e.g. a new `StaleData` subclass of `EmptyData`
-  so existing `except EmptyData` callers still catch it, but the type/message name the gap:
-  `"fmarket: NAV history for product {id} is stale — latest {latest_navdate} is before requested
-  {start}..{end}"`). Fail-loud, consistent with the library; actionable.
-- **(B) annotated result** — return a `NavHistory` with the available (pre-window) latest carried as
-  `latest_available_navdate` metadata + a `stale_history` warning, and... (awkward: callers expect
-  in-window points; an empty-but-annotated history is easy to misuse).
-- **(C) offline diagnostic** — keep `EmptyData` on the live call but add
-  `vnfin.diagnostics.explain_fund_nav_coverage(...)` to explain staleness preflight.
+**DECISION (approved, option A; C deferred):** add a `StaleData(EmptyData)` subclass. Existing
+`except EmptyData` / `except SourceError` callers still catch it; the distinct type + message name the
+gap. (B annotated-empty rejected as misuse-prone; C `explain_fund_nav_coverage` deferred — not needed
+to fix the bug, adds a public function now.)
 
-**My lean: (A)** — a `StaleData(EmptyData)` subclass keeps backward compatibility (still an
-`EmptyData`) while making the stale case distinguishable + actionable; optionally add (C) later. Please
-confirm (A) vs (B) vs (A+C).
+**Probe result (gated live, 2026-06-20 ~15:12 — truncation RULED OUT).** All 65 funds' wide
+`nav_history` fetch ends uniformly at **2025-12-05**, while per-fund row counts vary widely
+(110→1267) and first-dates track each fund's true inception (ENF 2014 … EVESG 2024). A flat-array
+cap/pagination would show a *constant* row count and a uniform first-date; instead the array is
+**complete from inception to a provider-wide cutoff**. So the wide fetch is correct and the staleness
+is genuine systemic provider lag (the `get-nav-history` endpoint has no `page`/`pageSize`), not a
+request/array-cap bug. `list_funds` shows current NAVs (e.g. VNDAF 19630.53) while history ends
+2025-12-05 — exactly the silent-`EmptyData` scenario. → implement `StaleData`.
+
+**Conditions of approval (fold into the coder spec):**
+1. **Compute latest navDate from the PRE-window-filter row set** — track `max(_nav_row_date(r))` over
+   ALL parsed rows BEFORE the `lo/hi` skip; do **NOT** run the #21 productId / #158 dup / value guards
+   on out-of-window rows (that would reintroduce the #144 bug).
+2. **Truncation ruled out first** (done — see probe). Implement `StaleData` regardless, for the
+   genuinely-stale / closed-fund case (defensive, synthetic-tested).
+3. **Message states the DATA GAP only**, not endpoint fault — must be true for a closed/delisted fund
+   too: `"fmarket: NAV history for product {id} ends at {latest_navdate}, before requested {start}..{end}"`.
+4. Add `StaleData` to `exceptions.__all__`; regenerate the surface snapshot **at release** (additive).
+
+**Trigger (precise):** after the wide fetch + parse, when post-filter `points` is empty AND a window
+start `lo` was given AND `max_navdate < lo` → raise `StaleData`. Otherwise `EmptyData` (unchanged) —
+this keeps pre-inception windows and the sparse/weekend straddle (`lo <= max_navdate`) as `EmptyData`.
 
 ### #172 tests (synthetic, offline)
 
@@ -76,38 +91,54 @@ confirm (A) vs (B) vs (A+C).
 other provider fields) → `EmptyData`, indistinguishable from "no holdings". `FundSummary.asset_type`
 already records the provider class (`STOCK`/`BOND`/…), so the entity type is known.
 
-### Investigation
+### Premise correction (reviewer review-202606201506 — MUST fold in before code)
 
-Map the `/res/products/{id}` response: which fields carry bond holdings (issuer/code/name/industry/
-weight) and the asset-allocation split (stock/bond/cash %), and the as-of/update metadata. Record
-provenance/terms before relying on any field.
+The original design's premise ("non-empty **bond holdings** under other provider fields") is **not
+supported by the blessed recon.** `docs/sources/funds-fmarket.md:121-139` documents the
+`/res/products/{id}` detail payload as exactly three arrays:
 
-### Proposed model (additive — the decision)
+- `productTopHoldingList` — **equity** rows (`stockCode`, `netAssetPercent`, `industry`, …)
+- `productAssetHoldingList` — **asset-class split** (`assetType.code` ∈ {STOCK, CASH, BOND}, `assetPercent`)
+- `productIndustriesHoldingList` — sector split
 
-Do **not** force bonds into the equity `stock_code` shape. Options:
+There is **NO `productBondHoldingList`** — no per-bond issuer/code/name/weight rows on this endpoint.
+A bond fund exposes a **BOND allocation %**, not a typed list of bond securities. Therefore option A
+(full typed per-bond `Holding`/`kind` model) is **over-scoped/speculative** (nothing to populate) →
+**DEFERRED** (a real per-bond source, if ever found + license-cleared, is a separate clean-room design).
 
-- **(A) typed holdings model (full fix):** add a `security_type`/`kind` enum (`EQUITY`/`BOND`/`CASH`/
-  `OTHER`) and a typed `Holding(kind, code, name, weight_pct, industry=None, …)`; keep `FundHolding`
-  (equity) working; add an `AssetAllocation` (class split %) + as-of metadata; surface bond holdings +
-  split via the holdings path (or a sibling accessor). Larger, but the real fix.
-- **(B) explicit diagnostic v1 (smaller):** keep `holdings()` equity-only, but when the fund has
-  **non-equity** holdings the API doesn't map (detectable via `asset_type`/the presence of bond
-  fields), return an explicit `"source has non-equity (bond/...) holdings not mapped by this API"`
-  diagnostic instead of plain `EmptyData`; design the typed model (A) as the follow-up.
+### Approved model (option B reframed, allocation-aware — the v1 contract)
 
-**My lean: confirm v1 scope with the reviewer.** Given the batch is "before #157," I lean **(B) for
-the immediate bug** (stop the silent `EmptyData`, ship the diagnostic + asset-allocation split if
-trivially available) + **(A) typed bond-holdings model as a fast follow-up** — unless you want the
-full typed model now. Either way: preserve equity behavior + product-id/code guards; additive
-public-API snapshot.
+1. **Kill the silent `EmptyData`** on the bond/empty path. When `productTopHoldingList` is empty/absent
+   **AND** `productAssetHoldingList` shows a non-STOCK class (`BOND`/`CASH`) > 0% → raise
+   `NonEquityHoldings(EmptyData)` (mirror the #172 `StaleData(EmptyData)` idiom for a consistent,
+   backward-compatible signal) naming the non-equity allocation, e.g. `"fmarket: product {id} discloses
+   asset-class allocation (BOND {x}%, CASH {y}%) but no per-security equity holdings; this source
+   exposes no per-bond holdings list — see asset_allocation()"`.
+2. **Expose the asset-class split as a primitive** via a **NEW sibling accessor**
+   `funds.source().asset_allocation(product_id) -> AssetAllocation`, typed (class code + percent 0-100
+   + as-of from `updateAt`), read directly from the source. **Do NOT mutate `holdings()`'s return
+   type** (`tuple[FundHolding, ...]` must stay stable — changing it is a BREAKING surface change).
+3. **Detect from the detail response itself**, NOT `Fund.asset_type` (`holdings(product_id)` takes only
+   an int id and never sees `Fund.asset_type`, which comes from `list_funds`).
+4. **Preserve genuine `EmptyData`** when `productTopHoldingList` AND `productAssetHoldingList` are both
+   empty/absent (no false-positive diagnostic).
+5. **Balanced/mixed funds** populate `productTopHoldingList` (equity rows) AND show BOND% — they already
+   return equity holdings today; the new path is in the rows-empty branch only, so it does NOT fire.
+6. **Update `docs/sources/funds-fmarket.md`** mapping table: `productAssetHoldingList`
+   (`assetType.code`→class / `assetPercent`→percent 0-100), `updateAt` as-of semantics, a note that
+   BOND appears only as an allocation % (no per-security disclosure), and the `NonEquityHoldings` error
+   row. Same already-used endpoint — no scraping, no new endpoint, clean-room intact.
 
 ### #173 tests (synthetic, offline)
 
-- bond fund: empty equity `productTopHoldingList` + non-empty bond holdings → NOT a bare `EmptyData`
-  (either typed bond holdings (A) or the explicit non-equity diagnostic (B)).
-- equity fund holdings unchanged.
-- malformed bond rows/weights fail closed (or are diagnosed per the chosen model).
-- as-of/update metadata parsed or explicitly diagnosed if absent.
+- bond fund: empty `productTopHoldingList` + `productAssetHoldingList` BOND>0% → `NonEquityHoldings`
+  (an `EmptyData` subclass), NOT bare `EmptyData`; `asset_allocation()` returns the typed split.
+- equity fund holdings unchanged; balanced fund (equity rows + BOND%) → `holdings()` returns equity
+  rows as today (the new diagnostic does NOT fire).
+- truly empty (no top-holdings AND no allocation) → `EmptyData` (unchanged, no false positive).
+- malformed allocation rows/percent → fail closed (`InvalidData`).
+- as-of/`updateAt` parsed or explicitly diagnosed if absent. Public-API additive (new exception +
+  `AssetAllocation` model + accessor); snapshot regenerated additively.
 
 ---
 
@@ -120,12 +151,11 @@ public-API snapshot.
   #172 and one for #173 (disjoint code paths: `nav_history` vs `holdings`), integrated separately →
   reviewer code review each → then proceed to #157.
 
-## Open questions for the reviewer
+## Resolved (reviewer picks, review-202606201506)
 
-1. **#172 contract:** (A) `StaleData(EmptyData)` typed exception naming the gap [my lean] / (B)
-   annotated empty result / (A+C with an offline `explain_fund_nav_coverage`)?
-2. **#173 v1 scope:** (A) full typed bond-holdings + asset-split model now / (B) explicit non-equity
-   diagnostic now + typed model as fast follow-up [my lean]?
-3. Should #172 and #173 ship as **two separate commits/reviews** (disjoint paths) or one batch?
-4. For #172, is adding a **`StaleData` exception subclass** to the public exceptions acceptable
-   (additive), or prefer keeping it within `EmptyData` + a warning?
+1. **#172 contract → A.** `StaleData(EmptyData)` typed exception naming the gap. C deferred.
+2. **#173 v1 scope → B reframed (allocation-aware).** `NonEquityHoldings(EmptyData)` diagnostic +
+   `asset_allocation()` accessor; full typed per-bond model A deferred (unbuildable from this source).
+3. **Two separate commits/reviews** (disjoint paths: `nav_history` vs `holdings`/`asset_allocation`).
+4. **Yes** — a `StaleData` exception subclass in public exceptions is acceptable (additive); use an
+   `EmptyData` subclass for #173's diagnostic too.

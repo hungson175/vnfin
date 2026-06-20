@@ -175,57 +175,32 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Next / in-flight bugs (BEFORE large #157 implementation)
 
-- **#172 + #173 — Fmarket fund-data coverage DESIGN BATCH (HIGH), design-first, BEFORE #157**
-  (reviewer specs review-202606201432 + review-202606201436). Author unified
-  `docs/design/fund-coverage-holdings.md`, no code until design approved.
-  - **#172 NAV staleness:** `nav_history` already wide-fetches+client-filters (#144), but if the
-    history endpoint is stale (ends 2025 while list/current NAV shows 2026), a bounded-recent window
-    silently returns `EmptyData`. Investigate request body/pagination/product-id/date-order first
-    (preferred: a correct request returns recent rows); else return an EXPLICIT staleness diagnostic/
-    warning, not silent EmptyData. Preserve #144/#158/#21 guards. No HTML scraping.
-  - **#173 bond holdings gap:** `holdings()` parses only equity `productTopHoldingList`/`stockCode`
-    → bond funds return `EmptyData`. Design an additive typed holdings model (kind/security_type,
-    bond code/name/industry/weight, asset-allocation split, as-of) OR, if bonds unmapped in v1, an
-    explicit "non-equity holdings not mapped" diagnostic — not plain no-holdings. Preserve equity
-    behavior + product-id/code guards. No scraping. Synthetic offline tests.
+- **#172 + #173 — Fmarket fund-data coverage. DESIGN APPROVED (review-202606201506,
+  APPROVE_WITH_NOTES; design doc `fund-coverage-holdings.md`).** Picks: Q1=A, Q2=B reframed, Q3=two
+  separate commits/reviews, Q4=yes subclass. Sequencing: #172 impl → commit → reviewer → #173 impl →
+  commit → reviewer → then #157.
+  - **#172 NAV staleness → `StaleData(EmptyData)` (option A; C deferred). IMPLEMENTING (TDD fork).**
+    Gated live probe (2026-06-20 ~15:12) RULED OUT truncation/pagination: all 65 funds' wide
+    `nav_history` ends uniformly at 2025-12-05, per-fund row counts vary 110→1267, first-dates track
+    each inception → array complete inception→provider cutoff = genuine systemic provider staleness
+    (not a request/array-cap bug). Contract: track max navDate over ALL rows via `_nav_row_date`
+    BEFORE the lo/hi skip (NO #21/#158/value guards on out-of-window rows); post-filter points empty
+    AND window start `lo` given AND `max_navdate < lo` → `StaleData` msg `"fmarket: NAV history for
+    product {id} ends at {latest}, before requested {start}..{end}"` (data-gap only, true for closed
+    funds); else `EmptyData` (unchanged — pre-inception + sparse/weekend straddle). Add `StaleData`
+    to exceptions.__all__ (additive; snapshot regen at release). 5 synthetic offline tests.
+  - **#173 bond holdings → option B REFRAMED (allocation-aware). IMPLEMENT AFTER #172 commit.**
+    Premise corrected: `/res/products/{id}` has NO per-bond list — only `productTopHoldingList`
+    (equity), `productAssetHoldingList` (asset-class STOCK/CASH/BOND %), `productIndustriesHoldingList`.
+    Option A (typed per-bond model) DEFERRED (speculative). Reframed v1: (1) `productTopHoldingList`
+    empty/absent AND `productAssetHoldingList` non-STOCK (BOND/CASH) >0% → raise `NonEquityHoldings(
+    EmptyData)` naming the alloc (not bare EmptyData); (2) NEW sibling accessor
+    `asset_allocation(product_id) -> AssetAllocation` (typed class code + pct 0-100 + as-of from
+    updateAt) read direct from source — do NOT change `holdings()` return; (3) detect from the detail
+    response, NOT `Fund.asset_type`; (4) preserve genuine EmptyData when BOTH lists empty;
+    (5) balanced funds (equity rows + BOND%) unchanged; (6) update docs/sources/funds-fmarket.md
+    mapping + error table. Additive public API (new exception + AssetAllocation model + accessor).
 
-
-- **#168 — DONE (impl), INTEGRATED GREEN, AWAITING CODE REVIEW** (reviewer spec review-202606201318;
-  fix sub-agent commit `53519ff`). Fail-loud price/index namespace guard shipped. **Integration verified
-  ON MERGED TREE:** full suite **2842 passed** (+31), gate trio **68** (public-API snapshot UNCHANGED —
-  guard uses a private instance flag `_reject_index_symbols`, not a ctor param), coverage **95%**,
-  clean-room clean, diff clean. Smoke-verified: prices rejects indices (incl. alias UPCOMINDEX, sector
-  VNFIN, case/ws) with 0 network; index_history rejects stocks + deny-only sector indices; FPT passes
-  prices guard, VNINDEX passes index guard; liquidity inherits. New private `_contracts/index_registry.py`.
-  **ONE judgment call for reviewer:** sector indices (VNCOND…VNUTI) are **deny-only** (rejected in
-  prices) but **NOT allow-listed** in index_history (no per-symbol value-history test; doc says VPS
-  serves them) — a later reviewer-gated 1-line expansion. HNXUPCOMINDEX fix `f7ab8f9` APPROVED + #168
-  CLOSED (review-202606201405); watermark 07:03Z. **REOPENED** (review-202606201410) for residual bare
-  `HNX` alias → FIXED `f4655ba`: HNX deny-listed (prices fail-loud 0-net) + canonicalize HNX->HNXINDEX
-  in index path (new `_INDEX_ALIASES`/`resolve_index_alias`, private) + 4 zero-net regressions; suite
-  2863, snapshot unchanged, cov 95%. NEXT: reviewer re-review (range `cd0e5ea..f4655ba`) → push+close #168.
-
-- **#168 (orig spec):** price/index namespaces must **fail loud on wrong asset type**, not silently
-  return wrong-typed data:
-  1. known index (`VNINDEX`/`VN30`) via `prices.history()` → raise (not VND security prices);
-  2. known equity (`FPT`) via `indices.index_history()` → raise (not index points);
-  3. liquidity (calls `prices.history`) **inherits** the price guard;
-  4. TDD-first + boundary tests + document public behavior;
-  5. NOT via broad provider pass-through / scraping / silent-warning-only.
-  **Design nuance to settle first (discuss w/ reviewer):** indices are a CLOSED known set, equities
-  are OPEN-ended → guard is asymmetric (index_history allow-lists known indices; prices.history
-  deny-lists known indices; unknown symbols still pass to price providers). Investigate existing
-  known-index registry / symbol classifier in `vnfin/indices/` + `_contracts` before coding.
-  Sequencing: do AFTER the tiny #157 rev2.4 design patch, BEFORE #157 implementation.
-  **STATUS:** design **APPROVE_WITH_TWEAKS** (reviewer 13:25). Chokepoints: prices `client.py:138`;
-  indices `indices/client.py:84`+`:115`; liquidity inherits (offline `from_price_history` + symbol-fetch
-  via default_client). **Tweaks:** PRIVATE `_contracts` registry (NO public API/snapshot); **two sets** —
-  deny-list (prices/liquidity) = ALL known index aliases incl. provider aliases (UPCOMINDEX, VNALL) +
-  sector indices; allow-list (index_history) = only **value-history-SUPPORTED** indices (sector indices
-  ONLY if current sources/tests prove support, else deny-in-price-but-not-allow-in-index). Seed:
-  VNINDEX/VN30/VN100/VNMID/VNSML/VNALLSHARE(+VNALL)/HNXINDEX/HNX30/UPCOM(+UPCOMINDEX)/VNDIAMOND/
-  VNFINLEAD/VNFINSELECT. Zero-network TDD; liquidity inherits price guard only. **PROCEED with TDD
-  now (#157 rev2.5 patch done).** → delegate to a sub-agent.
 
 - **#171 — docs/diagnostics polish: world-gold opt-in Stooq path** (poller triage review-202606201355).
   In-scope docs/enhancement; PARKED behind #168/#169/#157. Make the opt-in Stooq path unambiguous —
@@ -233,32 +208,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   manual opt-in (`StooqGoldSource` + `default_world_gold_client`). Do NOT add Stooq to the default chain.
 - **#170 — design-first: domestic VN gold history / diagnostics** (poller triage review-202606201348).
   In-scope; PARKED behind #168/#169/#157. NO implementation without a source/legal/provenance design.
-- **#169 — IMPLEMENTED (option B), INTEGRATED GREEN, AWAITING CODE REVIEW** (spec review-202606201334;
-  design choice review-202606201356; fix sub-agent commit `b9283f4`). Coverage-aware crypto orchestration:
-  full-cover source wins (failover-first, no warning); else best-available (max in-window overlap, then
-  source order) + exact constant `partial_coverage: requested {start}..{end}, returned {first}..{last}`;
-  unbounded unchanged; hard guards still hard-reject. **Integrated on merged tree:** suite 2859→**2863**
-  (after #168 HNX), gate trio 68 (public-API snapshot UNCHANGED — all new symbols private), cov 95%,
-  clean-room+diff clean; 12 zero-network regressions. NEXT: reviewer code review (range `cd0e5ea..b9283f4`)
-  → push+close #169 on APPROVE.
-  _Approved contract (ref):_ failover-first; full-coverage = `first_bar.date<=start AND
-  last_bar.date>=end`; partial primary → reject → backup; if a backup fully covers → select it; if NONE
-  covers → return **best-available** (maximize covered requested-day overlap, then source order) + an
-  exact `partial_coverage` warning constant naming requested start/end + returned first/last dates;
-  no coverage check when start/end unset; retain identity/unit/value guards. Zero-network synthetic TDD
-  (short-prefix primary + full backup; both-partial; prefix+suffix gaps; full unchanged; unbounded
-  unchanged). No new provider/scraping; no explain_crypto_coverage in this slice. → delegate TDD after #168. Crypto daily history must
-  not silently accept a primary-source result whose returned window starts after requested `start` /
-  ends before requested `end`:
-  1. client/failover-level requested-window coverage validation for crypto daily history;
-  2. partial primary prefix/suffix → fail over to backup;
-  3. backup covering the window → select it;
-  4. no source covers it → NOT a silent full-success — either explicit coverage warnings/diagnostics
-     by contract OR fail-closed typed error (**design decision — quick design-check w/ reviewer first**);
-  5. TDD synthetic sources incl. short-prefix primary + full-window backup;
-  6. no scraping / unreviewed providers.
-  Crypto domain (`vnfin/crypto/`), independent of #168 (prices/indices). Likely a small design-check
-  before coding (option 4 contract choice).
+- **#174 — sector-index routing (fast-follow, MEDIUM)** — reviewer triage review-202606201501,
+  ACCEPTED. Small tri-state index-guard fix. Do NOT interrupt the #172/#173 batch; queue behind it.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
@@ -291,6 +242,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Done today (trim periodically)
 
+- **#168 price/index namespace guard — DONE/CLOSED** (review-202606201424; fixes `53519ff`/`f7ab8f9`/
+  `f4655ba`). Fail-loud asymmetric guard (prices deny-list known indices incl. HNX/UPCOMINDEX aliases;
+  index_history allow-list; liquidity inherits) via private `_contracts/index_registry.py`. Snapshot
+  unchanged (private flag). Watermark 07:32Z.
+- **#169 crypto partial-coverage — DONE/CLOSED** (review-202606201424; fix `b9283f4`). Coverage-aware
+  failover: full-cover wins; else best-available (max in-window overlap, source order) + exact
+  `partial_coverage` warning constant; hard guards retained. 12 zero-network regressions. Watermark 07:32Z.
 - **#159 FX history — COMPLETE, pushed `5e4563d..ad83521`, CLOSED** (final APPROVE review-202606201140,
   2 Codex sub-reviews APPROVE). First historical FX in vnfin: `vnfin.fx.history()` → `FXHistory`
   (annual USD/VND via no-key World Bank `PA.NUS.FCRF`, `source="worldbank_fx"`) + `FXPoint` +
