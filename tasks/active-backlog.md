@@ -73,10 +73,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
       design-eval only — do NOT switch from #159. Future #163 scope: corporate-action/dividend
       EVENT data primitives + source/legal/diagnostics design; OUT: total-return/backtest/app
       helpers and blind scraping.
-    - **#149 addendum** (poller triage review-202606201046): macro source-health addendum accepted
-      for future design-first work but PARKED — do NOT switch from #159. Future safe scope: macro
-      data primitives + indicator catalog/freshness/coverage diagnostics; OUT: regime
-      scoring/advice/blind scraping.
+    - **#149 addenda** (poller triage review-202606201046 + review-202606201111): macro source-health
+      AND global-macro addenda accepted for future design-first work but PARKED — do NOT switch from
+      #159. Combined safe scope: macro data primitives + indicator catalog + country/source/
+      frequency/as-of/freshness/source-health/coverage diagnostics; OUT: regime scoring/allocation
+      advice/blind scraping.
     - **#157 addendum** (poller triage review-202606201101): fundamentals-metrics addendum
       accepted/HIGH-PRIORITY but PARKED for AFTER #159 — do NOT switch from #159 blocker fix.
       Future scope: canonical metrics + bank/non-bank mappings + coverage/source-health diagnostics;
@@ -143,18 +144,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#159 FX history — BLOCK FIXED, RE-INTEGRATED GREEN, AWAITING RE-REVIEW** (BLOCK review-202606201054;
-  fix sub-agent commit `aa42040` on `d00f6ec`). All 4 blockers fixed TDD fail-first: **B1** source
-  boundary now enforces USD/VND + ISO shape (InvalidData, no KeyError/mislabel); **B2** source
-  preflights dates before network; **B3** `rate_on` requires plain date / `rate_for_year` int-non-bool
-  1..9999 (InvalidData); **B4** stale FX spot-only/no-history docs refreshed + docs-contract guard
-  `test_fx_docs_do_not_claim_fx_has_no_history`.
-  **Re-integration verified ON MERGED TREE by main agent:** full suite **2810 passed** (+34 regressions),
-  gate trio **67** (incl. new B4 guard), coverage **95%**, diff --check clean, clean-room clean.
-  **All 11 reviewer repros raise InvalidData with 0 network calls; happy path intact**
-  (`rate_for_year(2024)=25000.0`). Lowercase `vnd` normalizes (no KeyError) — sensible deviation,
-  matches facade. NEXT: reviewer re-review (range `ca1ae7b..aa42040`) → push+close #159 + advance
-  watermark on APPROVE.
+- **#159 FX history — BLOCKs FIXED (code B1-B3 APPROVED; B4 docs completed), AWAITING RE-REVIEW #2**
+  (BLOCK#1 review-202606201054 → fix `aa42040`; BLOCK#2 docs-only review-202606201108 → fix `b9eaba1`).
+  Re-review#1 APPROVED code B1-B3 (source boundary USD/VND+ISO; date preflight; `rate_on` plain-date /
+  `rate_for_year` int-non-bool) but BLOCKed on B4 residual stale docs. B4 now finished (`b9eaba1`):
+  `skills/vnfin/SKILL.md` 'FX has no history' → spot-vs-history distinction; docs-contract guard
+  broadened (now scans SKILL.md + forbids literal 'FX has no history'); `docs/design/fx-history.md`
+  Status→IMPLEMENTED + resolved open-Qs; `fx-sources.md` stale TimeSeriesResult open-Q→resolved;
+  `diagnostics.py` docstring notes FX coverage.
+  **Re-integration verified ON MERGED TREE:** full suite **2810 passed**, gate trio green (broadened
+  B4 guard passes; forbids 'FX has no history' incl. bold variant, no false positives), coverage
+  **95%**, diff/clean-room clean, reviewer stale-phrase grep CLEAN.
+  NEXT: reviewer re-review#2 (range `ca1ae7b..b9eaba1`) → push+close #159 + advance watermark on APPROVE.
   _Prior state:_ IMPLEMENTED + integrated green (design APPROVE_WITH_NOTES
   review-202606201033; design `ca1ae7b`; impl sub-agent commit `167c622`). v1 = WB `PA.NUS.FCRF`
   annual USD/VND via `WorldBankFXHistorySource` (composes WorldBankMacroSource); `FXHistory`/`FXPoint`
