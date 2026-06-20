@@ -14,24 +14,38 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-06-20 22:13 +07_
 
-> **NOW: #177 S&P 500 world-index — DESIGN GATE APPROVED (reviewer 22:24); IN TDD.** Design note
-> `docs/design/world-index-sp500.md` (76b0414) APPROVED with all 4 §7 decisions resolved + ONE required
-> addition. Shape: `indices.world(symbol="SPY")→PriceHistory`; NEW `AlphaVantageIndexSource`
-> (`TIME_SERIES_DAILY` SPY, BYOK reuse `ALPHAVANTAGE_API_KEY`, key-redact, keyless→skip-no-network,
-> Note/Information→SourceUnavailable) PRIMARY + `StooqIndexSource` (`^SPX` CSV, anti-bot→SourceUnavailable
-> best-effort) FALLBACK in OWN chain (VN indices untouched); finalize must NOT enforce unit homogeneity
-> (single-source disclosed pick, #157-ratios-trap analog); in-memory `cache_ttl` ~6h v1 (persistent=v2).
-> **REQUIRED: `fallback_instrument_served` mechanical warning** when ^SPX served instead of SPY (~10x
-> magnitude gap → never-silent, emitted in finalize, covers throttle+keyless paths). SPY-as-proxy v1,
-> documented. TDD red-first → Codex×2 → push+close.
-> **ORDER (reviewer re-prioritized 22:24): #177 → #174 (HOSE sector-index routing BUG, jumps ahead) →
-> #178.** Bugs before features. Reviewer specs #174 while I'm on #177.
-> **#178 gold = QUEUED behind #174** (separate item, NOT a batch): `gold.world_reference_history_vnd()`
-> = existing Stooq world-gold × USD/VND FX × (31.1035/37.5) → VND/lượng, MANDATORY `world_reference_*`
-> naming + `premium_note` (excludes +10-21% VN premium; NOT SJC); reserve `gold.domestic_history()` → clear
-> source-gap diagnostic, never the synthesis. Likely straight to TDD→Codex×2 (composes existing primitives).
-> Source-hunt follow-up filed as **#182** (refs #178/#170). state/ watermark = reviewer. Clean-room: zero
-> VNStock both. Specs: spec-202606201815-issue177 / -issue178; TL handoff handoff-202606202209.
+> **NOW: #177 S&P 500 world-index — ✅ CODE COMPLETE, AWAITING CODEX×2** (commits `011cffa` impl +
+> `8ff1e78` critical fix + `2e7c694` docs; on top of design notes `76b0414`/`f34f090`). Shipped per the
+> APPROVED design: `indices.world(symbol="SPY")→PriceHistory` over its OWN chain `AlphaVantageIndexSource`
+> (TIME_SERIES_DAILY SPY, BYOK `ALPHAVANTAGE_API_KEY`, key-redact, keyless→skip-no-network,
+> Note/Information→SourceUnavailable, cache_ttl 6h) PRIMARY → `StooqIndexSource` (`^SPX` CSV,
+> anti-bot→SourceUnavailable) FALLBACK; VN indices untouched; unit-homogeneity guard disabled
+> (disclosed single-source pick); REQUIRED `fallback_instrument_served` warning when ^SPX served (both
+> throttle + keyless paths; absent on SPY success). **Adversarial self-verify (critical-code-reviewer)
+> found 1 CRITICAL** — AV primary accepted negative/zero OHLC (ordering invariant passes all-negative;
+> parse_provider_float ignores sign) → corrupt series served as trusted primary; **FIXED** `8ff1e78` with
+> positivity guard in AV `_field` + fail-first regressions (`test_av_negative_price_invalid`,
+> `test_av_zero_price_invalid`). Also fixed a latent secret-scanner blob in the test fake-key. **Full
+> suite 3172 green; gate trio 70 green; world_sources 99% / world_client 100% cov; snapshot frozen.**
+> Docs+skill+CHANGELOG shipped (`2e7c694`, + new `docs/sources/indices-world.md`). → handing CODE to
+> Codex×2; on APPROVE push (`011cffa..2e7c694`, plus design/backlog commits) + close #177.
+> **ORDER (reviewer re-prioritized 00:04, vf-advisor blocking signal): #177 → #178 (gold, JUMPS ahead) →
+> #174 (routing bug) → #183 (NEW).** Rationale: #177+#178 hard-block the live advisor product; #174 is a
+> UX/diagnostic bug (dangerous 1000x leak already prevented) so it waits behind the advisor blocker.
+> **#178 gold = QUEUED NEXT** (separate item, NOT a batch): `gold.world_reference_history_vnd()` =
+> existing Stooq world-gold × USD/VND FX × (31.1035/37.5) → VND/lượng, MANDATORY `world_reference_*`
+> naming + `premium_note` (excludes +10-21% VN premium; NOT SJC); reserve `gold.domestic_history()` →
+> clear source-gap diagnostic, never the synthesis. Likely straight to TDD→Codex×2. Source-hunt
+> follow-up filed as **#182** (refs #178/#170).
+> **#174 = QUEUED after #178** (spec `spec-202606202230`): branch on `is_known_index()` in BOTH
+> `index_history` + `index_history_stitched` after alias resolution → terminal "recognized index but
+> value-history unsupported" diagnostic (no prices.history text) for ALL deny-only ids; TDD → reviewer
+> LEAD review (not Codex×2).
+> **#183 = NEW, QUEUED LAST** (reviewer-accepted 00:04): optional interval/resample on `prices.history` +
+> `indices.index_history`; **design-note-first**; lowest priority (advisor has a client-side workaround);
+> has an `Interval.M1` minute-vs-month enum wrinkle (see #183 GitHub triage). Reviewer specs/gates when up.
+> state/ watermark = reviewer. Clean-room: zero VNStock. Specs: spec-202606201815-issue177/-issue178;
+> TL handoff handoff-202606202209.
 >
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
