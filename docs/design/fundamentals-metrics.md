@@ -82,8 +82,9 @@ cov = fundamentals.explain_metric_coverage("FPT", period="annual")   # MetricCov
 
 - `metric_catalog()` / `explain_metric()` are **fully offline** (no network) — pure registry.
 - `metrics()` / `explain_metric_coverage()` call `get_financials()` for the income+balance+cashflow
-  statements (and `ratios` only where a provider-native metric needs it), then transform offline.
-  They reuse the existing failover chain and surface its `warnings`/attempts.
+  statements only (no `ratios` in v1, B7), then transform offline. They reuse the existing failover
+  chain and surface each statement's `warnings` and its **succeeding source** — **not** a failed-
+  attempt trail (the public `get_financials` does not expose attempts; C1/B2).
 - All names are additive; **spot/existing `get_financials` is unchanged**. Exported via
   `vnfin.fundamentals.__all__` and captured additively in the public-API snapshot.
 
@@ -261,15 +262,22 @@ class MetricReport:                  # all metrics for one symbol + one fiscal p
     def to_dataframe(self) -> "pd.DataFrame": ...
 
 @dataclass(frozen=True)
+class MetricCoverageItem:           # B3: frozen typed record (NOT a bare tuple)
+    metric_id: MetricId
+    availability: MetricAvailability
+    fiscal_date: date
+    reason: Optional[str] = None
+
+@dataclass(frozen=True)
 class PeriodCoverage:               # B1: coverage is PER fiscal_date
     fiscal_date: date
     is_bank: Optional[bool]
     statement_provenance: tuple[StatementProvenance, ...]   # per-statement status + succeeding source
-    ratio_status: str = "not_requested"                     # B7: v1 never fetches ratios
-    per_metric: tuple[tuple[MetricId, MetricAvailability, Optional[str]], ...]
+    per_metric: tuple[MetricCoverageItem, ...]              # B3: typed records, not tuple-of-tuples
     named_item_count: int                                   # LineItems with a real name
     generic_item_count: int                                 # LineItems still "item_<code>"
     unmapped_codes: tuple[str, ...]                         # present codes not in the metric map
+    ratio_status: str = "not_requested"                     # B7: v1 never fetches ratios
 
 @dataclass(frozen=True)
 class MetricCoverage:               # offline-friendly diagnosis for a symbol over the fetched periods
@@ -520,7 +528,7 @@ catalog doesn't map yields `BLOCKED`/explicit reason, never silent MISSING. Cafe
 source per statement (`StatementProvenance`) + per-`MetricInput.source` lineage; full failed-attempt
 trail deferred to a possible `get_financials(..., return_attempts=True)` v2 (§3.5 C1/C2).
 **B3 — vague coverage:** replaced loose dict/tuple with frozen typed records `StatementProvenance` /
-`PeriodCoverage`; coverage is **per fiscal_date** (§4).
+`MetricCoverageItem` / `PeriodCoverage` (no bare tuple-of-tuples); coverage is **per fiscal_date** (§4).
 **B4 — signatures/injection:** exact `metrics()`/`explain_metric_coverage()` signatures with
 `is_bank/limit/source/sources/http_get/timeout/max_attempts` + private pure `_metrics_from_reports`
 transformer for HTTP-free tests (§3, §9).
