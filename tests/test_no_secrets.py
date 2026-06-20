@@ -63,10 +63,32 @@ SECRET_BLOB_RE = re.compile(r"[A-Za-z0-9]{%d,}" % _SECRET_BLOB_MIN)
 #     adapter (constructor ``widget_key=`` / env ``VNFIN_BTMC_WIDGET_KEY``). The
 #     value is sourced at runtime from vnfin.gold.BTMC_PUBLIC_WIDGET_KEY so this test
 #     never has to embed the literal itself.
+#   * World Bank CMO vintage-hash segment (#185): the CMO Pink Sheet annual-xlsx URLs in
+#     ``vnfin.gold.worldbank_cmo._CMO_ANNUAL_URLS`` embed a per-release vintage digest
+#     (a 32-char hex path segment). It is part of a PUBLIC CC-BY data URL, carries no
+#     credential, and is not a user secret — accepted for OSS distribution by explicit
+#     project decision (design note D4). Each hex segment is sourced at runtime from the
+#     URLs themselves so this test never embeds the literal hash.
+def _cmo_vintage_blobs() -> frozenset[str]:
+    """The vintage-hash path segments inside the public CMO annual-xlsx URLs.
+
+    Extracted from the live ``_CMO_ANNUAL_URLS`` tuple (not embedded as a literal) so the
+    allowlist tracks the source of truth. Only the long mixed-alnum runs that the blob
+    heuristic would otherwise flag are returned.
+    """
+    from vnfin.gold.worldbank_cmo import _CMO_ANNUAL_URLS
+
+    blobs: set[str] = set()
+    for url in _CMO_ANNUAL_URLS:
+        for blob in SECRET_BLOB_RE.findall(url):
+            blobs.add(blob)
+    return frozenset(blobs)
+
+
 def _allowlisted_blobs() -> frozenset[str]:
     from vnfin.gold import BTMC_PUBLIC_WIDGET_KEY  # imported, not embedded as a literal
 
-    return frozenset({BTMC_PUBLIC_WIDGET_KEY})
+    return frozenset({BTMC_PUBLIC_WIDGET_KEY}) | _cmo_vintage_blobs()
 
 
 _ALLOWLISTED_BLOBS = _allowlisted_blobs()
@@ -252,13 +274,31 @@ def test_btmc_widget_key_is_a_plain_literal_and_allowlisted() -> None:
         "the public widget token must be a single plain literal in vnfin/gold/vn.py"
     )
 
-    # The scanner allowlist contains EXACTLY this one public token.
-    assert _ALLOWLISTED_BLOBS == frozenset({BTMC_PUBLIC_WIDGET_KEY})
+    # The BTMC public token is in the allowlist (alongside the documented CMO vintage
+    # hashes, #185); it is one of EXACTLY two documented project-decision carve-outs.
+    assert BTMC_PUBLIC_WIDGET_KEY in _ALLOWLISTED_BLOBS
     # The allowlisted value is itself blob-allowed; an arbitrary other secret is NOT.
     # (Build the fake from fragments so this test file itself stays scanner-clean.)
     assert _blob_is_allowed(BTMC_PUBLIC_WIDGET_KEY)
     fake_other = "ab12cd34ef56" + "gh78ij90kl12mn"
     assert not _blob_is_allowed(fake_other)
+
+
+def test_cmo_vintage_hash_allowlisted_and_sourced_from_urls() -> None:
+    """#185: the CMO Pink Sheet annual-xlsx URLs embed a public per-release vintage
+    hash. It is allowlisted by explicit project decision (CC-BY public data URL, not a
+    credential), and the allowlist value is sourced at runtime from the live
+    ``_CMO_ANNUAL_URLS`` tuple — never embedded as a literal in this test file."""
+    from vnfin.gold.worldbank_cmo import _CMO_ANNUAL_URLS
+
+    cmo_blobs = _cmo_vintage_blobs()
+    assert cmo_blobs, "the CMO URLs should contain at least one long hex vintage segment"
+    # Every long blob from the CMO URLs is allowlisted (so the scanner stays green).
+    for blob in cmo_blobs:
+        assert blob in _ALLOWLISTED_BLOBS
+        assert _blob_is_allowed(blob)
+    # Sanity: the URLs are the World Bank public docs host.
+    assert all("worldbank.org" in u for u in _CMO_ANNUAL_URLS)
 
 
 def test_btmc_widget_key_resolves_from_constant_constructor_and_env(monkeypatch) -> None:
