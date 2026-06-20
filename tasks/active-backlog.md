@@ -149,7 +149,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN REV2.6 AWAITING RE-REVIEW (label addendum APPROVED; only role-source prose cleanup left)** (spec spec-202606201222). Rounds:
+- **#157 fundamentals metrics — DESIGN REV2.6 — last 1-line fixed (design APPROVED-pending-verify); awaiting final re-review** (spec spec-202606201222). Rounds:
   `1616ff6`→BLOCK×8→rev2 `a0a00cc`→BLOCK×7→rev2.1 `6fbe694`→rev2.2 `3a38a19`→BLOCK×6→rev2.3 `aeac970`
   →BLOCK×4→rev2.4 `51948cb` (+ adversarial Workflow consistency sweep caught 2 more)→BLOCK (label
   addendum review-202606201324)→rev2.5. No code until reviewer approves. **rev2.5** folds the
@@ -165,10 +165,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   ranking/advice/screener-with-strategy, blind external ingestion, generic item_<code> as
   investor-ready, silent bank/non-bank mixing. Spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606201222-issue157-fundamentals-metrics.md`.
 
-## Next (after #157 rev2.4 design is sent — BEFORE any large #157 implementation)
+## Next / in-flight bugs (BEFORE large #157 implementation)
 
-- **#168 — HIGH-priority data-correctness BUG: price/index namespace type confusion** (reviewer spec
-  review-202606201318). Price/index namespaces must **fail loud on wrong asset type**, not silently
+- **#168 — DONE (impl), INTEGRATED GREEN, AWAITING CODE REVIEW** (reviewer spec review-202606201318;
+  fix sub-agent commit `53519ff`). Fail-loud price/index namespace guard shipped. **Integration verified
+  ON MERGED TREE:** full suite **2842 passed** (+31), gate trio **68** (public-API snapshot UNCHANGED —
+  guard uses a private instance flag `_reject_index_symbols`, not a ctor param), coverage **95%**,
+  clean-room clean, diff clean. Smoke-verified: prices rejects indices (incl. alias UPCOMINDEX, sector
+  VNFIN, case/ws) with 0 network; index_history rejects stocks + deny-only sector indices; FPT passes
+  prices guard, VNINDEX passes index guard; liquidity inherits. New private `_contracts/index_registry.py`.
+  **ONE judgment call for reviewer:** sector indices (VNCOND…VNUTI) are **deny-only** (rejected in
+  prices) but **NOT allow-listed** in index_history (no per-symbol value-history test; doc says VPS
+  serves them) — a later reviewer-gated 1-line expansion. NEXT: reviewer code review (range
+  `b20b246..53519ff`) → push+close #168 on APPROVE.
+
+- **#168 (orig spec):** price/index namespaces must **fail loud on wrong asset type**, not silently
   return wrong-typed data:
   1. known index (`VNINDEX`/`VN30`) via `prices.history()` → raise (not VND security prices);
   2. known equity (`FPT`) via `indices.index_history()` → raise (not index points);
@@ -190,6 +201,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   VNFINLEAD/VNFINSELECT. Zero-network TDD; liquidity inherits price guard only. **PROCEED with TDD
   now (#157 rev2.5 patch done).** → delegate to a sub-agent.
 
+- **#170 — design-first: domestic VN gold history / diagnostics** (poller triage review-202606201348).
+  In-scope; PARKED behind #168/#169/#157. NO implementation without a source/legal/provenance design.
 - **#169 — HIGH data-coverage BUG: crypto long-window partial coverage** (reviewer spec
   review-202606201334). Queue AFTER #168, BEFORE large #157 implementation. Crypto daily history must
   not silently accept a primary-source result whose returned window starts after requested `start` /

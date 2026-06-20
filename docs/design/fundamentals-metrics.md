@@ -683,9 +683,10 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
 
 **B1 — VNDirect-vs-CafeF namespace:** resolved via option 3 (§3.5 C3) — a source whose namespace the
 catalog doesn't map yields `BLOCKED`/explicit reason, never silent MISSING. CafeF code map = v1.x (§6).
-**B2 — attempts/provenance not exposed:** dropped `source_attempts`; v1 exposes the **succeeding**
-source per statement (`StatementProvenance`) + per-`MetricInput.source` lineage; full failed-attempt
-trail deferred to a possible `get_financials(..., return_attempts=True)` v2 (§3.5 C1/C2).
+**B2 — attempts/provenance not exposed:** dropped `source_attempts`; v1 exposes the per-statement
+`StatementProvenance.source` per the role rule (OK→succeeding, NOT_SERVED→responsible,
+SOURCE_ERROR/MISSING→None) + per-`MetricInput.source` lineage; full failed-attempt trail deferred to
+a possible `get_financials(..., return_attempts=True)` v2 (§3.5 C1/C2).
 **B3 — vague coverage:** replaced loose dict/tuple with frozen typed records `StatementProvenance` /
 `MetricCoverageItem` / `PeriodCoverage` (no bare tuple-of-tuples); coverage is **per fiscal_date** (§4).
 **B4 — signatures/injection:** exact `metrics()`/`explain_metric_coverage()` signatures with
