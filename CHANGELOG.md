@@ -34,6 +34,34 @@ All notable changes to `vnfin` are documented here. The format follows
   [`docs/tutorials/funds-and-indices.md`](docs/tutorials/funds-and-indices.md),
   [`docs/design/prices-index-resample.md`](docs/design/prices-index-resample.md).
   ([#183](https://github.com/hungson175/vnfin/issues/183))
+- **World Bank CMO annual gold is now the primary world-gold leg of `world_reference_history_vnd`**
+  (#185) — `vnfin.gold.world_reference_history_vnd(...)` now fetches its world-gold leg from a new
+  **internal** `WorldBankCmoGoldSource` (World Bank Commodity Markets "Pink Sheet" **annual `.xlsx`**,
+  XAU/USD, no key) **as the primary**, falling back to the existing daily `CurrencyApiGoldSource →
+  StooqGoldSource` path only on a recoverable `SourceError`. This **unblocks the synthesis
+  server-side**: the daily legs are unfetchable from a datacenter host (CurrencyApi sparse + ~1100-day
+  cap, Stooq anti-bot-blocked), so the 50% coverage gate correctly failed safe and the call could not
+  run. CMO is **annual** and reachable, and because CMO gold IS *"spot average of daily rates"*
+  (LBMA-sourced — already an annual average of daily spot) it is a **lossless drop-in**: the
+  `annual-avg × annual-avg` basis and **every #178 output, warning and guard are preserved unchanged**
+  (the pure synthesis is byte-identical — one CMO annual bar per year means `mean(one) = that value`).
+  CMO is fetched **directly**, bypassing `FailoverGoldClient` whose daily-weekday coverage gate would
+  wrongly reject a 1-bar-per-year series; it self-validates instead (non-finite/`<=0`,
+  duplicate/non-monotonic year, and a plausible **20…10000 USD/oz** magnitude band, all →
+  `InvalidData`; `EmptyData` if no years fall in the span). When the daily fallback engages, the result
+  carries a never-silent **`world_reference_gold_source_fallback`** warning. The xlsx is parsed with
+  **stdlib only** (`zipfile` + `xml.etree` — no openpyxl/pandas, so vnfin's only core dep stays
+  `httpx`): the `Annual Prices (Nominal)` sheet is resolved via workbook+rels (not a hard-coded sheet
+  number) and the gold column is located by its **split header** (`Gold` name cell + `($/troy oz)`
+  units cell directly below, same column) — never a hard-coded index, since both shift between
+  vintages. A supporting additive transport helper **`HttpDataSource._request_bytes`** (+ a
+  keyword-only `binary=` path on `_default_http_get`/`_fetch_with_retry`) fetches binary payloads;
+  it is fully backward compatible (every existing text/JSON caller is unchanged). The CMO source class
+  stays **internal** — the public API surface is **unchanged**. License: World Bank CMO data is
+  **CC-BY 4.0** (*"Source: The World Bank — Commodity Markets (Pink Sheet)"*); runtime-fetch only, no
+  bundled rows. See [`docs/sources/cmo-gold-annual.md`](docs/sources/cmo-gold-annual.md),
+  [`docs/sources/gold-world-reference.md`](docs/sources/gold-world-reference.md).
+  ([#185](https://github.com/hungson175/vnfin/issues/185))
 - **World-reference VND/lượng gold history** (#178) — new `vnfin.gold.world_reference_history_vnd(start,
   end, *, http_get=None, timeout=25.0, max_attempts=3)` returning a `GoldHistory` in **`VND/luong`**,
   **ANNUAL** (one Jan-1 point per calendar year). It composes the existing world-gold daily history

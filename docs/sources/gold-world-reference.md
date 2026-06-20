@@ -1,10 +1,12 @@
 # World-reference VND/lượng gold — provenance, method & the domestic-premium caveat
 
-Clean-room: this is a **synthesis** over two already-vetted in-repo sources plus a physical
-constant — no new endpoint and no new external data. The composed sources are documented in
-[`gold-adapters.md`](gold-adapters.md) (world XAU/USD daily) and
+Clean-room: this is a **synthesis** over already-vetted in-repo sources plus a physical
+constant — no new external data is bundled. The composed sources are documented in
+[`cmo-gold-annual.md`](cmo-gold-annual.md) (**primary** world-gold annual leg, World Bank CMO),
+[`gold-adapters.md`](gold-adapters.md) (world XAU/USD daily — the **fallback** leg) and
 [`fx-history-worldbank.md`](fx-history-worldbank.md) (annual USD/VND). No vnstock / VNStock /
-derivative was read, cited, or copied. Design note: `docs/design/gold-world-reference-vnd.md`.
+derivative was read, cited, or copied. Design notes: `docs/design/gold-world-reference-vnd.md`
+(#178) and `docs/design/issue-185-annual-world-gold-source.md` (#185, the CMO annual primary).
 
 These power **`vnfin.gold.world_reference_history_vnd(start, end, *, http_get=None,
 timeout=25.0, max_attempts=3)`** → a `GoldHistory` in **VND/lượng**, **one point per calendar
@@ -22,16 +24,19 @@ it, or compare it as if it were the SJC/BTMC price; rebase/annotate accordingly.
 ## Method (annual, by construction)
 
 ```
-VND/lượng[year] = annual_avg( world_gold_USD_per_oz )[year]      # daily series → annual mean
+VND/lượng[year] = annual world_gold_USD_per_oz[year]             # CMO annual gold (primary); daily-mean on fallback
                   × annual_USD_VND[year]                          # World Bank PA.NUS.FCRF (period avg)
                   × (GRAMS_PER_LUONG / GRAMS_PER_TROY_OZ)         # 37.5 / 31.1035 ≈ 1.20565
 ```
 
 - **Why annual.** USD/VND history is annual-only (World Bank period-average); multiplying a daily
   gold series by a step-function annual FX would manufacture daily wiggles that are gold-only —
-  false precision. So the gold leg is reduced to an **annual mean** to match the FX basis
-  (annual-avg × annual-avg). A denser line needs a clean-room **daily** USD/VND source (a v2
-  follow-up); callers may interpolate for display.
+  false precision. So the gold leg is annual to match the FX basis (annual × annual). The
+  **primary** gold leg (World Bank CMO, #185) is **published annually** and is already an
+  *annual average of daily spot* (LBMA-sourced), so it slots in losslessly — the
+  `annual-avg × annual-avg` basis is preserved exactly. The **fallback** daily leg
+  (CurrencyApi → Stooq) is reduced to an annual mean for the same basis. A denser line needs a
+  clean-room **daily** USD/VND source (a v2 follow-up); callers may interpolate for display.
 - **Whole-calendar-year window.** `start`/`end` are interpreted as an inclusive **calendar-year**
   window: any portion of a year yields that year's annual point, and each emitted year's gold mean
   is computed from the **full calendar year** (the fetch window is snapped to `Jan-1 … Dec-31` of
@@ -50,13 +55,15 @@ VND/lượng[year] = annual_avg( world_gold_USD_per_oz )[year]      # daily seri
 
 | Leg | Accessor | Unit | Notes |
 |---|---|---|---|
-| World gold (daily) | `CurrencyApiGoldSource` → `StooqGoldSource` (`FailoverGoldClient`) | `USD/oz` | CurrencyApi covers only ~2024-03+ with a ~1100-day cap, so a **multi-year window** raises range-too-wide (a `SourceError`) and **fails over to Stooq**, the only full-history world-gold source. |
+| World gold (annual) — **PRIMARY** | `WorldBankCmoGoldSource` (internal) — World Bank CMO "Pink Sheet" annual `.xlsx` | `USD/oz` | #185. **Annual** and reachable server-side; CMO annual gold IS the annual average of daily spot, so it preserves the synthesis basis exactly. Fetched **directly** (bypassing `FailoverGoldClient` — the daily 50%-weekday coverage gate would wrongly reject a 1-bar-per-year series). See [`cmo-gold-annual.md`](cmo-gold-annual.md). |
+| World gold (daily) — **FALLBACK** | `CurrencyApiGoldSource` → `StooqGoldSource` (`FailoverGoldClient`) | `USD/oz` | Engaged only when the CMO leg raises a recoverable `SourceError` (unreachable/malformed/no-years-in-span). CurrencyApi covers only ~2024-03+ with a ~1100-day cap, so a **multi-year window** fails over to Stooq, the only full-history daily world-gold source. The result then carries a `world_reference_gold_source_fallback` warning. |
 | FX (annual) | `vnfin.fx.history("USD","VND", start, end)` | `VND per 1 USD` | World Bank `PA.NUS.FCRF` period-average, Jan-1 stamped; single-source (no FX-history failover in v1). |
 
-**Stooq is the de-facto workhorse here** for any horizon longer than ~3 years. From datacenter
-IPs Stooq sometimes returns a JS anti-bot challenge (`SourceUnavailable`); if that happens on a
-wide window where CurrencyApi cannot serve either, the call raises `AllSourcesFailed` (loud, not
-silent) — the honest result given the source landscape.
+**The CMO annual leg is the workhorse server-side** (it is the very source that unblocks the
+chart from a datacenter host). If CMO is unavailable the synthesis falls back to the daily path:
+from datacenter IPs Stooq sometimes returns a JS anti-bot challenge (`SourceUnavailable`); if that
+happens on a wide window where CurrencyApi cannot serve either, **and** CMO already failed, the
+call raises `AllSourcesFailed` (loud, not silent) — the honest result given the source landscape.
 
 ## Disclosure (redundant, never silent)
 
@@ -70,6 +77,7 @@ mechanical tokens on `GoldHistory.warnings`:
 - `world_reference_partial_year_coverage: …` — only when some requested years are dropped for lack of a paired gold-or-FX observation (an honest intersection; never a silent half-result). An **empty** overlap raises `EmptyData`.
 - `world_reference_gold_leg_partial_coverage: …` (and `world_reference_fx_leg_*`) — the world-gold failover client accepts a *gappy-but-not-rejected* series (coverage 50–90% of trading days) and attaches a soft `partial_coverage` warning; that is the only signal a year's annual mean came from an incomplete subset of days, so it is **forwarded** (namespaced by leg) onto the synthesized result — never dropped.
 - `world_reference_trailing_year_incomplete: …` — only when the **latest emitted year is the current calendar year**: that year is still in progress, so its annual mean is a *year-to-date* partial average, not a full-year mean. This is flagged **independently** of the gold-leg `partial_coverage` aggregate (a long window of complete prior years dilutes the in-progress year's coverage back above the threshold, silencing that signal), keyed only on today's year — so the trailing point is never mistaken for a settled full-year value.
+- `world_reference_gold_source_fallback: CMO annual source unavailable; used daily-averaging path` — **only when the primary World Bank CMO annual leg failed** and the synthesis fell back to the daily `CurrencyApi → Stooq` path (#185). Present together with any `world_reference_gold_leg_*` warnings from that daily leg. Absent when CMO served (the normal server-side case).
 
 ```python
 from datetime import date
@@ -97,7 +105,10 @@ claim; World Bank WDI is open data. The synthesis adds only a physical constant.
 
 ## Failover safety
 
-Both legs raise only `vnfin.exceptions` subclasses (`SourceUnavailable` / `InvalidData` /
+Every leg raises only `vnfin.exceptions` subclasses (`SourceUnavailable` / `InvalidData` /
 `EmptyData` / `AllSourcesFailed`), so a leg failure surfaces as a typed error rather than a
-crash or a silently-empty result. The synthesis adds a belt-and-suspenders positivity/finiteness
-guard on every emitted VND/lượng point.
+crash or a silently-empty result. The CMO→daily fallback `except` catches **`SourceError`** (the
+base of `SourceUnavailable`/`InvalidData`/`EmptyData`), **not** bare `Exception` — so every
+recoverable CMO failure reliably engages the daily fallback, while a non-`SourceError` programmer
+bug propagates (fails loud) instead of being silently swallowed. The synthesis adds a
+belt-and-suspenders positivity/finiteness guard on every emitted VND/lượng point.
