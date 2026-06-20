@@ -42,10 +42,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **#146 liquidity & position sizing: DONE** (Boss-authored; pushed `e518878..4ce11dc`, CLOSED;
   reviewer review-202606200632). Additive offline `vnfin.liquidity` (from_price_history + profile;
   ADV stats + max-order sizing; close*volume estimate labeled). Suite 2705 green; public-API additive.
-- **Batch A (NOW): #148 + #151** (poller triage review-202606200840). #148 docs/tutorial fix
-  (use real model fields: FundHolding.stock_code/weight_pct, IndexConstituents.members — no
-  aliases). #151 `explain_world_gold_history` also surfaces the max-day/range-width blocker
-  (live source `_MAX_DAYS`) with chunking suggestion. TDD + reviewer review before push.
+- **Batch A: DONE** (#148 tutorial fields + #151 window_too_wide diagnostic) + README agent
+  prompt/issues note — pushed `591a439..06acb62`; #148/#151 CLOSED (review-202606200858).
+- **#153 (NOW): GoldBar.price not .close** — docs/API bug; small docs batch (reviewer-authorized).
+- **Untriaged (await reviewer poller triage): #152, #154, #155, #156.**
 - **Batch B (design-first, parked): #147** VNINDEX long-window stitching/diagnostic — design API+risk
   first, no silent row-drop.
 - **Batch C (design-first, parked): #149 macro coverage, #150 portfolio analytics** (offline,
