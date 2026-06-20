@@ -280,6 +280,49 @@ def test_index_conflicting_same_date_duplicate_raises_in_source():
         s.get_history("VNINDEX", Interval.D1, *WIDE)
 
 
+def _udf_explicit_times(rows):
+    # rows: (epoch_seconds, o, h, l, c, v) — lets a test put two bars on the SAME VN
+    # calendar date at DIFFERENT intraday timestamps (#162 keys by date, not timestamp).
+    return json.dumps({
+        "s": "ok",
+        "t": [r[0] for r in rows],
+        "o": [r[1] for r in rows], "h": [r[2] for r in rows],
+        "l": [r[3] for r in rows], "c": [r[4] for r in rows], "v": [r[5] for r in rows],
+    })
+
+
+# Two UTC instants that are the SAME VN (UTC+7) calendar date 2024-06-11 but different times.
+_T_0611_A = int(datetime(2024, 6, 11, 1, 0, tzinfo=timezone.utc).timestamp())   # 08:00 VN
+_T_0611_B = int(datetime(2024, 6, 11, 6, 0, tzinfo=timezone.utc).timestamp())   # 13:00 VN
+_T_0612 = int(datetime(2024, 6, 12, 1, 0, tzinfo=timezone.utc).timestamp())
+
+
+def test_index_same_date_different_timestamp_identical_ohlcv_deduped():
+    # #162 reviewer case: same calendar date, DIFFERENT intraday timestamps (08:00/13:00),
+    # IDENTICAL OHLCV -> must dedupe to ONE bar per date + warning (was surviving before).
+    rows = [
+        (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+        (_T_0611_B, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),  # same date, other time
+        (_T_0612, 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 11), date(2024, 6, 12)]
+    assert len({b.time.date() for b in h.bars}) == len(h.bars)  # one bar per calendar date
+    assert "deduped_duplicate_daily_index_bars" in h.warnings
+
+
+def test_index_same_date_different_timestamp_conflicting_raises():
+    # Same calendar date, different timestamps, CONFLICTING OHLCV -> InvalidData in source path.
+    rows = [
+        (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+        (_T_0611_B, 1007.0, 1016.0, 1003.0, 1013.0, 111_000_000),  # same date, conflicting
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    with pytest.raises(InvalidData, match="conflicting index bars for date"):
+        s.get_history("VNINDEX", Interval.D1, *WIDE)
+
+
 def test_index_conflicting_duplicate_triggers_failover_to_next_source():
     # vps returns a CONFLICTING-duplicate payload (-> InvalidData in the source path);
     # the failover client must record that failed attempt and serve the clean ssi source.

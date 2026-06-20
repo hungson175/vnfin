@@ -180,8 +180,14 @@ class UDFSource(HttpDataSource, PriceSource):
             v = [0] * n
 
         bars: list[PriceBar] = []
-        seen: dict = {}  # Issue #66/#162: timestamp -> PriceBar, to detect duplicates
-        self._dedup_occurred = False  # Issue #162: set if an identical dup was deduped
+        # Issue #66/#162: duplicate detection. Equity (default) keys by EXACT timestamp and
+        # raises on ANY duplicate (#66). Index D1 sources opt in (_DEDUPE_IDENTICAL_DUPLICATE_BARS)
+        # to "one bar per CALENDAR DATE": key by tm.date() and compare OHLCV+volume ignoring the
+        # intraday timestamp — identical -> dedupe (keep first); conflicting -> raise. UDFSource is
+        # D1-only (SUPPORTED == {Interval.D1}), so the index opt-in is inherently the D1 path.
+        seen: dict = {}  # key (calendar date | exact timestamp) -> PriceBar
+        dedup_by_date = self._DEDUPE_IDENTICAL_DUPLICATE_BARS
+        self._dedup_occurred = False  # Issue #162: set if an identical same-date dup was deduped
         for i in range(n):
             try:
                 ts = parse_provider_int(t[i], label=f"timestamp at row {i}", source=self.name)
@@ -211,18 +217,27 @@ class UDFSource(HttpDataSource, PriceSource):
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
                 raise InvalidData(f"{self.name}: OHLC invariant violated at {tm.date()}")
             bar = PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol)
-            # Issue #66/#162: handle a duplicate observation timestamp. Default (equity):
-            # ANY duplicate is conflicting provider data -> raise. Index sources opt in
-            # (_DEDUPE_IDENTICAL_DUPLICATE_BARS) to dedupe an IDENTICAL same-date bar
-            # (keep first) and flag it; a CONFLICTING same-date bar always raises here in
-            # the source path so a failover client records the attempt and tries the next
-            # source (never a silent conflicting-row selection).
-            if tm in seen:
-                if self._DEDUPE_IDENTICAL_DUPLICATE_BARS and seen[tm] == bar:
-                    self._dedup_occurred = True
-                    continue
+            # Issue #66/#162: handle a duplicate observation. Equity (default): ANY duplicate
+            # EXACT timestamp is conflicting provider data -> raise. Index sources reduce to
+            # one bar per CALENDAR DATE: an IDENTICAL same-date bar (same OHLCV+volume, even at
+            # a different intraday timestamp e.g. 07:00 vs 14:00) is deduped (keep first) and
+            # flagged; a CONFLICTING same-date bar always raises here in the source path so a
+            # failover client records the attempt and tries the next source (never a silent
+            # conflicting-row selection).
+            key = tm.date() if dedup_by_date else tm
+            if key in seen:
+                if dedup_by_date:
+                    prev = seen[key]
+                    if (prev.open, prev.high, prev.low, prev.close, prev.volume) == (
+                        op, hp, lp, cp, vol
+                    ):
+                        self._dedup_occurred = True
+                        continue  # identical same-date bar -> dedupe (keep first)
+                    raise InvalidData(
+                        f"{self.name}: conflicting index bars for date {tm.date().isoformat()}"
+                    )
                 raise InvalidData(f"{self.name}: duplicate observation timestamp {tm.isoformat()}")
-            seen[tm] = bar
+            seen[key] = bar
             bars.append(bar)
 
         bars.sort(key=lambda b: b.time)
