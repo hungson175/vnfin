@@ -44,7 +44,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   ADV stats + max-order sizing; close*volume estimate labeled). Suite 2705 green; public-API additive.
 - **Batch A: DONE** (#148 tutorial fields + #151 window_too_wide diagnostic) + README agent
   prompt/issues note — pushed `591a439..06acb62`; #148/#151 CLOSED (review-202606200858).
-- **#153: DONE (pending review)** — gold tutorial GoldBar.price + docs-contract guard (9dc792c).
+- **#153: DONE** — gold tutorial GoldBar.price + docs-contract guard; pushed `d52dc98..f4435e5`, CLOSED (review-202606200902).
 - **CLAUDE.md: updated** — execution model (orchestrate via sub-agents/worktrees), integration-test
   + long-message rules (1074a0a, Boss directive).
 - **Design-first parked (reviewer triage review-202606200902, filtered specs only):**
@@ -53,6 +53,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   - D: **#154/#150** derived gold-premium / portfolio analytics (offline, data-only, no advice).
   - E: **#155** fund metadata / allocation diagnostics.
   All design-first: no code until reviewer-approved design.
+  - Newly appeared, await reviewer poller triage: **#157, #158**.
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
