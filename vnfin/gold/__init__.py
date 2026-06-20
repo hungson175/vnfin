@@ -33,6 +33,7 @@ from .gold_api import GoldApiSource
 from .models import GoldBar, GoldHistory, GoldQuote
 from .stooq import StooqGoldSource
 from .vn import BTMC_PUBLIC_WIDGET_KEY, BTMCGoldSource, PNJGoldSource
+from .world_reference import domestic_history, world_reference_history_vnd
 
 __all__ = [
     # models
@@ -57,6 +58,9 @@ __all__ = [
     "vn",
     "world",
     "source",
+    # world-reference VND/lượng synthesis (#178) + reserved domestic-history stub
+    "world_reference_history_vnd",
+    "domestic_history",
 ]
 
 _VN_PROVIDERS = {"btmc": BTMCGoldSource, "pnj": PNJGoldSource}
