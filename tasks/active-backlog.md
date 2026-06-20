@@ -42,9 +42,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **#146 liquidity & position sizing: DONE** (Boss-authored; pushed `e518878..4ce11dc`, CLOSED;
   reviewer review-202606200632). Additive offline `vnfin.liquidity` (from_price_history + profile;
   ADV stats + max-order sizing; close*volume estimate labeled). Suite 2705 green; public-API additive.
+- **Architecture deep-dive docs: DONE** (Boss directive; pushed `b046374..f48e789`; reviewer
+  review-202606200802). New `docs/architecture/` directory (system-overview / data-domains /
+  failover-and-validation / maintainer-workflow + refreshed provider-contracts) with progressive
+  disclosure + 5 Mermaid flow diagrams; authored via the `vnfin-architecture-cartographer`
+  sub-agent. Docs-only; full suite green. (Fixed a review BLOCK: reviewer-only poller routing.)
 - **✅ 0 OPEN ISSUES (re-confirmed).** All bugs fixed, full contract refactor (Phases 0–6) shipped,
-  and three enhancements delivered (#145 diagnostics, #140 news, #146 liquidity). origin/master
-  `4ce11dc`. Steady-state; poller watching.
+  three enhancements delivered (#145 diagnostics, #140 news, #146 liquidity), and architecture
+  docs written. origin/master `f48e789`. Steady-state; poller watching.
 
 ## Refactor done today (Phase 4 batches)
 
