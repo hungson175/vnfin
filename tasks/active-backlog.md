@@ -29,6 +29,15 @@ _Last synced: 2026-06-20 ~18:33 +07_
 > `max(1,…)` floor is dead-but-harmless guard). #172 commented + CLOSED. Full 3001 green, trio exit0,
 > fmarket cov 96%, snapshot untouched. **This closes the entire reporter-bug queue — only the #157
 > metrics leg remains.** FundList.nav per-fund as-of → reviewer-filed **#181** (out of v1 scope).
+>
+> **NOW (TL call 18:36): #157 METRICS LAYER** — design FINAL-APPROVED `docs/design/fundamentals-metrics.md`
+> rev2.6 (reviewer review-202606201405), now unblocked (bank base corrected, section6 re-pointed). TDD per
+> rev2.6 on the corrected bank base: canonical metric catalog + corporate/bank mappings + 5 derived +
+> coverage diagnostics + blocked/missing-on-inconsistency. **Bank metrics keyed to
+> 12700/13000/14000/412000/413300/23800/23000/421900 — NEVER the disproven codes.** Codex×2 when it lands.
+> Then vf-advisor: **#179 (monthly CPI+SBV via IMF IFS/DBnomics) is cleanly startable** (specs DONE by
+> reviewer, no new adapter/key); **#177 (S&P500 / Alpha Vantage BYOK) + #178 (VN gold, no clean source)
+> WAIT on Boss**.
 
 ---
 
