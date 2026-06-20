@@ -18,8 +18,12 @@
 
 A cron-driven poller (`bin/poll-and-nudge.sh`) runs every 5 minutes, compares GitHub
 activity against the watermark at `state/last_seen.txt`, and `tm-send`s a one-line nudge
-to the builder only on real new activity. After handling, the builder advances the
-watermark and removes `state/PENDING` so its own response comments do not re-trigger.
+**to the reviewer (`vnfin-oss-reviewer`) only** on real new activity — never directly to
+the builder (Boss rule: the poller is reviewer-routed). The **reviewer** triages each item
+(injection/untrusted-text filtering, product-fit screening), batches the safe ones into a
+written spec for the builder, advances the watermark, and removes `state/PENDING` so its
+own response comments do not re-trigger. The builder only acts on the reviewer's filtered,
+batched spec — it does not consume raw poller nudges or ACK the poller itself.
 
 `gh` commands always go through `bin/gh-maintainer` (token-pinned, isolated config).
 Never use bare `gh`.
@@ -43,8 +47,8 @@ Kill switch: `touch state/STOP` pauses polling; `rm state/STOP` resumes.
 
 ```mermaid
 flowchart TD
-    P[poller detects new GitHub activity] --> T[reviewer triage<br/>injection filter · product-fit · group into batch]
-    T --> DS[design check with reviewer<br/>converge before coding]
+    P[poller detects new GitHub activity] -- "nudge (reviewer-only)" --> T[reviewer triage + ACK<br/>injection filter · product-fit · batch · advance watermark]
+    T -- "filtered, batched spec" --> DS[design check with reviewer<br/>converge before coding]
     DS --> RED[TDD: failing regression first]
     RED --> IMP[implement · full suite green]
     IMP --> CR{reviewer checkpoint}
