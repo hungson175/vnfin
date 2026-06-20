@@ -31,15 +31,17 @@ World Bank FX) and the physical gram constants below. No new external source; ze
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from datetime import date, datetime, timezone
 
-from ..exceptions import EmptyData, InvalidData
+from ..exceptions import EmptyData, InvalidData, SourceError
 from ..fx.history_models import FXHistory
 from ..validation import validate_date_range
 from .currency_api import CurrencyApiGoldSource
 from .failover import FailoverGoldClient
 from .models import GoldBar, GoldHistory
 from .stooq import StooqGoldSource
+from .worldbank_cmo import WorldBankCmoGoldSource
 
 # Physical weights — auditable named constants. The oz→lượng factor is COMPUTED from them
 # (never a hardcoded 1.206) so a reviewer can re-derive it.
@@ -67,6 +69,12 @@ _ANNUAL_BASIS_NOTE = (
 )
 _PARTIAL_COVERAGE_TOKEN = "world_reference_partial_year_coverage"
 _TRAILING_YEAR_TOKEN = "world_reference_trailing_year_incomplete"
+# #185: never-silent disclosure that the annual CMO primary gold leg was unavailable and
+# the result was built from the daily-averaging fallback (CurrencyApi -> Stooq) instead.
+_GOLD_SOURCE_FALLBACK_NOTE = (
+    "world_reference_gold_source_fallback: CMO annual source unavailable; "
+    "used daily-averaging path"
+)
 
 
 def _today() -> date:
@@ -179,9 +187,12 @@ def world_reference_history_vnd(
 ) -> GoldHistory:
     """World-reference gold history in **VND/lượng**, ANNUAL — NOT the VN domestic price.
 
-    Composes world-gold daily history (USD/oz; ``CurrencyApiGoldSource`` →
-    ``StooqGoldSource`` failover) with annual USD/VND FX (World Bank ``PA.NUS.FCRF``) into a
-    one-point-per-calendar-year VND/lượng series (Jan-1 stamped). The result carries a
+    Composes the world-gold annual leg — PRIMARY: World Bank CMO "Pink Sheet" annual gold
+    (USD/oz), fetched directly; FALLBACK on any recoverable failure: the daily
+    ``CurrencyApiGoldSource`` → ``StooqGoldSource`` failover averaged to annual (disclosed
+    via a ``world_reference_gold_source_fallback`` warning) — with annual USD/VND FX (World
+    Bank ``PA.NUS.FCRF``) into a one-point-per-calendar-year VND/lượng series (Jan-1
+    stamped). The result carries a
     mandatory ``world_reference_excludes_domestic_premium`` warning: the VN domestic
     (SJC/BTMC) price sits a large, time-varying premium (historically +10–21%) ABOVE this
     world reference, so this series understates it — never present it as the domestic price.
@@ -212,16 +223,36 @@ def world_reference_history_vnd(
     year_start = date(lo.year, 1, 1)
     year_end = date(hi.year, 12, 31)
 
-    # World-gold daily history (USD/oz). CurrencyApi is primary (reliable, no key) but covers
-    # only ~2024-03+ with a ~1100-day cap, so any multi-year window raises range-too-wide
-    # (a SourceError) and fails over to Stooq, the only full-history world-gold source.
-    gold_sources = [
-        CurrencyApiGoldSource(http_get=http_get, timeout=timeout),
-        StooqGoldSource(http_get=http_get, timeout=timeout),
-    ]
-    gold_hist = FailoverGoldClient(gold_sources, max_attempts=max_attempts).get_history(
-        year_start, year_end
-    )
+    # World-gold leg (USD/oz). #185: the PRIMARY is the World Bank CMO annual "Pink Sheet"
+    # source — it is annual (matching the synthesis basis exactly: CMO annual gold IS the
+    # annual average of daily spot) AND reachable server-side, unlike the daily legs
+    # (CurrencyApi sparse + ~1100-day cap, Stooq anti-bot-blocked from datacenter hosts).
+    # CMO is fetched DIRECTLY, bypassing FailoverGoldClient: that client's 50% gate counts
+    # covered vs expected WEEKDAY trading days, so an annual series (1 bar/year) is <1% of
+    # weekdays and would be wrongly rejected. CMO self-validates instead (its own integrity
+    # + magnitude guards, EmptyData if no years in span).
+    #
+    # On any RECOVERABLE CMO failure (SourceError: unreachable/blocked -> SourceUnavailable,
+    # malformed/out-of-band -> InvalidData, no years in span -> EmptyData) fall back to the
+    # old daily-averaging path so behavior is NEVER worse than #178. The except catches
+    # SourceError (NOT bare Exception, N2) so a non-SourceError programmer bug fails loud.
+    used_daily_fallback = False
+    try:
+        gold_hist = WorldBankCmoGoldSource(http_get=http_get, timeout=timeout).get_history(
+            year_start, year_end
+        )
+    except SourceError:
+        used_daily_fallback = True
+        # CurrencyApi is primary (reliable, no key) but covers only ~2024-03+ with a
+        # ~1100-day cap, so any multi-year window raises range-too-wide (a SourceError) and
+        # fails over to Stooq, the only full-history world-gold source.
+        gold_sources = [
+            CurrencyApiGoldSource(http_get=http_get, timeout=timeout),
+            StooqGoldSource(http_get=http_get, timeout=timeout),
+        ]
+        gold_hist = FailoverGoldClient(gold_sources, max_attempts=max_attempts).get_history(
+            year_start, year_end
+        )
 
     # Annual USD/VND (World Bank period-average) — annual-only by construction, which is the
     # exact basis we aggregate the gold leg to. Imported lazily to avoid any import cycle.
@@ -229,7 +260,13 @@ def world_reference_history_vnd(
 
     fx_hist = _fx_history("USD", "VND", year_start, year_end, http_get=http_get, timeout=timeout)
 
-    return _synthesize_world_reference(gold_hist, fx_hist)
+    result = _synthesize_world_reference(gold_hist, fx_hist)
+    if used_daily_fallback:
+        # Never-silent disclosure that the daily fallback was used (the pure synthesis is
+        # left byte-identical; the fallback note is appended to the finished result here so
+        # _synthesize_world_reference stays unchanged).
+        result = replace(result, warnings=result.warnings + (_GOLD_SOURCE_FALLBACK_NOTE,))
+    return result
 
 
 def domestic_history(start=None, end=None, *, http_get=None, timeout: float = 25.0):

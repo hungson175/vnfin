@@ -436,3 +436,140 @@ def test_accessor_boundary_year_uses_full_calendar_year_mean():
     assert by_year[2023] == pytest.approx(full_year_2023_mean * 24000.0 * OZ_TO_LUONG)
     # the buggy partial-window mean (Jul-Dec only = 3000) must NOT be what we serve
     assert by_year[2023] != pytest.approx(3000.0 * 24000.0 * OZ_TO_LUONG)
+
+
+# --------------------------------------------------------------------------- #
+# #185 — CMO annual gold becomes the PRIMARY world-gold leg (D5)               #
+# --------------------------------------------------------------------------- #
+# The accessor now fetches the gold leg from WorldBankCmoGoldSource (annual,
+# server-reachable) PRIMARY, bypassing the daily FailoverGoldClient coverage gate; on a
+# SourceError it falls back to the daily CurrencyApi->Stooq path with a never-silent
+# `world_reference_gold_source_fallback` warning. The pure _synthesize stays unchanged
+# (mean(one annual bar) == that value), so each emitted point is CMO[y] x FX[y] x factor.
+
+from test_worldbank_cmo_gold import _build_cmo_xlsx  # noqa: E402
+
+
+def _cmo_router(*, cmo_gold_by_year=None, fx_by_year=None, cmo_body=None, stooq_text=None):
+    """URL-routing http_get fake that serves the CMO annual xlsx for thedocs.worldbank.org
+    (the CMO host), World Bank FX JSON for api.worldbank.org, Stooq CSV for stooq.com, and
+    404s currency-api. ``cmo_body`` overrides the CMO bytes (e.g. to force a CMO failure)."""
+    cmo = cmo_body if cmo_body is not None else _build_cmo_xlsx(rows=dict(cmo_gold_by_year or {}))
+    wb = _wb_json(fx_by_year or {})
+    stooq = stooq_text if stooq_text is not None else _stooq_csv({})
+
+    def _get(url, params=None, headers=None, json_body=None):
+        if "thedocs.worldbank.org" in url:  # CMO annual xlsx distribution host
+            return cmo
+        if "api.worldbank.org" in url or ("worldbank.org" in url and "indicator" in url):
+            return wb
+        if "worldbank.org" in url:  # WB FX indicators API (other worldbank.org paths)
+            return wb
+        if "stooq.com" in url:
+            return stooq
+        if "jsdelivr.net" in url or "currency-api" in url:
+            raise FileNotFoundError("404 (currency-api disabled in test)")
+        raise AssertionError(f"unexpected URL in test: {url}")
+
+    return _get
+
+
+def test_accessor_uses_cmo_annual_gold_as_primary():
+    cmo = {2021: 1800.0, 2022: 1900.0, 2023: 2000.0, 2024: 2100.0}
+    fx = {2021: 23500.0, 2022: 24000.0, 2023: 24500.0, 2024: 25000.0}
+    out = world_reference_history_vnd(
+        date(2021, 1, 1), date(2024, 12, 31),
+        http_get=_cmo_router(cmo_gold_by_year=cmo, fx_by_year=fx),
+    )
+    assert [b.date for b in out.bars] == [date(y, 1, 1) for y in (2021, 2022, 2023, 2024)]
+    for b in out.bars:
+        y = b.date.year
+        # one CMO annual bar per year -> mean(one) == CMO[y] -> CMO[y] x FX[y] x factor
+        assert b.price == pytest.approx(cmo[y] * fx[y] * OZ_TO_LUONG)
+    assert out.unit == "VND/luong" and out.currency == "VND"
+
+
+def test_accessor_cmo_path_fires_all_178_warnings():
+    # premium + annual-basis ALWAYS; partial-coverage when a year is dropped (here FX is
+    # missing 2024, so 2024 gold-only is dropped).
+    cmo = {2022: 1900.0, 2023: 2000.0, 2024: 2100.0}
+    fx = {2022: 24000.0, 2023: 24500.0}  # no 2024 FX
+    out = world_reference_history_vnd(
+        date(2022, 1, 1), date(2024, 12, 31),
+        http_get=_cmo_router(cmo_gold_by_year=cmo, fx_by_year=fx),
+    )
+    assert _premium(out)  # premium note always
+    assert any(w.startswith("world_reference_annual_basis") for w in out.warnings)
+    partial = [w for w in out.warnings if w.startswith("world_reference_partial_year_coverage")]
+    assert len(partial) == 1 and "2024" in partial[0]
+
+
+def test_accessor_cmo_path_trailing_year_guard(monkeypatch):
+    # If CMO published the current in-progress year, the trailing-year guard must fire.
+    monkeypatch.setattr("vnfin.gold.world_reference._today", lambda: date(2024, 6, 30))
+    cmo = {2023: 2000.0, 2024: 2100.0}
+    fx = {2023: 24500.0, 2024: 25000.0}
+    out = world_reference_history_vnd(
+        date(2023, 1, 1), date(2024, 12, 31),
+        http_get=_cmo_router(cmo_gold_by_year=cmo, fx_by_year=fx),
+    )
+    trailing = [w for w in out.warnings if w.startswith("world_reference_trailing_year_incomplete")]
+    assert len(trailing) == 1 and "2024" in trailing[0]
+
+
+def test_accessor_cmo_unavailable_falls_back_to_daily_with_warning():
+    # CMO fails (anti-bot HTML body) -> daily CurrencyApi->Stooq path serves -> result
+    # carries a never-silent world_reference_gold_source_fallback warning.
+    gold = {2021: 1800.0, 2022: 1900.0, 2023: 2000.0, 2024: 2100.0}
+    fx = {2021: 23500.0, 2022: 24000.0, 2023: 24500.0, 2024: 25000.0}
+    stooq = _stooq_csv(gold)
+    out = world_reference_history_vnd(
+        date(2021, 1, 1), date(2024, 12, 31),
+        http_get=_cmo_router(cmo_body=b"<html>blocked</html>", fx_by_year=fx, stooq_text=stooq),
+    )
+    fallback = [w for w in out.warnings if w.startswith("world_reference_gold_source_fallback")]
+    assert len(fallback) == 1
+    assert "CMO" in fallback[0] and "daily" in fallback[0].lower()
+    # the daily path produced the same annual values (constant per-year stooq)
+    for b in out.bars:
+        y = b.date.year
+        assert b.price == pytest.approx(gold[y] * fx[y] * OZ_TO_LUONG)
+
+
+def test_accessor_cmo_empty_span_falls_back_to_daily():
+    # CMO has data but NOT in the requested span (raises EmptyData, a SourceError) ->
+    # falls back to the daily path with the fallback warning.
+    cmo = {2010: 1200.0}  # outside the requested window
+    gold = {2022: 1900.0, 2023: 2000.0}
+    fx = {2022: 24000.0, 2023: 24500.0}
+    stooq = _stooq_csv(gold)
+    out = world_reference_history_vnd(
+        date(2022, 1, 1), date(2023, 12, 31),
+        http_get=_cmo_router(cmo_gold_by_year=cmo, fx_by_year=fx, stooq_text=stooq),
+    )
+    fallback = [w for w in out.warnings if w.startswith("world_reference_gold_source_fallback")]
+    assert len(fallback) == 1
+    assert [b.date.year for b in out.bars] == [2022, 2023]
+
+
+def test_accessor_cmo_primary_has_no_fallback_warning():
+    # When CMO serves, there must be NO fallback warning (it only fires on fallback).
+    cmo = {2022: 1900.0, 2023: 2000.0}
+    fx = {2022: 24000.0, 2023: 24500.0}
+    out = world_reference_history_vnd(
+        date(2022, 1, 1), date(2023, 12, 31),
+        http_get=_cmo_router(cmo_gold_by_year=cmo, fx_by_year=fx),
+    )
+    assert not any(w.startswith("world_reference_gold_source_fallback") for w in out.warnings)
+
+
+def test_accessor_cmo_fallback_then_daily_also_fails_propagates():
+    # CMO fails AND the daily path also fails (Stooq anti-bot, CurrencyApi 404) ->
+    # AllSourcesFailed bubbles up (never a silent half-result).
+    html = "<!DOCTYPE html><html><body><noscript>requires JavaScript</noscript></body></html>"
+    fx = {2021: 23500.0, 2022: 24000.0, 2023: 24500.0, 2024: 25000.0}
+    with pytest.raises(AllSourcesFailed):
+        world_reference_history_vnd(
+            date(2021, 1, 1), date(2024, 12, 31),
+            http_get=_cmo_router(cmo_body=b"<html>blocked</html>", fx_by_year=fx, stooq_text=html),
+        )
