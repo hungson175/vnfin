@@ -265,29 +265,46 @@ def test_fx_docs_do_not_claim_fx_has_no_history():
     import pathlib, re
 
     root = pathlib.Path(__file__).resolve().parent.parent
+
+    # (a) Forbidden FX-no-history phrases are banned REPO-WIDE (every doc/agent file, present or
+    # future) — not a curated list, because the stale text kept reappearing in files the list
+    # had not enumerated (SKILL.md, then macro-and-fx.md). Each phrase is FX-specific and does
+    # NOT match gold's legitimate bare "spot only" rows.
+    scan_roots = [
+        *root.glob("docs/**/*.md"),
+        *root.glob("skills/**/*.md"),
+        *root.glob("vnfin/fx/*.py"),
+        root / "vnfin/diagnostics.py",
+        root / "llms.txt",
+        root / "README.md",
+    ]
+    forbidden = re.compile(
+        r"fx has \*?\*?no\*?\*? ?history|no history in v0\.2|no historical fx|"
+        r"spot/current only|spot/current in v0\.\d|fx is spot|"
+        r"history deferred to a future issue",
+        re.I,
+    )
+    forbidden_offenders = []
+    for path in scan_roots:
+        if not path.exists():
+            continue
+        for ln in path.read_text().splitlines():
+            if forbidden.search(ln):
+                forbidden_offenders.append(f"{path.relative_to(root)}: {ln.strip()}")
+
+    # (b) FX-primary docs must positively affirm the history entrypoint, so deleting the history
+    # docs also fails. This stays a curated list (these files MUST mention fx.history).
     fx_doc_files = [
         "docs/ai-usage.md",
         "skills/vnfin/reference/domains.md",
         "skills/vnfin/SKILL.md",
         "docs/architecture/data-domains.md",
-        "docs/architecture/maintainer-workflow.md",
+        "docs/tutorials/macro-and-fx.md",
         "vnfin/fx/__init__.py",
     ]
-    # FX-specific denials of history. These phrasings were the stale ones and do NOT occur
-    # in gold's legitimate "spot only" rows (gold uses bare "spot only", never these).
-    forbidden = re.compile(
-        r"fx has \*?\*?no\*?\*? ?history|no history in v0\.2|no historical fx|"
-        r"spot/current only|history deferred to a future issue",
-        re.I,
-    )
-    forbidden_offenders = []
     affirm_missing = []
     for rel in fx_doc_files:
-        text = (root / rel).read_text()
-        for ln in text.splitlines():
-            if forbidden.search(ln):
-                forbidden_offenders.append(f"{rel}: {ln.strip()}")
-        low = text.lower()
+        low = (root / rel).read_text().lower()
         if "fx.history" not in low and "fxhistory" not in low:
             affirm_missing.append(rel)
     assert not forbidden_offenders, (
@@ -313,6 +330,7 @@ def test_diagnostics_docs_enumerate_fx_coverage():
     diag_doc_files = [
         "docs/api.md",
         "docs/architecture/data-domains.md",
+        "docs/how-to/source-diagnostics.md",
     ]
     missing = []
     for rel in diag_doc_files:

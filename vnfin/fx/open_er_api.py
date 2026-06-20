@@ -7,7 +7,8 @@ requested), and rate limits.
 
 Convention: with ``base_code = USD``, ``rates[X]`` is *X per 1 USD*. The canonical vnfin unit is
 **VND per 1 base**, so ``X/VND = rates["VND"] / rates[X]`` (USD/VND is just ``rates["VND"]``).
-One fetch (base=USD) yields every pair versus VND. Spot/current only — no history.
+One fetch (base=USD) yields every pair versus VND. This source serves the spot/current quote only
+(no historical endpoint); historical USD/VND lives in ``vnfin.fx.history`` (World Bank, annual).
 """
 from __future__ import annotations
 

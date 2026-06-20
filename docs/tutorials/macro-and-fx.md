@@ -4,7 +4,10 @@ Use this guide for Vietnam macro indicators and VND FX reference rates.
 
 ## FX rates
 
-FX is spot/current in v0.2. Rates are expressed as **VND per 1 base currency**.
+FX has two shapes. `vnfin.fx.get_rate()` / `vnfin.fx.client()` return the **spot/current**
+rate; `vnfin.fx.history()` returns **annual USD/VND history** (`FXHistory`, World Bank
+`PA.NUS.FCRF`, no-key — see [Historical FX](fx-history.md)). Rates are expressed as
+**VND per 1 base currency**.
 
 ```python
 import vnfin

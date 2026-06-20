@@ -23,7 +23,8 @@ Canonical vnfin unit: **VND per 1 unit of the base** (`unit = "VND per 1 {base}"
   → the adapter enables a **response cache by default** (`FXSource.DEFAULT_CACHE_TTL = 3600 s`),
   so repeated calls reuse one fetch; the health probe is opt-in (`scripts/healthcheck.py --fx`),
   never in the default scheduled sweep. Override the TTL via the `cache_ttl` constructor arg.
-- Spot/current only — **no historical** series on the open (no-key) tier.
+- This source serves the **spot/current** quote only — it has no historical endpoint. Historical
+  USD/VND comes from a separate source: `vnfin.fx.history()` (World Bank `PA.NUS.FCRF`, annual).
 - 166 currencies; CDN-backed, globally reachable (live-verified 2026-06-18).
 
 ## Terms / provenance (IMPORTANT)
