@@ -122,6 +122,8 @@ class AlphaVantageIndexSource(HttpDataSource):
                 f"{self.NAME}: no ALPHAVANTAGE_API_KEY configured (bring-your-own-key); "
                 "pass api_key= or set the env var"
             )
+        # v1: `symbol` is normalized into the result label only — the request below is
+        # pinned to SPY regardless. SPY-only gating lives in the client/accessor, not here.
         canonical = self._canonical_symbol(symbol)
         window_start = _as_window_date(start, "start") if start is not None else None
         window_end = _as_window_date(end, "end") if end is not None else None
@@ -189,7 +191,10 @@ class AlphaVantageIndexSource(HttpDataSource):
                 headers={"User-Agent": DEFAULT_UA, "Accept": "application/json"},
             )
         except VnfinError as exc:
-            # Never let a provider/transport message leak the key.
+            # Redact the key from the re-raised message. `from None` suppresses the
+            # original exception chain in tracebacks; the suppressed __context__ is
+            # itself key-safe because the transport layer redacts SENSITIVE_PARAMS, so
+            # `from None` is for a clean message here, not the key-safety guarantee.
             raise type(exc)(self._redact_key(str(exc))) from None
 
     def _parse_bars(self, series, window_start, window_end) -> list[PriceBar]:
@@ -274,6 +279,8 @@ class StooqIndexSource(HttpDataSource):
         *,
         interval: Interval = Interval.D1,
     ) -> PriceHistory:
+        # v1: `symbol` is normalized into the result label only — the CSV fetched below is
+        # pinned to ^SPX regardless. SPY-only gating lives in the client/accessor, not here.
         canonical = AlphaVantageIndexSource._canonical_symbol(symbol)
         window_start = _as_window_date(start, "start") if start is not None else None
         window_end = _as_window_date(end, "end") if end is not None else None
