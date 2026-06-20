@@ -48,18 +48,32 @@ _Last synced: 2026-06-21 00:40 +07_
 > (serving sector-index HISTORY = separate feature needing a clean source + per-symbol tests).
 > Watermark/state left to reviewer.
 >
-> **NOW: #183 optional interval/resample — MUST-FIX DONE, awaiting reviewer diff-confirm (NO re-gate).**
-> Codex×2 verdict = APPROVE_WITH_NOTES, ONE must-fix (reviewer's owned gate miss): the original
-> `apply_interval` hardcoded fetch=D1 + rejected intraday pre-fetch → **silently broke existing native-
-> intraday callers** of `prices.history` (and `index_history`, whose sources inherit intraday from the
-> equity base via `_IndexUDFMixin` — so index intraday is ALSO natively served, contra the reviewer's
-> "index sources don't serve intraday" premise → flagged back). **Fix `7c5ec2c`:** resample ONLY
-> W1/MN1/Q1/Y1 from `fetch(Interval.D1)`; everything else (D1 + intraday) → `fetch(interval)` native;
-> source `supports()` is the only reject. Thunks now `lambda iv: ...get_history(symbol, iv, ...)`.
-> TDD: flipped 3 intraday tests → assert native serving (RED→GREEN). Docs/CHANGELOG/skill/domains/2
-> tutorials reworded "intraday rejected"→"unchanged/native". Full suite **3290 passed**, surface+no-
-> secrets green, snapshot frozen. Commits `c6e8a23`+`7c5ec2c` (NOT pushed). On reviewer confirm: push
-> both + close #183 + CONFIRM back (→ reviewer pings vf-advisor to drop workaround). state/ = reviewer.
+> **#183 optional interval/resample — ✅ DONE + PUSHED + CLOSED.** Pushed master `17b3f5d..9f660df`
+> (design notes `0bb59cd`/`6e03048` + feat `c6e8a23` + must-fix `7c5ec2c` + backlog); #183 commented +
+> CLOSED (completed). `prices.history` + `index_history` take optional `interval` (Interval member OR
+> pandas alias `'D'/'W'/'M'/'Q'/'Y'`); `W1/MN1/Q1/Y1` resampled CLIENT-SIDE from D1 (OHLC/period, bar=
+> last actual trading day); `Interval.Q1="1Q"`/`Y1="1Y"` additive. Codex×2 = APPROVE_WITH_NOTES + ONE
+> must-fix (reviewer's owned gate miss): original code hardcoded fetch=D1 + rejected intraday pre-fetch
+> → silently broke existing native-intraday callers. **Must-fix `7c5ec2c`:** resample ONLY W1/MN1/Q1/Y1
+> from `fetch(D1)`; D1+intraday → `fetch(interval)` native passthrough for BOTH prices AND index (source
+> `supports()` the only reject) → truly additive. **My factual correction confirmed by reviewer:** index
+> sources inherit intraday (`_IndexUDFMixin` doesn't override SUPPORTED), so index intraday is NATIVELY
+> served, NOT rejected (reviewer's "index doesn't serve intraday" premise was wrong; passthrough-both is
+> final, no design change). `resampled_from_d1` always + `resample_partial_period` bars-kept warnings.
+> Suite **3290 green**, surface additive (snapshot FROZEN), no-secrets green. Reviewer pinging vf-advisor
+> to drop its client-side aggregation workaround. state/ watermark = reviewer.
+>
+> **NOW: #185 annual world-gold source (unblocks vf-advisor LIVE gold chart) — DESIGN-NOTE-FIRST.**
+> Reviewer spec `~/tools/vnfin-oss-reviewer/reviews/spec-202606210205-issue185-annual-world-gold-source.md`.
+> Follow-up to closed #178: from a datacenter host the daily world-gold leg (CurrencyApi→Stooq) is
+> unfetchable, so the ANNUAL `world_reference_history_vnd` gold leg needs an annual source. RECOMMENDED:
+> **World Bank CMO "Pink Sheet" annual xlsx** (keyless, CC-BY 4.0, server-reachable, 1960–2025 no gaps;
+> match gold col BY HEADER `Gold ($/troy oz)`). Process: builder DESIGN NOTE first → reviewer LEAD GATE
+> → TDD → Codex×2. Open Qs: (1) xlsx-parse dep (stdlib `zipfile`+`xml.etree` / optional `vnfin[gold-
+> history]`→openpyxl / core openpyxl; reviewer leans a/b lean-core); (2) vintage-coded URL robustness
+> (pin+fallback, clean `SourceUnavailable`/`InvalidData`). Rewire ONLY the annual synthesis to CMO;
+> preserve #178 intersection + premium/annual-basis/partial warnings + trailing-year guard; leave
+> `gold.world()` daily on CurrencyApi→Stooq. Next action: write the design note, route to reviewer LEAD.
 >
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
@@ -427,20 +441,7 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Next
 
-- **#185 annual world-gold source (unblocks vf-advisor's LIVE gold chart) — queued AFTER #183 ships.**
-  Reviewer spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606210205-issue185-annual-world-gold-source.md`.
-  Follow-up to closed #178: from a datacenter host the daily world-gold leg (CurrencyApi→Stooq) is
-  unfetchable (sparse/anti-bot), so the ANNUAL `world_reference_history_vnd` gold leg needs an annual
-  source. RECOMMENDED: **World Bank CMO "Pink Sheet" annual xlsx** (keyless, CC-BY 4.0, server-reachable,
-  1960–2025 no gaps; match gold col BY HEADER `Gold ($/troy oz)`, never fixed index). Process: **builder
-  DESIGN NOTE first** (resolve the 2 open Qs → reviewer LEAD GATE → TDD → Codex×2). Open design Qs:
-  (1) xlsx-parse dep — stdlib `zipfile`+`xml.etree` (no dep) vs optional `vnfin[gold-history]`→openpyxl
-  vs core openpyxl (reviewer leans a/b, lean-core); (2) vintage-coded URL robustness — pin current +
-  fallback list, clean `SourceUnavailable`/`InvalidData` on 404/anti-bot/parse-fail. Rewire ONLY the
-  annual synthesis to CMO (`gold_annual[y]=CMO[y]×fx_annual[y]×37.5/31.1035`); preserve #178's
-  intersection + premium/annual-basis/partial-coverage warnings + `world_reference_trailing_year_incomplete`
-  guard; leave `gold.world()` daily path on CurrencyApi→Stooq. Attribution: credit WB Commodity Markets
-  (Pink Sheet) in `docs/sources/`. On APPROVE+push+close → ping vf-advisor to flip gold line mock→real.
+- _(none — #185 promoted to NOW above)_
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
