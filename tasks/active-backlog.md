@@ -190,6 +190,20 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   VNFINLEAD/VNFINSELECT. Zero-network TDD; liquidity inherits price guard only. **PROCEED with TDD
   now (#157 rev2.5 patch done).** → delegate to a sub-agent.
 
+- **#169 — HIGH data-coverage BUG: crypto long-window partial coverage** (reviewer spec
+  review-202606201334). Queue AFTER #168, BEFORE large #157 implementation. Crypto daily history must
+  not silently accept a primary-source result whose returned window starts after requested `start` /
+  ends before requested `end`:
+  1. client/failover-level requested-window coverage validation for crypto daily history;
+  2. partial primary prefix/suffix → fail over to backup;
+  3. backup covering the window → select it;
+  4. no source covers it → NOT a silent full-success — either explicit coverage warnings/diagnostics
+     by contract OR fail-closed typed error (**design decision — quick design-check w/ reviewer first**);
+  5. TDD synthetic sources incl. short-prefix primary + full-window backup;
+  6. no scraping / unreviewed providers.
+  Crypto domain (`vnfin/crypto/`), independent of #168 (prices/indices). Likely a small design-check
+  before coding (option 4 contract choice).
+
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
 - _(none)_
