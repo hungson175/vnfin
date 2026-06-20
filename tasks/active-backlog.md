@@ -144,9 +144,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN-FIRST ONLY** (reviewer filtered spec
-  spec-202606201222). Deliverable: `docs/design/fundamentals-metrics.md` (no code until reviewer
-  approves). Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
+- **#157 fundamentals metrics — DESIGN REV2 AWAITING RE-REVIEW** (spec spec-202606201222; design
+  `1616ff6` → BLOCK review-202606201230 (8 blockers B1-B8) → rev2 `a0a00cc`). No code until reviewer
+  approves. Rev2 resolved all 8: B1/C3 VNDirect-only namespace map (non-vndirect→BLOCKED w/ reason,
+  CafeF map=v1.x); B2 drop source_attempts + per-statement StatementProvenance + MetricInput.source
+  lineage + remove unsafe MetricReport.source; B3 frozen typed coverage PER fiscal_date; B4 exact
+  signatures+injection+pure _metrics_from_reports seam; B5 module=metric_api.py; B6 full-catalog
+  invariant; B7 zero ratio fetch (not_requested); B8 lineage via code->LineItem. Q2 renames applied.
+  Deliverable: `docs/design/fundamentals-metrics.md` (design-only). Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
   external source). v1: canonical metric catalog (corporate + bank headline mapped, per spec codes) +
   5 derived (gross/net margin, liab/equity, cash/assets, OCF margin) + coverage diagnostics. API:
   `metric_catalog()`, `explain_metric(id)`, `metrics(symbol, period)`, `explain_metric_coverage(...)`.
