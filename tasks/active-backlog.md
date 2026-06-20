@@ -12,21 +12,23 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 ~17:30 +07_
+_Last synced: 2026-06-20 ~18:33 +07_
 
-> **State snapshot (17:30):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
+> **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
 > `aa72dca` per-model_type itemcode map + `0a28339` reviewer cosmetics; Codex×2 APPROVE review-202606201727;
 > #157 commented, **stays OPEN for the metrics leg**). Q1 probe PASS (VPB/ACB) + provenance `a01d3da`.
 > **#176 phantom-tail DONE+PUSHED+CLOSED** — `068d919` warn-v1 (`trailing_zero_volume_tail`, D1, ≥10
 > run, warn-not-drop) pushed `0a28339..1402b37`; Codex×2 APPROVE review-202606201750; #176 commented +
 > CLOSED (reported silent-corruption surfaced). Deferred design-eval follow-ups (trim / cross-source
-> reconciliation / ADV-dilution) live in design §8 + below — NOT open issues. **Now: #172-RESIDUAL
-> CODE committed `27cb353`** (base `7bbd730`) — `nav_end_gap` success-path warning (cadence-relative,
-> trailing-window, today-injected); implement→5-skeptic verify, 3 findings resolved (1 JUDGMENT CALL:
-> accept+pin the daily→weekly transition transient). Full 3001 green, trio exit0, fmarket cov 96%,
-> snapshot untouched. Handoff `/tmp/vnfin-172-residual-nav-end-gap-handoff-20260620.md`; **in Codex×2
-> review**. On APPROVE: push + close #172. FundList.nav as-of → reviewer-filed **#181** (out of v1 scope).
+> reconciliation / ADV-dilution) live in design §8 + below — NOT open issues. **#172-RESIDUAL
+> nav_end_gap DONE+PUSHED+CLOSED** — `27cb353` `nav_end_gap` success-path warning (cadence-relative,
+> trailing-window diffs[-8:], today-injected) pushed `7bbd730..57574ba`; Codex×2 APPROVE
+> review-202606201831 (all 4 refinements present; judgment call ENDORSED by all 3 — accept the
+> self-clearing daily→weekly transition transient over a false-negative suppressor; lone note: the
+> `max(1,…)` floor is dead-but-harmless guard). #172 commented + CLOSED. Full 3001 green, trio exit0,
+> fmarket cov 96%, snapshot untouched. **This closes the entire reporter-bug queue — only the #157
+> metrics leg remains.** FundList.nav per-fund as-of → reviewer-filed **#181** (out of v1 scope).
 
 ---
 
