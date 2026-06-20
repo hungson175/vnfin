@@ -12,7 +12,9 @@ The same numeric code means *different* things across statement templates
 a code is resolved only inside its own statement template, never via a
 cross-template fallback. An unmapped code returns the honest raw ``item_<code>``
 rather than a guessed (and possibly wrong) label. See
-``docs/design/bank-fundamentals-itemcodes.md`` (#157).
+``docs/design/bank-fundamentals-itemcodes.md`` for the mapping rationale and
+``docs/design/bank-itemcodes-probe-20260620.md`` for the identity-proven bank
+anchors (#157).
 
 These itemCode->name pairings were derived only from VNDirect's own API
 responses and the public Vietnamese accounting statement structure; no vnstock

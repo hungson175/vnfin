@@ -933,6 +933,12 @@ def test_item_name_same_code_different_template_distinct_labels():
     assert bank_23000 == "Lợi nhuận sau thuế"
     assert corp_23000 != bank_23000
 
+    corp_13000 = item_name("13000", model_type=1)  # corporate income
+    bank_13000 = item_name("13000", model_type=101)  # bank balance
+    assert corp_13000 == "Chi phí bán hàng"
+    assert bank_13000 == "Nợ phải trả"
+    assert corp_13000 != bank_13000
+
 
 def test_item_name_partition_completeness():
     # Every (model_type, code) in the partition resolves to its own label, and
