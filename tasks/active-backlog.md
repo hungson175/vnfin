@@ -48,7 +48,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **CLAUDE.md: updated** — execution model (orchestrate via sub-agents/worktrees), integration-test
   + long-message rules (1074a0a, Boss directive).
 - **Design-first parked (reviewer triage review-202606200902, filtered specs only):**
-  - B: **#147** VNINDEX long-window — DESIGN drafted `docs/design/index-long-window.md` (diagnostic + stitching; opt-in, no silent drop). Awaiting reviewer design review.
+  - B: **#147** VNINDEX long-window — design APPROVED_WITH_SPEC (review-202606200913); implementing Option2 v1 (opt-in index_history_stitched, calendar-year D1 segments) — DELEGATED to sub-agent.
   - C: **#149/#152/#156** macro / rates / global-benchmark diagnostics.
   - D: **#154/#150** derived gold-premium / portfolio analytics (offline, data-only, no advice).
   - E: **#155** fund metadata / allocation diagnostics.
