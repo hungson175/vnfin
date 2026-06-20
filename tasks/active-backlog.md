@@ -144,7 +144,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- _(none — #159 shipped; 0 open bugs. Parked design-first queue awaits reviewer specs.)_
+- **#157 fundamentals metrics — DESIGN-FIRST ONLY** (reviewer filtered spec
+  spec-202606201222). Deliverable: `docs/design/fundamentals-metrics.md` (no code until reviewer
+  approves). Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
+  external source). v1: canonical metric catalog (corporate + bank headline mapped, per spec codes) +
+  5 derived (gross/net margin, liab/equity, cash/assets, OCF margin) + coverage diagnostics. API:
+  `metric_catalog()`, `explain_metric(id)`, `metrics(symbol, period)`, `explain_metric_coverage(...)`.
+  Models: MetricId/MetricKind/MetricAvailability enums; MetricDefinition/MetricValue/MetricReport/
+  MetricCoverage. v2 (deferred/blocked): ROE/ROA/ROIC, FCF, valuation (P/E,P/B,...), EPS/BV. Non-goals:
+  ranking/advice/screener-with-strategy, blind external ingestion, generic item_<code> as
+  investor-ready, silent bank/non-bank mixing. Spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606201222-issue157-fundamentals-metrics.md`.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
