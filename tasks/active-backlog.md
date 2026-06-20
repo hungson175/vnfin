@@ -172,6 +172,20 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   MetricCoverage. v2 (deferred/blocked): ROE/ROA/ROIC, FCF, valuation (P/E,P/B,...), EPS/BV. Non-goals:
   ranking/advice/screener-with-strategy, blind external ingestion, generic item_<code> as
   investor-ready, silent bank/non-bank mixing. Spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606201222-issue157-fundamentals-metrics.md`.
+  - **#157 BANK DATA-INTEGRITY INPUT (HIGH; reviewer-reproduced, review-202606201553) — FOLD IN
+    BEFORE the #157 bank mapping finalizes; do NOT switch from #173.** Reporter + reviewer
+    independently reproduced a bank fundamentals mislabel in `get_financials` (VCB, is_bank=True,
+    balance, annual): code `412000` is labeled 'Tổng tài sản'(Total assets)=1,648.5T but that is
+    VCB's LOANS; the REAL total assets=2,442.3T sits under raw unlabeled code `12700`. Cross-statement
+    leak: income code `14000` ('Lợi nhuận thuần từ hoạt động kinh doanh') appears in the BALANCE
+    statement. So the bank item-code→label map is wrong + statement membership is contaminated →
+    headline bank values (PAT/NII/assets) wrong 5-7x or hidden under raw codes. **ROOT FIX at the base
+    layer (so raw `get_financials` is also correct):** correct the bank statement-template / itemcode→
+    canonical map vs the bank chart of accounts (assets=`12700`, `412000`=loans); ENFORCE per-statement
+    membership (reject income `14000` from balance); emit raw/coverage diagnostic for unverified codes —
+    NEVER a wrong human label on a value. #157 bank canonical metrics build on the corrected map +
+    blocked/missing diagnostics. Verified anchors → synthetic offline tests. Codex x2 review against
+    these anchors. Spec: `~/tools/vnfin-oss-reviewer/reviews/review-202606201553-issue157-bank-fundamentals-mislabel-VERIFIED.md`.
 
 ## Next / in-flight bugs (BEFORE large #157 implementation)
 
