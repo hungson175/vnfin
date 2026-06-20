@@ -21,8 +21,9 @@ _Last synced: 2026-06-20 ~17:30 +07_
 > **#176 phantom-tail DONE+PUSHED+CLOSED** — `068d919` warn-v1 (`trailing_zero_volume_tail`, D1, ≥10
 > run, warn-not-drop) pushed `0a28339..1402b37`; Codex×2 APPROVE review-202606201750; #176 commented +
 > CLOSED (reported silent-corruption surfaced). Deferred design-eval follow-ups (trim / cross-source
-> reconciliation / ADV-dilution) live in design §8 + below — NOT open issues. **Now: idle — next is
-> #172-RESIDUAL design (design-first) when ready.**
+> reconciliation / ADV-dilution) live in design §8 + below — NOT open issues. **Now: #172-RESIDUAL
+> DESIGN submitted** `b3d4a6f` (`docs/design/nav-success-path-staleness.md`) — cadence-relative NAV
+> staleness; sent to reviewer for design-check, converging Q1 (baseline) before TDD. Blocked on reviewer.
 
 ---
 
