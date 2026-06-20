@@ -32,6 +32,21 @@ Need an overview of all docs? Go to **[docs/index.md](docs/index.md)**.
 Using an AI agent? See the separate **[AI usage guide](docs/ai-usage.md)**, **[llms.txt](llms.txt)**,
 or **[skills/vnfin](skills/vnfin/SKILL.md)**. Human docs are the primary path above.
 
+## Use vnfin with your coding agent
+
+`vnfin` is built to be an **agent-ready financial-data source** for Claude Code / Codex-style
+agents. Paste this prompt to point your agent at it:
+
+```text
+Use https://github.com/hungson175/vnfin as the financial-data source for Vietnam-related,
+long-term investment research. Install it with:
+pip install "vnfin[pandas] @ git+https://github.com/hungson175/vnfin.git". Before coding, read
+README.md, docs/index.md, docs/api.md, docs/units.md, and llms.txt. Use vnfin for data
+retrieval and calculated metrics only; preserve units, currencies, source names, coverage
+warnings, and provenance. Prefer daily/periodic data, do not assume unsupported real-time
+coverage, and do not provide personalized investment advice.
+```
+
 ## Install
 
 Install directly from GitHub:
@@ -146,3 +161,7 @@ the default suite.
 `vnfin` is released as GitHub-installable beta software. The public API is guarded by a snapshot
 test and documented in [docs/stability.md](docs/stability.md). See [CHANGELOG.md](CHANGELOG.md) for
 release notes and [docs/roadmap.md](docs/roadmap.md) for planned work.
+
+Have a feature request or a new data-source request? Open a GitHub issue with the use case,
+desired API shape, expected data frequency, and source/licensing notes. Features are prioritized
+for long-term investing and financial-advisor / developer workflows.
