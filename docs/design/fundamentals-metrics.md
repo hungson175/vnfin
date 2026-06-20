@@ -1,10 +1,10 @@
 # Design — fundamentals metrics & coverage diagnostics (#157)
 
-**Status:** DESIGN (rev 2.3 — resolves three design-review rounds: 8 blockers (review-202606201230),
-7 spec-precision (review-202606201245), 6 public-contract/TDD-precision (review-202606201300): typed
-statement-result seam w/ `limit` + AllSourcesFailed/NOT_SERVED classification, fully-typed coverage
-enums w/ exact values, namespaced codes, exact reason+interpolation table, catalog filter semantics,
-exact DataFrame column+attr value types). Implementation-ready; must be APPROVED before any code.
+**Status:** DESIGN (rev 2.4 — resolves four design-review rounds: review-202606201230 (8),
+…201245 (7), …201300 (6), …201310 (4): typed statement-result seam w/ `limit`, deterministic
+capability-based AllSourcesFailed/NOT_SERVED predicate + TDD matrix, fully-typed coverage enums w/
+exact values, namespaced codes, exact reason+interpolation table, catalog filter semantics, exact
+DataFrame column+attr value types, single-category contract). Implementation-ready; APPROVE before code.
 **Scope:** an **additive, offline** canonical-metrics + coverage-diagnostics layer on top of the
 existing `vnfin.fundamentals` reports — fundamental **data primitives and diagnostics** for
 long-term investors, *not* an advice/ranking/screener layer.
@@ -150,12 +150,23 @@ def _coverage_from_statement_results(
 **Fiscal-date alignment (B1/B3):** align statements by the **union of fiscal dates across the
 successful statements**, newest-first; a metric whose statement has no report at a given date →
 `MISSING`; cap the period list to `limit` **after** alignment (the pure transformers take `limit`).
-**Wrapper error classification (B1):** the wrappers call `get_financials` per statement and map
-failures to a failed `StatementFetchResult` — a recoverable **`SourceError`** (direct/single-source)
-**and** a chain-level **`AllSourcesFailed`** (note: `AllSourcesFailed` is NOT a `SourceError`, so it
-is caught explicitly) both → `status=SOURCE_ERROR, source=None, detail=<exc class/msg>`; the
-specific CafeF-cashflow case (CafeF doesn't serve cashflow) → `status=NOT_SERVED, source="cafef"`.
-No failed-attempt trail is exposed (C1). `source` wins over `sources` (matching `get_financials`).
+**Wrapper error classification (B1/B4) — deterministic, capability-based (NOT failure-message-based):**
+the wrappers call `get_financials` per statement and map outcomes via a **static capability predicate**
+`serves(source, statement)` (known set per adapter — VNDirect serves `{income, balance, cashflow,
+ratios}`; CafeF serves `{income, balance, ratios}`, i.e. **not** cashflow). Let `C` be the resolved
+source chain for the statement (`source` wins over `sources`, matching `get_financials`):
+
+- **no source in `C` can serve the statement** (every member's `serves(...)` is false) →
+  `status=NOT_SERVED`, `source=` the responsible source (the lone non-serving source's name, e.g.
+  `"cafef"`; comma-joined if several), exact reason `statement {statement} not served by source '{source}'`.
+- **≥1 source in `C` can serve it but the fetch still failed** — a direct/single-source `SourceError`
+  **or** a chain-level `AllSourcesFailed` (which is NOT a `SourceError`, so caught explicitly) →
+  `status=SOURCE_ERROR, source=None, detail=<exc class/msg>`.
+- success → `status=OK, source=<succeeding source>`.
+
+The classification uses the static capability set, **not** `AllSourcesFailed.attempts`; if an
+implementation inspects `attempts` internally it must **not** expose the trail (C1). This makes the
+default chain (`VNDirect→CafeF`) vs an explicit `source=CafeF` deterministic — see the matrix in §9.
 
 - `metrics()`/`explain_metric_coverage()` mirror `get_financials`' injection knobs (`is_bank`,
   `limit`, `source`/`sources`, `http_get`, `timeout`, `max_attempts`) so tests can inject a fake
@@ -191,9 +202,10 @@ The public `get_financials()` returns just `tuple[FinancialReport]`. The failove
 public method. Therefore the metrics layer **cannot** report a full source-attempt log without a new
 client API — which is **out of v1 scope**.
 
-- v1 coverage reports the **succeeding source per statement** (each `FinancialReport.source`) and a
-  per-statement `status` (`ok` / `missing` / `source_error`). It does **not** claim a failed-attempt
-  trail. (A future `get_financials(..., return_attempts=True)` could add it — flagged as v2.)
+- v1 coverage reports the per-statement `status` as the typed `StatementCoverageStatus`
+  (`ok` / `missing` / `source_error` / `not_served`) plus the `source` per the B2 role rule (OK →
+  succeeding source; `not_served` → responsible source e.g. `"cafef"`; else `None`). It does **not**
+  claim a failed-attempt trail. (A future `get_financials(..., return_attempts=True)` could add it — v2.)
 
 ### C2 — a metrics request fans out to 3 statements → sources can differ → no single report `source` (B2)
 
@@ -215,8 +227,9 @@ under a different code — a silent all-MISSING trap.
 
 - The metric code map is **source-namespaced**. **v1 maps the VNDirect namespace only.** For a
   report whose `source != "vndirect"` (e.g. CafeF), raw_mapped metrics are marked
-  `availability=BLOCKED` with the stable reason `"metric map not available for source <name>"` —
-  **never silently MISSING**. A **CafeF headline-code map is a defined v1.x follow-up** (needs its
+  `availability=BLOCKED` with the exact stable reason `metric map not available for source '{source}'`
+  (the form tests bind verbatim; see §5 reason table) — **never silently MISSING**. A **CafeF
+  headline-code map is a defined v1.x follow-up** (needs its
   own clean-room derivation of CafeF's string codes), kept out of this slice to stay small+correct.
 - Note: because VNDirect is the primary and the only cashflow source, in practice most metrics
   resolve via VNDirect; CafeF only backstops income/balance, and when it does, v1 is honest that the
@@ -284,7 +297,7 @@ class MetricValue:
     availability: MetricAvailability
     fiscal_date: date
     inputs: tuple[MetricInput, ...]  # lineage (raw lines / dependency values used)
-    reason: Optional[str] = None     # stable reason when not AVAILABLE (e.g. "missing input revenue")
+    reason: Optional[str] = None     # stable reason when not AVAILABLE (e.g. "missing input metric net_revenue"; see §5 table)
     warnings: tuple[str, ...] = ()
 
 @dataclass(frozen=True)
@@ -405,9 +418,9 @@ them verbatim). `{…}` are substituted; string literals use single quotes as sh
 `MetricId.value`; `{availability}` = `MetricAvailability.value`; `{fiscal_date}` = `date.isoformat()`;
 `{source}` = source name string; `{code}` = the VNDirect item code string; `{value}` = `repr(float)`.
 String literals use single quotes exactly as shown. `MetricAvailability.NOT_APPLICABLE` is the
-enum member (there is no `UNAPPLICABLE`). `UNSUPPORTED` is reserved for v2 metric kinds
-(valuation/ROE-family) absent from the v1 catalog. All examples and tests in §9 reference these
-exact strings.
+enum member (there is no `UNAPPLICABLE`). `UNSUPPORTED` is reserved for v2 **valuation** metrics
+absent from the v1 catalog (the ROE/ROA/ROIC family is `BLOCKED`, not `UNSUPPORTED` — see §6). All
+examples and tests in §9 reference these exact strings.
 
 ### Coverage (`explain_metric_coverage`)
 
@@ -452,7 +465,7 @@ If a future `metrics_batch(symbols)` helper is added, it returns per-symbol resu
 
 | MetricId | code | category |
 |----------|------|----------|
-| net_revenue | 11000 | size/profitability |
+| net_revenue | 11000 | size |
 | gross_profit | 11200 | profitability |
 | operating_profit | 14000 | profitability |
 | profit_before_tax | 20000 | profitability |
@@ -512,8 +525,9 @@ via `codes_by_source["vndirect"].bank_code` on the shared `total_liabilities`/`o
 
 ### v1.x — CafeF code-namespace map (deferred, C3)
 
-A clean-room map of **CafeF's string headline codes** (e.g. `"DTTBHCCDV"` → `revenue`) so a
-CafeF-sourced statement also resolves canonical metrics instead of `BLOCKED`. Deferred out of v1 to
+A clean-room map of **CafeF's string headline codes** to canonical `MetricId`s (e.g. CafeF
+`"DTTBHCCDV"` → `net_revenue`), added as a `"cafef"` key in `codes_by_source`, so a CafeF-sourced
+statement also resolves canonical metrics instead of `BLOCKED`. Deferred out of v1 to
 keep the slice small + correct; until then CafeF-sourced metrics are `BLOCKED` with an explicit
 reason (never silently MISSING). Needs its own clean-room derivation from CafeF's own responses.
 
@@ -593,7 +607,20 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
   metrics are `BLOCKED` with reason `"metric map not available for source 'cafef'"`, **not** MISSING.
 - **per-fiscal-date coverage (B1):** multi-period fixture → `MetricCoverage.periods` has one
   `PeriodCoverage` per fiscal_date, each with its own statement_provenance + per_metric.
-- **not-applicable:** bank report → `gross_margin` `NOT_APPLICABLE`; corporate → bank-only ids `N/A`.
+- **not-applicable:** bank report → `gross_margin` `NOT_APPLICABLE`; corporate → bank-only ids
+  `NOT_APPLICABLE`.
+- **AllSourcesFailed → status classification (B4), capability-based, deterministic:**
+
+  | chain (resolved) | statement | fetch outcome | → status | source |
+  |---|---|---|---|---|
+  | `[VNDirect→CafeF]` (default) | cashflow | VNDirect succeeds | `OK` | `vndirect` |
+  | `[VNDirect→CafeF]` (default) | cashflow | all fail → `AllSourcesFailed` (VNDirect *can* serve it) | `SOURCE_ERROR` | `None` |
+  | `source=CafeF` (single) | cashflow | CafeF can't serve it | `NOT_SERVED` | `cafef` |
+  | `[VNDirect→CafeF]` (default) | income | all fail → `AllSourcesFailed` (both serve income) | `SOURCE_ERROR` | `None` |
+  | `source=CafeF` (single) | income | CafeF succeeds | `OK` | `cafef` |
+
+  Assert the wrapper uses the static `serves(source, statement)` set, not `AllSourcesFailed.attempts`,
+  and never exposes an attempt trail.
 - **catalog/explain offline:** `metric_catalog()` immutable + filterable; `explain_metric()` returns
   definition with formula/lineage; both make **zero** network calls.
 - **batch non-fatal:** a symbol whose fetch raises is caught by the documented loop without aborting.
@@ -614,6 +641,8 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
 - [x] **rev2:** all 8 review blockers (B1-B8, review-202606201230) resolved (§11).
 - [x] **rev2.2:** all 7 spec-precision blockers (review-202606201245) resolved (§12).
 - [x] **rev2.3:** all 6 public-contract/TDD-precision blockers (review-202606201300) resolved (§13).
+- [x] **rev2.4:** B1-B4 (review-202606201310) resolved — single-category contract, `not_served` in
+  C1 status list, exact quoted source-map reason, deterministic capability-based predicate + matrix.
 - [ ] **No implementation code** until the reviewer approves this revised design.
 
 ## 11. Blocker resolutions (review-202606201230) + reviewer-answered questions
@@ -673,8 +702,9 @@ The REV2.2 re-review raised 6 public-contract/TDD-precision blockers; all resolv
 
 - **B1 `AllSourcesFailed` classification:** the wrappers catch both a direct/single-source
   `SourceError` **and** a chain-level `AllSourcesFailed` (which is NOT a `SourceError`, so caught
-  explicitly) → `StatementFetchResult(status=SOURCE_ERROR, source=None, detail=…)`, except the CafeF
-  cashflow case → `NOT_SERVED, source="cafef"` (§3).
+  explicitly). REV2.4 makes the predicate **deterministic + capability-based**: no chain member can
+  serve the statement → `NOT_SERVED` (responsible source); ≥1 can serve but it failed → `SOURCE_ERROR,
+  source=None`; uses the static `serves(source, statement)` set, not the attempt trail (§3, matrix §9).
 - **B2 `NOT_SERVED` source metadata:** `StatementFetchResult.source`/`StatementProvenance.source`
   redefined — OK→succeeding source, NOT_SERVED→responsible source (e.g. `"cafef"`), else `None`;
   reason table `not served by source '{source}'` now well-defined (§3/§4/§5).
