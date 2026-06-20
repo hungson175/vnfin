@@ -334,7 +334,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             self._validate_value_unit("VND")
             li = LineItem(
                 item_code=code,
-                name=item_name(code, is_bank=is_bank),
+                name=item_name(code, model_type=model_type),
                 value=value,
                 value_unit="VND",  # statement money lines are raw, unscaled VND
             )

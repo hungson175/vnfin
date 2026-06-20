@@ -87,6 +87,10 @@ def bank_income_one_period(code="ZZBANK"):
     response-identity guard accepts the rows.
     """
     rows = [
+        # 421900 is the VERIFIED bank net-interest-income code (see
+        # docs/design/bank-itemcodes-probe-20260620.md); 22070 is an ~8T
+        # sub-line that is NOT NII and now stays raw.
+        _stmt_row(code, 421900, 58_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
         _stmt_row(code, 421601, 5_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
         _stmt_row(code, 22070, 8_000_000_000_000.0, "2025-12-31", "ANNUAL", 102),
     ]
@@ -312,12 +316,16 @@ def test_auto_detects_bank_sample_as_bank():
 
 
 def test_auto_detected_bank_uses_bank_name_map():
-    """After auto-detecting a bank, line-item names come from the bank map."""
+    """After auto-detecting a bank, line-item names come from the bank income
+    (model_type=102) template — the verified NII code is labeled, while the
+    demoted ~8T sub-line stays raw (no cross-template guess)."""
     reports = _src(bank_income_one_period()).get_financials(
         "ZZBANK", StatementType.INCOME, Period.ANNUAL  # AUTO
     )
-    nii = next(li for li in reports[0].items if li.item_code == "22070")
-    assert nii.name == "Thu nhập lãi thuần"  # bank net interest income label
+    nii = next(li for li in reports[0].items if li.item_code == "421900")
+    assert nii.name == "Thu nhập lãi thuần"  # verified bank net interest income
+    sub = next(li for li in reports[0].items if li.item_code == "22070")
+    assert sub.name == "item_22070"  # NOT NII -> honest raw
 
 
 def test_explicit_is_bank_false_overrides_auto_on_bank_rows():
@@ -857,30 +865,102 @@ def test_auto_is_the_none_sentinel():
 def test_item_name_maps_expanded_corporate_headlines():
     from vnfin.fundamentals.itemcodes import item_name
 
-    # net income / total assets / equity / operating cash flow now mapped
-    assert item_name("21000") == "Lợi nhuận sau thuế"  # net income
-    assert item_name("25000") == "Tổng tài sản"  # total assets
-    assert item_name("40000") == "Vốn chủ sở hữu"  # equity
-    assert item_name("31000") == "Lưu chuyển tiền từ hoạt động kinh doanh"  # operating CF
+    # net income / total assets / equity / operating cash flow now mapped.
+    # Corporate codes are keyed per statement model_type: income=1, balance=2,
+    # cashflow=3. Under the hard-switch a no-model_type call returns raw.
+    assert item_name("21000", model_type=1) == "Lợi nhuận sau thuế"  # net income (income)
+    assert item_name("25000", model_type=2) == "Tổng tài sản"  # total assets (balance)
+    assert item_name("40000", model_type=2) == "Vốn chủ sở hữu"  # equity (balance)
+    assert (
+        item_name("31000", model_type=3)
+        == "Lưu chuyển tiền từ hoạt động kinh doanh"
+    )  # operating CF (cashflow)
     # newly added headline lines
-    assert item_name("23400") == "Hàng tồn kho"  # inventories
-    assert item_name("40200") == "Lợi nhuận sau thuế chưa phân phối"  # retained earnings
+    assert item_name("23400", model_type=2) == "Hàng tồn kho"  # inventories (balance)
+    assert (
+        item_name("40200", model_type=2)
+        == "Lợi nhuận sau thuế chưa phân phối"
+    )  # retained earnings (balance)
 
 
 def test_item_name_maps_expanded_bank_headlines():
     from vnfin.fundamentals.itemcodes import item_name
 
-    assert item_name("22070", is_bank=True) == "Thu nhập lãi thuần"  # net interest income
-    assert item_name("412000", is_bank=True) == "Tổng tài sản"  # total assets
-    # newly added bank headline lines
-    assert item_name("411600", is_bank=True) == "Cho vay khách hàng"  # loans to customers
-    assert item_name("413100", is_bank=True) == "Tiền gửi của khách hàng"  # deposits
+    # Bank balance (model_type=101) — verified headline set.
+    assert item_name("12700", model_type=101) == "Tổng tài sản"  # total assets
+    assert item_name("13000", model_type=101) == "Nợ phải trả"  # total liabilities
+    assert item_name("14000", model_type=101) == "Vốn chủ sở hữu"  # total equity
+    assert item_name("412000", model_type=101) == "Cho vay khách hàng"  # customer loans
+    assert (
+        item_name("413300", model_type=101) == "Tiền gửi của khách hàng"
+    )  # customer deposits
+    # Bank income (model_type=102) — verified headline set.
+    assert item_name("23800", model_type=102) == "Lợi nhuận trước thuế"  # PBT
+    assert item_name("23000", model_type=102) == "Lợi nhuận sau thuế"  # PAT
+    assert item_name("421900", model_type=102) == "Thu nhập lãi thuần"  # NII
+    # Demoted WRONG codes -> honest raw item_<code> (never a guessed label).
+    assert item_name("22070", model_type=102) == "item_22070"  # NOT NII
+    assert item_name("421601", model_type=102) == "item_421601"  # NOT PAT
+    assert item_name("22160", model_type=102) == "item_22160"  # not mapped
+    assert item_name("411600", model_type=101) == "item_411600"  # NOT loans
+    assert item_name("413100", model_type=101) == "item_413100"  # NOT headline deposits
+
+
+def test_item_name_model_type_mismatch_falls_back_to_raw():
+    # A bank-balance code looked up under the corporate-balance template (mt=2)
+    # must fall back to honest raw — never a cross-template guess.
+    from vnfin.fundamentals.itemcodes import item_name
+
+    assert item_name("12700", model_type=2) == "item_12700"  # bank-balance code, corp template
+    # 14000-corporate lives in income (mt=1); under balance (mt=2) it is raw.
+    assert item_name("14000", model_type=2) == "item_14000"
+
+
+def test_item_name_same_code_different_template_distinct_labels():
+    # POSITIVE collision: the same numeric code is mapped in two templates with
+    # DIFFERENT labels — proving model_type is the authoritative key.
+    from vnfin.fundamentals.itemcodes import item_name
+
+    corp_14000 = item_name("14000", model_type=1)  # corporate income
+    bank_14000 = item_name("14000", model_type=101)  # bank balance
+    assert corp_14000 == "Lợi nhuận thuần từ hoạt động kinh doanh"
+    assert bank_14000 == "Vốn chủ sở hữu"
+    assert corp_14000 != bank_14000
+
+    corp_23000 = item_name("23000", model_type=2)  # corporate balance
+    bank_23000 = item_name("23000", model_type=102)  # bank income
+    assert corp_23000 == "Tài sản ngắn hạn"
+    assert bank_23000 == "Lợi nhuận sau thuế"
+    assert corp_23000 != bank_23000
+
+
+def test_item_name_partition_completeness():
+    # Every (model_type, code) in the partition resolves to its own label, and
+    # the same code under a foreign template that does NOT contain it -> raw.
+    # This proves there is no cross-template leak.
+    from vnfin.fundamentals.itemcodes import _NAMES_BY_MODEL_TYPE, item_name
+
+    for mt, table in _NAMES_BY_MODEL_TYPE.items():
+        for code, label in table.items():
+            assert item_name(code, model_type=mt) == label
+            # find at least one other model_type whose table lacks this code
+            foreign = [
+                other
+                for other, otable in _NAMES_BY_MODEL_TYPE.items()
+                if other != mt and code not in otable
+            ]
+            assert foreign, f"code {code} is in every table; cannot prove no-leak"
+            for other in foreign:
+                assert item_name(code, model_type=other) == f"item_{code}"
 
 
 def test_item_name_unknown_code_falls_back():
     from vnfin.fundamentals.itemcodes import item_name
 
     assert item_name("99999") == "item_99999"
+    assert item_name("99999", model_type=None) == "item_99999"  # explicit None -> raw
+    # A real mapped code with model_type=None (no template) is also raw.
+    assert item_name("12700", model_type=None) == "item_12700"
 
 
 # --------------------------------------------------------------------------- #
