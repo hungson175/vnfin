@@ -1,6 +1,6 @@
 # Design note — #183 optional interval/resample on `prices.history` + `index_history`
 
-- Date: 2026-06-21 +07 · Issue: #183 (enhancement) · Status: **DESIGN — for reviewer LEAD gate (pre-code)**
+- Date: 2026-06-21 +07 · Issue: #183 (enhancement) · Status: **LEAD-GATE APPROVED 2026-06-21 01:53 → TDD → Codex×2**
 - Reporter (vf-advisor): charts cadence series over 5–15y; a 10y daily pull is ~2,500 rows and overflows
   the agent's context. Wants optional period aggregation; daily stays the default (back-compat).
 
@@ -50,23 +50,38 @@ The reporter wrote "D1/W1/M1/Q1/Y1" meaning daily/weekly/monthly/quarterly/yearl
    warning when the first or last emitted bar covers an incomplete calendar period, so a chart never reads
    a partial month/quarter/year as a full one. Keep the partial bars (don't drop).
 
-## Open questions for the LEAD gate
-1. **Index aggregation — my recommendation diverges from your lean.** You leaned *index = period-end*; I
-   recommend **OHLC-per-period for BOTH** prices and index: it's a single code path, lossless (period-end
-   close is just `close=last`, and you get the period range for free), and index bars already carry OHLC.
-   Period-end-only throws away O/H/L for no clear benefit. Your call at the gate.
-2. **`Interval.Q1`/`Y1` as real enum members (my rec, additive) vs string-alias-only** (`'Q'`/`'Y'` with
-   no enum member)? Adding members keeps the Interval-primary form complete; needs the surface-additive
-   check.
-3. **Partial leading/trailing period:** warn (`resample_partial_period`, my rec) vs silent vs drop?
-4. **Bar label date:** last trading day in period (my rec) vs synthetic calendar period-end date?
-5. **`index_history_stitched` resample:** in scope for v1, or follow-up? (I rec **follow-up** — keep v1 to
-   `prices.history` + `index_history`; stitched can later stitch D1 then resample.)
-6. **Pandas alias set:** confirm the minimal accepted strings — `'D'/'W'/'M'/'Q'/'Y'` (case-insensitive);
-   reject everything else with a clear error. (Headline safety: `'M'`→`MN1`.)
+## LOCKED decisions (reviewer LEAD gate APPROVE — 2026-06-21 01:53)
+All 6 open questions resolved; the whole frame (client-side D1 resample, reuse existing `interval`,
+MN1-not-M1) is confirmed. These are now the build contract:
+1. **OHLC-per-period for BOTH prices AND index** — ACCEPTED, overturning the earlier period-end lean. OHLC
+   is a lossless superset: `close=last` IS exactly the period-end value a caller plots (via `.close`),
+   it's a single code path, and index bars already carry OHLC. Period-end-only would discard O/H/L for no
+   benefit.
+2. **Add `Interval.Q1` and `Interval.Y1` as REAL enum members** — additive; keeps the Interval vocabulary
+   consistent. Each source's `supports()` gates native serving, so crypto (and other native-interval
+   sources) cleanly reject Q1/Y1. **Verify the surface gate treats the 2 new members as additive** (same
+   as the macro `CPI_YOY`/`POLICY_RATE` enum adds — snapshot stays FROZEN, regen only at release).
+3. **Partial leading/trailing period → WARN (`resample_partial_period`) + KEEP the bars** — the #178/#172
+   never-silent pattern; do not drop an incomplete edge period.
+4. **Bar label = the last ACTUAL trading day in the period** — honest (the bar date matches the close's
+   real date; a synthetic calendar period-end could fall on a non-trading day).
+5. **`index_history_stitched` resample = FOLLOW-UP** — v1 = `prices.history` + `index_history` only, which
+   covers vf-advisor's stated #183 need (it uses `index_history` for its 10y pull today).
+6. **Pandas aliases `'D'/'W'/'M'/'Q'/'Y'`, case-insensitive; `'M'`→`MN1` (MONTH, never minute); reject
+   everything else with a clear error.** The `'M'`→`MN1` mapping is the highest-risk line → gets an
+   EXPLICIT dedicated test.
 
-## Plan after the gate
-Reviewer LEAD gate on this note → TDD (synthetic D1 fixtures → assert OHLC aggregation, the `'M'`→MN1
-mapping, intraday rejection, partial-period warning, D1 back-compat passthrough, both accessors) → **Codex
-×2** code review (per your routing) → push + close. Clean-room: zero VNStock; pure client-side aggregation
-of already-fetched bars, no new source/network.
+Also locked: keep the **`resampled_from_d1`** provenance warning (the series must disclose it is
+aggregated, not native); set `PriceHistory.interval = requested`; **intraday (`M1/M5/M15/M30/H1`) → clear
+`UnsupportedInterval`/`InvalidData`** on these daily-native accessors (cannot upsample daily→minute).
+
+This is a **public-API change** (2 new enum members + resample on 2 accessors + alias parsing + the
+never-silent warnings) → after TDD, bring CODE for **Codex×2** review. Public-API change ⇒ docs + skill +
+CHANGELOG in the same change.
+
+## Plan
+TDD (synthetic D1 fixtures): OHLC aggregation (prices + index), the `'M'`→MN1 mapping, intraday rejection,
+`resample_partial_period` warning + kept bars, last-trading-day labels, `resampled_from_d1` + `interval`
+metadata, D1 back-compat passthrough, both accessors, surface-additive for Q1/Y1 → **Codex×2** → docs +
+skill + CHANGELOG → push + close. Clean-room: zero VNStock; pure client-side aggregation of already-fetched
+bars, no new source/network.
