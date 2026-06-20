@@ -1,8 +1,9 @@
 # FX domain — source vetting & design (v0.2 MVP)
 
-**Status:** design for reviewer gate 3 (must be APPROVED before any FX adapter code).
-**Scope:** narrow **daily / current** FX (market reference rates), not historical, not macro
-FX. Macro annual FX-style series remain in `vnfin.macro` (World Bank). Source research:
+**Status:** IMPLEMENTED — the spot/current FX design shipped (`vnfin.fx.get_rate`/`client`/`source`).
+**Scope:** this doc covers the **daily / current** (spot) FX sources only. Historical FX shipped
+separately as `vnfin.fx.history()` → `FXHistory` (annual USD/VND via World Bank `PA.NUS.FCRF`,
+issue #159; see [`fx-history.md`](fx-history.md)). Source research:
 [`docs/research/2026-06-18-fx-rates-sources.md`](../research/2026-06-18-fx-rates-sources.md).
 **Clean-room:** VNStock/vnstock fully excluded; both sources are primary/official and were
 live-verified 2026-06-18.

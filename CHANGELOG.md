@@ -7,6 +7,16 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **`vnfin.fx.history(base="USD", quote="VND", start=None, end=None, *, frequency=ANNUAL)`** (#159) —
+  historical FX time series, the first historical FX in `vnfin` (spot `get_rate`/`FXRate` is
+  unchanged). v1 serves **annual USD/VND** from the no-key World Bank `PA.NUS.FCRF` series
+  (`source="worldbank_fx"`), returning a typed `FXHistory` (of `FXPoint`, a `TimeSeriesResult` with
+  `to_dataframe()`). Exact accessors `rate_on(date)` / `rate_for_year(year)` never fill or
+  interpolate. Plus offline `vnfin.diagnostics.explain_fx_coverage(...)` (statuses `ok` /
+  `coverage_gap` / `unsupported_pair` / `unsupported_frequency`). Monthly and non-USD cross-quotes
+  are deferred to v2. See [`docs/tutorials/fx-history.md`](docs/tutorials/fx-history.md),
+  [`docs/sources/fx-history-worldbank.md`](docs/sources/fx-history-worldbank.md),
+  [`docs/design/fx-history.md`](docs/design/fx-history.md).
 - **`vnfin.indices.index_history_stitched(symbol, start, end)`** (#147) — opt-in long-window index
   history stitched from per-calendar-year segments, each fetched via the failover chain (so a
   source's single OHLC-invariant day in one year is routed around by another clean source). Returns
@@ -473,7 +483,8 @@ All notable changes to `vnfin` are documented here. The format follows
 - **FX domain** (`vnfin.fx`) — daily/current foreign-exchange reference rates vs VND, no-key
   failover **open.er-api → Vietcombank XML**, canonical unit *VND per 1 unit of base* (USD/VND,
   plus cross-rates EUR/CNY/JPY/…), typed `FXRate`, two-layer unit guard, optional `bid`/`ask`.
-  Spot/current only (history deferred to BYOK). Opt-in live USD/VND cross-source parity test;
+  At this release the FX domain shipped the spot/current quote only; historical USD/VND was added
+  later via `vnfin.fx.history()` (#159, see Unreleased). Opt-in live USD/VND cross-source parity test;
   opt-in (rate-limit-aware) FX health probe. See [`docs/design/fx-sources.md`](docs/design/fx-sources.md),
   [`docs/sources/fx-open-er-api.md`](docs/sources/fx-open-er-api.md),
   [`docs/sources/fx-vietcombank.md`](docs/sources/fx-vietcombank.md).

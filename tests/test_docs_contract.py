@@ -273,10 +273,10 @@ def test_fx_docs_do_not_claim_fx_has_no_history():
     scan_roots = [
         *root.glob("docs/**/*.md"),
         *root.glob("skills/**/*.md"),
+        *root.glob("*.md"),  # all root markdown (README.md, CHANGELOG.md, AGENTS.md, ...)
         *root.glob("vnfin/fx/*.py"),
         root / "vnfin/diagnostics.py",
         root / "llms.txt",
-        root / "README.md",
     ]
     forbidden = re.compile(
         r"fx has \*?\*?no\*?\*? ?history|no history in v0\.2|no historical fx|"
