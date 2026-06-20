@@ -14,8 +14,12 @@ All notable changes to `vnfin` are documented here. The format follows
   CurrencyApi's ~1100-day range and **fails over to Stooq**, the only full-history world-gold source)
   with annual USD/VND FX (World Bank `PA.NUS.FCRF`, via `vnfin.fx.history`):
   `VND/lượng[y] = annual_avg(gold_USD/oz)[y] × annual_USD_VND[y] × (GRAMS_PER_LUONG / GRAMS_PER_TROY_OZ)`,
-  the oz→lượng factor (37.5 / 31.1035 ≈ **1.20566**) computed from named, auditable constants. The
+  the oz→lượng factor (37.5 / 31.1035 ≈ **1.20565**) computed from named, auditable constants. The
   basis is annual to match the annual-only FX (a daily output would imply false daily-FX precision).
+  `start`/`end` are interpreted as an inclusive **calendar-year** window — each year's gold mean is
+  computed from the full calendar year (the fetch window is snapped to `Jan-1…Dec-31`), matching the
+  FX leg so a mid-year bound never yields a partial-year mean; the world-gold leg's own soft
+  `partial_coverage` warning (a gappy-but-accepted series) is forwarded (namespaced by leg).
   **This is the world-gold-implied VND value, NOT the VN domestic (SJC/BTMC) price** — domestic gold
   trades a large, time-varying premium (historically **+10–21%**) above it, so the series understates
   the domestic price. It self-discloses **redundantly**: the accessor name, `product="XAU/VND

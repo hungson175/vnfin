@@ -18,6 +18,8 @@ Synthetic fixtures only — fabricated round numbers, no real provider rows, no 
 from __future__ import annotations
 
 import json
+import math
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
@@ -196,6 +198,35 @@ def test_synthesis_non_positive_synthesized_value_raises_invalid():
         _synthesize_world_reference(gold, fx)
 
 
+def test_synthesis_negative_value_raises_invalid():
+    # The <= 0 arm must reject a negative (not just zero) synthesized value.
+    gold = _gold_usd_oz({date(2022, 6, 1): -1900.0})
+    fx = _fx_usd_vnd({2022: 24000.0})
+    with pytest.raises(InvalidData):
+        _synthesize_world_reference(gold, fx)
+
+
+def test_synthesis_non_finite_value_raises_invalid():
+    # The `not math.isfinite(...)` arm must reject a non-finite product (e.g. inf FX).
+    gold = _gold_usd_oz({date(2022, 6, 1): 1900.0})
+    fx = _fx_usd_vnd({2022: math.inf})
+    with pytest.raises(InvalidData):
+        _synthesize_world_reference(gold, fx)
+
+
+def test_synthesis_forwards_gold_leg_partial_coverage_warning():
+    # A gappy-but-accepted world-gold leg carries a soft `partial_coverage` warning from
+    # FailoverGoldClient; the synthesis must FORWARD it (never drop the only freshness signal
+    # that the annual mean came from an incomplete subset of trading days).
+    gold = replace(
+        _gold_usd_oz({date(2022, 6, 1): 1900.0}),
+        warnings=("partial_coverage: covered 5/10 expected trading days (50% < 90%); series may be gappy",),
+    )
+    fx = _fx_usd_vnd({2022: 24000.0})
+    out = _synthesize_world_reference(gold, fx)
+    assert any("partial_coverage" in w for w in out.warnings)
+
+
 def test_synthesis_bars_strictly_ascending():
     gold = _gold_usd_oz(
         {date(2021, 6, 1): 1800.0, date(2022, 6, 1): 1900.0, date(2023, 6, 1): 2000.0}
@@ -322,3 +353,40 @@ def test_accessor_fx_missing_propagates():
 def test_accessor_rejects_inverted_date_range():
     with pytest.raises(InvalidData):
         world_reference_history_vnd(date(2024, 1, 1), date(2021, 1, 1), http_get=_router())
+
+
+def _stooq_csv_intra_year_2023():
+    """A Stooq CSV where 2023 VARIES within the year (H1 at 1000, H2 at 3000 USD/oz) and
+    2024 is constant. Returns (csv_text, {date: price}) so the test can compute the true
+    full-calendar-year 2023 mean. The two halves have a large gap so a partial- vs
+    full-year mean differ unmistakably."""
+    lines = ["Date,Open,High,Low,Close,Volume"]
+    prices: dict[date, float] = {}
+    for d in _weekdays(date(2023, 1, 1), date(2023, 12, 31)):
+        p = 1000.0 if d.month <= 6 else 3000.0
+        prices[d] = p
+        lines.append(f"{d.isoformat()},{p},{p},{p},{p},0")
+    for d in _weekdays(date(2024, 1, 1), date(2024, 12, 31)):
+        prices[d] = 2000.0
+        lines.append(f"{d.isoformat()},2000.0,2000.0,2000.0,2000.0,0")
+    return "\n".join(lines) + "\n", prices
+
+
+def test_accessor_boundary_year_uses_full_calendar_year_mean():
+    # Regression for the boundary-year partial-mean bug: a mid-year `start` must NOT make the
+    # boundary year's annual point a partial-window mean. The 2023 annual point must use the
+    # FULL calendar-year mean (to match the full-year FX period-average it is multiplied by),
+    # NOT just the Jul-Dec slice the caller's raw window would otherwise select.
+    csv, prices = _stooq_csv_intra_year_2023()
+    fx = {2023: 24000.0, 2024: 25000.0}
+    out = world_reference_history_vnd(
+        date(2023, 7, 1), date(2024, 12, 31),  # mid-year start in the boundary year
+        http_get=_router(fx_by_year=fx, stooq_text=csv),
+    )
+    by_year = {b.date.year: b.price for b in out.bars}
+    days_2023 = [d for d in prices if d.year == 2023]
+    full_year_2023_mean = sum(prices[d] for d in days_2023) / len(days_2023)
+    # correct: full-calendar-year mean × full-year FX × factor
+    assert by_year[2023] == pytest.approx(full_year_2023_mean * 24000.0 * OZ_TO_LUONG)
+    # the buggy partial-window mean (Jul-Dec only = 3000) must NOT be what we serve
+    assert by_year[2023] != pytest.approx(3000.0 * 24000.0 * OZ_TO_LUONG)

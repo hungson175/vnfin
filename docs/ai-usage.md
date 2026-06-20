@@ -263,6 +263,9 @@ print(hist.unit, len(hist.bars), hist.bars[0].date, hist.bars[0].price)  # 'USD/
 client = default_world_gold_client()               # world-only failover client (USD/oz)
 
 # World-reference VND/lượng history (#178) — ANNUAL; NOT the SJC/BTMC domestic price.
+# Needs network. Multi-year windows rely on Stooq for long world-gold history; from
+# datacenter/CI IPs Stooq may answer with an anti-bot challenge -> the call can raise
+# AllSourcesFailed (run from a normal residential IP, or catch and degrade).
 from vnfin.gold import world_reference_history_vnd
 ref = world_reference_history_vnd(date(2018, 1, 1), date(2024, 12, 31))     # GoldHistory
 print(ref.unit, ref.currency, len(ref.bars))       # 'VND/luong' 'VND' 7  (one point per year)

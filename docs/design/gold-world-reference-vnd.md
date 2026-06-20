@@ -27,8 +27,8 @@ premium). Reserve `gold.domestic_history()` → a clear source-gap diagnostic, n
 
 ## DECISION 1 — conversion factor (SPEC CORRECTION, high confidence)
 The spec writes `× (31.1035/37.5) ≈ 0.8297`. **That ratio is inverted.** Physics:
-- 1 troy oz = 31.1035 g; 1 lượng = 37.5 g, so 1 lượng = 37.5/31.1035 = **1.20566 oz** (a lượng is
-  heavier than an oz). Therefore **USD/lượng = USD/oz × (37.5 / 31.1035) ≈ × 1.20566** — scales UP.
+- 1 troy oz = 31.1035 g; 1 lượng = 37.5 g, so 1 lượng = 37.5/31.1035 = **1.20565 oz** (a lượng is
+  heavier than an oz). Therefore **USD/lượng = USD/oz × (37.5 / 31.1035) ≈ × 1.20565** — scales UP.
 - Cross-check the spec's OWN figures: world gold ≈ $2000/oz, USD/VND ≈ 24,000 (2023) →
   `2000 × 24000 × (37.5/31.1035) ≈ 57.9M VND/lượng`. The spec cites SJC ≈ +11.7M over the world
   equivalent → world-equiv ≈ 56M, SJC ≈ 67M. **57.9M matches; `× 0.8297` gives 39.8M (way low).**
@@ -87,7 +87,7 @@ Additive: new `gold.world_reference_history_vnd` + reserved `gold.domestic_histo
 skill + CHANGELOG in the same change (provenance note in `docs/sources/`, ai-usage entry, skill row).
 
 ## Reviewer decisions — LOCKED (00:35, 2026-06-21)
-1. **FACTOR (corrected):** `37.5 / 31.1035 ≈ 1.20566`. **Compute from NAMED constants**
+1. **FACTOR (corrected):** `37.5 / 31.1035 ≈ 1.20565`. **Compute from NAMED constants**
    `GRAMS_PER_LUONG = 37.5` and `GRAMS_PER_TROY_OZ = 31.1035` (auditable; never a hardcoded 1.206).
    Reviewer re-derived + confirmed (`950 × 24000 × 1.206 ≈ 56.4M`). The "understates domestic" point holds.
 2. **GRANULARITY: ANNUAL output.** Daily-forward-filled FX is REJECTED as false precision (daily wiggles

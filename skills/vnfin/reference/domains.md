@@ -93,7 +93,7 @@ from datetime import date; from vnfin.gold import vn, world, world_reference_his
 print(vn("btmc").get_quotes()[0].unit)                         # 'VND/luong'
 print(world().get_history(date(2026,1,1), date(2026,3,31)).unit)  # 'USD/oz'
 ref = world_reference_history_vnd(date(2018,1,1), date(2024,12,31))  # ANNUAL world-reference, NOT domestic
-print(ref.unit, len(ref.bars))                                 # 'VND/luong' 7
+print(ref.unit, len(ref.bars))                                 # 'VND/luong' 7  (needs network; multi-year leans on Stooq — datacenter IPs may hit its anti-bot → AllSourcesFailed)
 ```
 
 ## crypto — OHLCV (USD)

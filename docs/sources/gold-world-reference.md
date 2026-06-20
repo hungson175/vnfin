@@ -24,7 +24,7 @@ it, or compare it as if it were the SJC/BTMC price; rebase/annotate accordingly.
 ```
 VND/lượng[year] = annual_avg( world_gold_USD_per_oz )[year]      # daily series → annual mean
                   × annual_USD_VND[year]                          # World Bank PA.NUS.FCRF (period avg)
-                  × (GRAMS_PER_LUONG / GRAMS_PER_TROY_OZ)         # 37.5 / 31.1035 ≈ 1.20566
+                  × (GRAMS_PER_LUONG / GRAMS_PER_TROY_OZ)         # 37.5 / 31.1035 ≈ 1.20565
 ```
 
 - **Why annual.** USD/VND history is annual-only (World Bank period-average); multiplying a daily
@@ -32,11 +32,18 @@ VND/lượng[year] = annual_avg( world_gold_USD_per_oz )[year]      # daily seri
   false precision. So the gold leg is reduced to an **annual mean** to match the FX basis
   (annual-avg × annual-avg). A denser line needs a clean-room **daily** USD/VND source (a v2
   follow-up); callers may interpolate for display.
+- **Whole-calendar-year window.** `start`/`end` are interpreted as an inclusive **calendar-year**
+  window: any portion of a year yields that year's annual point, and each emitted year's gold mean
+  is computed from the **full calendar year** (the fetch window is snapped to `Jan-1 … Dec-31` of
+  the boundary years). This matches the FX leg, which already widens bounds to whole calendar
+  years, so a mid-year `start`/`end` never produces a partial-year gold mean silently multiplied
+  by a full-year FX average. (An inverted range — even within one year — is rejected up front with
+  `InvalidData`.)
 - **The oz→lượng factor scales UP.** 1 lượng = 37.5 g is **heavier** than 1 troy oz = 31.1035 g,
-  so USD/oz → USD/lượng multiplies by ≈ **1.20566** (not the inverted ≈ 0.83). Computed from the
+  so USD/oz → USD/lượng multiplies by ≈ **1.20565** (not the inverted ≈ 0.83). Computed from the
   **named constants** `GRAMS_PER_LUONG` / `GRAMS_PER_TROY_OZ` in
   `vnfin/gold/world_reference.py` so the arithmetic is auditable. Cross-check: gold $2000/oz ×
-  USD/VND 24,000 × 1.20566 ≈ **57.9M VND/lượng** (the world-equivalent; SJC would sit ~+11–12M
+  USD/VND 24,000 × 1.20565 ≈ **57.9M VND/lượng** (the world-equivalent; SJC would sit ~+11–12M
   above on top of that).
 
 ## Composed sources & failover
@@ -61,6 +68,7 @@ mechanical tokens on `GoldHistory.warnings`:
 - `world_reference_excludes_domestic_premium: … +10–21%, time-varying; NOT the SJC/BTMC domestic price` — **always present.**
 - `world_reference_annual_basis: one point per calendar year = annual-avg gold × annual USD/VND × 37.5/31.1035; stamped Jan-1; not a daily series` — always present.
 - `world_reference_partial_year_coverage: …` — only when some requested years are dropped for lack of a paired gold-or-FX observation (an honest intersection; never a silent half-result). An **empty** overlap raises `EmptyData`.
+- `world_reference_gold_leg_partial_coverage: …` (and `world_reference_fx_leg_*`) — the world-gold failover client accepts a *gappy-but-not-rejected* series (coverage 50–90% of trading days) and attaches a soft `partial_coverage` warning; that is the only signal a year's annual mean came from an incomplete subset of days, so it is **forwarded** (namespaced by leg) onto the synthesized result — never dropped.
 
 ```python
 from datetime import date

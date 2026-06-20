@@ -36,6 +36,7 @@ from typing import Optional
 
 from ..exceptions import EmptyData, InvalidData
 from ..fx.history_models import FXHistory
+from ..validation import validate_date_range
 from .currency_api import CurrencyApiGoldSource
 from .failover import FailoverGoldClient
 from .models import GoldBar, GoldHistory
@@ -45,7 +46,7 @@ from .stooq import StooqGoldSource
 # (never a hardcoded 1.206) so a reviewer can re-derive it.
 GRAMS_PER_LUONG = 37.5  # 1 lượng (tael) = 10 chỉ = 37.5 g (matches vnfin.gold.vn)
 GRAMS_PER_TROY_OZ = 31.1035  # 1 troy ounce = 31.1035 g (standard)
-# 1 lượng is HEAVIER than 1 troy oz, so USD/oz → USD/lượng scales UP (≈ 1.20566).
+# 1 lượng is HEAVIER than 1 troy oz, so USD/oz → USD/lượng scales UP (≈ 1.20565).
 OZ_TO_LUONG = GRAMS_PER_LUONG / GRAMS_PER_TROY_OZ
 
 _VND_PER_LUONG = "VND/luong"
@@ -107,6 +108,15 @@ def _synthesize_world_reference(gold_hist: GoldHistory, fx_hist: FXHistory) -> G
         bars.append(GoldBar(date=date(y, 1, 1), price=vnd_per_luong))
 
     warnings = [_PREMIUM_NOTE, _ANNUAL_BASIS_NOTE]
+    # Forward upstream leg warnings — never drop a freshness/quality signal. The gold leg's
+    # soft `partial_coverage` (a gappy-but-accepted series) is the ONLY signal that a year's
+    # annual mean came from an incomplete subset of trading days; dropping it would serve a
+    # gappy mean with zero disclosure. Namespace by leg so it is unambiguous which leg was gappy.
+    for w in gold_hist.warnings:
+        warnings.append(f"world_reference_gold_leg_{w}")
+    for w in fx_hist.warnings:
+        warnings.append(f"world_reference_fx_leg_{w}")
+
     dropped_gold = sorted(set(gold_annual) - set(fx_annual))  # gold years with no FX
     dropped_fx = sorted(set(fx_annual) - set(gold_annual))  # FX years with no gold
     if dropped_gold or dropped_fx:
@@ -144,29 +154,45 @@ def world_reference_history_vnd(
     (SJC/BTMC) price sits a large, time-varying premium (historically +10–21%) ABOVE this
     world reference, so this series understates it — never present it as the domestic price.
 
-    ``start``/``end`` are required calendar bounds. A multi-year window exceeds CurrencyApi's
-    coverage/range, so it cleanly fails over to Stooq (the long-history world-gold source).
-    A total failure of either leg propagates (``AllSourcesFailed`` / ``EmptyData``); a window
-    with no overlapping gold+FX years raises :class:`EmptyData` (no silent half-result).
+    ``start``/``end`` are required and interpreted as an inclusive **calendar-year** window:
+    any portion of a year yields that year's annual point, computed from the FULL calendar
+    year (so a mid-year ``start``/``end`` never produces a partial-year mean). A multi-year
+    window exceeds CurrencyApi's coverage/range, so it cleanly fails over to Stooq (the
+    long-history world-gold source). A total failure of either leg propagates
+    (``AllSourcesFailed`` / ``EmptyData``); a window with no overlapping gold+FX years raises
+    :class:`EmptyData` (no silent half-result).
 
     Pass ``http_get`` (and ``timeout``) to inject a transport stub for offline tests; it is
     forwarded to every underlying source. ``max_attempts`` caps the world-gold failover chain.
     """
+    # Validate the ORIGINAL bounds (type + ordering) before widening, so an inverted range —
+    # even within a single calendar year — is still rejected up front (no network call).
+    lo, hi = validate_date_range(start, end, name="gold world-reference history")
+    # Snap the fetch window to WHOLE calendar years so each emitted year's gold mean is a TRUE
+    # full-year average, matching the FX leg's calendar-year period-average basis (annual-avg ×
+    # annual-avg). Without this, a mid-year start/end would make the boundary year a partial-
+    # window gold mean while the FX leg stays full-year, silently biasing the boundary point.
+    # The FX leg already widens bounds to whole calendar years internally; this aligns the gold
+    # leg to the same basis.
+    year_start = date(lo.year, 1, 1)
+    year_end = date(hi.year, 12, 31)
+
     # World-gold daily history (USD/oz). CurrencyApi is primary (reliable, no key) but covers
     # only ~2024-03+ with a ~1100-day cap, so any multi-year window raises range-too-wide
-    # (a SourceError) and fails over to Stooq, the only full-history world-gold source. This
-    # validates start/end before any network call.
+    # (a SourceError) and fails over to Stooq, the only full-history world-gold source.
     gold_sources = [
         CurrencyApiGoldSource(http_get=http_get, timeout=timeout),
         StooqGoldSource(http_get=http_get, timeout=timeout),
     ]
-    gold_hist = FailoverGoldClient(gold_sources, max_attempts=max_attempts).get_history(start, end)
+    gold_hist = FailoverGoldClient(gold_sources, max_attempts=max_attempts).get_history(
+        year_start, year_end
+    )
 
     # Annual USD/VND (World Bank period-average) — annual-only by construction, which is the
     # exact basis we aggregate the gold leg to. Imported lazily to avoid any import cycle.
     from ..fx import history as _fx_history
 
-    fx_hist = _fx_history("USD", "VND", start, end, http_get=http_get, timeout=timeout)
+    fx_hist = _fx_history("USD", "VND", year_start, year_end, http_get=http_get, timeout=timeout)
 
     return _synthesize_world_reference(gold_hist, fx_hist)
 
