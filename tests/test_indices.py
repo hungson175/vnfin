@@ -230,6 +230,72 @@ def test_transport_error_wrapped_unavailable():
         s.get_history("VNINDEX", Interval.D1, *WIDE)
 
 
+# ----- Issue #162: one public bar per calendar date for a D1 index source -----
+# An index D1 source result must expose exactly one bar per calendar date. Identical
+# same-date OHLCV duplicates dedupe deterministically (keep first) + a warning token;
+# a CONFLICTING same-date bar raises InvalidData inside the source path so failover can
+# try the next source (never a silent conflicting-row selection).
+
+# Same date as the second _INDEX_ROWS bar, IDENTICAL OHLCV -> must dedupe to one bar.
+_INDEX_ROWS_IDENTICAL_DUP = [
+    ("2024-06-10", 1000.0, 1010.0, 995.0, 1005.0, 100_000_000),
+    ("2024-06-11", 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+    ("2024-06-11", 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),  # identical duplicate
+    ("2024-06-12", 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
+]
+
+# Same date, DIFFERENT OHLCV -> conflicting, must raise InvalidData in the source path.
+_INDEX_ROWS_CONFLICTING_DUP = [
+    ("2024-06-10", 1000.0, 1010.0, 995.0, 1005.0, 100_000_000),
+    ("2024-06-11", 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+    ("2024-06-11", 1007.0, 1016.0, 1003.0, 1013.0, 111_000_000),  # conflicting same date
+    ("2024-06-12", 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
+]
+
+
+def test_index_identical_same_date_duplicate_deduped_with_warning():
+    s = VPSIndexSource(http_get=_get(_bare_udf(rows=_INDEX_ROWS_IDENTICAL_DUP)))
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    # 4 input rows with one identical duplicate -> 3 unique calendar-date bars.
+    assert len(h.bars) == 3
+    assert [b.time.date() for b in h.bars] == [
+        date(2024, 6, 10), date(2024, 6, 11), date(2024, 6, 12)
+    ]
+    # exactly one bar per calendar date (no duplicates survive)
+    assert len({b.time.date() for b in h.bars}) == len(h.bars)
+    assert "deduped_duplicate_daily_index_bars" in h.warnings
+    assert h.currency == "points"
+
+
+def test_index_no_duplicate_has_no_dedup_warning():
+    s = VPSIndexSource(http_get=_get(_bare_udf()))  # the clean 3-row fixture
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert len(h.bars) == 3
+    assert "deduped_duplicate_daily_index_bars" not in h.warnings
+
+
+def test_index_conflicting_same_date_duplicate_raises_in_source():
+    s = VPSIndexSource(http_get=_get(_bare_udf(rows=_INDEX_ROWS_CONFLICTING_DUP)))
+    with pytest.raises(InvalidData):
+        s.get_history("VNINDEX", Interval.D1, *WIDE)
+
+
+def test_index_conflicting_duplicate_triggers_failover_to_next_source():
+    # vps returns a CONFLICTING-duplicate payload (-> InvalidData in the source path);
+    # the failover client must record that failed attempt and serve the clean ssi source.
+    def router(url, params, headers):
+        if "vps.com.vn" in url:
+            return _bare_udf(rows=_INDEX_ROWS_CONFLICTING_DUP)
+        return _ssi_envelope()
+
+    c = IndexClient(http_get=router)
+    h = c.index_history("VNINDEX", date(2024, 6, 1), date(2024, 6, 30))
+    assert h.source == "ssi_index"
+    # the conflicting vps attempt is recorded as a failed attempt (not silently selected)
+    assert any(a.name == "vps_index" and not a.ok for a in h.attempts)
+    assert "deduped_duplicate_daily_index_bars" not in h.warnings
+
+
 # ------------------- B2: index sources must stay POINT-scaled -----------------
 # Indices are POINTS, never VND. The index adapters must never apply the x1000
 # equity price scaling. Guard against a misconfigured/wrong-scaled index source

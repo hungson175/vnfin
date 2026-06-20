@@ -15,6 +15,12 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Index daily duplicate-date handling** — a D1 **index** source result now exposes exactly one
+  public bar per calendar date: an *identical* same-date OHLCV duplicate is deduped deterministically
+  (keep-first) with a ``deduped_duplicate_daily_index_bars`` warning, while a *conflicting* same-date
+  bar raises ``InvalidData`` inside the source path so the failover client records the attempt and
+  tries the next source (never a silent conflicting-row selection). Equity behavior is unchanged
+  (any duplicate timestamp still raises, #66). ([#162](https://github.com/hungson175/vnfin/issues/162))
 - **Fmarket NAV duplicate-date handling** — ``nav_history`` now dedupes a duplicate ``navDate``
   whose NAV is identical (keeping one point and adding a ``deduped ... duplicate navDate`` warning)
   and raises ``InvalidData`` only when a duplicate date carries a *conflicting* NAV. Previously any

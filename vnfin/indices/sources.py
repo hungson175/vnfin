@@ -57,6 +57,14 @@ class _IndexUDFMixin:
     CURRENCY = "points"  # kept "points" for backward compatibility (not money)
     unit = "points"  # failover unit guard: index sources are points, never VND
     ALIASES: dict = {}
+    # Issue #162: a D1 index source result must expose exactly one bar per calendar
+    # date. Unlike the equity default (#66: ANY duplicate timestamp -> raise), an index
+    # source DEDUPES an IDENTICAL same-date duplicate (keep first; flag a warning) while
+    # a CONFLICTING same-date bar still raises InvalidData inside the source path so the
+    # failover client tries the next source. The actual dedupe/raise happens in the
+    # shared UDF parse (it sets ``self._dedup_occurred``); the index-specific warning
+    # token is attached in get_history below.
+    _DEDUPE_IDENTICAL_DUPLICATE_BARS = True
 
     def normalize_symbol(self, symbol: str) -> str:
         canon = symbol.strip().upper()
@@ -87,6 +95,16 @@ class _IndexUDFMixin:
         # dataclass -> replace; the equity base sets value_unit/currency="VND".)
         if hist.value_unit != self.VALUE_UNIT or hist.currency != self.CURRENCY:
             hist = replace(hist, value_unit=self.VALUE_UNIT, currency=self.CURRENCY)
+        # Issue #162: if the shared UDF parse deduped an identical same-date duplicate
+        # (see ``_DEDUPE_IDENTICAL_DUPLICATE_BARS``), surface it as an explicit warning
+        # token so the one-bar-per-date reduction is never silent. (A conflicting
+        # same-date bar already raised InvalidData inside the parse — the source path —
+        # so it never reaches here.)
+        if getattr(self, "_dedup_occurred", False):
+            hist = replace(
+                hist,
+                warnings=tuple(hist.warnings) + ("deduped_duplicate_daily_index_bars",),
+            )
         return hist
 
 

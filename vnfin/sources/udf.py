@@ -30,6 +30,11 @@ class UDFSource(HttpDataSource, PriceSource):
     PRICE_SCALE = 1.0  # multiply feed price to reach VND (e.g. 1000 if feed is in thousands)
     VOLUME_SCALE = 1.0
     EXCHANGE = None
+    # Issue #162: duplicate-timestamp policy. Default (equity, #66): ANY duplicate
+    # timestamp is conflicting provider data -> raise. Index sources opt in to
+    # deduping an IDENTICAL-OHLCV same-date duplicate (keep first) while still raising
+    # on a CONFLICTING one (see _IndexUDFMixin). Equity behavior is unchanged when False.
+    _DEDUPE_IDENTICAL_DUPLICATE_BARS = False
     unit = "VND"  # equity UDF prices are money in VND (failover unit guard)
 
     def __init__(self, http_get=None, timeout: float = 25.0):
@@ -175,7 +180,8 @@ class UDFSource(HttpDataSource, PriceSource):
             v = [0] * n
 
         bars: list[PriceBar] = []
-        seen_times: set = set()  # Issue #66: reject duplicate timestamps within one response
+        seen: dict = {}  # Issue #66/#162: timestamp -> PriceBar, to detect duplicates
+        self._dedup_occurred = False  # Issue #162: set if an identical dup was deduped
         for i in range(n):
             try:
                 ts = parse_provider_int(t[i], label=f"timestamp at row {i}", source=self.name)
@@ -204,12 +210,20 @@ class UDFSource(HttpDataSource, PriceSource):
             vol = int(raw_vol)
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
                 raise InvalidData(f"{self.name}: OHLC invariant violated at {tm.date()}")
-            # Issue #66: a duplicate observation timestamp in one response is conflicting
-            # provider data; reject it instead of returning an ambiguous duplicate-keyed series.
-            if tm in seen_times:
+            bar = PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol)
+            # Issue #66/#162: handle a duplicate observation timestamp. Default (equity):
+            # ANY duplicate is conflicting provider data -> raise. Index sources opt in
+            # (_DEDUPE_IDENTICAL_DUPLICATE_BARS) to dedupe an IDENTICAL same-date bar
+            # (keep first) and flag it; a CONFLICTING same-date bar always raises here in
+            # the source path so a failover client records the attempt and tries the next
+            # source (never a silent conflicting-row selection).
+            if tm in seen:
+                if self._DEDUPE_IDENTICAL_DUPLICATE_BARS and seen[tm] == bar:
+                    self._dedup_occurred = True
+                    continue
                 raise InvalidData(f"{self.name}: duplicate observation timestamp {tm.isoformat()}")
-            seen_times.add(tm)
-            bars.append(PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol))
+            seen[tm] = bar
+            bars.append(bar)
 
         bars.sort(key=lambda b: b.time)
         return bars

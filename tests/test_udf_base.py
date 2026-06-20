@@ -229,6 +229,19 @@ def test_duplicate_observation_timestamp_raises_invalid(synth):
         src_with(synth.bare(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
 
 
+def test_equity_identical_duplicate_timestamp_still_raises(synth):
+    # Issue #162 must NOT leak into equity: the index dedupe-identical opt-in is gated by
+    # _DEDUPE_IDENTICAL_DUPLICATE_BARS (default False). An equity adapter must still raise
+    # on ANY duplicate timestamp — even an identical one (#66 behavior unchanged).
+    rows = [
+        ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000),
+        ("2024-01-02", 72.0, 72.5, 71.8, 72.3, 1000),  # identical duplicate
+    ]
+    assert DummyBare._DEDUPE_IDENTICAL_DUPLICATE_BARS is False
+    with pytest.raises(InvalidData):
+        src_with(synth.bare(rows=rows)).get_history("FPT", Interval.D1, *WIDE)
+
+
 def test_missing_array_raises_invalid(synth):
     payload = json.dumps(
         {"s": "ok", "t": [synth.ts("2024-01-02")], "o": [72.0], "h": [72.5], "l": [71.8], "v": [1000]}
