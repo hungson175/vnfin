@@ -98,7 +98,10 @@ Verified server behavior (live probes, 2026-06-18):
 **Adapter strategy:** always send `isAllData:1` + a far-past default `fromDate`
 (`2000-01-01`) + a `toDate` (caller's `to_date` or today), then apply the
 caller's `from_date` lower bound **client-side** for an exact window. If no rows
-fall in range, the adapter raises `EmptyData` (failover-safe).
+fall in range, the adapter raises `EmptyData` (failover-safe) — except when the
+history's newest `navDate` is strictly before the requested window start, in which
+case it raises `StaleData` (an `EmptyData` subclass) naming the gap, so a stale or
+closed feed is distinguishable from a genuinely-empty / pre-inception result.
 
 ### NAV history response shape
 
@@ -164,6 +167,7 @@ weights are **percent of NAV (0–100)**. `NavPoint.date` is a plain
 | Malformed scalar (bad/`null` nav, bad date, out-of-range weight, negative nav) | `InvalidData` |
 | Missing required field (id, stockCode, navDate) | `InvalidData` |
 | Empty rows / no data in range | `EmptyData` |
+| NAV history non-empty but its latest `navDate` is before the requested window start (stale/closed feed) | `StaleData` (an `EmptyData` subclass) |
 
 These reuse `vnfin.exceptions` so the adapter never leaks raw exceptions.
 

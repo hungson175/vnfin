@@ -12,6 +12,7 @@ __all__ = [
     "SourceError",
     "SourceUnavailable",
     "EmptyData",
+    "StaleData",
     "InvalidData",
     "UnsupportedInterval",
     "AdjustmentPolicyError",
@@ -34,6 +35,16 @@ class SourceUnavailable(SourceError):
 
 class EmptyData(SourceError):
     """Source responded but returned no usable rows for the request."""
+
+
+class StaleData(EmptyData):
+    """Data exists but ends before the requested window (stale/closed feed).
+
+    A subclass of :class:`EmptyData` so existing ``except EmptyData`` /
+    ``except SourceError`` callers still catch it, while the distinct type and
+    message name the gap (the source's latest observation predates the requested
+    window start) — distinguishable from a genuinely empty / pre-inception result.
+    """
 
 
 class InvalidData(SourceError):

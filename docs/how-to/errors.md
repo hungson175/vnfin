@@ -19,6 +19,7 @@ Common exception types:
 |-----------|---------|
 | `SourceUnavailable` | Provider/network/source-specific failure; failover clients can try the next source. |
 | `EmptyData` | Provider returned no usable rows for the request. |
+| `StaleData` | Data exists but ends before the requested window (stale/closed feed). Subclass of `EmptyData`, so `except EmptyData` still catches it. |
 | `InvalidData` | Input or provider payload is malformed. |
 | `UnsupportedInterval` | Requested interval is not supported by any eligible source. |
 | `UnitMismatchError` | Failover would mix incompatible units/scales, so the result is rejected. |

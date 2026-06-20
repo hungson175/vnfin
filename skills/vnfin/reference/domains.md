@@ -41,7 +41,7 @@ print(rep.fiscal_date, rep.get("11000"))   # raw VND
 
 - **Entry:** `vnfin.funds.source()` → `FmarketFundSource` (`vnfin.funds.client` is an alias). Verbs are **methods on the source**: `.list_funds(asset_type=None, search='', page_size=100)` → `FundList`; `.nav_history(product_id: int, from_date=None, to_date=None)` → `NavHistory`; `.holdings(product_id: int)` → `tuple[FundHolding]`. No module-level `list_funds`.
 - **Result fields:** `Fund(code, name, id, nav, manager, asset_type, currency='VND')`; `FundList(funds, source, currency, ...)` iterable/indexable; `NavHistory(product_id, points: tuple[NavPoint(date, nav)], value_unit='VND/unit', currency='VND', ...)`; `FundHolding(stock_code, weight_pct, industry, price_raw, price_unit)`.
-- **Gotchas:** `nav_history`/`holdings` take the fund's internal **`Fund.id` (int)**, not the ticker. `FundHolding.price_raw` is opaque/unnormalized (`price_unit='raw'/None`) — not money; use `weight_pct` (0–100 % of NAV). Inverted date window → `InvalidData`.
+- **Gotchas:** `nav_history`/`holdings` take the fund's internal **`Fund.id` (int)**, not the ticker. `FundHolding.price_raw` is opaque/unnormalized (`price_unit='raw'/None`) — not money; use `weight_pct` (0–100 % of NAV). Inverted date window → `InvalidData`. A window after the provider's latest `navDate` (feed currently stale) → `StaleData` (an `EmptyData` subclass) naming the gap, not a silent empty.
 
 ```python
 from vnfin.funds import source

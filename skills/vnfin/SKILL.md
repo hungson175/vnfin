@@ -86,7 +86,8 @@ print(vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP).latest())
 
 ## Errors
 
-Failures are `vnfin.exceptions`: `SourceUnavailable`, `EmptyData`, `InvalidData`,
+Failures are `vnfin.exceptions`: `SourceUnavailable`, `EmptyData`, `StaleData` (an `EmptyData`
+subclass — data ends before the requested window), `InvalidData`,
 `UnsupportedInterval`, `UnitMismatchError`, `AllSourcesFailed` (carries per-source `.attempts`).
 Bad input (missing/inverted dates, malformed currency) raises before any network call.
 

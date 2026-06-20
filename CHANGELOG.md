@@ -7,6 +7,9 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **`vnfin.exceptions.StaleData`** (#172) — a subclass of `EmptyData` raised when a source's history
+  exists but ends before the requested window (a stale or closed feed). Backward compatible: existing
+  `except EmptyData` / `except SourceError` handlers still catch it.
 - **`vnfin.fx.history(base="USD", quote="VND", start=None, end=None, *, frequency=ANNUAL)`** (#159) —
   historical FX time series, the first historical FX in `vnfin` (spot `get_rate`/`FXRate` is
   unchanged). v1 serves **annual USD/VND** from the no-key World Bank `PA.NUS.FCRF` series
@@ -25,6 +28,13 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Fmarket NAV-history staleness** — `vnfin.funds` `nav_history(...)` no longer returns a silent
+  `EmptyData` (indistinguishable from "no data") when the provider's history is stale. When the
+  newest `navDate` is strictly before the requested window start, it now raises the new `StaleData`
+  (an `EmptyData` subclass) naming the gap (`"... ends at <latest>, before requested <start>..<end>"`).
+  Genuinely-empty and pre-inception / sparse-window cases stay plain `EmptyData`. A live probe
+  confirmed Fmarket's history feed is systemically stale while `list_funds` shows current NAVs.
+  ([#172](https://github.com/hungson175/vnfin/issues/172))
 - **Crypto long-window partial coverage** — `vnfin.crypto` daily history no longer silently accepts a
   primary-source result that does not span the requested bounded window. The failover client now
   validates requested-window coverage: a source that fully covers (`first_bar.date <= start` and

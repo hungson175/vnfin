@@ -27,7 +27,7 @@ from .._contracts import (
     optional_present,
     require_present,
 )
-from ..exceptions import EmptyData, InvalidData, SourceUnavailable
+from ..exceptions import EmptyData, InvalidData, SourceUnavailable, StaleData
 from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import validate_iso_date_string
 from .models import Fund, FundHolding, FundList, NavHistory, NavPoint
@@ -200,6 +200,7 @@ class FmarketFundSource(HttpDataSource):
         seen: dict[date, float] = {}
         points: list[NavPoint] = []
         deduped = 0
+        max_navdate: date | None = None  # #172: latest navDate over ALL rows (pre-filter)
         for r in rows:
             # Issue #144: parse navDate FIRST and skip out-of-window rows BEFORE the
             # productId / value / duplicate guards — the broad fetch legitimately
@@ -207,6 +208,12 @@ class FmarketFundSource(HttpDataSource):
             # the request (e.g. an out-of-window duplicate or odd productId). An
             # in-window duplicate is still fatal (below).
             d = self._nav_row_date(r)
+            # Issue #172: track the newest navDate across the FULL (pre-window-filter)
+            # row set so a stale feed (history ending before the window) is
+            # distinguishable from genuinely-empty data. Date-only, no #21/#158/value
+            # guards on out-of-window rows (that would reintroduce the #144 bug).
+            if max_navdate is None or d > max_navdate:
+                max_navdate = d
             if (lo is not None and d < lo) or (hi is not None and d > hi):
                 continue
             # Issue #21 (reopen): an in-window NAV row that EXPOSES a productId must
@@ -237,6 +244,18 @@ class FmarketFundSource(HttpDataSource):
             points.append(point)
         points.sort(key=lambda p: p.date)
         if not points:
+            # Issue #172: history is non-empty but no row falls in the caller's window.
+            # If the newest navDate is strictly BEFORE the requested window start, the
+            # feed is stale (or the fund is closed) — surface an explicit, actionable
+            # StaleData (still an EmptyData subclass) naming the data gap, instead of a
+            # silent EmptyData. Pre-inception windows and sparse/weekend straddles
+            # (lo <= max_navdate) stay plain EmptyData.
+            if lo is not None and max_navdate is not None and max_navdate < lo:
+                end = hi.isoformat() if hi is not None else _today_ymd()
+                raise StaleData(
+                    f"fmarket: NAV history for product {product_id} ends at "
+                    f"{max_navdate.isoformat()}, before requested {lo.isoformat()}..{end}"
+                )
             raise EmptyData(f"fmarket: no NAV history for product {product_id} in range")
         warnings: tuple[str, ...] = ()
         if deduped:

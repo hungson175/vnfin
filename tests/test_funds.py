@@ -14,7 +14,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable
+from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable, StaleData
 from vnfin.funds import (
     Fund,
     FundHolding,
@@ -1459,3 +1459,89 @@ def test_nav_history_inverted_window_rejected():
     src = FmarketFundSource(http_get=_window_aware_get([_nav_row("2024-04-04")], []))
     with pytest.raises(InvalidData):
         src.nav_history(FAKE_ID_A, date(2024, 12, 31), date(2024, 1, 1))
+
+
+# ---------------------------------------------------------------------------
+# Issue #172 — NAV-history staleness. When the provider's history ends BEFORE the
+# requested window start (probe-confirmed: Fmarket's get-nav-history is systemically
+# stale), a bounded recent window must raise StaleData (an EmptyData subclass naming
+# the data gap), not a silent EmptyData indistinguishable from "no data".
+# ---------------------------------------------------------------------------
+
+
+def test_nav_history_stale_window_raises_staledata():
+    full = [_nav_row("2025-11-28"), _nav_row("2025-12-05")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(StaleData) as exc:
+        src.nav_history(FAKE_ID_A, date(2026, 1, 1), date(2026, 6, 20))
+    msg = str(exc.value)
+    assert "ends at 2025-12-05" in msg
+    assert "before requested 2026-01-01..2026-06-20" in msg
+
+
+def test_nav_history_staledata_is_emptydata_subclass():
+    # Backward compatible: existing `except EmptyData` callers still catch the stale case.
+    assert issubclass(StaleData, EmptyData)
+    full = [_nav_row("2025-12-05")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(EmptyData):
+        src.nav_history(FAKE_ID_A, date(2026, 1, 1), date(2026, 6, 20))
+
+
+def test_nav_history_fresh_window_returns_rows_not_stale():
+    # When the provider DOES return in-window 2026 rows, the bounded call returns them.
+    full = [_nav_row("2025-12-30"), _nav_row("2026-02-02"), _nav_row("2026-03-03")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A, date(2026, 1, 1), date(2026, 6, 20))
+    assert [p.date for p in hist.points] == [date(2026, 2, 2), date(2026, 3, 3)]
+
+
+def test_nav_history_pre_inception_window_is_plain_empty_not_stale():
+    # Window entirely BEFORE the data (latest navDate >= window start) -> EmptyData, NOT stale.
+    full = [_nav_row("2014-03-25"), _nav_row("2014-04-01")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(EmptyData) as exc:
+        src.nav_history(FAKE_ID_A, date(2010, 1, 1), date(2011, 1, 1))
+    assert not isinstance(exc.value, StaleData)
+
+
+def test_nav_history_sparse_straddle_is_plain_empty_not_stale():
+    # Window falls in a gap between two points but latest navDate >= window start -> EmptyData.
+    full = [_nav_row("2025-12-01"), _nav_row("2025-12-08")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(EmptyData) as exc:
+        src.nav_history(FAKE_ID_A, date(2025, 12, 2), date(2025, 12, 5))
+    assert not isinstance(exc.value, StaleData)
+
+
+def test_nav_history_stale_ignores_out_of_window_guard_rows():
+    # #144/#21/#158 preserved: an out-of-window odd-productId row and an out-of-window
+    # conflicting duplicate must NOT fail the request; the max-navDate scan runs no
+    # guards on out-of-window rows, so a stale recent window still yields StaleData.
+    full = [
+        _nav_row("2025-12-04", pid=9999),       # wrong productId, but out of window
+        _nav_row("2025-12-05", nav=100.0),
+        _nav_row("2025-12-05", nav=200.0),      # conflicting dup, but out of window
+    ]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(StaleData):
+        src.nav_history(FAKE_ID_A, date(2026, 1, 1), date(2026, 6, 20))
+
+
+def test_nav_history_open_ended_from_only_stale_uses_today_end():
+    # from_date only (to_date defaulted to today) on stale history -> StaleData; the
+    # message names a concrete end bound (today), never an empty/None end.
+    full = [_nav_row("2025-12-05")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(StaleData) as exc:
+        src.nav_history(FAKE_ID_A, from_date=date(2026, 1, 1))
+    assert "ends at 2025-12-05" in str(exc.value)
+    assert "before requested 2026-01-01.." in str(exc.value)
+
+
+def test_nav_history_full_history_call_on_stale_data_returns_all():
+    # No window -> no coverage check; the full stale history is returned (no exception).
+    full = [_nav_row("2025-11-28"), _nav_row("2025-12-05")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A)
+    assert [p.date for p in hist.points] == [date(2025, 11, 28), date(2025, 12, 5)]
