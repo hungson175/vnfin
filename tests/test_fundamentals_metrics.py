@@ -406,14 +406,18 @@ def test_catalog_derived_defs_exact():
         assert d.statement is None, mid
 
 
-def test_catalog_verified_bank_codes_present():
+def test_catalog_verified_bank_codes_exactly():
+    # HARD RULE (#157): bank metrics ship ONLY on the 8 verified anchor codes.
+    # Assert exact set EQUALITY (allowlist), not a subset — so a future UNKNOWN
+    # or extra bank code is caught too, not merely a missing one. (Hardened per
+    # the adversarial-verify bank-codes finding.)
     by_id = _by_id(metric_catalog())
     present = set()
     for d in by_id.values():
         codes = d.codes_by_source.get("vndirect")
         if codes and codes.bank_code is not None:
             present.add(codes.bank_code)
-    assert _VERIFIED_BANK_CODES <= present
+    assert present == _VERIFIED_BANK_CODES
 
 
 def test_catalog_deferred_bank_codes_absent():
