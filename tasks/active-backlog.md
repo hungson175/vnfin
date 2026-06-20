@@ -86,8 +86,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
       OUT: advice/ranking/screener app helpers/blind third-party ingestion. (NOW ACTIVE — see Now.)
     - **#166** (poller triage review-202606201304): index volume semantics — ACCEPT design-first/
       docs-diagnostics gap, queued BEHIND #157. No coder action now.
-    - **#167** (poller triage review-202606201304): VN equity universe / symbol discovery — ACCEPT
-      design-first core data primitive, likely high-value AFTER #157. No coder action now.
+    - **#167** (poller triage review-202606201304 + addendum review-202606201404): VN equity universe /
+      symbol discovery + **profile-diagnostics addendum** — ACCEPT design-first core data primitive,
+      likely high-value AFTER #157. No coder action now.
+    - **#161** (poller triage + **valuation-history addendum** review-202606201404): market valuation /
+      sector weights / concentration analytics — ACCEPT design-first/eval. No coder action now.
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
@@ -149,7 +152,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN REV2.6 — last 1-line fixed (design APPROVED-pending-verify); awaiting final re-review** (spec spec-202606201222). Rounds:
+- **#157 fundamentals metrics — DESIGN FINAL-APPROVED (review-202606201405); READY FOR IMPLEMENTATION
+  (sequenced AFTER #169/#168 close).** Design `84265fb`. On start → large TDD impl; consider a Workflow
+  for parallel slices (registry/models/extraction/coverage/docs) per the design's modular structure.
+  Full design history below. (spec spec-202606201222). Rounds:
   `1616ff6`→BLOCK×8→rev2 `a0a00cc`→BLOCK×7→rev2.1 `6fbe694`→rev2.2 `3a38a19`→BLOCK×6→rev2.3 `aeac970`
   →BLOCK×4→rev2.4 `51948cb` (+ adversarial Workflow consistency sweep caught 2 more)→BLOCK (label
   addendum review-202606201324)→rev2.5. No code until reviewer approves. **rev2.5** folds the
@@ -176,10 +182,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   prices guard, VNINDEX passes index guard; liquidity inherits. New private `_contracts/index_registry.py`.
   **ONE judgment call for reviewer:** sector indices (VNCOND…VNUTI) are **deny-only** (rejected in
   prices) but **NOT allow-listed** in index_history (no per-symbol value-history test; doc says VPS
-  serves them) — a later reviewer-gated 1-line expansion. Code-review BLOCK (review-202606201352):
-  missing alias HNXUPCOMINDEX in price deny-list → FIXED `f7ab8f9` (deny-only + 5 zero-network
-  regressions; suite 2847, snapshot unchanged, cov 95%). NEXT: reviewer re-review (range
-  `b20b246..f7ab8f9`) → push+close #168 on APPROVE.
+  serves them) — a later reviewer-gated 1-line expansion. HNXUPCOMINDEX fix `f7ab8f9` APPROVED + #168
+  CLOSED (review-202606201405); watermark 07:03Z. **REOPENED** (review-202606201410) for residual bare
+  `HNX` alias → FIXED `f4655ba`: HNX deny-listed (prices fail-loud 0-net) + canonicalize HNX->HNXINDEX
+  in index path (new `_INDEX_ALIASES`/`resolve_index_alias`, private) + 4 zero-net regressions; suite
+  2863, snapshot unchanged, cov 95%. NEXT: reviewer re-review (range `cd0e5ea..f4655ba`) → push+close #168.
 
 - **#168 (orig spec):** price/index namespaces must **fail loud on wrong asset type**, not silently
   return wrong-typed data:
@@ -209,9 +216,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   manual opt-in (`StooqGoldSource` + `default_world_gold_client`). Do NOT add Stooq to the default chain.
 - **#170 — design-first: domestic VN gold history / diagnostics** (poller triage review-202606201348).
   In-scope; PARKED behind #168/#169/#157. NO implementation without a source/legal/provenance design.
-- **#169 — HIGH data-coverage BUG: crypto long-window partial coverage — DESIGN APPROVED (option B)**
-  (spec review-202606201334; design choice review-202606201356). Queue AFTER #168 closes, BEFORE large
-  #157 impl. **Approved contract:** failover-first; full-coverage = `first_bar.date<=start AND
+- **#169 — IMPLEMENTED (option B), INTEGRATED GREEN, AWAITING CODE REVIEW** (spec review-202606201334;
+  design choice review-202606201356; fix sub-agent commit `b9283f4`). Coverage-aware crypto orchestration:
+  full-cover source wins (failover-first, no warning); else best-available (max in-window overlap, then
+  source order) + exact constant `partial_coverage: requested {start}..{end}, returned {first}..{last}`;
+  unbounded unchanged; hard guards still hard-reject. **Integrated on merged tree:** suite 2859→**2863**
+  (after #168 HNX), gate trio 68 (public-API snapshot UNCHANGED — all new symbols private), cov 95%,
+  clean-room+diff clean; 12 zero-network regressions. NEXT: reviewer code review (range `cd0e5ea..b9283f4`)
+  → push+close #169 on APPROVE.
+  _Approved contract (ref):_ failover-first; full-coverage = `first_bar.date<=start AND
   last_bar.date>=end`; partial primary → reject → backup; if a backup fully covers → select it; if NONE
   covers → return **best-available** (maximize covered requested-day overlap, then source order) + an
   exact `partial_coverage` warning constant naming requested start/end + returned first/last dates;
