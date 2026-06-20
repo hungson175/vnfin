@@ -260,7 +260,8 @@ single-source legs for long-horizon allocation workflows.
 - `source_capabilities() -> tuple[SourceCapability, ...]` — static registry of known source
   capabilities (world-gold history + index constituents).
 - `explain_world_gold_history(start, end) -> RequestDiagnostic` — classifies a window as
-  `coverage_gap` / `partial_coverage` / `ok` vs `CurrencyApiGoldSource.COVERAGE_START`.
+  `coverage_gap` / `partial_coverage` / `window_too_wide` / `ok` vs
+  `CurrencyApiGoldSource.COVERAGE_START` and `_MAX_DAYS` (reports both blockers when both apply).
 - `explain_index_constituents(index) -> RequestDiagnostic` — reports `single_source`
   limitation (membership only, no weights, no clean fallback).
 

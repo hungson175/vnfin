@@ -187,3 +187,14 @@ def test_funds_indices_tutorial_uses_real_model_fields():
     # non-existent / wrong attrs absent
     assert "h.symbol" not in tut and "h.weight)" not in tut
     assert "members.constituents" not in tut
+
+
+# Issue #151 — public docs must enumerate the window_too_wide diagnostic status so the
+# documented status set stays in sync with vnfin.diagnostics.
+def test_diagnostics_docs_mention_window_too_wide_status():
+    for path in (
+        "docs/how-to/source-diagnostics.md",
+        "docs/api.md",
+        "docs/architecture/data-domains.md",
+    ):
+        assert "window_too_wide" in _read(path), f"{path} missing window_too_wide status"

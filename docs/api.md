@@ -115,9 +115,10 @@ never fabricated data:
   conservative coverage metadata for the source-limited legs (world-gold history,
   index constituents).
 - `vnfin.diagnostics.explain_world_gold_history(start, end) -> RequestDiagnostic` —
-  classify a window as `coverage_gap` / `partial_coverage` / `ok` vs the default
-  source's known coverage start (the live `vnfin.gold.world(...)` history call also
-  fails fast with `EmptyData` for an entirely-pre-coverage window).
+  classify a window as `coverage_gap` / `partial_coverage` / `window_too_wide` / `ok` vs the
+  default source's known coverage start and max range width (the live `vnfin.gold.world(...)`
+  history call fails fast with `EmptyData` for an entirely-pre-coverage window and raises
+  `InvalidData` for a window wider than `_MAX_DAYS`; the diagnostic reports both blockers).
 - `vnfin.diagnostics.explain_index_constituents(index) -> RequestDiagnostic` — canonicalize
   the selector and report the `single_source` (membership-only, no-weights) limitation.
 

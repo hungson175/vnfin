@@ -28,14 +28,16 @@ from datetime import date
 import vnfin
 
 d = vnfin.diagnostics.explain_world_gold_history(date(2024, 1, 1), date(2024, 12, 31))
-print(d.status)            # "coverage_gap" | "partial_coverage" | "ok"
+print(d.status)            # "coverage_gap" | "partial_coverage" | "window_too_wide" | "ok"
 print(d.notes)
 print(d.suggested_actions)
 ```
 
 A window entirely before the default source's known coverage start is `coverage_gap`
 (the live `vnfin.gold.world(...).get_history(...)` call now also **fails fast** with
-`EmptyData` instead of issuing one doomed request per day); a window straddling the
+`EmptyData` instead of issuing one doomed request per day); a window wider than the
+source's max range (`_MAX_DAYS`) is `window_too_wide` (the live call raises `InvalidData`;
+the diagnostic suggests chunking) — when both apply, both blockers are reported; a window straddling the
 start is `partial_coverage`; an otherwise-covered window is `ok`.
 
 ## Preflight index constituents
