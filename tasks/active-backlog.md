@@ -22,8 +22,9 @@ _Last synced: 2026-06-20 ~17:30 +07_
 > run, warn-not-drop) pushed `0a28339..1402b37`; Codex×2 APPROVE review-202606201750; #176 commented +
 > CLOSED (reported silent-corruption surfaced). Deferred design-eval follow-ups (trim / cross-source
 > reconciliation / ADV-dilution) live in design §8 + below — NOT open issues. **Now: #172-RESIDUAL
-> DESIGN submitted** `b3d4a6f` (`docs/design/nav-success-path-staleness.md`) — cadence-relative NAV
-> staleness; sent to reviewer for design-check, converging Q1 (baseline) before TDD. Blocked on reviewer.
+> DESIGN APPROVED_WITH_NOTES** (reviewer review-202606201803, `ea44de7`) — cadence-relative `nav_end_gap`
+> with trailing-window cadence + today-injection; TDD in flight (implement→adversarial-verify workflow).
+> FundList.nav as-of follow-up filed by reviewer as **#181** (out of v1 scope).
 
 ---
 
