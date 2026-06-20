@@ -1,10 +1,10 @@
 # Design — fundamentals metrics & coverage diagnostics (#157)
 
-**Status:** DESIGN (rev 2.4 — resolves four design-review rounds: review-202606201230 (8),
-…201245 (7), …201300 (6), …201310 (4): typed statement-result seam w/ `limit`, deterministic
-capability-based AllSourcesFailed/NOT_SERVED predicate + TDD matrix, fully-typed coverage enums w/
-exact values, namespaced codes, exact reason+interpolation table, catalog filter semantics, exact
-DataFrame column+attr value types, single-category contract). Implementation-ready; APPROVE before code.
+**Status:** DESIGN (rev 2.5 — five review rounds resolved: …201230 (8), …201245 (7), …201300 (6),
+…201310 (4), …201324 (label/statement-semantics addendum). Adds: label-provenance contract —
+identity = requested statement + source namespace + item code (NEVER the human label); raw
+`MetricInput.name` provenance + `input_names` DataFrame column; labels are provenance-only (no
+label-mismatch diagnostic). Prior decisions intact. Implementation-ready; APPROVE before code.
 **Scope:** an **additive, offline** canonical-metrics + coverage-diagnostics layer on top of the
 existing `vnfin.fundamentals` reports — fundamental **data primitives and diagnostics** for
 long-term investors, *not* an advice/ranking/screener layer.
@@ -42,7 +42,8 @@ clean-room.
 - **raw_mapped / provider_native / derived** kind flags + formula/source lineage per metric.
 - Explicit **value units** and fiscal-period metadata on every value.
 - **Coverage diagnostics** (per fiscal_date): missing/unmapped/blocked per metric; named-vs-generic
-  item-label stats; per-statement status + **succeeding source** (ratios `not_requested` in v1, B7;
+  item-label stats; per-statement status + **source per the `StatementProvenance` role rule** (OK→
+  succeeding, NOT_SERVED→responsible, else None) (ratios `not_requested` in v1, B7;
   no failed-attempt trail in v1, B2); not-applicable per bank/non-bank.
 - **Batch-friendly, non-fatal** diagnostics (a bad symbol yields a per-symbol diagnostic, never
   aborts a universe) so users can build their *own* screeners.
@@ -271,6 +272,8 @@ class MetricInput:                   # one source line a metric was built from (
     value_unit: str                  # "VND" | "vnd_per_share" | "ratio"
     fiscal_date: date
     source: str
+    name: str                        # raw LineItem.name PROVENANCE (e.g. "Doanh thu thuần" or
+                                     # "item_11000"); provenance-only — NEVER used for metric identity (§5)
 
 @dataclass(frozen=True)
 class MetricDefinition:              # static catalog entry (no symbol)
@@ -325,7 +328,10 @@ class MetricReport:                  # all metrics for one symbol + one fiscal p
     #   metric_id (MetricId.value), name (str), value (float|None), value_unit (str),
     #   kind (MetricKind.value), availability (MetricAvailability.value), reason (str|None),
     #   category (MetricCategory.value), applies_to (AppliesTo.value), fiscal_date (date.isoformat()),
-    #   input_codes (comma-joined str, "" if none), input_sources (comma-joined str, "" if none).
+    #   input_codes (comma-joined str, "" if none), input_sources (comma-joined str, "" if none),
+    #   input_names (comma-joined raw LineItem.name provenance, "" if none — REV2.5 label addendum).
+    #   `name` column = the metric DEFINITION's human label; `input_names` = the raw provider labels
+    #   of the source lines (provenance; never used for identity).
     # EXACT df.attrs value types (B6):
     #   symbol=str, period=Period.value, fiscal_date=date.isoformat(), is_bank=bool,
     #   statement_sources = tuple of (statement.value, status.value, source|None, detail|None).
@@ -343,7 +349,7 @@ class MetricCoverageItem:           # B3: frozen typed record (NOT a bare tuple)
 class PeriodCoverage:               # B1: coverage is PER fiscal_date
     fiscal_date: date
     is_bank: Optional[bool]
-    statement_provenance: tuple[StatementProvenance, ...]   # per-statement status + succeeding source
+    statement_provenance: tuple[StatementProvenance, ...]   # per-statement status + source (role rule, §4)
     per_metric: tuple[MetricCoverageItem, ...]              # B3: typed records, not tuple-of-tuples
     named_item_count: int                                   # LineItems with a real name
     generic_item_count: int                                 # LineItems still "item_<code>"
@@ -379,6 +385,12 @@ need `TimeSeriesResult` (it is one period; the *tuple* of reports is the series 
 4. **Full-catalog invariant (B6):** every `MetricReport` contains a `MetricValue` for **every** v1
    catalog metric — applicability is expressed by `availability`, never by omission. `MetricReport.get(id)`
    returns a `MetricValue` (possibly unavailable) for any known id. For each `MetricDefinition`:
+   - **Identity invariant (REV2.5 / label addendum):** a metric is matched **only** by *requested
+     statement + source namespace + item code* — **never** by the provider's human `LineItem.name`.
+     The label is **provenance-only**: a generic (`item_<code>`) or semantically surprising label
+     **never** blocks, alters, or re-routes a metric; it is preserved as `MetricInput.name` and its
+     quality is surfaced by the named/generic coverage counts. Labels are therefore not used for
+     identity and there is no "label mismatch" diagnostic (we match by the stable code, not the text).
    - **`applies_to` mismatch** (e.g. `gross_margin` for a bank, or a bank-only id for a corporate)
      → `NOT_APPLICABLE`, value `None`. (It is still present in the report.)
    - **Source-namespace gate (C3):** look the metric up in `definition.codes_by_source[<succeeding
@@ -386,7 +398,8 @@ need `TimeSeriesResult` (it is one period; the *tuple* of reports is the series 
      (e.g. CafeF) → `BLOCKED` (never silent MISSING).
    - **raw_mapped:** look the code up in the statement's `code -> LineItem` index; build a
      `MetricInput` from the full `LineItem` (statement, code, value, `value_unit`, fiscal_date,
-     **source**). Missing code / missing-or-failed statement → `MISSING` with a reason naming the input.
+     **source**, and raw **`name`** provenance). Missing code / missing-or-failed statement →
+     `MISSING` with a reason naming the input.
    - **derived:** compute `formula` from already-resolved `MetricValue`s with **guards** —
      denominator zero/negative/missing/non-finite → `MISSING`/`BLOCKED` with a stable `reason`,
      value `None` (never `inf`/`NaN`, never a silent wrong number); if inputs span >1 source add a
@@ -426,7 +439,8 @@ examples and tests in §9 reference these exact strings.
 
 Same fetch, but never raises on a per-statement failure. It returns a `MetricCoverage` whose
 `periods` is **one `PeriodCoverage` per fiscal_date** (B1). Each period entry records: per-statement
-`StatementProvenance` (status + **succeeding source**), named-vs-generic item-label counts, unmapped
+`StatementProvenance` (status + **source per the role rule**: OK→succeeding, NOT_SERVED→responsible,
+else None), named-vs-generic item-label counts, unmapped
 codes, and each metric's availability + reason (including `BLOCKED` for an unmapped source namespace,
 C3). It does **not** fabricate a failed-attempt trail (C1). Designed so a caller can loop over a
 universe catching nothing and get a per-symbol, per-period `MetricCoverage`.
@@ -583,6 +597,12 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
 - **missing-input diagnostics:** drop a required line → metric `MISSING`, reason names the input.
 - **generic-label coverage:** fixture with unmapped `item_<code>` lines → `generic_item_count` /
   `unmapped_codes` populated; named count correct.
+- **label provenance & identity (REV2.5):** a fixture where a mapped code (e.g. `11000`) carries a
+  **generic** (`item_11000`) or **semantically surprising** (e.g. wrong/odd) `LineItem.name` → the
+  metric still resolves by code (value correct, `AVAILABLE`), the raw label is preserved in
+  `MetricInput.name`, and surfaces in the `input_names` DataFrame column. Assert the metric is **not**
+  blocked/altered by the label and **no** label-mismatch warning is emitted (labels are
+  provenance-only; identity = statement+namespace+code).
 - **ratios NOT fetched in v1 (B7):** assert `metrics()`/`explain_metric_coverage()` make **zero**
   ratio (`StatementType.RATIOS`) calls and `ratio_status == "not_requested"` for every period.
 - **pure transformers (B1/B4):** `_metrics_from_statement_results(...)` and
@@ -643,6 +663,9 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
 - [x] **rev2.3:** all 6 public-contract/TDD-precision blockers (review-202606201300) resolved (§13).
 - [x] **rev2.4:** B1-B4 (review-202606201310) resolved — single-category contract, `not_served` in
   C1 status list, exact quoted source-map reason, deterministic capability-based predicate + matrix.
+- [x] **rev2.5:** label/statement-semantics addendum (review-202606201324) — identity invariant
+  (statement+namespace+code, never label), `MetricInput.name` + `input_names` provenance,
+  labels provenance-only, label-provenance tests; shorthand cleanup.
 - [ ] **No implementation code** until the reviewer approves this revised design.
 
 ## 11. Blocker resolutions (review-202606201230) + reviewer-answered questions
@@ -718,3 +741,22 @@ The REV2.2 re-review raised 6 public-contract/TDD-precision blockers; all resolv
 - **B6 DataFrame attr value types:** `period=Period.value`, `fiscal_date=date.isoformat()`,
   `statement_sources`=tuple of `(statement.value, status.value, source|None, detail|None)`; enum
   columns `.value`; no `source` attr (§4).
+
+## 14. REV2.5 — label/statement-semantics addendum (review-202606201324)
+
+The latest #157 addendum (raw provider rows may carry misleading/generic/surprising labels) is folded
+into the public contract:
+
+1. **Identity invariant:** a metric is matched **only** by *requested statement + source namespace +
+   item code*, **never** by the provider human label (§5 step 4).
+2. **Raw label provenance:** `MetricInput.name: str` carries the original `LineItem.name` used to
+   compute each input (§4).
+3. **DataFrame label provenance:** new `input_names` column (comma-joined raw labels) beside
+   `input_codes`/`input_sources`; the `name` column is the metric DEFINITION label, `input_names` is
+   the raw provider labels (§4).
+4. **Coverage/test contract:** generic (`item_<code>`) or surprising labels keep the metric computable
+   by code with the raw label preserved + surfaced via named/generic counts (§9).
+5. **Warning/reason semantics:** **labels are provenance-only and NOT used for metric identity** —
+   there is deliberately **no** label-mismatch warning/reason (we match by the stable code, not text).
+   Cleanup: replaced "status + succeeding source" shorthands with the full `StatementProvenance` role
+   rule (OK→succeeding, NOT_SERVED→responsible, else None).

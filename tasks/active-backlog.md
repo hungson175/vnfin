@@ -149,17 +149,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN REV2.4 (in consistency-sweep before re-request)** (spec
-  spec-202606201222). Design rounds: `1616ff6`→BLOCK×8→`a0a00cc`→BLOCK×7→`6fbe694` rev2.1→`3a38a19`
-  rev2.2→BLOCK×6→rev2.3 `aeac970`→BLOCK×4 (review-202606201310)→rev2.4. No code until reviewer approves.
-  Rev2.4 fixes B1-B4: net_revenue category=size (single, no slash); C1 status list includes
-  not_served + responsible-source rule; source-map reason uses exact quoted form
-  `metric map not available for source '{source}'`; deterministic capability-based
-  AllSourcesFailed→NOT_SERVED predicate (`serves(source,statement)` static set) + TDD matrix in §9;
-  N/A→NOT_APPLICABLE cleanup. Then ran an adversarial Workflow consistency sweep (5 auditors + verify)
-  to catch ANY remaining staleness before re-request (break the multi-round cycle). Deliverable:
-  `docs/design/fundamentals-metrics.md` (design-only). On APPROVE → delegate TDD impl (Workflow for
-  parallel test/impl slices per CLAUDE.md). Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
+- **#157 fundamentals metrics — DESIGN REV2.5 AWAITING RE-REVIEW** (spec spec-202606201222). Rounds:
+  `1616ff6`→BLOCK×8→rev2 `a0a00cc`→BLOCK×7→rev2.1 `6fbe694`→rev2.2 `3a38a19`→BLOCK×6→rev2.3 `aeac970`
+  →BLOCK×4→rev2.4 `51948cb` (+ adversarial Workflow consistency sweep caught 2 more)→BLOCK (label
+  addendum review-202606201324)→rev2.5. No code until reviewer approves. **rev2.5** folds the
+  label/statement-semantics addendum: identity invariant (statement+source-namespace+item code, NEVER
+  the human label); `MetricInput.name` raw-label provenance + `input_names` DataFrame column; labels
+  provenance-only (no label-mismatch diagnostic); label-provenance tests; shorthand cleanup.
+  Deliverable: `docs/design/fundamentals-metrics.md` (design-only). On APPROVE → delegate TDD impl. Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
   external source). v1: canonical metric catalog (corporate + bank headline mapped, per spec codes) +
   5 derived (gross/net margin, liab/equity, cash/assets, OCF margin) + coverage diagnostics. API:
   `metric_catalog()`, `explain_metric(id)`, `metrics(symbol, period)`, `explain_metric_coverage(...)`.
@@ -183,6 +180,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   deny-lists known indices; unknown symbols still pass to price providers). Investigate existing
   known-index registry / symbol classifier in `vnfin/indices/` + `_contracts` before coding.
   Sequencing: do AFTER the tiny #157 rev2.4 design patch, BEFORE #157 implementation.
+  **STATUS:** design **APPROVE_WITH_TWEAKS** (reviewer 13:25). Chokepoints: prices `client.py:138`;
+  indices `indices/client.py:84`+`:115`; liquidity inherits (offline `from_price_history` + symbol-fetch
+  via default_client). **Tweaks:** PRIVATE `_contracts` registry (NO public API/snapshot); **two sets** —
+  deny-list (prices/liquidity) = ALL known index aliases incl. provider aliases (UPCOMINDEX, VNALL) +
+  sector indices; allow-list (index_history) = only **value-history-SUPPORTED** indices (sector indices
+  ONLY if current sources/tests prove support, else deny-in-price-but-not-allow-in-index). Seed:
+  VNINDEX/VN30/VN100/VNMID/VNSML/VNALLSHARE(+VNALL)/HNXINDEX/HNX30/UPCOM(+UPCOMINDEX)/VNDIAMOND/
+  VNFINLEAD/VNFINSELECT. Zero-network TDD; liquidity inherits price guard only. **PROCEED with TDD
+  now (#157 rev2.5 patch done).** → delegate to a sub-agent.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
