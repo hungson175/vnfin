@@ -48,14 +48,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **CLAUDE.md: updated** — execution model (orchestrate via sub-agents/worktrees), integration-test
   + long-message rules (1074a0a, Boss directive).
 - **Design-first parked (reviewer triage review-202606200902, filtered specs only):**
-  - B: **#147** VNINDEX long-window — design APPROVED_WITH_SPEC (review-202606200913); implementing Option2 v1 (opt-in index_history_stitched, calendar-year D1 segments) — DELEGATED to sub-agent.
+  - B: **#147** v1 IMPLEMENTED (sub-agent 281bc1e, integrated by main; suite 2719 green) — index_history_stitched opt-in calendar-year stitching; **awaiting reviewer code review** before push.
   - C: **#149/#152/#156** macro / rates / global-benchmark diagnostics.
   - D: **#154/#150** derived gold-premium / portfolio analytics (offline, data-only, no advice).
   - E: **#155** fund metadata / allocation diagnostics.
   All design-first: no code until reviewer-approved design.
   - **#158: DONE** (delegated to sub-agent, integrated by main; pushed `7d528d2..cd7b941`, CLOSED;
     review-202606200907). Same-NAV dedupe+warning; conflicting -> InvalidData; #144 guards preserved.
-  - Await reviewer poller triage: **#157, #159**.
+  - Design-eval-only (parked): **#160** metadata news (no scraping/advice; source/legal/injection review). Await triage: **#157, #159**.
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
