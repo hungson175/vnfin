@@ -57,10 +57,20 @@ factory (gold-style, `gold/__init__.py:66-109`), exported additively in `indices
 - **Cross-instrument failover (SPY ↔ ^SPX):** the two legs return **different instruments and units**
   (SPY USD/share vs ^SPX index points). Only ONE leg's result is ever returned per call (failover-pick,
   **not a merge**), and the returned `PriceHistory` self-discloses via `source` + `value_unit` +
-  `provider_symbol`. For a rebased-to-100 chart both are proportional. **Decision for you:** OK to accept
-  this disclosed cross-instrument fallback (my lean: yes, it's the spec's design), and confirm the
-  world-index client's `finalize` must NOT impose VND/unit homogeneity (that guard is for merges; this is a
-  single-source pick — avoids the #157 ratios-guard trap).
+  `provider_symbol`. For a rebased-to-100 chart both are proportional. **RESOLVED (reviewer 22:24):**
+  ACCEPT the disclosed cross-instrument fallback; the world-index client `finalize` must NOT impose
+  unit/VND homogeneity (that guard is for MERGES; this is a single-source disclosed pick — the
+  #157-ratios-guard-trap analog).
+- **REQUIRED never-silent warning (reviewer 22:24):** magnitudes differ ~10× (SPY ~600 USD/share vs ^SPX
+  ~6000 index points), so a caller ignoring `value_unit` and mixing them in a non-rebased calc is a 10×
+  error. Therefore: whenever the **^SPX (Stooq) instrument is served instead of the SPY primary**, append a
+  **mechanical** warning to `PriceHistory.warnings` — token `fallback_instrument_served`, human cause in the
+  tail, e.g. `"fallback_instrument_served: requested SPY (USD/share, S&P 500 proxy) unavailable; served
+  Stooq ^SPX index points (~10x different magnitude) — rebase before comparing"`. Emitted in the
+  world-index client `finalize` (the failover seam, so it survives like #179's `series_end_gap`), keyed on
+  the served result being the Stooq/^SPX leg — covers BOTH the AV-throttle fallback AND the keyless-skip
+  (AV skipped → Stooq served directly) paths, since both substitute the requested SPY. Never silent
+  (cf. #176/#172/#179).
 
 ## 4. Caching
 
@@ -93,9 +103,17 @@ factory (gold-style, `gold/__init__.py:66-109`), exported additively in `indices
 9. non-SPY symbol in v1 → clear error.
 10. public-API additive: new accessor + sources exported; `PriceHistory` reused; frozen snapshot stays
     additive-green (regen at release only — see [[public-api-snapshot-is-release-time-not-per-feature]]).
+11. **`fallback_instrument_served` warning (REQUIRED):** AV-throttle → Stooq ^SPX served → result carries the
+    mechanical warning (token + magnitude cause in tail); AND keyless (AV skipped) → Stooq ^SPX served →
+    same warning. The SPY-primary success path carries NO such warning. Assert it survives the `finalize`
+    seam (mirror #179's `_finalize`-survival test).
 
-## 7. Open decisions for the quick-gate
-- **(3)** accept disclosed cross-instrument SPY↔^SPX failover + no-homogeneity finalize?
-- **(4)** in-memory `cache_ttl` for v1 (defer persistent cache)?
-- accessor name `indices.world()` vs a `benchmarks`/`global` module (my lean: `indices.world()`).
-- `value_unit` label wording for SPY (`"USD/share (SPY ETF, S&P 500 proxy)"`) — OK?
+## 7. Decisions — RESOLVED (reviewer lead quick-gate, 2026-06-20 22:24, APPROVE)
+- **(1) Cross-instrument SPY↔^SPX failover + no-homogeneity finalize — ACCEPTED.** PLUS the REQUIRED
+  `fallback_instrument_served` mechanical never-silent warning when ^SPX is served instead of SPY (see §3).
+- **(2) In-memory `cache_ttl` ~6h default on the AV source for v1 — OK;** persistent on-disk cache deferred to v2.
+- **(3) Accessor `indices.world(symbol="SPY")` — OK** (mirrors `gold.world()`).
+- **(4) `value_unit="USD/share (SPY ETF, S&P 500 proxy)"` — OK.** v1 SPY-only with a clear error for other
+  symbols — OK. AV `Note`/`Information`→`SourceUnavailable`, keyless-skip-no-network, key-redaction — all confirmed correct.
+- **Process:** TDD red-first → Codex×2 before push. **Re-prioritization (reviewer 22:24):** after #177 code
+  lands, **#174 (HOSE sector-index routing BUG) jumps ahead of #178** — bugs before features. Order: #177 → #174 → #178.

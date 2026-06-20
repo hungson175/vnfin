@@ -14,13 +14,19 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-06-20 22:13 +07_
 
-> **NOW: #177 S&P 500 world-index — ACTIVE (Boss GREENLIT 22:09, TL handoff
-> handoff-202606202209).** New source adapter (Alpha Vantage `TIME_SERIES_DAILY` SPY, BYOK reusing
-> `ALPHAVANTAGE_API_KEY`, redact key, keyless→skip) PRIMARY + Stooq `^SPX` keyless best-effort
-> FALLBACK + new lean accessor `indices.world(symbol="SPY")` (PriceHistory-shaped) + local cache (AV
-> 25/day). FRED ruled out; SPY-as-proxy (not ^GSPC), SPY-only v1, document proxy provenance. **NEW
-> adapter+accessor+source-legal ⇒ SHORT DESIGN NOTE first → reviewer lead quick-gate → TDD → Codex×2 →
-> push+close.** **#178 gold = QUEUED next** (separate item, NOT a batch): `gold.world_reference_history_vnd()`
+> **NOW: #177 S&P 500 world-index — DESIGN GATE APPROVED (reviewer 22:24); IN TDD.** Design note
+> `docs/design/world-index-sp500.md` (76b0414) APPROVED with all 4 §7 decisions resolved + ONE required
+> addition. Shape: `indices.world(symbol="SPY")→PriceHistory`; NEW `AlphaVantageIndexSource`
+> (`TIME_SERIES_DAILY` SPY, BYOK reuse `ALPHAVANTAGE_API_KEY`, key-redact, keyless→skip-no-network,
+> Note/Information→SourceUnavailable) PRIMARY + `StooqIndexSource` (`^SPX` CSV, anti-bot→SourceUnavailable
+> best-effort) FALLBACK in OWN chain (VN indices untouched); finalize must NOT enforce unit homogeneity
+> (single-source disclosed pick, #157-ratios-trap analog); in-memory `cache_ttl` ~6h v1 (persistent=v2).
+> **REQUIRED: `fallback_instrument_served` mechanical warning** when ^SPX served instead of SPY (~10x
+> magnitude gap → never-silent, emitted in finalize, covers throttle+keyless paths). SPY-as-proxy v1,
+> documented. TDD red-first → Codex×2 → push+close.
+> **ORDER (reviewer re-prioritized 22:24): #177 → #174 (HOSE sector-index routing BUG, jumps ahead) →
+> #178.** Bugs before features. Reviewer specs #174 while I'm on #177.
+> **#178 gold = QUEUED behind #174** (separate item, NOT a batch): `gold.world_reference_history_vnd()`
 > = existing Stooq world-gold × USD/VND FX × (31.1035/37.5) → VND/lượng, MANDATORY `world_reference_*`
 > naming + `premium_note` (excludes +10-21% VN premium; NOT SJC); reserve `gold.domestic_history()` → clear
 > source-gap diagnostic, never the synthesis. Likely straight to TDD→Codex×2 (composes existing primitives).
