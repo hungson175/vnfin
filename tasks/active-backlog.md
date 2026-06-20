@@ -42,6 +42,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **#146 liquidity & position sizing: DONE** (Boss-authored; pushed `e518878..4ce11dc`, CLOSED;
   reviewer review-202606200632). Additive offline `vnfin.liquidity` (from_price_history + profile;
   ADV stats + max-order sizing; close*volume estimate labeled). Suite 2705 green; public-API additive.
+- **Batch A (NOW): #148 + #151** (poller triage review-202606200840). #148 docs/tutorial fix
+  (use real model fields: FundHolding.stock_code/weight_pct, IndexConstituents.members — no
+  aliases). #151 `explain_world_gold_history` also surfaces the max-day/range-width blocker
+  (live source `_MAX_DAYS`) with chunking suggestion. TDD + reviewer review before push.
+- **Batch B (design-first, parked): #147** VNINDEX long-window stitching/diagnostic — design API+risk
+  first, no silent row-drop.
+- **Batch C (design-first, parked): #149 macro coverage, #150 portfolio analytics** (offline,
+  data-only, no advice) — #149 design before #150.
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
