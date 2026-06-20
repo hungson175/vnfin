@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 ~16:18 +07_
+_Last synced: 2026-06-20 ~16:40 +07_
 
 ---
 
@@ -231,6 +231,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     Suite 2917 green; funds cov 96%; all-additive. **Non-blocking nits (reviewer N1/N2, follow-up):**
     (N1) `asset_allocation` redundant `data.get("code")` re-read; (N2) unused `seen_codes=None`
     default branch — see Non-blocking follow-ups. N3 snapshot regen = release-time.
+    - **⚠️ #173 RE-OPENED — UNLISTED-bond residual (HIGH, regression-ish on shipped work; review-202606201628).
+      IN PROGRESS (parallel worktree fork).** My fail-closed `{STOCK,BOND}` whitelist hard-fails ~8
+      UNLISTED-bond funds (defensive-credit sleeve = core use case): bond `type` is `BOND` **or**
+      `UNLISTED_BOND` (ASBF id51 / VFF id21 / DCBF id27); my `canonical_enum_tag` turned their EmptyData
+      into **InvalidData** (harder failure). Also ASBF has a descriptive `stockCode`
+      `'Trái phiếu chưa niêm yết'` that `canonical_security_symbol` rejects. FIX (additive): (1) accept
+      `{STOCK,BOND,UNLISTED_BOND}` granularly + map present-but-unknown type → new **`OTHER`** tag (NOT
+      fail-closed — reverses the earlier fail-closed call ON THE EVIDENCE; OTHER is honest); (2) descriptive
+      bond id must not fail the fund — **builder model pick: relax `stock_code` validation for bond/
+      unlisted-bond rows to accept a non-empty non-canonical identifier; equities stay strict
+      `canonical_security_symbol`** (reviewer offered alt: add a `name` field + None code; Codex x2 to
+      confirm); (3) preserve listed-bond/equity behavior; synthetic tests (anchors ASBF/VFF/DCBF). Codex x2.
 
 
 - **#171 — docs/diagnostics polish: world-gold opt-in Stooq path** (poller triage review-202606201355).
@@ -251,6 +263,30 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   document it**. Design-first → converge with reviewer BEFORE coding; Codex x2 review when it lands.
 - **#174 — sector-index routing (fast-follow, MEDIUM)** — reviewer triage review-202606201501,
   ACCEPTED. Small tri-state index-guard fix. Do NOT interrupt the #172/#173 batch; queue behind it.
+- **#176 — delisted/phantom trailing-tail (HIGH; reviewer VERIFIED, spec
+  review-202606201601-issue176-delisted-phantom-tail-VERIFIED.md). QUEUED BEHIND the #157 base-layer
+  fixes.** Multi-source (vps + vndirect) trailing run of zero-volume O=H=L=C "phantom" bars after a
+  symbol delists/halts. **Fix in the CANONICAL post-processing layer (NOT per-adapter):** detect a
+  trailing zero-vol O=H=L=C run and **WARN** (no silent drop). Threshold = **design-first** (how long a
+  run / what tolerance qualifies as phantom). Design-first → converge with reviewer before coding; Codex x2.
+
+## Boss-filed vf-advisor features (#177/#178/#179 — design-first, AFTER the HIGH bugs)
+
+Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a currently-MOCKED series.
+Reviewer ACCEPTED all three, **sequenced AFTER the HIGH correctness bugs** (#157 bank+ratios, #176,
+#173-unlisted); the app currently works on mocks so these are additive value, not correctness.
+Reviewer (TL) is doing the source-identification design IN PARALLEL — **no coder action yet**. Boss
+may override to prioritize now (e.g. for a demo); default = bugs first. (review-202606201628 §B.)
+- **#177 — US/global equity index (S&P 500/SPY)** — concretizes #156. Clean source: prefer **BYOK FRED
+  `SP500`** (matches existing optional FRED macro key, US-gov, clean-room-safe) over Stooq `^SPX`
+  (Stooq needs a terms/redistribution check). Expose explicit units + `source`. Design-first.
+- **#178 — VN domestic gold history (VND/lượng)** — concretizes #170. ⚠️ **Data-integrity caveat:**
+  world-gold USD/oz × USD/VND ≠ VN domestic gold (large, time-varying VN premium). ACCEPT a REAL
+  domestic gold history (SJC/BTMC/PNJ historical) as the primitive (sourcing-gated). Any world-implied
+  series must be a clearly-LABELED "world-gold-implied VND reference (excludes VN domestic premium)"
+  diagnostic, NEVER the domestic price. Decline a bare synthesis as the primary answer. Design-first.
+- **#179 — Monthly CPI YoY + SBV policy rate** — concretizes #149. Clean sources: GSO (CPI) / SBV
+  (policy rate) / DBnomics/FRED for VN CPI. Monthly periodic macro (not real-time). Design-first.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
