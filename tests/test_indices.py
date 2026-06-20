@@ -393,10 +393,10 @@ def test_index_isolated_conflict_quarantined_and_served_no_failover():
 
 
 def test_index_systematically_broken_source_fails_over_to_next():
-    # #186 threshold: when quarantined rows exceed max(_QUARANTINE_ABS_FLOOR,
-    # _QUARANTINE_FRACTION * n) the source is deemed systematically broken — it raises
-    # InvalidData in the source path and the failover client records that failed attempt
-    # and serves the clean ssi source (never a silent partial-garbage selection).
+    # #186 threshold: when the in-range quality failures exceed max(_QUARANTINE_ABS_FLOOR,
+    # _QUARANTINE_FRACTION * considered) over the in-range rows, the source is deemed
+    # systematically broken — it raises InvalidData in the source path and the failover client
+    # records that failed attempt and serves the clean ssi source (no silent partial-garbage).
     def router(url, params, headers):
         if "vps.com.vn" in url:
             return _bare_udf(rows=_INDEX_ROWS_SYSTEMICALLY_BAD)

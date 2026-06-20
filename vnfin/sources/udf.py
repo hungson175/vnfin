@@ -148,7 +148,11 @@ class UDFSource(HttpDataSource, PriceSource):
                 raise EmptyData(f"{self.name}: status={status}")
             raise InvalidData(f"{self.name}: unexpected UDF status {status!r}")
 
-        bars = [b for b in self._build_bars(data, interval) if lo <= b.time <= hi]
+        # Issue #186 (reviewer follow-up): the requested-range filter lives INSIDE
+        # _build_bars so out-of-window provider padding is dropped BEFORE the
+        # quarantine/threshold accounting — otherwise bad rows outside [lo, hi] could
+        # spuriously fail over an otherwise-clean window.
+        bars = self._build_bars(data, interval, lo, hi)
         if not bars:
             raise EmptyData(f"{self.name}: no bars in requested range")
 
@@ -182,7 +186,12 @@ class UDFSource(HttpDataSource, PriceSource):
             f"{QUARANTINED_INVALID_BARS}: dropped {len(quarantined)} bar(s) — {detail}",
         )
 
-    def _build_bars(self, data, interval) -> list[PriceBar]:
+    def _build_bars(self, data, interval, lo=None, hi=None) -> list[PriceBar]:
+        # ``lo``/``hi`` are the requested-range bounds (tz-aware). Rows outside [lo, hi] are
+        # dropped here — before quarantine/threshold accounting — so out-of-window provider
+        # padding never drives the "source systematically broken" verdict (issue #186
+        # follow-up). When both are None (a direct call without a range) no range filter is
+        # applied and every row is considered.
         # Required OHLC arrays must be present and list/tuple-like. Scalars,
         # strings, bytes, and None must raise InvalidData, never a raw TypeError.
         required = ("t", "o", "h", "l", "c")
@@ -228,47 +237,71 @@ class UDFSource(HttpDataSource, PriceSource):
         self._dedup_occurred = False  # Issue #162: set if an identical same-date dup was deduped
         # Issue #186: per-bar data-quality failures QUARANTINE the offending row (keep the
         # rest) instead of raising and aborting the whole response. ``quarantined`` records
-        # one (label, reason) per dropped ROW (drives both the warning and the threshold);
-        # ``poisoned`` holds keys dropped ENTIRELY (conflicting/duplicate — can't pick).
-        # Structural/array-shape failures above this loop still HARD-RAISE.
+        # one (label, reason) per dropped ROW (drives the warning). The failover THRESHOLD is
+        # judged ONLY over rows relevant to THIS request: ``considered`` = in-range,
+        # timestamp-parseable rows (denominator); ``bad_inrange`` = how many of those failed a
+        # quality check (numerator). Out-of-range padding and unplaceable rows are excluded
+        # (see below). ``poisoned`` holds keys dropped ENTIRELY (conflicting/duplicate — can't
+        # pick). Structural/array-shape failures above this loop still HARD-RAISE.
         quarantined: list[tuple[str, str]] = []
         poisoned: set = set()
+        considered = 0
+        bad_inrange = 0
         for i in range(n):
+            # Parse the timestamp FIRST so the row can be range-filtered BEFORE any quality
+            # accounting. A row whose timestamp is itself unparseable can't be placed in time
+            # at all -> disclose it (never silent) but EXCLUDE it from the verdict: we can't
+            # confirm it falls inside the requested window, and out-of-window padding of
+            # garbage-timestamp rows must not fail over a clean window. (A genuinely in-range
+            # garbage column still drops to EmptyData -> failover when no bar survives.) The
+            # coerce helper raises InvalidData for null/NaN/bool/garbage; datetime.fromtimestamp
+            # raises Overflow/OSError for an out-of-range epoch.
             try:
                 ts = parse_provider_int(t[i], label=f"timestamp at row {i}", source=self.name)
                 tm = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(VN_TZ)
+            except (InvalidData, TypeError, ValueError, OverflowError, OSError):
+                quarantined.append((f"row {i}", "malformed scalar"))
+                continue
+            # Requested-range filter: a bar outside [lo, hi] is irrelevant to this request —
+            # neither served nor counted toward the failover verdict (providers pad responses
+            # with out-of-window rows; their quality must not fail a clean requested window).
+            if (lo is not None and tm < lo) or (hi is not None and tm > hi):
+                continue
+            considered += 1
+            try:
                 op = parse_provider_float(o[i], label=f"open at row {i}", source=self.name) * self.PRICE_SCALE
                 hp = parse_provider_float(h[i], label=f"high at row {i}", source=self.name) * self.PRICE_SCALE
                 lp = parse_provider_float(l[i], label=f"low at row {i}", source=self.name) * self.PRICE_SCALE
                 cp = parse_provider_float(c[i], label=f"close at row {i}", source=self.name) * self.PRICE_SCALE
                 raw_vol = parse_provider_float(v[i], label=f"volume at row {i}", source=self.name) * self.VOLUME_SCALE
             except (InvalidData, TypeError, ValueError, OverflowError, OSError):
-                # Issue #186: a single unparseable scalar is a per-ROW failure (the array
-                # SHAPE is fine) -> quarantine that row, labelled by index (the timestamp is
-                # unknown). The coerce helpers raise InvalidData for null/NaN/bool/garbage
-                # scalars; datetime.fromtimestamp raises Overflow/OSError for an out-of-range
-                # epoch. All are this-row-only — a systematically-bad column trips the
-                # threshold below -> failover. A structural array-shape error still hard-raises
-                # above this loop (it never reaches here).
-                quarantined.append((f"row {i}", "malformed scalar"))
+                # An unparseable OHLCV scalar on an in-range, timestamp-good row: quarantine
+                # by date (the timestamp is known) and count it toward the verdict.
+                quarantined.append((tm.date().isoformat(), "malformed scalar"))
+                bad_inrange += 1
                 continue
             if not all(math.isfinite(x) for x in (op, hp, lp, cp, raw_vol)):
                 quarantined.append((tm.date().isoformat(), "non-finite OHLCV"))
+                bad_inrange += 1
                 continue
             # Issue #13: zero/negative price observations are not valid market data.
             if not all(x > 0 for x in (op, hp, lp, cp)):
                 quarantined.append((tm.date().isoformat(), "non-positive price"))
+                bad_inrange += 1
                 continue
             if raw_vol < 0:
                 quarantined.append((tm.date().isoformat(), "negative volume"))
+                bad_inrange += 1
                 continue
             # Issue #120: equity/index volume must be whole after VOLUME_SCALE.
             if not raw_vol.is_integer():
                 quarantined.append((tm.date().isoformat(), "fractional volume"))
+                bad_inrange += 1
                 continue
             vol = int(raw_vol)
             if not (lp <= op <= hp and lp <= cp <= hp and lp <= hp):
                 quarantined.append((tm.date().isoformat(), "OHLC invariant violated"))
+                bad_inrange += 1
                 continue
             bar = PriceBar(time=tm, open=op, high=hp, low=lp, close=cp, volume=vol)
             # Issue #66/#162/#186: duplicate handling. dedup_by_date (index D1): an IDENTICAL
@@ -285,6 +318,7 @@ class UDFSource(HttpDataSource, PriceSource):
             )
             if key in poisoned:
                 quarantined.append((tm.date().isoformat(), reason))
+                bad_inrange += 1
                 continue
             if key in seen:
                 if dedup_by_date:
@@ -299,6 +333,7 @@ class UDFSource(HttpDataSource, PriceSource):
                 poisoned.add(key)
                 quarantined.append((seen[key].time.date().isoformat(), reason))
                 quarantined.append((tm.date().isoformat(), reason))
+                bad_inrange += 2
                 continue
             seen[key] = bar
             bars.append(bar)
@@ -310,14 +345,19 @@ class UDFSource(HttpDataSource, PriceSource):
                 if (b.time.date() if dedup_by_date else b.time) not in poisoned
             ]
 
-        # Issue #186: a systematically-broken response still fails over. Raise (-> failover)
-        # when quarantined rows exceed max(absolute floor, fraction x n) over ALL provider
-        # rows n (before range filtering). The floor guarantees a few isolated glitches never
-        # block ANY window; the fraction fails a mostly-bad source.
-        if n and len(quarantined) > max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION * n):
+        # Issue #186 (+ reviewer follow-up): a systematically-broken response still fails
+        # over — but judged ONLY over rows relevant to THIS request. Raise (-> failover) when
+        # the in-range quality failures (``bad_inrange``) exceed max(absolute floor, fraction x
+        # ``considered``) over the in-range, timestamp-parseable rows. Excluding out-of-range
+        # padding and unplaceable rows stops a provider's out-of-window junk from spuriously
+        # failing a clean window. The floor guarantees a few isolated glitches never block ANY
+        # window; the fraction fails a mostly-bad in-range response.
+        if considered and bad_inrange > max(
+            _QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION * considered
+        ):
             raise InvalidData(
-                f"{self.name}: {len(quarantined)}/{n} bars failed data-quality checks "
-                f"(> max(floor={_QUARANTINE_ABS_FLOOR}, "
+                f"{self.name}: {bad_inrange}/{considered} in-range bars failed "
+                f"data-quality checks (> max(floor={_QUARANTINE_ABS_FLOOR}, "
                 f"{int(_QUARANTINE_FRACTION * 100)}%)) — source systematically broken"
             )
 

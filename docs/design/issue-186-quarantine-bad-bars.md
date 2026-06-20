@@ -77,6 +77,17 @@ warning. A systematically-broken source still fails over via a threshold guard. 
   use case. *Optional mitigation if the gate prefers:* an absolute floor (always allow ≥K quarantines
   regardless of fraction). I lean pure-fraction for v1 simplicity — **gate's call.**
 
+> **Implemented as (supersedes the D3 prose above):** the gate **adds the absolute floor** —
+> constants `_QUARANTINE_FRACTION = 0.10` **and** `_QUARANTINE_ABS_FLOOR = 3`; the source fails over
+> iff `bad_inrange > max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION × considered)`. **The threshold is
+> judged over the requested window, NOT all provider rows** — the range filter runs *inside*
+> `_build_bars`, so `considered` = in-range timestamp-parseable rows and `bad_inrange` = how many of
+> those failed; out-of-range padding and unplaceable (timestamp-unparseable) rows are excluded. This
+> corrects a reviewer-found regression: computing the threshold over *all* provider rows (before the
+> range filter) let a provider's bad rows OUTSIDE `[start, end]` spuriously fail over a clean window —
+> re-creating the very #186 bug in the padding region. See
+> `docs/architecture/failover-and-validation.md` → "A systematically-broken source still fails over".
+
 ### D4 — The warning (never-silent) + how it threads to BOTH paths
 - Mechanical token **`quarantined_invalid_bars`**; human tail names the dropped dates + reasons, e.g.
   `quarantined_invalid_bars: dropped 2 of 2487 bars — 2018-08-22: OHLC invariant violated; 2020-12-25: conflicting same-date bars`.

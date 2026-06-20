@@ -188,9 +188,12 @@ All notable changes to `vnfin` are documented here. The format follows
   same-date duplicate still dedupes keep-first as before, #162), and any duplicate exact timestamp
   (equity / intraday) drops that timestamp. **Never silent:** the result carries a new
   `quarantined_invalid_bars` warning naming the dropped dates + reasons (surfaced on both equity and index
-  results). **A systematically-broken source still fails over:** when quarantined rows exceed
-  `max(_QUARANTINE_ABS_FLOOR=3, _QUARANTINE_FRACTION=0.10 × n)` over the `n` provider rows, the parse
-  raises `InvalidData` → the next source is tried (all-bad → `AllSourcesFailed`). **Structural/shape faults
+  results). **A systematically-broken source still fails over — judged over the requested window:** when
+  the in-range quality failures exceed `max(_QUARANTINE_ABS_FLOOR=3, _QUARANTINE_FRACTION=0.10 ×
+  considered)` over the in-range, timestamp-parseable rows, the parse raises `InvalidData` → the next
+  source is tried (all-bad → `AllSourcesFailed`). Bad rows *outside* the requested `[start, end]` (provider
+  padding) and rows with an unparseable timestamp are excluded from that verdict, so a provider's
+  out-of-window junk can't spuriously fail an otherwise-clean window. **Structural/shape faults
   still hard-raise** (misaligned/missing arrays, malformed envelope/status). Behavior change: a *lone*
   bad row now yields `EmptyData` (still a `SourceError` → failover) rather than `InvalidData`. No
   public-API surface change (the warning is just a string). See

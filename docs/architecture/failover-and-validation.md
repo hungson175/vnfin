@@ -163,12 +163,18 @@ report). The parse now **quarantines** instead:
 - **The result self-discloses** via a `quarantined_invalid_bars` warning naming the dropped dates +
   reasons, attached in the shared `UDFSource.get_history` (so both equity and index carry it; the
   index dedupe token is appended *after* it).
-- **A systematically-broken source still fails over.** If `len(quarantined) > max(_QUARANTINE_ABS_FLOOR,
-  _QUARANTINE_FRACTION × n)` over the `n` provider rows (before range filtering), the parse raises
-  `InvalidData` (a `SourceError`) → the failover client tries the next source; all-sources-bad →
-  `AllSourcesFailed`. Constants: `_QUARANTINE_ABS_FLOOR = 3` (a few isolated glitches never block any
-  window), `_QUARANTINE_FRACTION = 0.10` (a mostly-bad source is untrustworthy). A lone all-bad row
-  drops below the floor → zero bars → `EmptyData` (still a `SourceError`).
+- **A systematically-broken source still fails over — judged over the requested window only.** The
+  requested-range filter runs *inside* `_build_bars`, so out-of-window provider padding is dropped
+  **before** the threshold is computed. If `bad_inrange > max(_QUARANTINE_ABS_FLOOR,
+  _QUARANTINE_FRACTION × considered)` — where `considered` is the in-range, timestamp-parseable rows
+  and `bad_inrange` is how many of those failed a quality check — the parse raises `InvalidData`
+  (a `SourceError`) → the failover client tries the next source; all-sources-bad → `AllSourcesFailed`.
+  Bad rows **outside** `[start, end]`, and rows whose timestamp is itself unparseable (can't be
+  range-attributed), are excluded from the verdict so a provider's out-of-window junk can't spuriously
+  fail an otherwise-clean window (a reviewer-found regression of the original fix). Constants:
+  `_QUARANTINE_ABS_FLOOR = 3` (a few isolated glitches never block any window), `_QUARANTINE_FRACTION =
+  0.10` (a mostly-bad in-range response is untrustworthy). A lone all-bad row drops below the floor →
+  zero bars → `EmptyData` (still a `SourceError`).
 - **Structural / array-shape faults still HARD-RAISE** (they reach this point as an untrustworthy whole
   response): missing/misaligned/non-sequence arrays, malformed envelope / non-object data / bad status.
 

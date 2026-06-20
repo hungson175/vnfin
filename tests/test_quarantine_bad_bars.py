@@ -321,6 +321,82 @@ def test_single_all_bad_row_yields_emptydata_not_invaliddata():
 
 
 # --------------------------------------------------------------------------- #
+# 4b. Out-of-range / unplaceable rows must NOT drive the failover verdict.
+# (Reviewer adversarial finding, #186 follow-up: the threshold was computed over ALL
+#  provider rows BEFORE the requested-range filter, so a provider that pads its response
+#  with bad rows OUTSIDE [start, end] could spuriously fail over an otherwise-clean
+#  window — re-creating the very #186 bug in the padding region.)
+# --------------------------------------------------------------------------- #
+def test_out_of_range_bad_bars_do_not_fail_a_clean_window():
+    # Provider pads the response with 8 OHLC-invalid rows BEFORE the requested window plus
+    # 3 clean in-range bars. Pre-fix: 8 > max(3, 0.1*11)=3 -> InvalidData aborts a clean
+    # window. Post-fix: the out-of-range rows are dropped WITHOUT quarantine/threshold
+    # accounting -> the 3 clean bars are served, with NO quarantine warning (the drops are
+    # outside the window the caller asked for, so they are not disclosed as quarantined).
+    out_of_range_bad = [
+        (f"2023-12-{d:02d}", 72.0, 72.5, 99.0, 72.3, 1000)  # low>high, BEFORE the window
+        for d in range(20, 28)  # 8 bad rows, all out of range
+    ]
+    clean_in_range = [
+        ("2024-01-05", 72.0, 72.5, 71.8, 72.3, 1000),
+        ("2024-01-10", 72.1, 72.6, 71.9, 72.4, 1100),
+        ("2024-01-15", 72.2, 72.7, 72.0, 72.5, 1200),
+    ]
+    rows = out_of_range_bad + clean_in_range
+    h = _eq(_payload(rows)).get_history("FPT", Interval.D1, *WIDE_EQ)
+    assert [b.time.date() for b in h.bars] == [
+        date(2024, 1, 5), date(2024, 1, 10), date(2024, 1, 15)
+    ]
+    assert _quarantine_warning(h) is None  # out-of-range drops are silent, not quarantined
+
+
+def test_unparseable_timestamp_rows_excluded_from_failover_threshold():
+    # A row whose TIMESTAMP can't be parsed can be neither served nor range-attributed, so it
+    # must NOT count toward the systematically-broken verdict (else out-of-window padding of
+    # garbage-timestamp rows would spuriously fail over a clean window). It is still disclosed.
+    clean = [
+        ("2024-01-05", 72.0, 72.5, 71.8, 72.3, 1000),
+        ("2024-01-10", 72.1, 72.6, 71.9, 72.4, 1100),
+    ]
+    null_ts = 5  # > max(3, 0.1*7)=3 pre-fix -> InvalidData; post-fix not counted -> serve 2
+    payload = json.dumps(
+        {
+            "s": "ok",
+            "t": [None] * null_ts + [_ts(r[0]) for r in clean],
+            "o": [72.0] * null_ts + [r[1] for r in clean],
+            "h": [72.5] * null_ts + [r[2] for r in clean],
+            "l": [71.8] * null_ts + [r[3] for r in clean],
+            "c": [72.3] * null_ts + [r[4] for r in clean],
+            "v": [1000] * null_ts + [r[5] for r in clean],
+        }
+    )
+    h = _eq(payload).get_history("FPT", Interval.D1, *WIDE_EQ)
+    assert [b.time.date() for b in h.bars] == [date(2024, 1, 5), date(2024, 1, 10)]
+    assert _quarantine_warning(h) is not None  # still disclosed (never silent)
+
+
+def test_out_of_range_padding_does_not_break_prices_history():
+    # End-to-end at the public API: every chart request goes through prices.history. A
+    # provider padding 6 OHLC-invalid out-of-range rows must not knock the source out of the
+    # failover chain — the clean requested window renders. This is the real #186 symptom.
+    from vnfin import prices
+
+    inner = {
+        "s": "ok",
+        "t": [_ts(f"2023-12-2{d}") for d in range(6)] + [_ts("2024-01-10"), _ts("2024-01-20")],
+        "o": [72.0] * 6 + [72.0, 72.1],
+        "h": [72.5] * 6 + [72.5, 72.6],
+        "l": [99.0] * 6 + [71.8, 71.9],  # low>high for the 6 out-of-range rows only
+        "c": [72.3] * 6 + [72.3, 72.4],
+        "v": [1000] * 8,
+    }
+    env = json.dumps({"code": "SUCCESS", "message": "ok", "status": "ok", "data": inner})
+    h = prices.history("FPT", Interval.D1, *WIDE_EQ, http_get=lambda u, p, hd: env)
+    assert [b.time.date() for b in h.bars] == [date(2024, 1, 10), date(2024, 1, 20)]
+    assert _quarantine_warning(h) is None
+
+
+# --------------------------------------------------------------------------- #
 # 5. Warning threads through BOTH public accessors; order = quarantine, then dedupe
 # --------------------------------------------------------------------------- #
 def test_quarantine_warning_surfaces_via_prices_history():
