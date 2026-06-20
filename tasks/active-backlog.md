@@ -159,9 +159,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   add fx/history/worldbank_fx + unsupported_pair/unsupported_frequency statuses; new guard
   `test_diagnostics_docs_enumerate_fx_coverage`; proactive sweep added fx-history to llms.txt + reworded
   api.md get_rate 'spot/current quote'.
-  **Re-integration verified ON MERGED TREE:** full suite **2811 passed**, gate trio green (2 B4 guards),
-  coverage **95%**, diff/clean-room clean, **reviewer's full stale-phrase grep now CLEAN**.
-  NEXT: reviewer re-review#3 (range `ca1ae7b..e0e1e1f`) → push+close #159 + advance watermark on APPROVE.
+  Re-review#3 (review-202606201124) BLOCKed on `macro-and-fx.md` 'FX is spot/current in v0.2' +
+  guards not covering it. **Round-3 fix `eb746d6`:** fixed the tutorial; **redesigned the stale-FX
+  guard to scan REPO-WIDE** (docs/**, skills/**, vnfin/fx/*, diagnostics, llms.txt, README) instead
+  of a curated list (the recurring root cause); diagnostics guard now covers source-diagnostics.md;
+  reworded accurate per-source 'Spot/current only' notes to point at fx.history.
+  **Re-integration verified ON MERGED TREE:** full suite **2811 passed**, gate trio green (repo-wide
+  B4 guard + diagnostics guard), coverage **95%**, diff/clean-room clean, **reviewer's full B4 grep
+  across the WHOLE repo now CLEAN**.
+  NEXT: reviewer re-review#4 (range `ca1ae7b..eb746d6`) → push+close #159 + advance watermark on APPROVE.
   _Prior state:_ IMPLEMENTED + integrated green (design APPROVE_WITH_NOTES
   review-202606201033; design `ca1ae7b`; impl sub-agent commit `167c622`). v1 = WB `PA.NUS.FCRF`
   annual USD/VND via `WorldBankFXHistorySource` (composes WorldBankMacroSource); `FXHistory`/`FXPoint`
