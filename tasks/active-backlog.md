@@ -51,7 +51,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   - B: **#147** v1 DONE (sub-agent + main integrate; pushed `eadf7e1..a645c71`, CLOSED; review-202606200931). index_history_stitched. Deferred polish (non-blocking notes): rename design-doc 'Open questions' heading; add returned-segment-interval regression.
   - C: **#149/#152/#156** macro / rates / global-benchmark diagnostics.
   - D: **#154/#150** derived gold-premium / portfolio analytics (offline, data-only, no advice).
-  - E: **#155** fund metadata / allocation diagnostics.
+  - E: **#155** fund metadata / allocation diagnostics. **Addendum** (poller triage
+    review-202606201058): accepted/parked design-first behind #159 (likely after #157 unless Boss
+    reprioritizes). Scope: fund metadata / NAV-as-of / staleness / holdings+ETF diagnostics; starts
+    with a source/legal + taxonomy design doc. OUT: recommendations/ranking/advice/blind scraping.
   All design-first: no code until reviewer-approved design.
   - **#158: DONE** (delegated to sub-agent, integrated by main; pushed `7d528d2..cd7b941`, CLOSED;
     review-202606200907). Same-NAV dedupe+warning; conflicting -> InvalidData; #144 guards preserved.
@@ -71,6 +74,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
       for future design-first work but PARKED — do NOT switch from #159. Future safe scope: macro
       data primitives + indicator catalog/freshness/coverage diagnostics; OUT: regime
       scoring/advice/blind scraping.
+    - **#157 addendum** (poller triage review-202606201101): fundamentals-metrics addendum
+      accepted/HIGH-PRIORITY but PARKED for AFTER #159 — do NOT switch from #159 blocker fix.
+      Future scope: canonical metrics + bank/non-bank mappings + coverage/source-health diagnostics;
+      OUT: advice/ranking/screener app helpers/blind third-party ingestion. (Recommended next after
+      #159 per reviewer queue.)
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
@@ -132,7 +140,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#159 FX history — IMPLEMENTED, INTEGRATED GREEN, AWAITING CODE REVIEW** (design APPROVE_WITH_NOTES
+- **#159 FX history — BLOCK FIXED, RE-INTEGRATED GREEN, AWAITING RE-REVIEW** (BLOCK review-202606201054;
+  fix sub-agent commit `aa42040` on `d00f6ec`). All 4 blockers fixed TDD fail-first: **B1** source
+  boundary now enforces USD/VND + ISO shape (InvalidData, no KeyError/mislabel); **B2** source
+  preflights dates before network; **B3** `rate_on` requires plain date / `rate_for_year` int-non-bool
+  1..9999 (InvalidData); **B4** stale FX spot-only/no-history docs refreshed + docs-contract guard
+  `test_fx_docs_do_not_claim_fx_has_no_history`.
+  **Re-integration verified ON MERGED TREE by main agent:** full suite **2810 passed** (+34 regressions),
+  gate trio **67** (incl. new B4 guard), coverage **95%**, diff --check clean, clean-room clean.
+  **All 11 reviewer repros raise InvalidData with 0 network calls; happy path intact**
+  (`rate_for_year(2024)=25000.0`). Lowercase `vnd` normalizes (no KeyError) — sensible deviation,
+  matches facade. NEXT: reviewer re-review (range `ca1ae7b..aa42040`) → push+close #159 + advance
+  watermark on APPROVE.
+  _Prior state:_ IMPLEMENTED + integrated green (design APPROVE_WITH_NOTES
   review-202606201033; design `ca1ae7b`; impl sub-agent commit `167c622`). v1 = WB `PA.NUS.FCRF`
   annual USD/VND via `WorldBankFXHistorySource` (composes WorldBankMacroSource); `FXHistory`/`FXPoint`
   + `fx.history()` + `explain_fx_coverage`. All P1/P2 gates addressed (rate>0/finite/non-bool guard;
