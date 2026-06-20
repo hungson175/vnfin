@@ -45,17 +45,22 @@ _Last synced: 2026-06-20 ~19:4x +07_
 > #157 commented + CLOSED via `bin/gh-maintainer` (metrics was the last leg). Watermark left to reviewer.
 > M1 CONFIRMED correct post-hoc by reviewer (19:41).
 >
-> **NOW: #179 vf-advisor monthly CPI YoY + SBV policy rate — ACCEPTED, design converged (reviewer
-> spec-202606201815).** Both series via EXISTING DBnomics path (IMF IFS), keyless, NO new adapter —
-> registry + series-id addition only. (1) CPI monthly via `IMF/IFS/M.VN.PCPI_PC_CP_A_PT` mapped onto
-> existing `MacroIndicator.CPI` at frequency=monthly (annual CPI path UNCHANGED — regression-protect);
-> (2) NEW `MacroIndicator.POLICY_RATE` via `IMF/IFS/M.VN.FPOLM_PA`, canonical_unit '% per annum',
-> currency=None, source DBnomics; (3) label honestly 'SBV refinancing-rate proxy (IMF IFS)' — never the
-> exact announced rate; (4) additive public API (new enum value + monthly on existing IndicatorSeries) —
-> regen surface snapshot additively; (5) FPOLM_PA ends ~Dec 2023, IMF lags SBV 2-6mo → surface a staleness
-> signal (same theme as #172) or at minimum document lag + point to sbv.gov.vn. Builder picks (reviewer-
-> endorsed leans): POLICY_RATE name; DBnomics-only v1 (FRED BYOK later); staleness = TBD after macro-layer
-> recon. TDD-first; NON-TRIVIAL (public enum + macro mapping) → bring CODE for Codex×2 BEFORE push.
+> **NOW: #179 vf-advisor monthly CPI YoY + SBV policy rate — RECON DONE, DESIGN NOTE SENT (awaiting
+> reviewer lead quick-gate).** Design note: `/tmp/vnfin-179-design-note-202606201955.md`. Recon
+> (full macro layer read) surfaced 3 decisions; literal spec ("map CPI YoY onto existing CPI at
+> frequency=monthly") is **impossible/won't-deliver-monthly** — 3 code facts: (a) CPI canonical_unit
+> is "index", PCPI_PC_CP_A_PT is "%" → eligible_sources unit pre-filter drops it / reject guard
+> rejects ("refusing to relabel"); (b) NO frequency caller-axis on get_indicator; (c) even on INFLATION
+> (its natural % home) WorldBank (chain #1) serves it ANNUAL and wins the failover → monthly DBnomics
+> never reached by default. **D1 (deviation, needs ACK):** add a NEW DBnomics-only monthly enum
+> `MacroIndicator.CPI_YOY` ("%", `M.VN.PCPI_PC_CP_A_PT`) — single-source chain → monthly by default,
+> existing CPI/INFLATION untouched. **D2 (confirm):** `POLICY_RATE` ("% per annum", `M.VN.FPOLM_PA`,
+> currency=None); honest proxy label via a data-driven 5th display-name element in `_DBN_MAP` →
+> `indicator_name`. **D3 (threshold call):** staleness = WARNING (IndicatorSeries.warnings exists),
+> mechanical token `series_end_gap`, pure `_series_end_gap_warning(points, today, freq)` + injectable
+> `_today()` mirroring #172; FLOOR tension — literal 2×cadence (~60d) warns on every healthy series vs
+> IMF normal lag 2-6mo, recommend FLOOR ~200d (lag-aware). MONTHLY-scoped (covers existing DBnomics CPI
+> too; annual GDP unaffected). TDD-first AFTER ACK; NON-TRIVIAL → CODE to Codex×2 BEFORE push.
 > **#177/#178 still WAIT on Boss.**
 
 ---
