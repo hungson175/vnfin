@@ -28,7 +28,10 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from ._contracts import canonical_security_symbol
-from .gold.currency_api import COVERAGE_START as _WORLD_GOLD_COVERAGE_START
+from .gold.currency_api import (
+    COVERAGE_START as _WORLD_GOLD_COVERAGE_START,
+    _MAX_DAYS as _WORLD_GOLD_MAX_DAYS,
+)
 from .validation import validate_date_range
 
 __all__ = [
@@ -92,6 +95,7 @@ _WORLD_GOLD_CAPS: tuple[SourceCapability, ...] = (
             "no-key daily EOD; one date-pinned request per calendar day; missing days "
             "(weekends/holidays/pre-coverage) are skipped; all-missing -> EmptyData",
             f"no known coverage before {_WORLD_GOLD_COVERAGE_START.isoformat()}",
+            f"max range width {_WORLD_GOLD_MAX_DAYS} days per call (wider -> InvalidData)",
         ),
         suggested_action="request a window on/after the known coverage start",
     ),
@@ -142,12 +146,17 @@ def source_capabilities() -> tuple[SourceCapability, ...]:
 def explain_world_gold_history(start, end) -> RequestDiagnostic:
     """Diagnose a world-gold daily-history window vs known coverage (no network).
 
-    Validates the bounds with the same contract as the live call, then classifies:
-    a window entirely before the known coverage start is ``coverage_gap``; a window
-    straddling it is ``partial_coverage``; an otherwise-covered window is ``ok``.
+    Validates the bounds with the same contract as the live call, then surfaces ALL known
+    blockers before a call (issue #151): coverage (a window entirely before the known
+    coverage start is ``coverage_gap``; straddling is ``partial_coverage``; otherwise
+    ``ok``) AND range width (a window wider than the source's ``_MAX_DAYS`` cap would raise
+    ``InvalidData`` on the live call -> ``window_too_wide``). Both blockers are reported
+    together when both apply. No network call.
     """
     lo, hi = validate_date_range(start, end, name="explain_world_gold_history")
     cov = _WORLD_GOLD_COVERAGE_START
+    # Mirror the live source's exact too-wide condition: (hi - lo).days > _MAX_DAYS.
+    too_wide = (hi - lo).days > _WORLD_GOLD_MAX_DAYS
     notes: list[str] = []
     suggested: list[str] = []
     if hi < cov:
@@ -168,6 +177,19 @@ def explain_world_gold_history(start, end) -> RequestDiagnostic:
     else:
         status = "ok"
         notes.append("window is within known coverage; daily EOD via the default no-key source")
+    if too_wide:
+        # Width is an independent blocker: the live call raises InvalidData regardless of
+        # coverage. For a covered window it becomes the dominant status; for a pre-coverage
+        # window we keep coverage_gap (fails first) but still surface the width blocker.
+        if status in ("ok", "partial_coverage"):
+            status = "window_too_wide"
+        notes.append(
+            f"requested window spans {(hi - lo).days} days, exceeding the source's "
+            f"max range width of {_WORLD_GOLD_MAX_DAYS} days; the live call raises InvalidData"
+        )
+        suggested.append(
+            f"chunk the request into windows of <= {_WORLD_GOLD_MAX_DAYS} days (or use a shorter window)"
+        )
     return RequestDiagnostic(
         domain="gold",
         endpoint="world_history",

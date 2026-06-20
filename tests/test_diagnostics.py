@@ -1,7 +1,7 @@
 """Issue #145 — source-coverage diagnostics (offline, additive public API)."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -90,3 +90,37 @@ def test_index_constituents_malformed_selector_fails_closed(bad):
 # --- public namespace --------------------------------------------------------
 def test_diagnostics_exposed_on_package():
     assert vnfin.diagnostics.source_capabilities() == source_capabilities()
+
+
+# Issue #151 — explain_world_gold_history surfaces the max-day/range-width blocker too.
+from vnfin.gold.currency_api import _MAX_DAYS as _GOLD_MAX_DAYS
+
+
+def test_world_gold_pre_coverage_and_too_wide_reports_both():
+    d = explain_world_gold_history(date(2018, 1, 1), date(2021, 6, 1))  # pre-cov AND > _MAX_DAYS
+    assert d.status == "coverage_gap"  # coverage fails first
+    notes = " ".join(d.notes).lower()
+    assert "coverage start" in notes and "exceeding" in notes  # BOTH blocker notes present
+    assert any("chunk" in s.lower() for s in d.suggested_actions)        # width action
+    assert any("on/after" in s.lower() for s in d.suggested_actions)     # coverage action
+
+
+def test_world_gold_covered_but_too_wide_is_window_too_wide():
+    d = explain_world_gold_history(date(2024, 4, 1), date(2027, 6, 1))  # covered, span > _MAX_DAYS
+    assert d.status == "window_too_wide"
+    assert any("chunk" in s.lower() for s in d.suggested_actions)
+
+
+def test_world_gold_acceptable_width_covered_stays_ok():
+    d = explain_world_gold_history(date(2025, 1, 1), date(2025, 3, 31))
+    assert d.status == "ok"
+    assert not any("exceeding" in n.lower() for n in d.notes)
+
+
+def test_world_gold_max_day_boundary_exact():
+    # span == _MAX_DAYS days is allowed (mirrors live `.days > _MAX_DAYS`); +1 day is too wide.
+    base = date(2024, 4, 1)
+    ok = explain_world_gold_history(base, base + timedelta(days=_GOLD_MAX_DAYS))
+    assert ok.status == "ok"
+    wide = explain_world_gold_history(base, base + timedelta(days=_GOLD_MAX_DAYS + 1))
+    assert wide.status == "window_too_wide"

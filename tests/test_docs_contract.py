@@ -165,3 +165,25 @@ def test_skill_files_present_and_have_frontmatter():
     assert (repo / "skills" / "vnfin" / "reference" / "domains.md").exists()
     assert (repo / "llms.txt").exists()
     assert (repo / "docs" / "ai-usage.md").exists()
+
+
+# Issue #148 — funds/indices tutorial must use real model fields, not non-existent attrs.
+def test_funds_indices_tutorial_uses_real_model_fields():
+    import dataclasses
+    from vnfin.funds.models import FundHolding
+    from vnfin.indices.models import IndexConstituents, IndexMember
+
+    fh = {f.name for f in dataclasses.fields(FundHolding)}
+    assert {"stock_code", "weight_pct"} <= fh and "symbol" not in fh and "weight" not in fh
+    ic = {f.name for f in dataclasses.fields(IndexConstituents)}
+    assert "members" in ic and "constituents" not in ic
+    im = {f.name for f in dataclasses.fields(IndexMember)}
+    assert {"symbol", "exchange"} <= im
+
+    tut = _read("docs/tutorials/funds-and-indices.md")
+    # correct fields present
+    assert "h.stock_code" in tut and "h.weight_pct" in tut
+    assert "members.members" in tut
+    # non-existent / wrong attrs absent
+    assert "h.symbol" not in tut and "h.weight)" not in tut
+    assert "members.constituents" not in tut

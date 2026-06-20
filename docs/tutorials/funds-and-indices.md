@@ -25,7 +25,7 @@ holdings = fund_src.holdings(first.id)
 
 print(nav.value_unit, nav.points[-1])
 for h in holdings[:10]:
-    print(h.symbol, h.weight)
+    print(h.stock_code, h.weight_pct)  # FundHolding: stock_code, weight_pct (0-100)
 ```
 
 ## Index levels
@@ -45,8 +45,8 @@ as money.
 
 ```python
 members = vnfin.indices.index_constituents("VN30")
-for m in members.constituents[:10]:
-    print(m.symbol, m.weight)
+for m in members.members[:10]:            # IndexConstituents.members -> tuple[IndexMember]
+    print(m.symbol, m.exchange)           # this endpoint exposes membership only (no weights)
 ```
 
 ## Related reference
