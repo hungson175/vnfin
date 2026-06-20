@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 ~18:33 +07_
+_Last synced: 2026-06-20 ~19:1x +07_
 
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
@@ -30,11 +30,16 @@ _Last synced: 2026-06-20 ~18:33 +07_
 > fmarket cov 96%, snapshot untouched. **This closes the entire reporter-bug queue — only the #157
 > metrics leg remains.** FundList.nav per-fund as-of → reviewer-filed **#181** (out of v1 scope).
 >
-> **NOW (TL call 18:36): #157 METRICS LAYER** — design FINAL-APPROVED `docs/design/fundamentals-metrics.md`
-> rev2.6 (reviewer review-202606201405), now unblocked (bank base corrected, section6 re-pointed). TDD per
-> rev2.6 on the corrected bank base: canonical metric catalog + corporate/bank mappings + 5 derived +
-> coverage diagnostics + blocked/missing-on-inconsistency. **Bank metrics keyed to
-> 12700/13000/14000/412000/413300/23800/23000/421900 — NEVER the disproven codes.** Codex×2 when it lands.
+> **NOW: #157 METRICS LAYER — IMPLEMENTED + IN Codex×2 REVIEW** (sent ~19:1x, handoff
+> `/tmp/vnfin-157-metrics-review-handoff-20260620.md`). Built per rev2.6 via implement→adversarial-verify
+> workflow `wf_4125b404-2eb`: new `metric_models.py` + `metric_api.py` (26-metric v1 catalog, `serves()`,
+> pure transformers, `metrics()`/`explain_metric_coverage()`, 11 exact §5 reasons) + docs/skill/CHANGELOG +
+> 2 docs-contract guards. Commits `0739def`(A)→`8cdaa36`(B)→`fa13cf4`(C)→`be58b9d`(D)→`5c84d53`(bank-code
+> allowlist guard hardening). **Full suite 3082 passed, exit0; gate trio green; snapshot untouched (additive);
+> clean-room clean.** Bank metrics keyed ONLY to 12700/13000/14000/412000/413300/23800/23000/421900. 6-way
+> adversarial verify → **ALL 6 PASS**, 3 MINORs (1 applied; 2 judgment calls open for reviewer: AllSourcesFailed
+> detail text; raw non-finite seam guard needs a new §5 reason — not added unilaterally). **AWAITING reviewer**:
+> on APPROVE → push to master + comment #157 metrics leg (#157 stays OPEN if other legs remain — confirm close state).
 > Then vf-advisor: **#179 (monthly CPI+SBV via IMF IFS/DBnomics) is cleanly startable** (specs DONE by
 > reviewer, no new adapter/key); **#177 (S&P500 / Alpha Vantage BYOK) + #178 (VN gold, no clean source)
 > WAIT on Boss**.
