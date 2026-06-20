@@ -53,7 +53,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   - D: **#154/#150** derived gold-premium / portfolio analytics (offline, data-only, no advice).
   - E: **#155** fund metadata / allocation diagnostics.
   All design-first: no code until reviewer-approved design.
-  - Newly appeared, await reviewer poller triage: **#157, #158**.
+  - **#158 (NOW, delegated): Fmarket NAV duplicate-date** — same-value dup dedupe+warning;
+    conflicting NAV -> InvalidData; preserve #144 guards/tests. (#155 update + #157 design-first.)
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
