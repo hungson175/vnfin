@@ -26,6 +26,7 @@ Runtime fetch only — no caching or redistribution of provider data.
 from __future__ import annotations
 
 import math
+import statistics
 from datetime import date, datetime, timezone
 
 from .._contracts import (
@@ -55,6 +56,16 @@ _BASE_URL = "https://api.fmarket.vn"
 _FILTER_PATH = "/res/products/filter"
 _NAV_PATH = "/res/product/get-nav-history"
 _DETAIL_PATH = "/res/products"  # + /{id}
+
+# Issue #172-RESIDUAL: success-path NAV end-gap warning. Cadence-relative (NOT the
+# stock trading calendar — fund NAV cadence varies: daily vs weekly/twice-monthly),
+# inferred over a TRAILING window of recent diffs so a daily->weekly switch does not
+# false-positive. Design: docs/design/nav-success-path-staleness.md.
+_NAV_END_GAP = "nav_end_gap"            # mechanical token (matches partial_end_coverage style)
+_NAV_END_GAP_FACTOR = 2                  # threshold = max(FACTOR * typical_gap, MIN_DAYS)
+_NAV_END_GAP_MIN_DAYS = 7                # daily-fund floor (a holiday weekend never trips it)
+_NAV_END_GAP_SINGLE_POINT_DAYS = 14     # single-point fallback (cadence unknown)
+_NAV_END_GAP_CADENCE_WINDOW = 8         # most-recent diffs feeding the cadence median (all if fewer)
 
 
 def _parse_json(text, who):
@@ -304,6 +315,10 @@ class FmarketFundSource(HttpDataSource):
             warnings = (
                 f"deduped {deduped} duplicate navDate row(s) with identical NAV",
             )
+        # Issue #172-RESIDUAL: success-path cadence-relative end-gap warning. Appended
+        # AFTER the dedup warning (dedup stays first). `today` is injected (never
+        # written into the result); `fetched_at_utc` below stays the real fetch stamp.
+        warnings = warnings + _nav_end_gap_warning(points, hi, _today())
         return NavHistory(
             product_id=fid,
             points=tuple(points),
@@ -696,8 +711,57 @@ def _coerce_date(value, label) -> date:
         raise InvalidData(f"fmarket: malformed {label} {value!r}") from exc
 
 
+def _today() -> date:
+    """The current UTC calendar date — the injected `today` for end-gap freshness.
+
+    A `date` (not a `datetime`): the success-path end-gap warning judges a calendar
+    gap, never a fetch timestamp. Tests pin this for determinism; it never leaks into
+    ``NavHistory.fetched_at_utc`` (which stays the real ``datetime.now(timezone.utc)``).
+    """
+    return datetime.now(timezone.utc).date()
+
+
 def _today_ymd() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return _today().isoformat()
+
+
+def _nav_end_gap_warning(points, to_date, today) -> tuple[str, ...]:
+    """Cadence-relative end-gap warning for a SUCCESSFUL ``nav_history`` return.
+
+    ``points`` is a non-empty, ascending, deduped ``tuple[NavPoint, ...]`` (the caller
+    guarantees this). ``to_date`` is the requested window end (``date`` or ``None`` for
+    an open/now window). ``today`` is a REQUIRED injected ``date`` — this function MUST
+    NOT call ``datetime.now()`` / ``date.today()`` so it is fully deterministic.
+
+    Returns a one-element tuple naming the gap/cadence/threshold when the latest NAV is
+    older than the fund's own (trailing) cadence allows, else ``()``. Never raises.
+    """
+    # reference: open/now window -> today (cannot expect NAV beyond today); a past
+    # window -> its end. min() clamps a future to_date back to today.
+    reference = min(to_date, today) if to_date is not None else today
+    gap_days = (reference - points[-1].date).days
+    if gap_days <= 0:
+        return ()  # series reaches the window end -> fresh
+    if len(points) >= 2:
+        diffs = [
+            (points[i + 1].date - points[i].date).days
+            for i in range(len(points) - 1)
+        ]
+        window = diffs[-_NAV_END_GAP_CADENCE_WINDOW:]  # last N (all if fewer) — CURRENT regime
+        typical_gap = max(1, int(statistics.median(window)))  # robust to a single holiday outlier
+        threshold = max(_NAV_END_GAP_FACTOR * typical_gap, _NAV_END_GAP_MIN_DAYS)
+    else:
+        typical_gap = None  # single point: cadence unknown
+        threshold = _NAV_END_GAP_SINGLE_POINT_DAYS
+    if gap_days > threshold:
+        cadence = "unknown (single NAV point)" if typical_gap is None else f"~{typical_gap}d"
+        return (
+            f"{_NAV_END_GAP}: latest NAV {points[-1].date.isoformat()} is {gap_days}d "
+            f"before {reference.isoformat()} (typical cadence {cadence}; "
+            f"threshold {threshold}d) — fund NAV feed may be delayed, paused, or the "
+            f"fund dormant",
+        )
+    return ()
 
 
 def _validate_product_id(product_id) -> int:

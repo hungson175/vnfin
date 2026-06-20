@@ -77,9 +77,22 @@ Constants (Q3 ratified): `_NAV_END_GAP_FACTOR = 2`, `_NAV_END_GAP_MIN_DAYS = 7`,
 `_NAV_END_GAP_SINGLE_POINT_DAYS = 14`, `_NAV_END_GAP_CADENCE_WINDOW = 8`.
 
 Worked: **daily** fund (trailing median ≈ 1) → threshold `max(2,7)=7` → warns only when >7 calendar days
-stale (a holiday weekend never trips it). **Weekly** fund (trailing median ≈ 7) → threshold `max(14,7)=14`
-→ warns only after ~2 missed publications. **Daily→weekly switch** → trailing median ≈ 7 → a fresh weekly
-tail does **not** warn. No false positives; daily funds going a week dark are still caught.
+stale (a holiday weekend never trips it). **Settled weekly** fund (trailing median ≈ 7) → threshold
+`max(14,7)=14` → warns only after ~2 missed publications. Daily funds going a week dark are still caught.
+
+#### Bounded transition transient (accepted, self-clearing)
+
+The trailing window kills the *permanent* false positive a whole-series median would inflict on a
+daily→weekly fund (its years of daily history would dominate the median **forever**). It does **not**
+fully kill the **transition transient**: in the first ~3 weeks after a daily→weekly switch the trailing
+window of 8 is still daily-dominated (median ≈ 1 → threshold 7), so a fresh weekly NAV (~8d old) is briefly
+flagged, then self-clears once ≥ half the window is weekly. **We accept this on purpose.** Every cheap fix
+that would suppress the transient (`max(median, last_diff)`, a window max/high-percentile) introduces a
+**false *negative*** — a single large recent gap (e.g. a Tet gap landing as the last diff) would mask a
+genuinely stale daily fund. For a staleness signal a missed warning defeats the feature, while a soft,
+self-clearing over-warn on a fund that genuinely changed cadence is harmless and arguably informative. So
+the conservative choice is: keep the trailing-window median, accept the bounded transient, and pin it with
+tests (§6) so it is intentional, not accidental.
 
 ### Tet (Lunar New Year) — a TRUE positive, self-clearing (not a bug)
 
@@ -125,9 +138,13 @@ Reuse `_nav_history_payload` / `_capture_get` / window-aware fixtures (the #172 
 - **Weekly fund, fresh** (trailing cadence ≈ 7, latest NAV 8d old) → NO warning — the key regression that
   the stock-calendar approach would wrongly flag.
 - **Weekly fund, stale** (cadence ≈ 7, latest NAV 20d old) → warns.
-- **Mid-series cadence change, fresh tail** (years of daily then a recent weekly tail, latest NAV ~6–8d
-  old) → NO warning — proves the trailing window (not whole-series median) governs; also folds in the
-  Tet-gap robustness.
+- **Mid-series cadence change, SETTLED weekly tail** (years of daily then ≥8 weekly points, latest NAV 8d
+  old — gap in the 8..14 band) → NO warning. The 8d offset is deliberate: a whole-series-median impl
+  (threshold 7) would warn, so the test genuinely **fails a non-trailing impl**, pinning the trailing
+  window; also folds in the Tet-gap robustness.
+- **Cadence transition transient** (long daily then only 1–3 weekly points, fresh weekly tail) → WARNS,
+  then NO warning once the window is settled (≥8 weekly points). Pins the accepted, self-clearing transient
+  (§3) at both ends so it is intentional.
 - **`gap_days == 0`** (latest NAV exactly == reference) → NO warning (boundary).
 - **`to_date == today`** and **future `to_date`** → reference clamps to today; behaves like the now-window.
 - **Historical window fully covered** (`to_date` in the past, series reaches it) → NO warning (NON-GOAL,
@@ -161,6 +178,10 @@ Reuse `_nav_history_payload` / `_capture_get` / window-aware fixtures (the #172 
 - **Q2 (token):** **`nav_end_gap`** (constant `_NAV_END_GAP`) — mechanical; NOT `stale_nav` (a
   conclusion/cause word), NOT a reuse of `partial_end_coverage`.
 - **Q3 (constants):** `FACTOR=2`, `MIN_DAYS=7`, `SINGLE_POINT_DAYS=14`, `median` — RATIFIED; plus the
-  mandatory **trailing-window** `CADENCE_WINDOW=8` (most-recent diffs, all-if-fewer).
+  mandatory **trailing-window** `CADENCE_WINDOW=8` (most-recent diffs, all-if-fewer). **Post-build amend
+  (adversarial-verify):** the trailing window bounds — but does not erase — the daily→weekly false positive
+  to a self-clearing ~3-week transition transient (§3); accepted as the conservative choice (any suppressor
+  risks a false *negative*). Single-point message reads `cadence unknown (single NAV point)` (no `str(None)`
+  leak). Flagged for reviewer ratification in the code review.
 - **Q4 (scope):** v1 = `NavHistory` only — CONFIRMED; `FundList.nav` as-of → **#181**.
 - **Q5 (reference date):** `reference = min(to_date, today)` (else `today`) — CONFIRMED.

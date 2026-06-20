@@ -1870,9 +1870,11 @@ def test_nav_history_in_window_identical_duplicate_deduped_with_warning():
 
 
 def test_nav_history_no_duplicates_has_no_dedupe_warning():
+    # to_date == the last point's date so the series reaches the window end (gap 0,
+    # no #172-RESIDUAL end-gap warning); proves no dedupe warning when no duplicates.
     full = [_nav_row("2024-04-04", nav=100.0), _nav_row("2024-04-05", nav=101.0)]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
-    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 4, 5))
     assert hist.warnings == ()
 
 
@@ -1973,3 +1975,342 @@ def test_nav_history_full_history_call_on_stale_data_returns_all():
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     hist = src.nav_history(FAKE_ID_A)
     assert [p.date for p in hist.points] == [date(2025, 11, 28), date(2025, 12, 5)]
+    # #172-RESIDUAL: the returned NavHistory now carries an end-gap warning — this
+    # fixture's tail is years before any live today, so a 'nav_end_gap'-prefixed
+    # warning is always present (presence-only assertion, robust to live-today).
+    assert any(w.startswith("nav_end_gap:") for w in hist.warnings)
+
+
+# ---------------------------------------------------------------------------
+# Issue #172-RESIDUAL — success-path NAV end-gap warning. nav_history() succeeds
+# (series reaches the window) but its LATEST observation is old (feed delayed /
+# paused / fund dormant). A cadence-relative soft warning is appended to
+# NavHistory.warnings, computed against an INJECTED `today` date (never now()).
+# Design: docs/design/nav-success-path-staleness.md.
+#
+# Direct unit tests on the pure helper _nav_end_gap_warning(points, to_date, today)
+# pass fixed points/to_date/today -> fully deterministic, no HTTP, no live date.
+# ---------------------------------------------------------------------------
+
+
+def _np(d, nav=100.0):
+    """A NavPoint at an ISO date string (ascending order is the caller's job)."""
+    return NavPoint(date=date.fromisoformat(d), nav=nav)
+
+
+def _daily(start, n):
+    """n consecutive daily NavPoints starting at ISO `start`, ascending."""
+    from datetime import timedelta
+    s = date.fromisoformat(start)
+    return tuple(NavPoint(date=s + timedelta(days=i), nav=100.0 + i) for i in range(n))
+
+
+def _weekly(start, n):
+    """n weekly (7d-spaced) NavPoints starting at ISO `start`, ascending."""
+    from datetime import timedelta
+    s = date.fromisoformat(start)
+    return tuple(NavPoint(date=s + timedelta(days=7 * i), nav=100.0 + i) for i in range(n))
+
+
+def test_nav_end_gap_helper_is_pure_and_importable():
+    # The helper must be a module-level pure function taking an injected `today`.
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 5)
+    out = _nav_end_gap_warning(pts, None, date(2026, 1, 5))
+    assert isinstance(out, tuple)
+
+
+def test_nav_end_gap_daily_stale_tail_warns_naming_gap_cadence_threshold():
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 10)  # latest 2026-01-10, daily cadence
+    today = date(2026, 1, 25)        # 15d after the latest point, open/now window
+    out = _nav_end_gap_warning(pts, None, today)
+    assert len(out) == 1
+    msg = out[0]
+    assert msg.startswith("nav_end_gap:")
+    assert "latest NAV 2026-01-10" in msg
+    assert "15d before 2026-01-25" in msg          # gap named
+    assert "typical cadence ~1d" in msg            # cadence named
+    assert "threshold 7d" in msg                   # threshold named
+    assert "may be delayed, paused, or the fund dormant" in msg
+
+
+def test_nav_end_gap_daily_fresh_weekend_no_warn():
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 10)  # latest 2026-01-10
+    today = date(2026, 1, 12)        # 2d (weekend) -> under the 7d floor
+    assert _nav_end_gap_warning(pts, None, today) == ()
+
+
+def test_nav_end_gap_weekly_fund_fresh_8d_no_warn():
+    # KEY regression: a weekly fund whose latest NAV is 8d old is FRESH. A stock-
+    # calendar approach (>7d before expected trading day) would wrongly flag it.
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _weekly("2026-01-05", 10)  # cadence ~7, latest 2026-03-09
+    from datetime import timedelta
+    today = pts[-1].date + timedelta(days=8)
+    assert _nav_end_gap_warning(pts, None, today) == ()
+
+
+def test_nav_end_gap_weekly_fund_stale_20d_warns():
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _weekly("2026-01-05", 10)  # cadence ~7 -> threshold max(14,7)=14
+    from datetime import timedelta
+    today = pts[-1].date + timedelta(days=20)
+    out = _nav_end_gap_warning(pts, None, today)
+    assert len(out) == 1
+    assert out[0].startswith("nav_end_gap:")
+    assert "typical cadence ~7d" in out[0]
+    assert "threshold 14d" in out[0]
+
+
+def test_nav_end_gap_midseries_cadence_change_fresh_weekly_tail_no_warn():
+    # PROVES the trailing window governs (not whole-series median): years of daily NAV
+    # then a SETTLED weekly tail (8 weekly points => trailing window all-7), latest 8d
+    # old -> NO warn. gap=8 is deliberately in the 8..14 band: a whole-series-median
+    # impl would have median ~1 -> threshold max(2,7)=7 -> 8 > 7 -> WRONGLY warn (so this
+    # test genuinely FAILS a whole-series impl); the trailing window -> median 7 ->
+    # threshold max(14,7)=14 -> 8 <= 14 -> correctly silent.
+    from datetime import timedelta
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    daily = list(_daily("2024-01-01", 400))         # long daily history
+    last_daily = daily[-1].date
+    weekly_tail = [
+        NavPoint(date=last_daily + timedelta(days=7 * k), nav=999.0 + k) for k in range(1, 9)
+    ]
+    pts = tuple(daily + weekly_tail)                 # ascending, daily->weekly switch (settled)
+    today = pts[-1].date + timedelta(days=8)         # one normal weekly gap + 1d; in the 8..14 band
+    assert _nav_end_gap_warning(pts, None, today) == ()
+
+
+def test_nav_end_gap_cadence_transition_transient_warns_then_self_clears():
+    # ACCEPTED, documented behaviour (design §3 "Bounded transition transient"): right
+    # after a daily->weekly switch the trailing window is still daily-dominated
+    # (median 1 -> threshold 7), so a fresh weekly NAV (~8d old) is briefly flagged, then
+    # self-clears once the window is mostly weekly. We deliberately accept this soft,
+    # self-clearing over-warn rather than risk EVER missing real staleness (a false
+    # negative would defeat the feature). This test pins both ends of that behaviour.
+    from datetime import timedelta
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    daily = list(_daily("2024-01-01", 400))
+    last_daily = daily[-1].date
+    # transient: only 2 weekly points since the switch -> trailing window still daily.
+    pts_transient = tuple(daily + [
+        NavPoint(date=last_daily + timedelta(days=7 * k), nav=999.0 + k) for k in range(1, 3)
+    ])
+    fresh = pts_transient[-1].date + timedelta(days=8)   # an on-time weekly NAV (1 gap + 1d)
+    out = _nav_end_gap_warning(pts_transient, None, fresh)
+    assert len(out) == 1 and out[0].startswith("nav_end_gap:")   # accepted transient over-warn
+    # settled: 8 weekly points -> trailing window all-weekly -> the same fresh tail clears.
+    pts_settled = tuple(daily + [
+        NavPoint(date=last_daily + timedelta(days=7 * k), nav=999.0 + k) for k in range(1, 9)
+    ])
+    settled_fresh = pts_settled[-1].date + timedelta(days=8)
+    assert _nav_end_gap_warning(pts_settled, None, settled_fresh) == ()
+
+
+def test_nav_end_gap_zero_gap_no_warn():
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 10)  # latest 2026-01-10
+    assert _nav_end_gap_warning(pts, None, date(2026, 1, 10)) == ()  # gap_days == 0
+
+
+def test_nav_end_gap_negative_gap_future_today_no_warn():
+    # today before the latest point (gap_days < 0) -> fresh, no warn.
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 10)  # latest 2026-01-10
+    assert _nav_end_gap_warning(pts, None, date(2026, 1, 1)) == ()
+
+
+def test_nav_end_gap_exactly_at_threshold_no_warn_strictly_greater():
+    # threshold is strict (>): gap == threshold -> NO warn; threshold+1 -> warn.
+    from datetime import timedelta
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 10)  # daily -> threshold 7
+    latest = pts[-1].date
+    assert _nav_end_gap_warning(pts, None, latest + timedelta(days=7)) == ()
+    out = _nav_end_gap_warning(pts, None, latest + timedelta(days=8))
+    assert len(out) == 1 and out[0].startswith("nav_end_gap:")
+
+
+def test_nav_end_gap_reference_clamps_to_today_for_future_to_date():
+    # reference = min(to_date, today): a FUTURE to_date must not inflate the gap.
+    from datetime import timedelta
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 10)  # latest 2026-01-10
+    today = pts[-1].date + timedelta(days=2)          # fresh vs today
+    future_to_date = date(2030, 1, 1)                 # way beyond today
+    assert _nav_end_gap_warning(pts, future_to_date, today) == ()
+
+
+def test_nav_end_gap_reference_uses_to_date_when_to_date_before_today():
+    # to_date == today behaves like the now-window; here to_date precedes today and
+    # the series reaches to_date -> reference = to_date -> no warn (NON-GOAL).
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2026-01-01", 10)  # latest 2026-01-10
+    out = _nav_end_gap_warning(pts, date(2026, 1, 10), date(2026, 6, 20))
+    assert out == ()
+
+
+def test_nav_end_gap_historical_window_fully_covered_no_warn():
+    # NON-GOAL: past to_date, series reaches it -> gap_days <= 0 -> no warn.
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2024-01-01", 30)  # latest 2024-01-30
+    out = _nav_end_gap_warning(pts, date(2024, 1, 30), date(2026, 6, 20))
+    assert out == ()
+
+
+def test_nav_end_gap_historical_window_early_ending_series_warns_vs_to_date():
+    # Series ends long before a PAST to_date -> warns against to_date (not today).
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = _daily("2024-01-01", 30)  # latest 2024-01-30
+    out = _nav_end_gap_warning(pts, date(2024, 6, 30), date(2026, 6, 20))
+    assert len(out) == 1
+    msg = out[0]
+    assert msg.startswith("nav_end_gap:")
+    assert "latest NAV 2024-01-30" in msg
+    assert "before 2024-06-30" in msg               # reference is the past to_date
+
+
+def test_nav_end_gap_single_point_fresh_under_14d_no_warn():
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = (_np("2026-01-01"),)
+    assert _nav_end_gap_warning(pts, None, date(2026, 1, 14)) == ()   # 13d, under 14
+
+
+def test_nav_end_gap_single_point_stale_over_14d_warns_no_cadence():
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = (_np("2026-01-01"),)
+    out = _nav_end_gap_warning(pts, None, date(2026, 1, 20))           # 19d > 14
+    assert len(out) == 1
+    msg = out[0]
+    assert msg.startswith("nav_end_gap:")
+    assert "typical cadence unknown (single NAV point)" in msg   # cadence unknown, cleanly phrased
+    assert "None" not in msg                          # never the str(None) repr ('~Noned')
+    assert "threshold 14d" in msg
+
+
+def test_nav_end_gap_two_point_weekend_only_gap_fresh_no_warn():
+    # Two points spaced 3d (weekend), latest only 2d before reference -> fresh.
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = (_np("2026-01-02"), _np("2026-01-05"))   # 3d diff -> typical_gap 3, threshold max(6,7)=7
+    assert _nav_end_gap_warning(pts, None, date(2026, 1, 7)) == ()    # 2d gap
+
+
+def test_nav_end_gap_cadence_window_clips_to_last_n_diffs():
+    # Only the last _NAV_END_GAP_CADENCE_WINDOW diffs feed the median: a long weekly
+    # run (>8 diffs) followed by daily would still be governed by the recent diffs.
+    from datetime import timedelta
+    from vnfin.funds.fmarket import _nav_end_gap_warning, _NAV_END_GAP_CADENCE_WINDOW
+    weekly = list(_weekly("2026-01-05", 20))        # 19 weekly diffs of 7
+    last = weekly[-1].date
+    daily_tail = [NavPoint(date=last + timedelta(days=k), nav=500.0 + k) for k in range(1, 10)]
+    pts = tuple(weekly + daily_tail)                # last 8 diffs are all 1 (daily)
+    # trailing window all-1 -> typical_gap 1 -> threshold 7; a 10d gap warns.
+    today = pts[-1].date + timedelta(days=10)
+    out = _nav_end_gap_warning(pts, None, today)
+    assert len(out) == 1 and "typical cadence ~1d" in out[0]
+    assert _NAV_END_GAP_CADENCE_WINDOW == 8
+
+
+def test_nav_end_gap_median_robust_to_single_holiday_outlier():
+    # A single long Tet/holiday diff among daily diffs must not inflate typical_gap
+    # (median, not mean) -> daily threshold (7) still governs.
+    from datetime import timedelta
+    from vnfin.funds.fmarket import _nav_end_gap_warning
+    pts = list(_daily("2026-01-01", 8))
+    # inject one 14d holiday gap then resume daily
+    gap_start = pts[-1].date
+    pts += [NavPoint(date=gap_start + timedelta(days=14 + i), nav=900.0 + i) for i in range(4)]
+    pts = tuple(pts)
+    latest = pts[-1].date
+    # median of the trailing 8 diffs is still 1 (one 14 outlier doesn't move it) -> threshold 7
+    assert _nav_end_gap_warning(pts, None, latest + timedelta(days=6)) == ()
+    out = _nav_end_gap_warning(pts, None, latest + timedelta(days=10))
+    assert len(out) == 1 and "typical cadence ~1d" in out[0]
+
+
+# --- integration through nav_history() (synthetic payload; deterministic today) ----
+
+
+def _patch_today(monkeypatch, d):
+    """Pin fmarket._today() so success-path end-gap tests are deterministic."""
+    import vnfin.funds.fmarket as fm
+    monkeypatch.setattr(fm, "_today", lambda: d)
+
+
+def test_nav_history_appends_end_gap_warning_open_window(monkeypatch):
+    # No window -> reference = today (injected). Stale daily tail warns.
+    _patch_today(monkeypatch, date(2026, 1, 25))
+    full = [_nav_row("2026-01-08"), _nav_row("2026-01-09"), _nav_row("2026-01-10")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A)
+    assert [p.date for p in hist.points][-1] == date(2026, 1, 10)
+    assert any(w.startswith("nav_end_gap:") for w in hist.warnings)
+
+
+def test_nav_history_fresh_tail_no_end_gap_warning(monkeypatch):
+    _patch_today(monkeypatch, date(2026, 1, 11))
+    full = [_nav_row("2026-01-08"), _nav_row("2026-01-09"), _nav_row("2026-01-10")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A)
+    assert hist.warnings == ()
+
+
+def test_nav_history_end_gap_coexists_with_dedup_dedup_first(monkeypatch):
+    # Both warnings present, dedup stays FIRST, end-gap appended after, no double-warn.
+    _patch_today(monkeypatch, date(2026, 1, 25))
+    full = [
+        _nav_row("2026-01-08", nav=100.0),
+        _nav_row("2026-01-08", nav=100.0),   # identical dup -> dedupe + warn
+        _nav_row("2026-01-09", nav=101.0),
+        _nav_row("2026-01-10", nav=102.0),
+    ]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A)
+    assert len(hist.warnings) == 2
+    assert "dedup" in hist.warnings[0].lower()                    # dedup first
+    assert hist.warnings[1].startswith("nav_end_gap:")           # end-gap second
+    assert sum(w.startswith("nav_end_gap:") for w in hist.warnings) == 1  # no double
+
+
+def test_nav_history_past_to_date_covered_no_end_gap_warning(monkeypatch):
+    # Past to_date the series reaches -> no warn, regardless of (much later) today.
+    _patch_today(monkeypatch, date(2026, 6, 20))
+    full = [_nav_row("2024-01-08"), _nav_row("2024-01-09"), _nav_row("2024-01-10")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 1, 10))
+    assert hist.warnings == ()
+
+
+def test_nav_history_past_to_date_early_ending_warns(monkeypatch):
+    # Series ends well before a past to_date -> warns vs to_date (not today).
+    _patch_today(monkeypatch, date(2026, 6, 20))
+    full = [_nav_row("2024-01-08"), _nav_row("2024-01-09"), _nav_row("2024-01-10")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 6, 30))
+    matches = [w for w in hist.warnings if w.startswith("nav_end_gap:")]
+    assert len(matches) == 1
+    assert "before 2024-06-30" in matches[0]
+
+
+def test_nav_history_end_gap_never_raises_and_fetched_at_is_real(monkeypatch):
+    # The helper never raises; fetched_at_utc stays the real fetch stamp (a tz-aware
+    # datetime), NOT the injected `today` date.
+    _patch_today(monkeypatch, date(2026, 1, 25))
+    before = datetime.now(timezone.utc)
+    full = [_nav_row("2026-01-08"), _nav_row("2026-01-09"), _nav_row("2026-01-10")]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A)
+    after = datetime.now(timezone.utc)
+    assert hist.fetched_at_utc is not None
+    assert hist.fetched_at_utc.tzinfo is not None
+    assert before <= hist.fetched_at_utc <= after
+    assert not isinstance(hist.fetched_at_utc, date) or isinstance(hist.fetched_at_utc, datetime)
+
+
+def test_nav_today_returns_date_typed_value():
+    # _today() is the injected date source: returns a `date`, never a datetime.
+    from vnfin.funds.fmarket import _today
+    t = _today()
+    assert isinstance(t, date) and not isinstance(t, datetime)
