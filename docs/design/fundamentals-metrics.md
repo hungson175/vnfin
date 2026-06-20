@@ -502,31 +502,35 @@ If a future `metrics_batch(symbols)` helper is added, it returns per-symbol resu
 | net_cash_flow | 34000 | cashflow |
 | cash_end_of_period | 35000 | cashflow |
 
-### v1 — raw_mapped (bank, from `itemcodes._BANK`)
+### v1 — raw_mapped (bank) — RE-POINTED to #157-verified codes
 
-| MetricId | code | category |
-|----------|------|----------|
-| net_interest_income | 22070 | profitability |
-| net_fee_income | 22080 | profitability |
-| total_operating_income | 22120 | profitability |
-| operating_expenses | 22130 | profitability |
-| credit_provision_expense | 22150 | profitability |
-| profit_before_tax (bank) | 22160 | profitability |
-| net_income (bank) | 421601 | profitability |
-| loans_to_customers | 411600 | size |
-| total_assets (bank) | 412000 | size |
-| customer_deposits | 413100 | leverage |
-| total_liabilities (bank) | 414000 | leverage |
-| owners_equity (bank) | 415000 | size |
-| operating_cash_flow (bank) | 431000 | cashflow |
-| investing_cash_flow (bank) | 432000 | cashflow |
-| financing_cash_flow (bank) | 433000 | cashflow |
+> **#157 re-point (reviewer N1, BLOCKING follow-up — 2026-06-20).** The previous bank codes were
+> *disproven* by the bank-itemcode base-layer fix (`docs/design/bank-fundamentals-itemcodes.md`):
+> Q1 probe PASS on VCB/CTG/VPB/ACB, accounting identity `13000+14000==12700` exact to the VND. Bank
+> metrics ship **only** on the verified codes below. Metrics whose code the #157 probe did **not**
+> verify are DEFERRED to v2 rather than emitted on an unverified code (correctness over coverage).
 
-> `profit_before_tax`, `net_income`, `total_assets`, `total_liabilities`, `owners_equity`, and the
-> cashflow trio are **shared canonical ids** (reviewer Q2 APPROVED) with **different underlying codes
-> per entity type** (one `MetricId`, with `codes_by_source["vndirect"]` carrying both
-> `corporate_code` and `bank_code`). `applies_to=BOTH` for those; corporate-only
-> margins are `applies_to=CORPORATE`; bank-specific lines are `applies_to=BANK`.
+| MetricId | code | was (WRONG) | category |
+|----------|------|------|----------|
+| net_interest_income | **421900** | 22070 | profitability |
+| profit_before_tax (bank) | **23800** | 22160 | profitability |
+| net_income (bank) | **23000** | 421601 | profitability |
+| loans_to_customers | **412000** | 411600 | size |
+| total_assets (bank) | **12700** | 412000 | size |
+| customer_deposits | **413300** | 413100 | leverage |
+| total_liabilities (bank) | **13000** | 414000 | leverage |
+| owners_equity (bank) | **14000** | 415000 | size |
+
+**DEFERRED to v2 (code unverified by the #157 probe — must NOT ship on the old code):**
+`net_fee_income` (was 22080), `total_operating_income` (was 22120), `operating_expenses` (was 22130),
+`credit_provision_expense` (was 22150), and the bank cashflow trio `operating/investing/
+financing_cash_flow` (was 431000/432000/433000 — bank cashflow is fully RAW in the base layer, Q3).
+
+> `profit_before_tax`, `net_income`, `total_assets`, `total_liabilities`, `owners_equity` are
+> **shared canonical ids** (reviewer Q2 APPROVED) with **different underlying codes per entity type**
+> (one `MetricId`, with `codes_by_source["vndirect"]` carrying both `corporate_code` and `bank_code`).
+> `applies_to=BOTH` for those; corporate-only margins are `applies_to=CORPORATE`; bank-specific lines
+> are `applies_to=BANK`. (The bank cashflow trio is no longer a shared id in v1 — deferred above.)
 
 ### v1 — derived (formula-backed, guarded)
 

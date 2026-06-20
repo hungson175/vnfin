@@ -1,6 +1,6 @@
 # Design — Bank fundamentals item-code mapping (#157 base-layer mislabel fix)
 
-- Status: **DESIGN — awaiting reviewer convergence (design gate; no code yet)**
+- Status: **APPROVED_WITH_NOTES (reviewer Codex×2, review-202606201700) — Q1 probe PASS; implementing**
 - Date: 2026-06-20
 - Issue: #157 bank data-integrity input (reviewer-reproduced, review-202606201553)
 - Related: `docs/design/fundamentals-metrics.md` (the canonical-metrics layer builds ON the corrected base)
@@ -66,16 +66,15 @@ cross-bank consistency and the official cross-check.
 |---|---|---|---|---|---|---|
 | `23800` | *(raw)* | 44.02 | 43.44 | 37.79 | **Lợi nhuận trước thuế** (PBT) | official VCB PBT 44.02 ✓✓✓; cross-bank — **HIGH** |
 | `23000` | "Tài sản ngắn hạn" | 35.18 | 34.60 | 29.90 | **Lợi nhuận sau thuế** (PAT) | official VCB PAT 35.2 ✓; corp-fallback leak — **HIGH** |
-| `421900` | *(raw)* | 58.77 | 66.45 | *(absent)* | **Thu nhập lãi thuần** (NII) | official VCB NII 58.4 ✓; cross-bank — **HIGH** |
+| `421900` | *(raw)* | 58.77 | 66.45 | 63.30 | **Thu nhập lãi thuần** (NII) | official VCB NII 58.4 ✓; cross-bank (BID 63.30 **present**) — **HIGH** |
 | `22070` | "Thu nhập lãi thuần" | 8.82 | 8.57 | 7.36 | *(NOT NII)* | ~8T sub-line → remove wrong label, RAW |
 | `421601` | "Lợi nhuận sau thuế" | 5.27 | 11.77 | 16.25 | *(NOT PAT)* | not PAT → remove wrong label, RAW |
 | `23003` | *(raw)* | 35.20 | 34.87 | 30.43 | *(≈PAT near-dup)* | near-duplicate of 23000 → **leave RAW** (avoid double-label) |
 
-### Cash flow (model_type 103)
-The standard aggregate codes `32000`/`33000`/`34000`/`35000` currently receive corporate labels via
-the fallback and appear structurally correct for banks too (VCB `35000`=111.07 "cash at end",
-`34000`=-3.78 "net change"). Everything else is `431xxx`/`43xxxx` and is unverified. **Proposal:
-v1 leaves bank cash flow RAW except the four standard aggregates (MEDIUM); see open question Q3.**
+### Cash flow (model_type 103) — FULLY RAW in v1 (reviewer Q3)
+Even the standard aggregates are unreliable for banks (`32000`=116T investing-CF is implausible), so
+v1 maps **no** bank cashflow code — the 103 table is empty and every bank cashflow line stays raw
+`item_<code>`. Bank cashflow labels are deferred.
 
 **Key insight — per-bank code variability:** `12700` is present for VCB/CTG but absent for BID;
 `413300` absent for VCB. A fixed code→name map therefore *will* have per-bank gaps. That is fine
@@ -105,7 +104,7 @@ _NAMES_BY_MODEL_TYPE = {
     3:   {...},   # corporate cashflow (unchanged content)
     101: {...},   # BANK balance  — verified headline set (12700/13000/14000/412000/413300)
     102: {...},   # BANK income   — verified headline set (421900/23800/23000)
-    103: {...},   # BANK cashflow — v1: 32000/33000/34000/35000 only (or empty; see Q3)
+    103: {},      # BANK cashflow — v1 FULLY RAW (reviewer Q3): no codes mapped
 }
 
 def item_name(item_code: str, *, model_type: int | None = None) -> str:
@@ -121,7 +120,7 @@ def item_name(item_code: str, *, model_type: int | None = None) -> str:
 - **Signature change** `is_bank=` → `model_type=`. The sole caller is `vndirect.py:337`
   (`name=item_name(code, is_bank=is_bank)`), where the resolved `model_type` is already in scope —
   change to `item_name(code, model_type=model_type)`. CafeF uses its own `_line_item_name` and is
-  out of scope. (Open question Q2: keep an `is_bank` shim for any external caller, or hard-switch.)
+  out of scope. (Reviewer Q2: HARD-SWITCH — no `is_bank` shim.)
 - Corporate codes don't collide across statements, so corporate behavior is byte-identical; we just
   partition the existing `_CORPORATE` entries into the 1/2/3 sub-tables by their statement comment.
 
@@ -151,16 +150,53 @@ keyed to these verified codes. Bank ratios/EPS/BV remain v2 (per metrics design)
 - **Identity sanity (doc-level):** 13000 + 14000 == 12700 for the synthetic VCB fixture.
 - Anchor fixtures to the cross-verified VCB/CTG/BID values; **no live calls in tests**.
 
-## 8. Open questions for the reviewer
-- **Q1 (confidence gate):** the HIGH set is anchored by the accounting identity + official VCB + 3
-  banks. Do you want the map **validated against 1–2 more banks of a different structure** (e.g. a
-  joint-stock retail bank) via one more gated probe BEFORE coding, or is the 3-bank + identity +
-  official evidence sufficient? (I lean: one more probe on a non-SOCB bank is cheap insurance.)
-- **Q2 (signature):** hard-switch `item_name(code, *, model_type=)` (sole internal caller), or keep
-  an `is_bank=` shim mapping to a representative model_type for back-compat?
-- **Q3 (bank cashflow):** map the four standard aggregates `32000/33000/34000/35000` for model_type
-  103 at MEDIUM confidence, or leave bank cash flow fully RAW in v1 (follow-up)?
-- **Q4 (diagnostic home):** coverage diagnostic in the #157 metric layer (`explain_metric_coverage`)
-  vs a dedicated `bank_itemcode_coverage` helper now?
-- **Q5 (412100 / 23003):** leave the near-duplicate gross-loan / PAT-adjacent codes RAW (my pick) or
-  attempt a gross-vs-net split now?
+## 8. Reviewer decisions (design gate 202606201700, Codex×2 → APPROVE_WITH_NOTES)
+
+**Q1 — PASS (private-bank probe REQUIRED, then run).** Gated probe
+(`scripts/probe_bank_itemcodes.py`, `VNFIN_LIVE=1`) on PRIVATE banks VPB + ACB (controls VCB/CTG),
+2026-06-20: every code-of-interest present under the same templates (balance mt=101, income mt=102);
+identity `13000+14000==12700` exact to the VND for all four (VPB 1,079.87+180.28=1,260.15; ACB
+931.33+94.52=1,025.85). `412000` is customer-loans (VPB 926.47 ≪ assets 1,260.15), `421900` is NII
+(VPB 58.66), `23800/23000` are PBT/PAT. → the per-`model_type` map generalizes beyond SOCBs.
+Provenance: `docs/design/bank-itemcodes-probe-20260620.md`.
+
+- **Q2 — HARD-SWITCH** `item_name(code, *, model_type=)`, no `is_bank` shim (sole non-test caller is
+  `vndirect.py`, which has the resolved `model_type` in scope).
+- **Q3 — bank cashflow FULLY RAW** in v1 (model_type 103 table empty); `32000`=116T investing-CF is
+  implausible. Deferred.
+- **Q4 — coverage diagnostic** lives in the #157 metric layer (`explain_metric_coverage`), not a base
+  helper. Base layer stays raw-for-unmapped only.
+- **Q5 — `412100` / `23003` stay RAW** (near-dup gross-loan / PAT-adjacent; no gross-vs-net split).
+
+### Implementation checklist (the coding pass)
+1. Replace `_BANK` + corporate cross-fallback with `_NAMES_BY_MODEL_TYPE`: {1,2,3 corporate split by
+   statement (income/balance/cashflow); **101** bank-balance = {12700,13000,14000,412000,413300};
+   **102** bank-income = {23800,23000,421900}; **103** = {} (fully raw)}. Hard-switch
+   `item_name(item_code, *, model_type=None)` → look up only the matching template, else raw
+   `item_<code>` (NO cross-template fallback).
+2. Update the sole caller `vndirect.py` → `name=item_name(code, model_type=model_type)`.
+3. **Fix the swapped header comment** `itemcodes.py:55` ("101 income / 102 balance" → "101 balance /
+   102 income"; the inner section comments at 57/65 are already correct).
+4. **REWRITE (don't extend)** `tests/test_fundamentals.py::test_item_name_maps_expanded_bank_headlines`
+   (~L869-877) — it asserts WRONG labels (22070→NII, 412000→assets, 411600→loans, 413100→deposits).
+   New asserts (all `model_type=`): 421900→NII, 12700→assets, 412000→loans, 413300→deposits, 23800→
+   PBT, 23000→PAT, 13000→liabilities, 14000→equity; demoted codes (22070/411600/413100/421601/22160)
+   → raw `item_<code>`.
+5. **Update** `test_item_name_maps_expanded_corporate_headlines` to pass `model_type=` (1 income /
+   2 balance / 3 cashflow) — under the hard-switch a no-`model_type` call returns raw.
+6. **+3 tests (reviewer):** (a) **model_type-mismatch → raw**, e.g. `item_name("12700", model_type=2)`
+   (bank-balance code under corp-balance) → raw; (b) **POSITIVE collision** (same code, different
+   template, both mapped): `item_name("14000", model_type=1)`→corp "Lợi nhuận thuần…" vs
+   `item_name("14000", model_type=101)`→"Vốn chủ sở hữu"; also `item_name("23000", model_type=2)`→
+   "Tài sản ngắn hạn" vs `item_name("23000", model_type=102)`→"Lợi nhuận sau thuế"
+   (NB the reviewer wrote "14000@mt2"; in our split 14000-corp is income=mt1, so the corp side uses
+   mt1 and `14000@mt2`→raw — that is the mismatch case in (a)); (c) **partition-completeness** —
+   every code in every sub-table resolves to its own label and to raw under a foreign model_type.
+7. **N1 (cross-design, BLOCKING follow-up — DONE in this change):** `fundamentals-metrics.md` §6 bank
+   table re-pointed to the verified codes (NII 421900, assets 12700, deposits 413300, loans 412000,
+   PAT 23000, PBT 23800, liabilities 13000, equity 14000; unverified-code metrics deferred to v2).
+   Bank metrics must NOT ship on the old codes.
+8. **N2 (DONE):** dated provenance artifact `docs/design/bank-itemcodes-probe-20260620.md`.
+9. Gates: corporate labels **byte-identical** (regression); additive surface (only `name` strings +
+   internal signature change — public `LineItem`/values unchanged); full suite green; coverage ≥85%
+   on `itemcodes.py`.
