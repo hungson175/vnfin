@@ -16,6 +16,7 @@ Install: `pip install git+https://github.com/hungson175/vnfin.git` (add `[pandas
   [fundamentals](docs/tutorials/fundamentals.md),
   [funds and indices](docs/tutorials/funds-and-indices.md),
   [macro and FX](docs/tutorials/macro-and-fx.md),
+  [historical FX](docs/tutorials/fx-history.md),
   [gold and crypto](docs/tutorials/gold-and-crypto.md).
 - How-to: [pandas DataFrames](docs/how-to/pandas-dataframes.md),
   [errors](docs/how-to/errors.md), [cache/retry](docs/how-to/cache-retry.md),
