@@ -345,8 +345,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   history-as-of vs current-NAV coupling); (2) pick a 'material' staleness threshold so a normal 1-3
   business-day lag does NOT warn but a months-long lag does — **that threshold is THE design decision,
   document it**. Design-first → converge with reviewer BEFORE coding; Codex x2 review when it lands.
-- **#174 — sector-index routing (fast-follow, MEDIUM)** — reviewer triage review-202606201501,
-  ACCEPTED. Small tri-state index-guard fix. Do NOT interrupt the #172/#173 batch; queue behind it.
+- **#174 — sector-index routing BUG — ✅ SPEC READY (reviewer 22:31, spec-202606202230); INTAKE AFTER
+  #177 (jumps ahead of #178).** BUG = contradictory routing loop: `prices.history(VNFIN)` correctly
+  rejects (deny-list) but `index_history(VNFIN)` wrongly says "not a known market index; use
+  prices.history() for stocks" (allow-list miss) → user dead-ends. Root cause: the index path conflates
+  "not value-history-servable" with "not an index at all". **FIX (minimal — NO registry-data change, NO
+  new source):** in BOTH `index_history` + `index_history_stitched` (`indices/client.py` ~101 and ~141),
+  after alias resolution, when a symbol is NOT value-history-servable, branch on `is_known_index(symbol)`:
+  True → terminal "recognized market index but value-history not supported in this version" diagnostic
+  (NO "use prices.history()" text); else → keep existing route-to-prices message. GENERAL — covers ALL
+  deny-only ids (10 sector + VN100/VNMID/VNSML/VNDIAMOND/VNFINLEAD/VNFINSELECT/VNXALL family), not just
+  the 10. Tests: each sector idx → prices rejects (unchanged) + both index fns give the new diagnostic
+  asserting NO "prices.history"/"for stocks"; headline indices still serve (regression); HNX alias still
+  serves; unknown symbol still routes to prices; add the 10 to the routing regression matrix. Serving
+  sector-index HISTORY = separate deferred feature (note in close comment). **Process: TDD → reviewer
+  LEAD review (NOT Codex×2 — localized error-path fix).**
 - **#176 — delisted/phantom trailing-tail (HIGH; reviewer VERIFIED, spec
   review-202606201601-issue176-delisted-phantom-tail-VERIFIED.md). QUEUED BEHIND the #157 base-layer
   fixes.** Multi-source (vps + vndirect) trailing run of zero-volume O=H=L=C "phantom" bars after a
