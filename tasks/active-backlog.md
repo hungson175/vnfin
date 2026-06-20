@@ -18,7 +18,10 @@ _Last synced: 2026-06-20 ~17:30 +07_
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
 > `aa72dca` per-model_type itemcode map + `0a28339` reviewer cosmetics; Codex×2 APPROVE review-202606201727;
 > #157 commented, **stays OPEN for the metrics leg**). Q1 probe PASS (VPB/ACB) + provenance `a01d3da`.
-> **Now (WIP): #176 phantom-tail code** (design approved review-202606201703; token `trailing_zero_volume_tail`).
+> **Now (IN REVIEW): #176 phantom-tail code** committed `068d919` (local master, NOT pushed) — sent to
+> reviewer for Codex×2 (handoff `/tmp/vnfin-176-phantom-tail-handoff-20260620.md`). Self-verified via
+> implement→5-skeptic adversarial workflow (4/5 clean, 1 low test-weakness fixed); full suite green,
+> gates pass, clean-room clean. Awaiting APPROVE → push to master + close #176.
 
 ---
 
