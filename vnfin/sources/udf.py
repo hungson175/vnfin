@@ -130,7 +130,7 @@ class UDFSource(HttpDataSource, PriceSource):
                 raise EmptyData(f"{self.name}: status={status}")
             raise InvalidData(f"{self.name}: unexpected UDF status {status!r}")
 
-        bars = [b for b in self._build_bars(data) if lo <= b.time <= hi]
+        bars = [b for b in self._build_bars(data, interval) if lo <= b.time <= hi]
         if not bars:
             raise EmptyData(f"{self.name}: no bars in requested range")
 
@@ -147,7 +147,7 @@ class UDFSource(HttpDataSource, PriceSource):
             fetched_at_utc=datetime.now(timezone.utc),
         )
 
-    def _build_bars(self, data) -> list[PriceBar]:
+    def _build_bars(self, data, interval) -> list[PriceBar]:
         # Required OHLC arrays must be present and list/tuple-like. Scalars,
         # strings, bytes, and None must raise InvalidData, never a raw TypeError.
         required = ("t", "o", "h", "l", "c")
@@ -181,12 +181,15 @@ class UDFSource(HttpDataSource, PriceSource):
 
         bars: list[PriceBar] = []
         # Issue #66/#162: duplicate detection. Equity (default) keys by EXACT timestamp and
-        # raises on ANY duplicate (#66). Index D1 sources opt in (_DEDUPE_IDENTICAL_DUPLICATE_BARS)
-        # to "one bar per CALENDAR DATE": key by tm.date() and compare OHLCV+volume ignoring the
-        # intraday timestamp — identical -> dedupe (keep first); conflicting -> raise. UDFSource is
-        # D1-only (SUPPORTED == {Interval.D1}), so the index opt-in is inherently the D1 path.
+        # raises on ANY duplicate (#66). Index sources opt in (_DEDUPE_IDENTICAL_DUPLICATE_BARS)
+        # to "one bar per CALENDAR DATE" — but ONLY for D1: key by tm.date() and compare
+        # OHLCV+volume ignoring the intraday timestamp (identical -> dedupe keep-first;
+        # conflicting -> raise). For intraday index intervals (e.g. H1) two bars legitimately
+        # share a calendar date, so date-keying would wrongly collapse them — keep exact-timestamp
+        # behavior there. (Index adapters support intraday via their equity base's SUPPORTED set;
+        # the base UDFSource default is D1-only but subclasses may widen it.)
         seen: dict = {}  # key (calendar date | exact timestamp) -> PriceBar
-        dedup_by_date = self._DEDUPE_IDENTICAL_DUPLICATE_BARS
+        dedup_by_date = self._DEDUPE_IDENTICAL_DUPLICATE_BARS and interval is Interval.D1
         self._dedup_occurred = False  # Issue #162: set if an identical same-date dup was deduped
         for i in range(n):
             try:

@@ -323,6 +323,30 @@ def test_index_same_date_different_timestamp_conflicting_raises():
         s.get_history("VNINDEX", Interval.D1, *WIDE)
 
 
+def test_index_h1_same_date_different_timestamp_not_collapsed():
+    # #162 must NOT collapse intraday: two H1 bars on the same calendar date at different
+    # hours are distinct and must both survive (date-dedupe is D1-only; no daily warning).
+    rows = [
+        (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+        (_T_0611_B, 1008.0, 1018.0, 1004.0, 1016.0, 115_000_000),  # same date, later hour
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    h = s.get_history("VNINDEX", Interval.H1, *WIDE)
+    assert len(h.bars) == 2  # both intraday bars kept
+    assert "deduped_duplicate_daily_index_bars" not in h.warnings
+
+
+def test_index_h1_exact_duplicate_timestamp_raises():
+    # Non-D1 keeps exact-timestamp keying + #66 raise-on-any-duplicate (no date dedupe).
+    rows = [
+        (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+        (_T_0611_A, 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),  # exact same timestamp
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    with pytest.raises(InvalidData, match="duplicate observation timestamp"):
+        s.get_history("VNINDEX", Interval.H1, *WIDE)
+
+
 def test_index_conflicting_duplicate_triggers_failover_to_next_source():
     # vps returns a CONFLICTING-duplicate payload (-> InvalidData in the source path);
     # the failover client must record that failed attempt and serve the clean ssi source.
