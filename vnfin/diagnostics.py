@@ -18,9 +18,11 @@ Public API::
     vnfin.diagnostics.source_capabilities()
     vnfin.diagnostics.explain_world_gold_history(date(2024, 1, 1), date(2024, 1, 7))
     vnfin.diagnostics.explain_index_constituents("VN30")
+    vnfin.diagnostics.explain_fx_coverage("USD", "VND", date(2000, 1, 1), date(2024, 1, 1))
 
-This first version focuses on the two source-limited legs raised by #145: world-gold
-daily history and index constituents.
+This started with the two source-limited legs raised by #145 (world-gold daily history and
+index constituents) and now also covers FX-history coverage (#159: annual USD/VND via World
+Bank ``PA.NUS.FCRF``).
 """
 from __future__ import annotations
 

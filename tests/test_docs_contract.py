@@ -268,6 +268,7 @@ def test_fx_docs_do_not_claim_fx_has_no_history():
     fx_doc_files = [
         "docs/ai-usage.md",
         "skills/vnfin/reference/domains.md",
+        "skills/vnfin/SKILL.md",
         "docs/architecture/data-domains.md",
         "docs/architecture/maintainer-workflow.md",
         "vnfin/fx/__init__.py",
@@ -275,8 +276,8 @@ def test_fx_docs_do_not_claim_fx_has_no_history():
     # FX-specific denials of history. These phrasings were the stale ones and do NOT occur
     # in gold's legitimate "spot only" rows (gold uses bare "spot only", never these).
     forbidden = re.compile(
-        r"no history in v0\.2|no historical fx|spot/current only|"
-        r"history deferred to a future issue",
+        r"fx has \*?\*?no\*?\*? ?history|no history in v0\.2|no historical fx|"
+        r"spot/current only|history deferred to a future issue",
         re.I,
     )
     forbidden_offenders = []

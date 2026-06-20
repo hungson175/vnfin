@@ -135,9 +135,11 @@ provenance explicitly:
 - This matches the library-wide data-use posture (README data-use note): `vnfin` is an API
   *client*; redistributing raw provider data may require the provider's licence.
 
-## Open question for reviewer
+## Resolved questions
 
-1. Is a single mid `rate` (+ optional bid/ask) the right minimal shape, or do you want
-   Buy/Transfer/Sell modeled explicitly? (I lean: mid `rate` from VCB `Transfer` / open-er-api
-   direct, with optional `bid`/`ask`, to keep the cross-source contract uniform.)
-2. OK to keep FX **out** of `TimeSeriesResult`/`to_dataframe()` for v0.2 (it's point-in-time)?
+1. **Quote shape:** RESOLVED — spot `FXRate` carries a single mid `rate` plus optional `bid`/`ask`
+   (VCB `Transfer` / open-er-api direct), keeping the cross-source contract uniform.
+2. **Spot vs series:** RESOLVED — spot `FXRate` stays a flat point-in-time quote (no `TimeSeriesResult`
+   /`to_dataframe()`). Historical FX ships separately as `FXHistory(TimeSeriesResult)` via
+   `vnfin.fx.history()` (issue #159; see [`fx-history.md`](fx-history.md)) — that is where the
+   series shape + `to_dataframe()` live.

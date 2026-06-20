@@ -1,6 +1,9 @@
 # Design — historical FX data primitives (#159)
 
-**Status:** DESIGN — reviewer gate (must be APPROVED before any FX-history adapter code).
+**Status:** IMPLEMENTED — design APPROVED (review-202606201033) and shipped. v1 = `vnfin.fx.history()`
+(annual USD/VND via World Bank `PA.NUS.FCRF`) + `FXHistory`/`FXPoint` + `vnfin.diagnostics.explain_fx_coverage`.
+Monthly (IMF/DBnomics) and non-USD cross-quotes remain deferred to v2. The analysis below is retained
+as the design record.
 **Scope:** add **historical** foreign-exchange time series + capability diagnostics, alongside the
 existing **spot/current** `vnfin.fx` (see [`docs/design/fx-sources.md`](fx-sources.md)). v1 is
 **annual, no-key, official-source** FX history — the deterministic data primitive a Vietnam-based
@@ -14,9 +17,9 @@ Bank adapter is already integrated and live-verified (2026-06-18). FX-source res
 
 ## 1. Why now, and the key insight
 
-The current `vnfin.fx` is deliberately **spot-only** — `fx-sources.md` lists "no historical FX in
-v0.2" as a known limitation, deferring it to "a future BYOK enhancement". #159 closes that gap with
-a **no-key** path that already exists in the codebase:
+Before #159, `vnfin.fx` was **spot-only** — `fx-sources.md` had listed historical FX as a known
+v0.2 limitation, deferring it to a future enhancement. #159 closed that gap (spot `get_rate` is
+unchanged; `history()` is the new sibling) with a **no-key** path that already existed in the codebase:
 
 > **The World Bank Indicators API already serves official historical FX, and we already have a
 > battle-tested clean-room adapter for it (`WorldBankMacroSource`).**
@@ -268,16 +271,15 @@ USD/VND band (e.g. last actual within 15,000–40,000) and ascending annual date
 - [x] Source feasibility table (§3).
 - [x] Test matrix — offline synthetic + opt-in live (§8).
 - [x] Explicit scope exclusions (§2).
-- [ ] **No implementation code** until the reviewer approves this design.
+- [x] **Implemented** (design APPROVED review-202606201033; shipped — see Status above).
 
-## 10. Open questions for the reviewer
+## 10. Resolved questions (reviewer design gate review-202606201033)
 
-1. **Module placement:** `FXHistory`/`FXPoint` in a new `vnfin/fx/history_models.py` + adapter in
-   `vnfin/fx/history_worldbank.py`, reusing `WorldBankMacroSource` by composition — OK? (I lean yes;
-   keeps the FX domain coherent while not duplicating WB parsing.)
-2. **`source` label:** `"worldbank_fx"` to distinguish from the macro `"worldbank"` source, or reuse
-   `"worldbank"`? (I lean `"worldbank_fx"` for clear FX provenance.)
-3. **`rate_for_year(year)` sugar:** include the year-convenience accessor over the exact-match rule,
-   or ship only `rate_on(date)` in v1? (I lean: include it — annual data makes year-keying natural.)
-4. **v2 scope confirmation:** agree monthly (IMF/DBnomics) and non-USD cross-quotes are explicitly
-   v2, gated on a separate clean-room terms+convention check?
+1. **Module placement:** RESOLVED — `FXHistory`/`FXPoint` live in `vnfin/fx/history_models.py`; the
+   adapter `WorldBankFXHistorySource` in `vnfin/fx/history_worldbank.py` reuses `WorldBankMacroSource`
+   by composition (no parser duplication).
+2. **`source` label:** RESOLVED — `"worldbank_fx"` (distinct from the macro `"worldbank"` source).
+3. **`rate_for_year(year)` sugar:** RESOLVED — included as exact sugar over `rate_on(date(year,1,1))`
+   (int-non-bool 1..9999 only; no fill/interpolation).
+4. **v2 scope:** RESOLVED — monthly (IMF/DBnomics) and non-USD cross-quotes are explicitly v2, gated
+   on a separate clean-room terms + convention + alignment review.

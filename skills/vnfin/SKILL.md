@@ -41,7 +41,8 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
    failover client refuses to mix/relabel units.
 4. **`start`/`end` are required for history** (`prices.history`, `indices.index_history`,
    `gold ...get_history`) and validated **before any network call** (→ `InvalidData`/`VnfinError`).
-   FX has **no history** (single current quote).
+   FX has **two shapes**: `fx.get_rate()`/`FXRate` = spot/current quote; `fx.history()`/`FXHistory`
+   = **annual USD/VND history** (World Bank `PA.NUS.FCRF`, no-key).
 5. **`.to_dataframe()` needs the `pandas` extra**; the typed dataclasses work without it.
 
 ## Domain cheat-sheet
