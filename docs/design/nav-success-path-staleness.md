@@ -1,144 +1,166 @@
-# Design — Success-path NAV staleness warning (#172-RESIDUAL)
+# Design — Success-path NAV end-gap warning (#172-RESIDUAL)
 
-**Status:** DESIGN (awaiting `vnfin-oss-reviewer` design-check before code). TDD-first when approved.
-**Relates to:** #172 (shipped `vnfin.exceptions.StaleData` for the *failure* path). This is the *success*-path residual.
+**Status:** APPROVED_WITH_NOTES (reviewer design-check ×2, review-202606201803). TDD-first.
+**Relates to:** #172 (shipped `vnfin.exceptions.StaleData` for the *failure* path). This is the *success*-path
+residual. **Follow-up:** `FundList.nav` per-fund as-of is filed as **#181** (out of scope here, §7).
 
 ## 1. Problem
 
-`#172` added `StaleData` (a subclass of `EmptyData`) raised by `FmarketFundSource.nav_history()`
+`#172` added `StaleData` (subclass of `EmptyData`) raised by `FmarketFundSource.nav_history()`
 (`vnfin/funds/fmarket.py:297`) when the **whole** NAV history ends *before* the requested window
 (`max_navdate < from_date`) — a stale/closed feed that returns nothing usable.
 
-The **residual** is the opposite, quieter failure: `nav_history(...)` **succeeds** (the series reaches into
-the window) but its **latest** observation is old — the fund's feed is delayed, paused, or the fund has
-gone dormant — and today the returned `NavHistory` carries **no staleness signal at all**. A NAV-driven
-metric (return, drawdown, "current value") silently computes on a stale tail. The price side already warns
-on the analogous case (`partial_end_coverage`, `vnfin/client.py:244`); funds do not.
+The **residual** is the quieter failure: `nav_history(...)` **succeeds** (the series reaches into the
+window) but its **latest** observation is old — the feed is delayed, paused, or the fund dormant — and the
+returned `NavHistory` carries **no signal at all**. A NAV-driven metric (return, drawdown, "current
+value") silently computes on a stale tail. The price side already warns on the analogue
+(`partial_end_coverage`, `vnfin/client.py:244`); funds do not.
 
 `NavHistory.warnings: tuple[str, ...]` already exists and is already populated (the dedup warning,
 `vnfin/funds/fmarket.py:302`), so a soft warning needs **no schema change** — only a new diagnostic.
+
+Complementarity with `StaleData` is structurally clean: the failure path is the *no usable points* branch
+(`raise StaleData`), this warning is the *else* branch (points exist, judge the tail) — they cannot both
+fire.
 
 ## 2. The trap — NAV cadence is NOT the stock trading calendar
 
 The obvious fix (reuse the price `partial_end_coverage` logic keyed on
 `calendar.expected_latest_trading_day`) is **wrong** for funds:
 
-- Stocks trade **every** trading day, so "last bar > 7d before the expected latest trading day" is a clean
-  staleness signal.
-- Fund **NAV publication cadence varies by fund**: large equity funds publish ~daily, but many **bond and
-  balanced funds** (now in scope since #173) publish **weekly or twice-monthly**. A weekly-NAV fund whose
-  latest NAV is 6 days old is **perfectly fresh** — a stock-trading-day expectation would emit a
-  false-positive `partial_end_coverage` for it every single day except publication day.
+- Stocks trade **every** trading day, so "last bar > 7d before the expected latest trading day" is clean.
+- Fund NAV cadence **varies by fund**: large equity funds publish ~daily, but many **bond and balanced
+  funds** (in scope since #173) publish **weekly or twice-monthly**. A weekly-NAV fund whose latest NAV is
+  6–8 days old is **fresh** — a stock-trading-day expectation would false-positive it almost every day.
 
 We must not hardcode which funds are weekly. The robust, self-calibrating signal is **cadence-relative**:
-infer the fund's typical inter-NAV gap **from the returned series itself**, and warn only when the latest
-point is older than a multiple of that fund's own cadence.
+infer the fund's typical inter-NAV gap **from the returned series**, and warn only when the latest point is
+older than a multiple of that fund's own cadence.
 
-## 3. Approach — cadence-relative staleness on the `nav_history()` success path
+## 3. Approach — cadence-relative end-gap on the `nav_history()` success path
 
-On a **successful** `nav_history()` return (no `StaleData` raised; `points` non-empty, ascending,
-deduped), compute a soft staleness warning from the data already in hand. Append it to
-`NavHistory.warnings`. **Never fabricate `now()`** in the result; `today` is an explicit, injectable
-reference date (deterministic in tests) used only for the comparison, not stored.
+On a **successful** `nav_history()` return (no `StaleData`; `points` non-empty, ascending, deduped),
+compute a soft warning from the data in hand and append it to `NavHistory.warnings`.
 
-### Algorithm
+**Cadence is inferred over a TRAILING window of the most recent diffs, not the whole series.** A fund that
+ran daily for years then switched to weekly keeps a whole-series median gap ≈ 1 → threshold 7 → a normal
+weekly gap (7–10d) **false-positives**. The trailing window tracks the *current* publication regime. The
+#173 bond/balanced funds are exactly the at-risk population.
+
+### Algorithm (`today` is an injected `date`, never `datetime.now()`; never written to the result)
 
 ```
-reference = to_date if (to_date is not None and to_date < today) else today
-# historical window → measure vs its end; open/now window → measure vs today (can't expect NAV > today)
+reference = min(to_date, today) if to_date is not None else today
+# open/now window → today (can't expect NAV beyond today); past window → its end.
 
 gap_days = (reference - points[-1].date).days
 if gap_days <= 0:
-    return ()                      # series reaches the window end → fresh
+    return ()                                  # series reaches the window end → fresh
 
-# infer the fund's own cadence from consecutive NAV dates (calendar days)
 if len(points) >= 2:
-    diffs = [(points[i+1].date - points[i].date).days for i in range(len(points)-1)]
-    typical_gap = max(1, median(diffs))   # robust to holiday/weekend outliers
-    threshold = max(_STALE_NAV_GAP_FACTOR * typical_gap, _STALE_NAV_MIN_DAYS)
+    diffs = [(points[i+1].date - points[i].date).days for i in range(len(points) - 1)]
+    window = diffs[-_NAV_END_GAP_CADENCE_WINDOW:]      # last N (all if fewer) — CURRENT regime
+    typical_gap = max(1, int(median(window)))          # robust to a single Tet/holiday outlier
+    threshold = max(_NAV_END_GAP_FACTOR * typical_gap, _NAV_END_GAP_MIN_DAYS)
 else:
-    typical_gap = None                    # single point: cadence unknown
-    threshold = _STALE_NAV_SINGLE_POINT_DAYS
+    typical_gap = None                                 # single point: cadence unknown
+    threshold = _NAV_END_GAP_SINGLE_POINT_DAYS
 
 if gap_days > threshold:
-    return (f"stale_nav: latest NAV {points[-1].date.isoformat()} is {gap_days}d before "
+    return (f"nav_end_gap: latest NAV {points[-1].date.isoformat()} is {gap_days}d before "
             f"{reference.isoformat()} (typical cadence ~{typical_gap}d; threshold {threshold}d) "
             f"— fund NAV feed may be delayed, paused, or the fund dormant",)
 return ()
 ```
 
-Proposed constants (Q3): `_STALE_NAV_GAP_FACTOR = 2`, `_STALE_NAV_MIN_DAYS = 7`,
-`_STALE_NAV_SINGLE_POINT_DAYS = 14`.
+Constants (Q3 ratified): `_NAV_END_GAP_FACTOR = 2`, `_NAV_END_GAP_MIN_DAYS = 7`,
+`_NAV_END_GAP_SINGLE_POINT_DAYS = 14`, `_NAV_END_GAP_CADENCE_WINDOW = 8`.
 
-Worked: a **daily** fund (typical_gap≈1) → threshold `max(2, 7)=7` → warns only when >7 calendar days
-stale (a holiday weekend never trips it). A **weekly** fund (typical_gap≈7) → threshold `max(14, 7)=14` →
-warns only when it has missed ~2 publications. No false positives on weekly funds; no missed staleness on
-daily funds.
+Worked: **daily** fund (trailing median ≈ 1) → threshold `max(2,7)=7` → warns only when >7 calendar days
+stale (a holiday weekend never trips it). **Weekly** fund (trailing median ≈ 7) → threshold `max(14,7)=14`
+→ warns only after ~2 missed publications. **Daily→weekly switch** → trailing median ≈ 7 → a fresh weekly
+tail does **not** warn. No false positives; daily funds going a week dark are still caught.
 
-Why **no** `expected_latest_trading_day` snap: the `max(…, _STALE_NAV_MIN_DAYS=7)` floor already absorbs
-weekend/holiday lag, so snapping `today` to a trading day buys nothing and re-imports the stock-calendar
-assumption we are deliberately avoiding.
+### Tet (Lunar New Year) — a TRUE positive, self-clearing (not a bug)
+
+Tet closes the market/funds ~1–2 weeks. Right after Tet a still-**daily** fund's latest NAV is ~9–12 days
+old → `gap_days > 7` → `nav_end_gap` **fires correctly** (the feed genuinely paused). `median` keeps the
+single long Tet diff from inflating `typical_gap`, so the warning is a true positive that **self-clears**
+once daily NAV resumes (`gap_days` drops back under 7). This is documented to pre-empt a "false positive
+after Tet" bug report — it is the intended, correct behaviour.
 
 ## 4. Warning message format
 
 Token-prefixed (matches `partial_end_coverage` / `trailing_zero_volume_tail` so callers can match
-programmatically), mechanical fact first, inferred cause in the human-detail tail:
+programmatically). The token is **mechanical** — `nav_end_gap` states the observed fact (a gap to the
+expected end); the *cause* ("may be delayed, paused, or dormant") stays in the human-detail tail. We do
+**not** reuse `partial_end_coverage` — a caller matching that token would wrongly assume the stock-calendar
+computation ran. (Same call as #176: `trailing_zero_volume_tail` over `stale_or_delisted_tail`.)
 
 ```
-stale_nav: latest NAV 2026-06-05 is 15d before 2026-06-20 (typical cadence ~1d; threshold 7d)
+nav_end_gap: latest NAV 2026-06-05 is 15d before 2026-06-20 (typical cadence ~1d; threshold 7d)
 — fund NAV feed may be delayed, paused, or the fund dormant
 ```
 
 ## 5. Implementation sketch
 
-- New pure helper `_nav_staleness_warning(points, to_date, today) -> tuple[str, ...]` (module-level or
-  staticmethod, mirroring `_coverage_warnings` / `_phantom_tail_warning`). `today` injected for
-  deterministic tests (reuse the existing VN-today source behind `_today_ymd()` as the production default).
+- New pure helper `_nav_end_gap_warning(points, to_date, today) -> tuple[str, ...]` (module-level or
+  staticmethod, mirroring `_coverage_warnings` / `_phantom_tail_warning`). **`today: date` is a required
+  param**, injected for deterministic tests; production passes the existing VN-today source (behind
+  `_today_ymd()`). The helper never calls `datetime.now()` and never writes `today` into the result —
+  `NavHistory.fetched_at_utc` stays the real fetch stamp.
 - Call it in `nav_history()` where `warnings` is assembled (`vnfin/funds/fmarket.py:302`), concatenating
-  after the existing dedup warning: `warnings = dedup_warnings + _nav_staleness_warning(points, hi, today)`.
+  after the existing dedup warning:
+  `warnings = dedup_warnings + _nav_end_gap_warning(points, hi, today)`.
 - Additive only: `NavHistory.warnings` already exists; no public-API signature change; surface snapshot
   untouched.
 
 ## 6. Test plan (synthetic JSON payloads, offline; TDD red-first; `tests/test_funds.py`)
 
-Reuse `_nav_history_payload` / `_capture_get` / window-aware fixtures (the #172 block, lines 1893–1976):
-- **Daily fund, stale tail** (latest NAV 15d before an open-ended/now window) → `stale_nav` warns; names
-  gap + cadence + threshold.
+Reuse `_nav_history_payload` / `_capture_get` / window-aware fixtures (the #172 block, lines 1893–1976).
+**All threshold tests pass an explicit `today` (deterministic) — never live `date.today()`.**
+- **Daily fund, stale tail** (latest NAV 15d before an open/now window) → `nav_end_gap` warns; names gap +
+  cadence + threshold.
 - **Daily fund, fresh** (latest NAV 1–2d old, weekend) → NO warning (under the 7d floor).
-- **Weekly fund, fresh** (cadence≈7, latest NAV 6d old) → NO warning (this is the false-positive the
-  stock-calendar approach would wrongly flag — the key regression test).
-- **Weekly fund, stale** (cadence≈7, latest NAV 20d old) → warns (missed ~2 publications).
-- **Historical window** (`to_date` well in the past, series reaches `to_date`) → NO warning
-  (`gap_days <= 0`).
+- **Weekly fund, fresh** (trailing cadence ≈ 7, latest NAV 8d old) → NO warning — the key regression that
+  the stock-calendar approach would wrongly flag.
+- **Weekly fund, stale** (cadence ≈ 7, latest NAV 20d old) → warns.
+- **Mid-series cadence change, fresh tail** (years of daily then a recent weekly tail, latest NAV ~6–8d
+  old) → NO warning — proves the trailing window (not whole-series median) governs; also folds in the
+  Tet-gap robustness.
+- **`gap_days == 0`** (latest NAV exactly == reference) → NO warning (boundary).
+- **`to_date == today`** and **future `to_date`** → reference clamps to today; behaves like the now-window.
+- **Historical window fully covered** (`to_date` in the past, series reaches it) → NO warning (NON-GOAL,
+  §7).
 - **Historical window, early-ending series** (series ends long before a past `to_date`) → warns vs
   `to_date`.
-- **Single-point series** → uses `_STALE_NAV_SINGLE_POINT_DAYS` fallback (one case each side of it).
+- **Single-point series** → `_NAV_END_GAP_SINGLE_POINT_DAYS` fallback (one case each side).
+- **Two-point weekend** (only diff is a 2–3d weekend gap) → fresh tail → NO warning.
 - **Coexists with dedup warning** — both present, no double-warn, dedup stays first.
-- **Never raises / never fabricates now()** — result `fetched_at_utc` untouched; deterministic `today`.
+- **Existing no-window stale-history test** — its returned `NavHistory` now carries `nav_end_gap`; add an
+  explicit warning-**presence** assertion (the result object changed; pin it).
+- **Never raises / never fabricates now()** — `fetched_at_utc` untouched; `today` injected.
 
-## 7. Out of scope for v1 (follow-ups)
+## 7. Out of scope / NON-GOALS
 
-- **`FundList` per-fund NAV staleness.** `Fund.nav: float` carries **no** as-of date
-  (`vnfin/funds/models.py:19`), so its freshness cannot be judged. Fixing it first needs an **additive**
-  `nav_as_of` field populated from the provider's per-fund nav date *if `list_funds` supplies one* (needs a
-  gated probe of the list endpoint). Tracked against the "typed results carry the provider's own as-of"
-  principle. Deferred.
-- **Per-point `NavPoint.as_of`** — NAV is a once-daily calendar observation with no intraday meaning;
-  retrofitting a per-point timestamp adds nothing. Not planned.
-- **Holiday-aware NAV calendar** — funds don't share one published calendar; cadence-relative inference
-  intentionally avoids needing it.
+- **Historical-window-fully-covered is a NON-GOAL.** When the caller asks for a past window and the series
+  reaches its end, there is nothing stale about it — `gap_days <= 0` returns no warning by design.
+- **`FundList` per-fund NAV staleness → filed as #181.** `Fund.nav: float` carries no as-of date
+  (`vnfin/funds/models.py:19`); judging its freshness first needs an **additive** `nav_as_of` field
+  populated from the provider's per-fund nav date *if `list_funds` supplies one* (gated probe). This is the
+  list-NAV half the reporter saw — tracked, not dropped. Deferred to #181.
+- **Per-point `NavPoint.as_of`** — NAV is a once-daily calendar observation with no intraday meaning; a
+  per-point timestamp adds nothing. Not planned.
+- **Holiday-aware NAV calendar** — funds share no published calendar; cadence-relative inference avoids
+  needing one.
 
-## 8. Open questions for the reviewer
+## 8. Reviewer decisions (ratified — design gate review-202606201803)
 
-- **Q1 (baseline — the critical choice):** ratify **cadence-relative** (infer typical gap from the
-  series; recommended, avoids weekly-fund false positives) vs. reuse the stock-calendar
-  `expected_latest_trading_day` (simpler, but false-positives weekly/biweekly funds) vs. a flat absolute
-  calendar-day tolerance (cadence-agnostic but blind to daily funds going a week stale)?
-- **Q2 (token):** `stale_nav` (proposed), or reuse `partial_end_coverage` for cross-domain consistency
-  (risks implying the same stock-calendar computation), or a more mechanical name (`nav_end_gap`)?
-- **Q3 (constants):** ratify `GAP_FACTOR=2`, `MIN_DAYS=7`, `SINGLE_POINT_DAYS=14`, and `median` (vs mode)
-  for typical-gap inference?
-- **Q4 (scope):** confirm v1 = `NavHistory` only; `FundList.nav` as-of is a separate probe+additive-field
-  follow-up (§7)?
-- **Q5 (reference date):** confirm staleness is measured vs `min(to_date, today)` so explicitly-historical
-  windows that the series fully covers never warn.
+- **Q1 (baseline):** **cadence-relative** — RATIFIED (stock-calendar provably false-positives the #173
+  weekly/bond funds daily).
+- **Q2 (token):** **`nav_end_gap`** (constant `_NAV_END_GAP`) — mechanical; NOT `stale_nav` (a
+  conclusion/cause word), NOT a reuse of `partial_end_coverage`.
+- **Q3 (constants):** `FACTOR=2`, `MIN_DAYS=7`, `SINGLE_POINT_DAYS=14`, `median` — RATIFIED; plus the
+  mandatory **trailing-window** `CADENCE_WINDOW=8` (most-recent diffs, all-if-fewer).
+- **Q4 (scope):** v1 = `NavHistory` only — CONFIRMED; `FundList.nav` as-of → **#181**.
+- **Q5 (reference date):** `reference = min(to_date, today)` (else `today`) — CONFIRMED.
