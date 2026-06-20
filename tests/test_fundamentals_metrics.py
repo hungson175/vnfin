@@ -1562,6 +1562,41 @@ def test_metrics_per_statement_source_error_is_non_fatal():
 
 
 # --------------------------------------------------------------------------- #
+# metrics() — M1/C1: a CHAIN-level AllSourcesFailed must NOT leak the per-source
+# failed-attempt trail onto the public StatementProvenance.detail / reason.
+# --------------------------------------------------------------------------- #
+def test_metrics_all_sources_failed_detail_is_trail_free():
+    # AllSourcesFailed.__str__ enumerates "name:reason" for every attempted
+    # source; surfacing it would contradict C1 (no attempt trail in v1) and the
+    # StatementProvenance docstring. The chain-level branch must reduce detail to
+    # a trail-free string. (Single-source SourceError detail stays verbatim.)
+    def _mk(name, token):
+        per = _stub_corp_for(name)
+
+        def _boom(symbol, period, is_bank, limit):
+            raise EmptyData(f"{name}_{token}")
+
+        per[StatementType.INCOME] = _boom
+        return _StubSource(name, per)
+
+    rep = metrics(
+        "TESTCO",
+        period="annual",
+        sources=[_mk("vndirect", "TOKENA"), _mk("cafef", "TOKENB")],
+    )[0]
+    inc = {s.statement: s for s in rep.statement_sources}[StatementType.INCOME]
+    assert inc.status is StatementCoverageStatus.SOURCE_ERROR
+    assert inc.detail == "AllSourcesFailed: upstream sources failed"
+    reason = rep.get("net_revenue").reason
+    assert reason == (
+        "statement income unavailable: AllSourcesFailed: upstream sources failed"
+    )
+    for leak in ("TOKENA", "TOKENB", "vndirect:", "cafef:", "all sources failed for"):
+        assert leak not in (inc.detail or "")
+        assert leak not in (reason or "")
+
+
+# --------------------------------------------------------------------------- #
 # metrics() — bank auto-detect (is_bank resolved from the OK report).
 # --------------------------------------------------------------------------- #
 def test_metrics_bank_auto_detect_from_report():

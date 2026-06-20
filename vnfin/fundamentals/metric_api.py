@@ -502,6 +502,9 @@ def _resolve_raw(
             REASON_MISSING_LINE_ITEM.format(code=code, statement=st_value),
         )
     # 5. AVAILABLE — build lineage from the full LineItem (B8, not via .get()).
+    #    No local finiteness guard on line.value: every LineItem.value is already
+    #    finite because coerce.parse_provider_float rejects inf/NaN at the parser
+    #    boundary (preserve that invariant if the parser boundary is refactored).
     mi = MetricInput(
         statement=st,
         item_code=code,
@@ -591,7 +594,10 @@ def _resolve_derived(
             ),
         )
     value = float(numerator.value) / den
-    # AVAILABLE derived must never be inf / NaN (guards above should ensure this).
+    # AVAILABLE derived must never be inf / NaN. Unreachable in practice: the
+    # upstream parser (coerce.parse_provider_float) rejects a non-finite numerator
+    # AND denominator before they reach a LineItem.value, and the denom guards
+    # above cover zero/negative — so this branch is purely defensive.
     if not math.isfinite(value):  # pragma: no cover - defensive
         return _unavailable(
             defn,
@@ -870,12 +876,22 @@ def _fetch_statement_result(
             timeout=timeout,
         )
     except (SourceError, AllSourcesFailed) as exc:
+        # C1: the public ``detail`` (-> StatementProvenance.detail and the
+        # MetricValue.reason "statement {s} unavailable: {detail}") must carry NO
+        # per-source failed-attempt trail. AllSourcesFailed.__str__ enumerates
+        # every attempted source + its reason, so on the chain-level branch we
+        # reduce to a trail-free string. A single-source SourceError carries no
+        # trail (it is the same text get_financials itself raises), so keep it.
+        if isinstance(exc, AllSourcesFailed):
+            detail = f"{type(exc).__name__}: upstream sources failed"
+        else:
+            detail = f"{type(exc).__name__}: {exc}"
         return StatementFetchResult(
             statement=statement,
             reports=(),
             status=StatementCoverageStatus.SOURCE_ERROR,
             source=None,
-            detail=f"{type(exc).__name__}: {exc}",
+            detail=detail,
         )
     reports = tuple(reports)
     succeeding = reports[0].source if reports else None
@@ -1001,7 +1017,8 @@ def explain_metric_coverage(
 
     Same 3-statement fetch as :func:`metrics` (NEVER ratios — B7,
     ``ratio_status`` is always ``not_requested``), but never raises on a
-    per-statement failure: it returns a :class:`MetricCoverage` whose ``periods``
+    *recoverable* per-statement failure (``SourceError``/``AllSourcesFailed``):
+    it returns a :class:`MetricCoverage` whose ``periods``
     is one :class:`PeriodCoverage` per fiscal_date (newest first), each carrying
     per-statement provenance, named-vs-generic item counts, unmapped codes, and
     every metric's availability + stable reason. Designed for a batch loop over a

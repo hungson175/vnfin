@@ -22,3 +22,4 @@ dist/
 bin/gh-maintainer
 bin/poll-and-nudge.sh
 state/
+.claude/
