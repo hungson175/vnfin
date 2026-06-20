@@ -620,3 +620,103 @@ def test_cache_distinguishes_nested_json_body_secrets():
     flat = repr(list(probe._cache.keys()))
     assert "ALPHA" not in flat
     assert "BETA" not in flat
+
+
+# --- D3 (#185): binary fetch (_request_bytes + binary= kwarg) ------------- #
+
+
+def test_request_bytes_returns_bytes_from_injected_stub():
+    """An injected stub returns raw bytes (e.g. an xlsx body); _request_bytes
+    forwards them unchanged with no text/JSON decode."""
+    raw = b"PK\x03\x04binary-xlsx-bytes"
+    probe = _Probe(http_get=_capture(raw))
+    out = probe._request_bytes(FAKE_URL)
+    assert out == raw
+    assert isinstance(out, (bytes, bytearray))
+
+
+def test_request_bytes_passes_three_positional_args_to_injected_stub():
+    """An INJECTED http_get keeps the legacy (url, params, headers) 3-arg shape —
+    no binary= kwarg is passed through to it (only the default fetcher gets that)."""
+    seen = {}
+
+    def _g(url, params, headers):  # exactly 3 positional, NO binary kwarg
+        seen.update(url=url, params=params, headers=headers)
+        return b"\x00\x01\x02"
+
+    probe = _Probe(http_get=_g)
+    out = probe._request_bytes(FAKE_URL, params={"s": "x"}, headers={"H": "1"})
+    assert out == b"\x00\x01\x02"
+    assert seen == {"url": FAKE_URL, "params": {"s": "x"}, "headers": {"H": "1"}}
+
+
+def test_request_bytes_transport_error_wrapped_as_source_unavailable():
+    probe = _Probe(http_get=_raising(ConnectionError("net down")))
+    with pytest.raises(SourceUnavailable):
+        probe._request_bytes(FAKE_URL)
+
+
+def test_request_bytes_rejects_non_bytes_result():
+    """If the stub hands back a str (not bytes) for a binary endpoint, that is a
+    contract violation -> InvalidData, never a silent text payload."""
+    probe = _Probe(http_get=_capture("not-bytes-but-text"))
+    with pytest.raises(InvalidData):
+        probe._request_bytes(FAKE_URL)
+
+
+def test_request_bytes_accepts_bytearray():
+    raw = bytearray(b"PK\x03\x04abc")
+    probe = _Probe(http_get=_capture(raw))
+    assert probe._request_bytes(FAKE_URL) == raw
+
+
+def test_default_http_get_returns_content_when_binary_true():
+    """The DEFAULT fetcher must honor binary=True by returning resp.content (bytes)
+    rather than resp.text. Exercised with a fake httpx response object (no network)."""
+    class _FakeResp:
+        text = "decoded-text"
+        content = b"raw-bytes"
+
+        def raise_for_status(self):
+            return None
+
+    class _FakeClient:
+        def __init__(self, *a, **k):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def get(self, url, params=None):
+            return _FakeResp()
+
+    import vnfin.transport as _t
+
+    class _FakeHttpx:
+        Client = _FakeClient
+
+        @staticmethod
+        def HTTPTransport(*a, **k):
+            return None
+
+    probe = _Probe()
+    import sys
+    saved = sys.modules.get("httpx")
+    sys.modules["httpx"] = _FakeHttpx
+    try:
+        assert probe._default_http_get(FAKE_URL, binary=True) == b"raw-bytes"
+        assert probe._default_http_get(FAKE_URL, binary=False) == "decoded-text"
+    finally:
+        if saved is not None:
+            sys.modules["httpx"] = saved
+        else:
+            del sys.modules["httpx"]
+
+
+def test_request_text_still_works_after_binary_addition():
+    """Regression: the existing text path is unchanged by the binary addition."""
+    probe = _Probe(http_get=_capture("plain text"))
+    assert probe._request_text(FAKE_URL) == "plain text"

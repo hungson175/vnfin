@@ -445,18 +445,31 @@ class HttpDataSource:
             self._cache[key] = (self._clock() + self._cache_ttl, text)
         return text
 
-    def _fetch_with_retry(self, url, params, headers, json_body):
+    def _fetch_with_retry(self, url, params, headers, json_body, binary=False):
         """Call ``http_get`` with bounded, jittered exponential backoff on transients.
 
-        Returns the response text. Non-transient errors (and transient errors after the
+        Returns the response body. Non-transient errors (and transient errors after the
         retry budget is exhausted) are wrapped as
         :class:`~vnfin.exceptions.SourceUnavailable`.
+
+        ``binary`` selects the binary (bytes) response for the **default** fetcher
+        (``resp.content`` instead of ``resp.text``). Only the default fetcher accepts a
+        ``binary=`` kwarg; an **injected** ``http_get`` (test stubs, signature
+        ``(url, params, headers[, json_body])``) does NOT, so ``binary`` is passed
+        through ONLY when the bound default method is in use — an injected stub simply
+        returns ``bytes`` for a binary endpoint, exactly as it returns ``str`` for text.
         """
+        # An injected stub never accepts ``binary=``; only the default fetcher does.
+        use_default = self._http_get is self._default_http_get
         attempt = 0
         while True:
             try:
                 if json_body is not None:
+                    if use_default:
+                        return self._http_get(url, params, headers, json_body, binary=binary)
                     return self._http_get(url, params, headers, json_body)
+                if use_default:
+                    return self._http_get(url, params, headers, binary=binary)
                 return self._http_get(url, params, headers)
             except Exception as exc:  # transport-level
                 # Retry only transient failures, and only while budget remains.
@@ -487,6 +500,27 @@ class HttpDataSource:
         capped = min(self._backoff_base * (2 ** attempt), self._backoff_max)
         return self._rand() * capped
 
+    def _request_bytes(self, url, params=None, headers=None) -> bytes:
+        """Fetch ``url`` and return the raw response **bytes** (no text/JSON decode).
+
+        For binary payloads (e.g. an ``.xlsx`` distribution). Issues a GET; any
+        transport-level error (network, timeout, non-2xx) is wrapped as
+        :class:`~vnfin.exceptions.SourceUnavailable` so callers/failover can recover.
+        The result must be ``bytes``/``bytearray`` — a non-binary body (a stub or
+        feed handing back ``str`` for a binary endpoint) is a contract violation and
+        raises :class:`~vnfin.exceptions.InvalidData`. There is **no caching** (a
+        single-shot large payload) and no JSON/text decode.
+
+        The injected ``http_get`` is invoked with the legacy 3-arg GET signature
+        (``url, params, headers``); only the default fetcher receives ``binary=True``.
+        """
+        body = self._fetch_with_retry(url, params, headers, None, binary=True)
+        if not isinstance(body, (bytes, bytearray)):
+            raise InvalidData(
+                f"{self._source_name}: expected binary response, got {type(body).__name__}"
+            )
+        return body
+
     def _request_json(self, url, params=None, headers=None, json_body=None):
         """:meth:`_request_text` then JSON-decode.
 
@@ -505,12 +539,14 @@ class HttpDataSource:
             raise InvalidData(f"{self._source_name}: non-JSON response") from exc
 
     # --- default client -------------------------------------------------- #
-    def _default_http_get(self, url, params=None, headers=None, json_body=None):  # pragma: no cover - network
+    def _default_http_get(self, url, params=None, headers=None, json_body=None, binary=False):  # pragma: no cover - network
         """Default transport: IPv4-forced httpx with a browser UA and timeout.
 
         GET by default; POST with ``json_body`` when supplied. ``headers`` is merged
         on top of the default ``User-Agent`` so callers can add ``Accept`` /
-        ``Content-Type`` without losing the UA.
+        ``Content-Type`` without losing the UA. ``binary=True`` returns ``resp.content``
+        (raw bytes) instead of ``resp.text`` so binary distributions (e.g. ``.xlsx``)
+        are fetched without a lossy text decode.
         """
         import httpx
 
@@ -524,4 +560,4 @@ class HttpDataSource:
             else:
                 resp = client.get(url, params=params)
             resp.raise_for_status()
-            return resp.text
+            return resp.content if binary else resp.text
