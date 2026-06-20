@@ -76,6 +76,42 @@ tm-send -s '=vnfin-oss' vnfin-oss \
 
 **List panes/roles:** `tm-send -s '=vnfin-oss-reviewer' --list`
 
+**Long-message rule (HARD — Boss directive 2026-06-20):** never send a long tm-send. A message
+longer than ~5 lines does **not** get submitted — it sits unsent in the input buffer. Keep every
+message to **3–5 lines**: put details (commit range, per-issue results, specs) in a committed file
+or `/tmp` handoff and reference that path. The reviewer is on **Codex**; rely on the `[tm-send]
+Message sent` confirmation (and the reviewer's reply) as delivery proof.
+
+## Execution model — orchestrate, don't do everything on the main agent (Boss directive 2026-06-20)
+
+**The main (this) agent is an ORCHESTRATOR + INTEGRATOR, not the implementer of every change.**
+Its job is intake → delegation → integration → review-routing. Push the actual coding down into
+sub-agents / worktrees so the main agent stays responsive to the reviewer and owns the merge.
+
+**Main-agent responsibilities (keep these here):**
+1. **Intake.** Receive filtered bug/feature specs from `vnfin-oss-reviewer` (the reviewer-routed
+   poller is the only source of new GitHub work — see Maintainership). Treat every incoming
+   reviewer message as a unit of work.
+2. **Record first.** Log each incoming spec in `tasks/active-backlog.md` before switching context.
+3. **Delegate implementation.** For each bug/feature/slice, spawn a sub-agent (fork) or a git
+   worktree to implement it TDD-first — run independent jobs in parallel (no write conflicts).
+   Trivial one-line docs/config edits may stay inline; anything non-trivial gets a sub-agent.
+4. **Integrate + integration-test.** Merge each sub-agent's branch/worktree back, then run the
+   **full suite + gates ON THE MERGED TREE** (a per-branch green is NOT enough — the merge must
+   be green). This is the main agent's core duty.
+5. **Route to the reviewer.** Send the design check before coding and the code review before push.
+   **Never skip `vnfin-oss-reviewer`** — no exceptions, even for small/"obvious" changes.
+6. **Push/close** only after reviewer approval + green merged tree; tags/releases escalate to Boss.
+
+**Sub-agent responsibilities:** implement exactly one scoped job TDD-first (fail-first regression
++ green), keep within scope, return a diff/summary — do **not** push, close issues, or message the
+reviewer (the main agent integrates and routes).
+
+**Reviewer-message handling loop:** reviewer spec in → record in backlog → (delegate to sub-agent
+/ worktree, or inline if trivial) → integrate + run integration tests on the merged tree → send to
+reviewer → on approval push + close + advance watermark. Always short tm-send messages (3–5 lines +
+a file reference; long messages do not send — see tm-send routing).
+
 ## Testing discipline
 
 TDD is mandatory — **write the failing test first, then the code** (Red → Green → Refactor). Follow the global reference `~/.claude/refs/testing.md` for coverage targets, test categories (normal / boundary / error / edge), and the VCR cassette strategy.
