@@ -35,8 +35,9 @@ print(len(yearly.bars), yearly.warnings)
 
 - Each aggregated bar is full **OHLC** per period (`open`=first, `high`=max, `low`=min,
   `close`=last day's close, `volume`=sum), labelled at the **last actual trading day** in the period.
-- **`'M'` = MONTH (`Interval.MN1`), never minute.** Resampling is daily → coarser only:
-  intraday (`M1`/`M5`/`M15`/`M30`/`H1`) is rejected (`UnsupportedInterval`).
+- **`'M'` = MONTH (`Interval.MN1`), never minute.** Resampling only produces coarser-than-daily
+  periods (`W1`/`MN1`/`Q1`/`Y1`); `D1` and the intraday intervals (`M1`/`M5`/`M15`/`M30`/`H1`) are
+  **unchanged** — served natively by the sources that support them (this feature is purely additive).
 - The network still fetches the full **daily** range — the win is the returned row count
   (10y → ~10 yearly / ~120 monthly rows), not fewer requests.
 - The result self-discloses: `warnings` always contains `resampled_from_d1`, and a

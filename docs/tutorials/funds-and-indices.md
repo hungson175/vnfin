@@ -75,7 +75,8 @@ print(monthly.value_unit, len(monthly.bars), monthly.warnings)  # still "points"
 Aggregation is full OHLC per period (`close` is the period-end level), labelled at the last actual
 trading day; the unit stays `points`. The series self-discloses with a `resampled_from_d1` warning
 (always) and a `resample_partial_period` warning when an edge period is incomplete (bars kept). The
-network still fetches the full daily range — the win is the returned row count. Intraday is rejected.
+network still fetches the full daily range — the win is the returned row count. `D1` and intraday are
+unchanged (index sources serve intraday natively — only `W1`/`MN1`/`Q1`/`Y1` are resampled).
 Resample is on `index_history` only for now; `index_history_stitched` stays D1.
 
 For a **long multi-year** window (e.g. a 10-year VNINDEX backtest) where a single source has one

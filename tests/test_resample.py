@@ -197,26 +197,48 @@ def test_index_resample_preserves_points_and_close_is_period_end():
 
 
 # --------------------------------------------------------------------------- #
-# 5. Intraday rejected on the daily-native path
+# 5. Intraday is NATIVELY served (#183 must-fix: resample must NOT remove the
+#    pre-existing native-intraday path — resample only the coarser-than-daily set).
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("iv", [Interval.M1, Interval.M5, Interval.M15, Interval.M30, Interval.H1])
-def test_apply_interval_rejects_intraday(iv):
-    def _should_not_fetch():
-        raise AssertionError("fetch_d1 must NOT be called for an intraday request")
+def test_apply_interval_passes_intraday_to_native_fetch(iv):
+    # Intraday is natively served by the sources; apply_interval must pass it through
+    # to fetch(interval) UNCHANGED (no resample, no rejection) — the source's supports()
+    # gate is the only thing that may reject a truly-unsupported interval.
+    captured = {}
+    sentinel = object()
 
-    with pytest.raises(UnsupportedInterval):
-        apply_interval(iv, date(2024, 1, 1), date(2024, 6, 30), _should_not_fetch)
+    def _fetch(requested):
+        captured["iv"] = requested
+        return sentinel
+
+    out = apply_interval(iv, date(2024, 1, 1), date(2024, 6, 30), _fetch)
+    assert out is sentinel  # native fetch result returned verbatim (not resampled)
+    assert captured["iv"] is iv  # fetched at the requested intraday interval, NOT D1
 
 
-def test_prices_history_rejects_intraday():
-    with pytest.raises(UnsupportedInterval):
-        vnfin.prices.history("FAKECORP", Interval.M5, date(2024, 1, 1), date(2024, 6, 30))
+def test_prices_history_serves_native_intraday():
+    # SSI (primary equity source) supports M5 -> native intraday fetch, no resample.
+    env = _ssi_envelope(_E2E_ROWS)
+    fake = lambda url, params, headers: env  # noqa: E731
+    h = vnfin.prices.history("FAKECORP", Interval.M5, date(2024, 1, 1), date(2024, 3, 31),
+                             http_get=fake)
+    assert h.interval is Interval.M5
+    assert RESAMPLED_FROM_D1 not in h.warnings  # native, not aggregated
+    assert len(h.bars) == len(_E2E_ROWS)  # raw bars, no period aggregation
 
 
-def test_index_history_rejects_intraday():
-    with pytest.raises(UnsupportedInterval):
-        vnfin.indices.index_history("VNINDEX", date(2024, 1, 1), date(2024, 6, 30),
-                                    interval=Interval.H1)
+def test_index_history_serves_native_intraday():
+    # Index sources inherit intraday support from their equity base (udf.py) -> H1 is
+    # served natively (unchanged from pre-#183), NOT rejected by the resample layer.
+    env = _bare_udf(_E2E_ROWS, symbol="VNINDEX")
+    fake = lambda url, params, headers: env  # noqa: E731
+    h = vnfin.indices.index_history("VNINDEX", date(2024, 1, 1), date(2024, 3, 31),
+                                    interval=Interval.H1, http_get=fake)
+    assert h.interval is Interval.H1
+    assert h.value_unit == "points"
+    assert RESAMPLED_FROM_D1 not in h.warnings
+    assert len(h.bars) == len(_E2E_ROWS)
 
 
 # --------------------------------------------------------------------------- #
@@ -224,7 +246,7 @@ def test_index_history_rejects_intraday():
 # --------------------------------------------------------------------------- #
 def test_d1_passthrough_unchanged():
     daily = _daily([_bar("2024-01-02", 10, 12, 9, 11, 100)], warnings=("preexisting",))
-    out = apply_interval(Interval.D1, date(2024, 1, 1), date(2024, 1, 31), lambda: daily)
+    out = apply_interval(Interval.D1, date(2024, 1, 1), date(2024, 1, 31), lambda iv: daily)
     assert out is daily  # passthrough is the exact object the thunk returned
     assert RESAMPLED_FROM_D1 not in out.warnings
     assert out.interval is Interval.D1
@@ -246,7 +268,7 @@ def test_resampled_results_self_disclose(iv):
 
 
 def test_apply_interval_resamples_for_coarse():
-    h = apply_interval(Interval.MN1, date(2024, 1, 1), date(2025, 1, 31), lambda: _MULTI)
+    h = apply_interval(Interval.MN1, date(2024, 1, 1), date(2025, 1, 31), lambda iv: _MULTI)
     assert h.interval is Interval.MN1
     assert RESAMPLED_FROM_D1 in h.warnings
 

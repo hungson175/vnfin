@@ -66,27 +66,25 @@ def resolve_interval(value) -> Interval:
     )
 
 
-def apply_interval(value, start, end, fetch_d1: Callable[[], PriceHistory]) -> PriceHistory:
+def apply_interval(value, start, end, fetch: Callable[[Interval], PriceHistory]) -> PriceHistory:
     """Resolve ``value`` and return the requested series.
 
-    * ``D1`` -> ``fetch_d1()`` unchanged (back-compat passthrough);
-    * ``W1``/``MN1``/``Q1``/``Y1`` -> :func:`resample_history` of ``fetch_d1()``;
-    * intraday (``M1``/``M5``/``M15``/``M30``/``H1``) -> :class:`UnsupportedInterval`
-      *before any fetch* — a daily-native series cannot be upsampled to intraday.
+    * ``W1``/``MN1``/``Q1``/``Y1`` (coarser than daily, NOT natively served) ->
+      :func:`resample_history` of a ``fetch(Interval.D1)`` daily series;
+    * everything else — ``D1`` AND the intraday intervals (``M1``/``M5``/``M15``/``M30``/
+      ``H1``) — -> ``fetch(interval)`` UNCHANGED. These are served **natively** by the
+      sources that support them, so #183 adds resampling *without removing any pre-existing
+      native path* (it is purely additive). A truly-unsupported interval is rejected by the
+      source's own ``supports()`` capability gate (``UnsupportedInterval``), exactly as
+      before this feature — the resample layer never rejects intraday.
 
-    ``start``/``end`` are the requested window (used only for partial-period detection).
+    ``fetch`` is called with the interval to fetch; ``start``/``end`` are the requested
+    window (used only for partial-period detection on a resampled result).
     """
     interval = resolve_interval(value)
-    if interval is Interval.D1:
-        return fetch_d1()
     if interval in _RESAMPLE_INTERVALS:
-        return resample_history(fetch_d1(), interval, start, end)
-    # Intraday (or any other non-resampleable interval): reject without fetching.
-    raise UnsupportedInterval(
-        f"interval {interval.value} is not supported for this daily-native series; "
-        f"intraday (M1/M5/M15/M30/H1) cannot be resampled from a daily series. "
-        f"Use D1 (daily) or a coarser period (W1/MN1/Q1/Y1)."
-    )
+        return resample_history(fetch(Interval.D1), interval, start, end)
+    return fetch(interval)
 
 
 # --------------------------------------------------------------------------- #

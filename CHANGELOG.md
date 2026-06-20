@@ -19,8 +19,11 @@ All notable changes to `vnfin` are documented here. The format follows
   `Q1="1Q"` (calendar quarter) and `Y1="1Y"` (calendar year)**, resample-only (each source's
   `supports()` gates native serving, so crypto/world sources cleanly reject them). The pandas alias
   **`'M'` maps to `MN1` (MONTH), never `M1` (one minute)** — the single highest-risk mapping, with a
-  dedicated test. Intraday intervals (`M1/M5/M15/M30/H1`) are rejected with `UnsupportedInterval` (a
-  daily-native series cannot be upsampled to intraday) **before any network fetch**. Resampled results
+  dedicated test. **`D1` and the intraday intervals (`M1/M5/M15/M30/H1`) are unchanged** — they pass
+  straight through to the native fetch (the resample layer only handles the coarser-than-daily
+  `W1`/`MN1`/`Q1`/`Y1`, which the VN sources do not serve natively). #183 introduces **no** behavior
+  change for existing daily or intraday callers — it is purely additive; a truly-unsupported interval
+  is still rejected by the source's own capability gate (`UnsupportedInterval`), as before. Resampled results
   are never-silent: `warnings` always contains `resampled_from_d1` (the series discloses it is
   aggregated, not native), plus a `resample_partial_period` warning when the first/last emitted bar
   covers an incomplete calendar period relative to the requested window (the partial bars are KEPT,

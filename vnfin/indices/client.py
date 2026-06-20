@@ -137,7 +137,7 @@ class IndexClient:
             interval,
             start,
             end,
-            lambda: self._client.get_history(symbol, Interval.D1, start, end),
+            lambda iv: self._client.get_history(symbol, iv, start, end),
         )
 
     def index_history_stitched(

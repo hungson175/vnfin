@@ -94,7 +94,7 @@ def history(
     """
     c = client(max_attempts=max_attempts, http_get=http_get, timeout=timeout)
     return apply_interval(
-        interval, start, end, lambda: c.get_history(symbol, Interval.D1, start, end)
+        interval, start, end, lambda iv: c.get_history(symbol, iv, start, end)
     )
 
 
