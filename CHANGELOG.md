@@ -25,6 +25,14 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Crypto long-window partial coverage** — `vnfin.crypto` daily history no longer silently accepts a
+  primary-source result that does not span the requested bounded window. The failover client now
+  validates requested-window coverage: a source that fully covers (`first_bar.date <= start` and
+  `last_bar.date >= end`) wins; a partial primary is not accepted as a clean success so backups get a
+  chance; if no source fully covers, the **best-available** series (max in-window overlap, then source
+  order) is returned with an explicit `partial_coverage: requested <start>..<end>, returned
+  <first>..<last>` warning instead of a misleading full-success. Unbounded requests are unchanged.
+  ([#169](https://github.com/hungson175/vnfin/issues/169))
 - **Price/index namespace type confusion** — the price and index namespaces now **fail loud** on the
   wrong asset type instead of silently returning wrong-typed data.
   `vnfin.prices.history()` (and `vnfin.liquidity` by inheritance) reject a **market-index** symbol

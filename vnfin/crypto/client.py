@@ -25,6 +25,7 @@ that source is skipped by the capability guard without a network call.
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 from datetime import date, datetime
 
@@ -39,9 +40,9 @@ from .._contracts import (
     row_object_and_aware_datetime_reason,
     strictly_ascending_reason,
 )
-from ..exceptions import AllSourcesFailed, InvalidData, UnsupportedInterval
+from ..exceptions import AllSourcesFailed, InvalidData, SourceError, UnsupportedInterval
 from ..failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
-from ..models import Interval
+from ..models import Interval, SourceAttempt
 from ..validation import validate_date_range, validate_non_empty_string
 
 # Default crypto failover chain (deepest/widest first).
@@ -56,6 +57,50 @@ def default_crypto_sources(http_get=None, timeout: float = 25.0):
 def _crypto_unit(source):
     """Declared crypto unit/currency of a source (``"USD"`` for the default chain)."""
     return getattr(source, "unit", None)
+
+
+#: Issue #169: exact warning emitted on a returned crypto history that does NOT fully cover the
+#: requested bounded window (after failover-first found no fully-covering source). It names the
+#: requested start/end AND the returned first/last dates so the gap is explicit, never silent.
+#: Tests bind this verbatim. ``open`` marks an unbounded side (start or end not requested).
+_PARTIAL_COVERAGE_WARNING_TEMPLATE = (
+    "partial_coverage: requested {start}..{end}, returned {first}..{last}"
+)
+
+
+def _partial_coverage_warning(sd, ed, first: date, last: date) -> str:
+    """Format the exact #169 ``partial_coverage`` warning for a best-available result."""
+    return _PARTIAL_COVERAGE_WARNING_TEMPLATE.format(
+        start=sd.isoformat() if sd is not None else "open",
+        end=ed.isoformat() if ed is not None else "open",
+        first=first.isoformat(),
+        last=last.isoformat(),
+    )
+
+
+def _as_request_date(val):
+    """Coerce a request bound (date | datetime | None) to a plain ``date`` (or ``None``)."""
+    if val is None:
+        return None
+    if hasattr(val, "date"):
+        return val.date()
+    return val if isinstance(val, date) else None
+
+
+def _coverage_facts(bars, sd, ed):
+    """Return ``(fully_covers, overlap, first_date, last_date)`` for a bounded request.
+
+    ``bars`` is the validated, strictly-ascending bar tuple. ``fully_covers`` requires the series to
+    reach the requested start AND end (an unbounded side imposes no requirement). ``overlap`` is the
+    number of bars whose date falls inside the requested window — the best-available ranking key.
+    """
+    dates = [b.time.date() for b in bars]
+    first, last = dates[0], dates[-1]
+    fully = (sd is None or first <= sd) and (ed is None or last >= ed)
+    overlap = sum(
+        1 for d in dates if (sd is None or d >= sd) and (ed is None or d <= ed)
+    )
+    return fully, overlap, first, last
 
 
 # Quotes recognized by the crypto adapters, longest-first, so stripping a known
@@ -165,7 +210,81 @@ class FailoverCryptoClient:
             )
         if start is not None or end is not None:
             validate_date_range(start, end, name="crypto klines", allow_none=True)
+            # Issue #169: a BOUNDED request needs requested-window coverage validation +
+            # failover-first + best-available, which the first-accepted-wins engine cannot express
+            # (it would AllSourcesFailed when every source is partial). Orchestrate here.
+            return self._run_with_coverage(symbol, interval, start, end)
+        # Unbounded: no coverage check — preserve the existing engine behavior exactly.
         return self._engine.run(symbol, interval, start, end)
+
+    def _run_with_coverage(self, symbol, interval, start, end) -> CryptoHistory:
+        """Issue #169 (option B): failover-first, then best-available + ``partial_coverage`` warning.
+
+        1. A source whose VALID series fully covers the requested window wins immediately (no warning).
+        2. A partial (but otherwise valid) series is collected, not accepted as a clean success, so
+           later sources still get a chance.
+        3. If no source fully covers, return the best-available valid series (max requested-day
+           overlap, then source order) with an exact ``partial_coverage`` warning.
+        Hard guards (type/identity/unit/value/ascending) still hard-reject; a series with ZERO
+        in-window bars is a failed attempt (not a misleading best-available). No valid series at all
+        -> ``AllSourcesFailed`` (same as the engine).
+        """
+        sd, ed = _as_request_date(start), _as_request_date(end)
+        capable = [s for s in self._engine.sources if s.supports(interval)]
+        if not capable:
+            raise UnsupportedInterval(
+                f"no configured crypto source supports interval "
+                f"{getattr(interval, 'value', interval)}"
+            )
+        attempts: list[SourceAttempt] = []
+        candidates: list[tuple[int, int, CryptoHistory]] = []  # (overlap, order, hist)
+        for order, src in enumerate(capable):
+            if len(attempts) >= self.max_attempts:
+                break
+            try:
+                hist = self._operation_get_klines(src, symbol, interval, start, end)
+            except SourceError as exc:
+                attempts.append(SourceAttempt(src.name, False, f"{type(exc).__name__}: {exc}"))
+                continue
+            reason = _hard_reject_reason(
+                hist, symbol=symbol, interval=interval, chain_unit=self._chain_unit
+            )
+            if reason:
+                attempts.append(SourceAttempt(src.name, False, reason))
+                continue
+            # Provenance (#126): a crypto result carries a plain string ``source``.
+            prov = getattr(hist, "source", None)
+            if prov != src.name:
+                attempts.append(
+                    SourceAttempt(
+                        src.name,
+                        False,
+                        f"provenance mismatch: result stamped source {prov!r} "
+                        f"but produced by source {src.name!r}",
+                    )
+                )
+                continue
+            fully, overlap, _first, _last = _coverage_facts(hist.bars, sd, ed)
+            if overlap == 0:
+                attempts.append(SourceAttempt(src.name, False, "no bars in requested date range"))
+                continue
+            if fully:
+                attempts.append(SourceAttempt(src.name, True, "ok"))
+                return hist  # failover-first: first fully-covering source wins, no warning
+            attempts.append(SourceAttempt(src.name, True, "partial_coverage"))
+            candidates.append((overlap, order, hist))
+        if candidates:
+            # Best-available: maximize covered requested-day overlap, then source order.
+            candidates.sort(key=lambda c: (-c[0], c[1]))
+            best = candidates[0][2]
+            first, last = best.bars[0].time.date(), best.bars[-1].time.date()
+            warning = _partial_coverage_warning(sd, ed, first, last)
+            return dataclasses.replace(best, warnings=tuple(best.warnings) + (warning,))
+        raise AllSourcesFailed(symbol, interval, tuple(attempts))
+
+    @staticmethod
+    def _operation_get_klines(src, symbol, interval, start, end):
+        return src.get_klines(symbol, interval, start, end)
 
     def _reject_reason(self, hist, symbol, interval, start, end) -> str | None:
         return _validate_crypto_result(
@@ -178,16 +297,20 @@ class FailoverCryptoClient:
         )
 
 
-def _validate_crypto_result(
+def _hard_reject_reason(
     hist,
     *,
     symbol: str,
     interval: Interval,
     chain_unit: str | None,
-    start,
-    end,
 ) -> str | None:
-    """Return a rejection reason or ``None`` if the crypto result is acceptable."""
+    """Return a HARD rejection reason (type/identity/unit/value/ascending) or ``None``.
+
+    Window coverage is intentionally NOT checked here — it is the softer #169 dimension handled by
+    :meth:`FailoverCryptoClient._run_with_coverage` for bounded requests.
+    :func:`_validate_crypto_result` wraps this with the legacy in-window check for the unbounded
+    engine path.
+    """
     # Issue #125: a malformed (non-typed) result container must be recorded as a
     # rejected source attempt, not leak a raw AttributeError from len(hist.bars).
     reason = result_type_reason(hist, CryptoHistory)
@@ -311,25 +434,35 @@ def _validate_crypto_result(
         if reason:
             return reason
 
-    # Window coverage (preserved).
-    def _as_date(val):
-        if val is None:
-            return None
-        if hasattr(val, "date"):
-            return val.date()
-        return val if isinstance(val, date) else None
+    return None
 
-    sd, ed = _as_date(start), _as_date(end)
+
+def _validate_crypto_result(
+    hist,
+    *,
+    symbol: str,
+    interval: Interval,
+    chain_unit: str | None,
+    start,
+    end,
+) -> str | None:
+    """Return a rejection reason or ``None`` (engine / unbounded path).
+
+    Hard guards then the legacy in-window check. Bounded requests no longer reach this — the client
+    routes them to :meth:`FailoverCryptoClient._run_with_coverage` (#169). Kept correct for the
+    unbounded engine path, where ``start``/``end`` are ``None`` and the window check is a no-op.
+    """
+    reason = _hard_reject_reason(
+        hist, symbol=symbol, interval=interval, chain_unit=chain_unit
+    )
+    if reason:
+        return reason
+    sd, ed = _as_request_date(start), _as_request_date(end)
     if sd is not None or ed is not None:
-        in_window = False
-        for bar in hist.bars:
-            d = bar.time.date()
-            if sd is not None and d < sd:
-                continue
-            if ed is not None and d > ed:
-                continue
-            in_window = True
-            break
+        in_window = any(
+            (sd is None or bar.time.date() >= sd) and (ed is None or bar.time.date() <= ed)
+            for bar in hist.bars
+        )
         if not in_window:
             return "no bars in requested date range"
     return None

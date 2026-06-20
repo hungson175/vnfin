@@ -100,10 +100,13 @@ def test_primary_used_when_healthy():
         http_get=lambda u, p, h: (_ for _ in ()).throw(AssertionError("backup hit"))
     )
     client = default_crypto_client(sources=[binance, coinbase])
-    h = client.get_klines("BTCUSDT", Interval.D1, *WIDE)
+    # #169: request exactly the window the primary fully covers (Jun 15-16) so failover-first
+    # returns the primary immediately without consulting the backup.
+    h = client.get_klines("BTCUSDT", Interval.D1, date(2026, 6, 15), date(2026, 6, 16))
     assert isinstance(h, CryptoHistory)
     assert h.source == "binance"
     assert len(h) == 2
+    assert h.warnings == ()  # full coverage -> no partial_coverage warning
 
 
 # --- failover to backup -----------------------------------------------------
@@ -263,7 +266,8 @@ def test_usd_pair_still_served_normally():
         http_get=lambda u, p, h: (_ for _ in ()).throw(AssertionError("backup hit"))
     )
     client = default_crypto_client(sources=[binance, coinbase])
-    h = client.get_klines("BTCUSDT", Interval.D1, *WIDE)
+    # #169: full-coverage window -> primary served directly (backup not consulted).
+    h = client.get_klines("BTCUSDT", Interval.D1, date(2026, 6, 15), date(2026, 6, 16))
     assert h.source == "binance"
     assert h.currency == "USD"
     assert h.value_unit == "USD"
