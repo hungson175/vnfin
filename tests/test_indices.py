@@ -619,3 +619,109 @@ def test_constituent_duplicate_after_canonicalization_rejected():
         IndexConstituentsSource(
             http_get=_get(_constituents_payload(members=[("fake1", "hose"), ("FAKE1", "hose")]))
         ).get_constituents("VN30")
+
+
+# --------------------------------------------------------------------------- #
+# Issue #147 — index_history_stitched (opt-in long-window calendar-year stitching).
+# --------------------------------------------------------------------------- #
+from vnfin.models import PriceBar, PriceHistory
+
+
+def _pb(d, close):
+    return PriceBar(time=datetime(d.year, d.month, d.day, tzinfo=timezone.utc),
+                    open=close, high=close, low=close, close=close, volume=1000)
+
+
+def _idx_ph(symbol, bars, source, *, adj=AdjustmentPolicy.RAW, value_unit="points", currency="points"):
+    return PriceHistory(symbol=symbol, interval=Interval.D1, adjustment_policy=adj,
+                        source=source, bars=tuple(bars), currency=currency, value_unit=value_unit)
+
+
+def _no_http(url, params=None, headers=None):
+    raise AssertionError("no network expected")
+
+
+class _FakeIdxSource:
+    """Index source double: clean per-year bars, but raises OHLC-invariant for a bad year."""
+    unit = "points"
+
+    def __init__(self, name, bad_year=None):
+        self._name = name
+        self._bad_year = bad_year
+
+    @property
+    def name(self):
+        return self._name
+
+    def supports(self, interval):
+        return interval is Interval.D1
+
+    def get_history(self, symbol, interval, start, end):
+        if self._bad_year is not None and start.year <= self._bad_year <= end.year:
+            raise InvalidData(f"{self._name}: OHLC invariant violated in {self._bad_year}")
+        bars = (_pb(start, 1000.0 + start.year), _pb(end, 1010.0 + end.year))
+        return _idx_ph(symbol, bars, self._name)
+
+
+def test_index_history_stitched_segment_failover():
+    # source A is bad for 2018; B is clean -> 2018 segment falls over to B.
+    a = _FakeIdxSource("idx_a", bad_year=2018)
+    b = _FakeIdxSource("idx_b")
+    c = IndexClient(sources=[a, b])
+    h = c.index_history_stitched("vnindex", date(2016, 1, 1), date(2019, 12, 31))
+    assert h.symbol == "VNINDEX" and h.source == "stitched_index_history"
+    assert h.value_unit == "points" and h.adjustment_policy is AdjustmentPolicy.RAW
+    dates = [bar.time.date() for bar in h.bars]
+    assert dates == sorted(dates) and len(dates) == len(set(dates))  # strictly ascending, deduped
+    assert any("segment 2018: idx_b" in w for w in h.warnings)       # 2018 served by B
+    assert any("segment 2016: idx_a" in w for w in h.warnings)       # others by A
+
+
+def test_index_history_stitched_rejects_non_daily():
+    with pytest.raises(InvalidData, match="only daily"):
+        IndexClient(http_get=_no_http).index_history_stitched(
+            "VNINDEX", date(2016, 1, 1), date(2016, 12, 31), interval=Interval.H1)
+
+
+def test_index_history_stitched_homogeneity_violation_raises(monkeypatch):
+    c = IndexClient(http_get=_no_http)
+
+    def fake(symbol, start, end, interval=Interval.D1):
+        pol = AdjustmentPolicy.RAW if start.year == 2016 else AdjustmentPolicy.UNKNOWN
+        return _idx_ph(symbol, (_pb(date(start.year, 6, 1), 100.0),), "src", adj=pol)
+
+    monkeypatch.setattr(c, "index_history", fake)
+    with pytest.raises(InvalidData, match="cannot stitch heterogeneous"):
+        c.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2017, 12, 31))
+
+
+def test_index_history_stitched_conflicting_seam_raises(monkeypatch):
+    c = IndexClient(http_get=_no_http)
+
+    def fake(symbol, start, end, interval=Interval.D1):
+        if start.year == 2016:
+            bars = (_pb(date(2016, 6, 1), 100.0), _pb(date(2017, 1, 1), 111.0))  # boundary
+        else:
+            bars = (_pb(date(2017, 1, 1), 999.0), _pb(date(2017, 6, 1), 120.0))  # conflicting close
+        return _idx_ph(symbol, bars, "src")
+
+    monkeypatch.setattr(c, "index_history", fake)
+    with pytest.raises(InvalidData, match="conflicting duplicate date"):
+        c.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2017, 12, 31))
+
+
+def test_index_history_stitched_identical_seam_deduped(monkeypatch):
+    c = IndexClient(http_get=_no_http)
+
+    def fake(symbol, start, end, interval=Interval.D1):
+        if start.year == 2016:
+            bars = (_pb(date(2016, 6, 1), 100.0), _pb(date(2017, 1, 1), 111.0))
+        else:
+            bars = (_pb(date(2017, 1, 1), 111.0), _pb(date(2017, 6, 1), 120.0))  # identical boundary
+        return _idx_ph(symbol, bars, "src")
+
+    monkeypatch.setattr(c, "index_history", fake)
+    h = c.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2017, 12, 31))
+    dates = [bar.time.date() for bar in h.bars]
+    assert dates == sorted(dates) and len(dates) == len(set(dates))  # 2017-01-01 deduped once
+    assert dates.count(date(2017, 1, 1)) == 1

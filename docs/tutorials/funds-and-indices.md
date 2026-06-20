@@ -41,6 +41,19 @@ print(vni.source, vni.value_unit, vni.bars[-1].close)  # points, not VND
 Index levels use the same bar shape as prices but the unit is `points`. Do not compare index values
 as money.
 
+For a **long multi-year** window (e.g. a 10-year VNINDEX backtest) where a single source has one
+bad day somewhere in the range, use the opt-in stitcher — it fetches each calendar year via the
+failover chain (routing around each source's bad day) and stitches the years into one series:
+
+```python
+hist = vnfin.indices.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2026, 6, 1))
+print(hist.source)        # "stitched_index_history"
+print(hist.warnings)      # one "segment <year>: <source> (<n> bars)" provenance line per year
+```
+
+The default `index_history` stays strict (it fails closed on a bad row); `index_history_stitched`
+is the explicit, multi-source-provenance opt-in (D1 only).
+
 ## Constituents
 
 ```python

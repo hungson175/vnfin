@@ -23,6 +23,7 @@ from .client import (
     default_index_sources,
     index_constituents,
     index_history,
+    index_history_stitched,
 )
 from .models import IndexConstituents, IndexMember
 from .sources import (
@@ -35,6 +36,7 @@ from .sources import (
 __all__ = [
     "IndexClient",
     "index_history",
+    "index_history_stitched",
     "index_constituents",
     "default_index_sources",
     "IndexConstituents",

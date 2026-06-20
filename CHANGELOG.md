@@ -6,6 +6,14 @@ All notable changes to `vnfin` are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **`vnfin.indices.index_history_stitched(symbol, start, end)`** (#147) — opt-in long-window index
+  history stitched from per-calendar-year segments, each fetched via the failover chain (so a
+  source's single OHLC-invariant day in one year is routed around by another clean source). Returns
+  one `PriceHistory` with `source="stitched_index_history"` and per-segment provenance warnings;
+  enforces points/RAW/symbol homogeneity and rejects conflicting seam dates. D1 only. The default
+  strict `index_history` is unchanged.
+
 ### Fixed
 - **Fmarket NAV duplicate-date handling** — ``nav_history`` now dedupes a duplicate ``navDate``
   whose NAV is identical (keeping one point and adding a ``deduped ... duplicate navDate`` warning)

@@ -76,6 +76,11 @@ funds = src.list_funds()
 # indices — index value (points) + members.
 ic   = vnfin.indices.client()                # IndexClient
 hist = vnfin.indices.index_history("FAKEINDEX", date(2024, 1, 1), date(2024, 6, 30))  # PriceHistory in points (start/end required)
+# Long multi-year windows: opt-in calendar-year stitching (#147). Each year is fetched
+# via the failover chain (routing around a source's single bad day), then stitched into
+# one PriceHistory with source="stitched_index_history" and per-segment provenance
+# warnings. Default index_history stays strict (unchanged).
+hist = vnfin.indices.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2026, 6, 1))  # D1 only
 
 # gold — VN domestic (VND/lượng) and world XAU (USD/oz). Provider is explicit.
 vn    = vnfin.gold.vn("btmc")                # BTMCGoldSource (default), or "pnj"

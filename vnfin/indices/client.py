@@ -85,6 +85,82 @@ class IndexClient:
         validate_date_range(start, end, name="index_history")
         return self._client.get_history(symbol, interval, start, end)
 
+    def index_history_stitched(
+        self,
+        symbol: str,
+        start: date,
+        end: date,
+        *,
+        interval: Interval = Interval.D1,
+    ) -> PriceHistory:
+        """Issue #147: opt-in long-window index history stitched from per-CALENDAR-YEAR
+        segments, each fetched through the normal failover chain.
+
+        A long window can fail the strict ``index_history`` because *every* source has
+        some single OHLC-invariant day in the range. Splitting into calendar-year
+        segments lets each year fail over to whichever source is clean for that year;
+        the segments are then stitched into one :class:`PriceHistory`.
+
+        D1 only. The result carries ``source="stitched_index_history"`` and a per-segment
+        provenance warning (``"segment <year>: <source> (<n> bars)"``). All segments must
+        be homogeneous — same ``value_unit``/``currency`` (points), ``adjustment_policy``
+        (RAW), and the canonical ``symbol`` — else :class:`~vnfin.exceptions.InvalidData`.
+        A conflicting duplicate date across segments is fatal; an identical seam bar is
+        deduped. The default strict :meth:`index_history` is unchanged.
+        """
+        if interval is not Interval.D1:
+            raise InvalidData(
+                f"index_history_stitched: only daily (D1) is supported, got {interval}"
+            )
+        symbol = canonical_security_symbol(symbol, "symbol")
+        lo, hi = validate_date_range(start, end, name="index_history_stitched")
+
+        bars: list = []
+        warnings: list[str] = []
+        seen: dict = {}  # date -> PriceBar (seam dedup / conflict detection)
+        homo = None  # (value_unit, currency, adjustment_policy)
+        for year in range(lo.year, hi.year + 1):
+            seg_lo = max(lo, date(year, 1, 1))
+            seg_hi = min(hi, date(year, 12, 31))
+            seg = self.index_history(symbol, seg_lo, seg_hi, interval)
+            key = (seg.value_unit, seg.currency, seg.adjustment_policy)
+            if homo is None:
+                homo = key
+            elif key != homo:
+                raise InvalidData(
+                    f"index_history_stitched: segment {year} unit/policy {key} "
+                    f"!= {homo}; cannot stitch heterogeneous segments"
+                )
+            if seg.symbol != symbol:
+                raise InvalidData(
+                    f"index_history_stitched: segment {year} symbol {seg.symbol!r} "
+                    f"!= requested {symbol!r}"
+                )
+            warnings.append(f"segment {year}: {seg.source} ({len(seg.bars)} bars)")
+            for bar in seg.bars:
+                d = bar.time.date()
+                if d in seen:
+                    if seen[d] != bar:
+                        raise InvalidData(
+                            f"index_history_stitched: conflicting duplicate date "
+                            f"{d.isoformat()} across segments"
+                        )
+                    continue  # identical seam bar -> dedupe
+                seen[d] = bar
+                bars.append(bar)
+        bars.sort(key=lambda b: b.time)
+        value_unit, currency, adjustment_policy = homo
+        return PriceHistory(
+            symbol=symbol,
+            interval=interval,
+            adjustment_policy=adjustment_policy,
+            source="stitched_index_history",
+            bars=tuple(bars),
+            currency=currency,
+            value_unit=value_unit,
+            warnings=tuple(warnings),
+        )
+
     def constituents(self, index: str) -> IndexConstituents:
         """Current index membership (no weights from this source)."""
         index = _validate_index_selector(index, "index")
@@ -110,6 +186,21 @@ def index_history(
     """Convenience: one-shot index value history over the default index chain."""
     client = IndexClient(http_get=http_get, timeout=timeout, max_attempts=max_attempts)
     return client.index_history(symbol, start, end, interval)
+
+
+def index_history_stitched(
+    symbol: str,
+    start: date,
+    end: date,
+    *,
+    http_get=None,
+    timeout: float = 25.0,
+    max_attempts: int = 3,
+) -> PriceHistory:
+    """Convenience (#147): one-shot long-window index history stitched from per-calendar-year
+    segments over the default index chain (D1 only; ``source='stitched_index_history'``)."""
+    client = IndexClient(http_get=http_get, timeout=timeout, max_attempts=max_attempts)
+    return client.index_history_stitched(symbol, start, end)
 
 
 def index_constituents(

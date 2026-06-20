@@ -3841,6 +3841,7 @@
       "all": [
         "IndexClient",
         "index_history",
+        "index_history_stitched",
         "index_constituents",
         "default_index_sources",
         "IndexConstituents",
@@ -3944,6 +3945,41 @@
                   "default_repr": "'1d'",
                   "has_default": true,
                   "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "interval"
+                }
+              ],
+              "returns": "PriceHistory"
+            },
+            "index_history_stitched": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "symbol"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "start"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "end"
+                },
+                {
+                  "default_repr": "'1d'",
+                  "has_default": true,
+                  "kind": "KEYWORD_ONLY",
                   "name": "interval"
                 }
               ],
@@ -4567,6 +4603,48 @@
               "has_default": true,
               "kind": "POSITIONAL_OR_KEYWORD",
               "name": "interval"
+            },
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "http_get"
+            },
+            {
+              "default_repr": "25.0",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "timeout"
+            },
+            {
+              "default_repr": "3",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "max_attempts"
+            }
+          ],
+          "returns": "PriceHistory"
+        },
+        "index_history_stitched": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "symbol"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "start"
+            },
+            {
+              "default_repr": null,
+              "has_default": false,
+              "kind": "POSITIONAL_OR_KEYWORD",
+              "name": "end"
             },
             {
               "default_repr": "None",
