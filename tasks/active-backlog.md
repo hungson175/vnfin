@@ -45,23 +45,22 @@ _Last synced: 2026-06-20 ~20:25 +07_
 > #157 commented + CLOSED via `bin/gh-maintainer` (metrics was the last leg). Watermark left to reviewer.
 > M1 CONFIRMED correct post-hoc by reviewer (19:41).
 >
-> **NOW: #179 vf-advisor monthly CPI YoY + SBV policy rate — ✅ IMPL DONE + COMMITTED `fc0d9be`
-> (local); IN self-adversarial-verify → then Codex×2.** Design ACK'd by reviewer (20:08, N-b probe
-> confirmed real magnitudes 4.5/~3%; do-not-suppress-real-series steer honored). Shipped per the
-> ACK'd design: two new `MacroIndicator` members on the existing keyless DBnomics path (NO new
-> adapter) — `CPI_YOY` ("%", `M.{CC}.PCPI_PC_CP_A_PT`, monthly) + `POLICY_RATE` ("% per annum",
-> `M.{CC}.FPOLM_PA`, monthly, honest SBV-proxy via 5th display element in `_DBN_MAP`). Both
-> DBnomics-only → single-source monthly chains; existing WB-annual CPI(index)/INFLATION(%) untouched
-> (regression test proves INFLATION still WB-annual). N-a identity: verbose proxy string is DISPLAY
-> only (`indicator_name`); canonical code/name stay `policy_rate`/`Policy Rate`; `indicator_identity`
-> + `get_indicator` compute the name identically. D3 staleness: pure `_series_end_gap_warning(points,
-> today)` + injectable `_today()` (#172 parity), FLOOR=210d (above IMF 2-6mo lag → healthy never
-> warns), monthly-scoped, values kept. **Full suite 3101 green; trio (surface+docs+no-secrets) green;
-> snapshot FROZEN (additive-only, regen=release-time — NOT regenerated); touched-module cov
-> dbnomics 91%/indicators 97%; new gap_days<=0 branch covered.** Docs additive: macro-dbnomics source
-> doc + macro-and-fx tutorial + data-domains arch + skill domains.md (5→7 + 3-way CPI coexistence) +
-> CHANGELOG. NEXT: self-verify result → hand CODE to Codex×2 → push+close #179 on approve (state/ to
-> reviewer). **#177/#178 still WAIT on Boss.**
+> **#179 vf-advisor monthly CPI YoY + SBV policy rate — ✅ DONE + PUSHED `66c7bdf..088220c` + #179
+> CLOSED.** Codex×2 BOTH APPROVE, ZERO blockers (review-202606202037; N-a triple-verified+live-probed,
+> single-source chain live-probed+e2e, CPI/INFLATION regression PASS, D3 AST-confirmed pure, 2
+> mutations caught). Shipped per ACK'd design: two new `MacroIndicator` members on the existing keyless
+> DBnomics path (NO new adapter) — `CPI_YOY` ("%", `M.{CC}.PCPI_PC_CP_A_PT`, monthly) + `POLICY_RATE`
+> ("% per annum", `M.{CC}.FPOLM_PA`, monthly, honest SBV-proxy via 5th display element in `_DBN_MAP`).
+> Both DBnomics-only → single-source monthly chains; WB-annual CPI(index)/INFLATION(%) untouched
+> (regression-tested). N-a: verbose proxy string is DISPLAY only; canonical code/name stay
+> `policy_rate`/`Policy Rate`; identity expr byte-identical in get_indicator + indicator_identity. D3:
+> pure `_series_end_gap_warning(points, today)` + injectable `_today()` (#172 parity), FLOOR=210d,
+> monthly-scoped, values kept. **Full suite 3103 green; trio green; snapshot FROZEN (additive-only);
+> touched-module cov dbnomics 91%/indicators 97%.** Folded both APPROVE-stage extras: failover
+> `_finalize`-survival test (`737687a`) + single-point fallback test (`088220c`, optional polish). NIT
+> CPI_YOY name-form left as default for GDP/CPI consistency (reviewer-endorsed). Docs additive
+> (macro-dbnomics, macro-and-fx, data-domains, domains.md 5→7, CHANGELOG). state/ watermark = reviewer.
+> **#177/#178 still WAIT on Boss.**
 
 ---
 
