@@ -804,3 +804,288 @@ def test_price_symbol_normalizes_padded_lower(synth):
     client = FailoverPriceClient([s1])
     h = client.get_daily("  fpt  ", *WIDE)
     assert h.source == "s1"  # " fpt " normalized to FPT, source reached
+
+
+# --------------------------------------------------------------------------- #
+# Issue #176 — delisted/suspended phantom trailing-tail detection.
+#
+# After a symbol is suspended/delisted, some sources keep emitting a trailing run
+# of forward-filled phantom bars (each volume == 0 AND open == high == low ==
+# close). The canonical post-processing in _finalize warns (D1-only) when that
+# trailing run reaches the threshold (_PHANTOM_TAIL_MIN_RUN = 10). v1 = warn,
+# never drop. Warning token = "trailing_zero_volume_tail".
+# --------------------------------------------------------------------------- #
+
+_PHANTOM_DAY0 = date(2024, 1, 1)
+
+
+def _phantom_bars(
+    real_specs,
+    *,
+    phantom_count,
+    phantom_values=(35.0,),
+    interval=Interval.D1,
+):
+    """Build a tuple of bars: ``real_specs`` real (volume>0) trading days, then a
+    trailing run of ``phantom_count`` phantom bars (volume == 0, O==H==L==C).
+
+    ``real_specs`` is a list of ``(close, volume)`` real bars. ``phantom_values``
+    cycles the flat close used for each phantom bar (lets a tail DRIFT across two
+    or more distinct flat closes, e.g. FLC's 3500/3570). Dates are consecutive
+    UTC days starting at ``_PHANTOM_DAY0`` so the whole window lands inside the
+    requested range; intraday steps use hours so H1 keys stay strictly ascending.
+    """
+    from datetime import timedelta
+
+    from vnfin.models import AdjustmentPolicy, PriceHistory
+
+    bars = []
+    if interval is Interval.D1:
+        cursor = datetime(_PHANTOM_DAY0.year, _PHANTOM_DAY0.month, _PHANTOM_DAY0.day, tzinfo=timezone.utc)
+        step = timedelta(days=1)
+    else:
+        cursor = datetime(_PHANTOM_DAY0.year, _PHANTOM_DAY0.month, _PHANTOM_DAY0.day, 9, tzinfo=timezone.utc)
+        step = timedelta(hours=1)
+    for close, vol in real_specs:
+        bars.append(
+            PriceBar(
+                time=cursor,
+                open=close - 1.0,
+                high=close + 1.0,
+                low=close - 1.5,
+                close=close,
+                volume=vol,
+            )
+        )
+        cursor = cursor + step
+    for i in range(phantom_count):
+        v = phantom_values[i % len(phantom_values)]
+        bars.append(PriceBar(time=cursor, open=v, high=v, low=v, close=v, volume=0))
+        cursor = cursor + step
+    return PriceHistory(
+        symbol="ZZZFAKE",
+        interval=interval,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED,
+        source="src",
+        bars=tuple(bars),
+        currency="VND",
+        value_unit="VND",
+        exchange="HOSE",
+        provider_symbol="ZZZFAKE",
+    )
+
+
+def _phantom_warning(history):
+    return next((w for w in history.warnings if w.startswith("trailing_zero_volume_tail")), None)
+
+
+# 1 — trailing run >= threshold (FLC/HAI-shaped long run AND TGG-shaped run) warns;
+#     message names run length + through-date + last real bar; bars NOT dropped.
+def test_phantom_tail_long_run_warns_and_keeps_bars():
+    # FLC/HAI-shaped: 5 real bars + 20 phantom flats -> long trailing run.
+    hist = _phantom_bars([(35.0, 1000)] * 5, phantom_count=20, phantom_values=(35.0,))
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    w = _phantom_warning(h)
+    assert w is not None
+    assert "20" in w  # run length
+    through = h.bars[-1].time.date().isoformat()
+    last_real = h.bars[-21].time.date().isoformat()
+    assert through in w
+    assert last_real in w
+    assert len(h.bars) == 25  # bars NOT dropped
+
+
+def test_phantom_tail_tgg_shaped_run_warns():
+    # TGG-shaped: a single real bar then a long phantom tail.
+    hist = _phantom_bars([(23.0, 5000)], phantom_count=15, phantom_values=(23.0,))
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    w = _phantom_warning(h)
+    assert w is not None and "15" in w
+    assert len(h.bars) == 16
+
+
+# 2 — threshold boundary: run length exactly 10 -> warn; exactly 9 -> no warn.
+def test_phantom_tail_threshold_exactly_10_warns():
+    hist = _phantom_bars([(35.0, 1000)] * 3, phantom_count=10)
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    assert _phantom_warning(h) is not None
+
+
+def test_phantom_tail_threshold_exactly_9_no_warn():
+    hist = _phantom_bars([(35.0, 1000)] * 3, phantom_count=9)
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    assert _phantom_warning(h) is None
+
+
+# 3 — normal illiquid tail: 1-2 trailing V==0 bars -> no warn.
+@pytest.mark.parametrize("n", [1, 2])
+def test_phantom_tail_short_illiquid_tail_no_warn(n):
+    hist = _phantom_bars([(35.0, 1000)] * 5, phantom_count=n)
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    assert _phantom_warning(h) is None
+
+
+# 4 — interior (not trailing): a zero-vol flat stretch mid-series followed by REAL
+#     bars -> no warn (the suffix is real).
+def test_phantom_tail_interior_stretch_no_warn():
+    from datetime import timedelta as _td
+
+    from vnfin.models import AdjustmentPolicy, PriceHistory
+
+    cursor = datetime(_PHANTOM_DAY0.year, _PHANTOM_DAY0.month, _PHANTOM_DAY0.day, tzinfo=timezone.utc)
+    bars = []
+    # 3 real bars
+    for _ in range(3):
+        bars.append(PriceBar(cursor, 34.0, 36.0, 33.0, 35.0, 1000))
+        cursor += _td(days=1)
+    # 15 interior phantom flats (a mid-series halt)
+    for _ in range(15):
+        bars.append(PriceBar(cursor, 35.0, 35.0, 35.0, 35.0, 0))
+        cursor += _td(days=1)
+    # then REAL bars resume -> the SUFFIX is not phantom
+    for _ in range(3):
+        bars.append(PriceBar(cursor, 34.0, 36.0, 33.0, 35.0, 1200))
+        cursor += _td(days=1)
+    hist = PriceHistory(
+        symbol="ZZZFAKE", interval=Interval.D1,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED, source="src",
+        bars=tuple(bars), currency="VND", value_unit="VND",
+        exchange="HOSE", provider_symbol="ZZZFAKE",
+    )
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    assert _phantom_warning(h) is None
+
+
+# 5 — legit flat trading: trailing flat bars with V>0 (limit-locked) -> no warn.
+def test_phantom_tail_flat_with_volume_no_warn():
+    from datetime import timedelta as _td
+
+    from vnfin.models import AdjustmentPolicy, PriceHistory
+
+    cursor = datetime(_PHANTOM_DAY0.year, _PHANTOM_DAY0.month, _PHANTOM_DAY0.day, tzinfo=timezone.utc)
+    bars = [PriceBar(cursor, 34.0, 36.0, 33.0, 35.0, 1000)]
+    cursor += _td(days=1)
+    # 15 trailing flat bars BUT with positive volume (limit-locked real trading)
+    for _ in range(15):
+        bars.append(PriceBar(cursor, 35.0, 35.0, 35.0, 35.0, 500))
+        cursor += _td(days=1)
+    hist = PriceHistory(
+        symbol="ZZZFAKE", interval=Interval.D1,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED, source="src",
+        bars=tuple(bars), currency="VND", value_unit="VND",
+        exchange="HOSE", provider_symbol="ZZZFAKE",
+    )
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    assert _phantom_warning(h) is None
+
+
+# 6 — fully-phantom series: every bar phantom -> warns, last_real == "none in window".
+def test_phantom_tail_fully_phantom_series_warns_none_in_window():
+    hist = _phantom_bars([], phantom_count=12)
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    w = _phantom_warning(h)
+    assert w is not None
+    assert "none in window" in w
+    # Pin the run-length rendering with the token substring; a bare "12" would be
+    # masked by the through-date (2024-01-12) and survive an off-by-one regression.
+    assert "12 trailing" in w
+
+
+# 7 — interval gate: the SAME phantom-tail series at H1 -> no warn (D1-only).
+def test_phantom_tail_interval_gate_h1_no_warn():
+    hist = _phantom_bars([(35.0, 1000)] * 3, phantom_count=15, interval=Interval.H1)
+    src = RawFakeSource("src", hist, supported=(Interval.H1,))
+    client = FailoverPriceClient([src])
+    h = client.get_history(
+        "ZZZFAKE", Interval.H1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    assert _phantom_warning(h) is None
+
+
+# 8 — coexists with partial_end_coverage: a STALE phantom-tail series -> BOTH
+#     warnings present, no double-warn.
+def test_phantom_tail_coexists_with_partial_end_coverage():
+    # Build a phantom-tail series whose last bar is far before the requested end so
+    # the staleness (partial_end_coverage) warning also fires.
+    hist = _phantom_bars([(35.0, 1000)] * 3, phantom_count=15)
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, date(2025, 6, 1)
+    )
+    phantom = [w for w in h.warnings if w.startswith("trailing_zero_volume_tail")]
+    coverage = [w for w in h.warnings if w.startswith("partial_end_coverage")]
+    assert len(phantom) == 1  # no double-warn
+    assert len(coverage) == 1
+    # coverage warnings stay first
+    assert h.warnings.index(coverage[0]) < h.warnings.index(phantom[0])
+
+
+# 10 (reviewer +1) — DRIFTED-value run: a trailing run of >= threshold V==0 bars
+#     with 2+ DISTINCT flat closes (each bar still O==H==L==C) -> WARNS. Pins Q3:
+#     no flat==last_close requirement.
+def test_phantom_tail_drifted_values_still_warns():
+    # 11 phantom bars alternating between two distinct flat closes (3500/3570 style).
+    hist = _phantom_bars([(35.0, 1000)] * 3, phantom_count=11, phantom_values=(35.0, 35.7))
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    distinct = {h.bars[i].close for i in range(-11, 0)}
+    assert len(distinct) >= 2  # the tail DRIFTS across two flat values
+    assert _phantom_warning(h) is not None
+
+
+# 11 (reviewer +1) — THRESHOLD-length run with ONE interior V>0 bar in the middle
+#     -> NO warn (a single V>0 bar breaks the trailing run; trailing-only).
+def test_phantom_tail_interior_volume_bar_breaks_run_no_warn():
+    from datetime import timedelta as _td
+
+    from vnfin.models import AdjustmentPolicy, PriceHistory
+
+    cursor = datetime(_PHANTOM_DAY0.year, _PHANTOM_DAY0.month, _PHANTOM_DAY0.day, tzinfo=timezone.utc)
+    bars = [PriceBar(cursor, 34.0, 36.0, 33.0, 35.0, 1000)]
+    cursor += _td(days=1)
+    # 5 phantom, then ONE real (V>0) bar, then 5 phantom: longest TRAILING run = 5 < 10
+    for _ in range(5):
+        bars.append(PriceBar(cursor, 35.0, 35.0, 35.0, 35.0, 0))
+        cursor += _td(days=1)
+    bars.append(PriceBar(cursor, 34.0, 36.0, 33.0, 35.0, 800))  # interior V>0 breaks it
+    cursor += _td(days=1)
+    for _ in range(5):
+        bars.append(PriceBar(cursor, 35.0, 35.0, 35.0, 35.0, 0))
+        cursor += _td(days=1)
+    hist = PriceHistory(
+        symbol="ZZZFAKE", interval=Interval.D1,
+        adjustment_policy=AdjustmentPolicy.PROVIDER_ADJUSTED, source="src",
+        bars=tuple(bars), currency="VND", value_unit="VND",
+        exchange="HOSE", provider_symbol="ZZZFAKE",
+    )
+    client = FailoverPriceClient([RawFakeSource("src", hist)])
+    h = client.get_history(
+        "ZZZFAKE", Interval.D1, _PHANTOM_DAY0, _PHANTOM_DAY0 + timedelta(days=60)
+    )
+    assert _phantom_warning(h) is None

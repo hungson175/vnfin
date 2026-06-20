@@ -90,12 +90,12 @@ Token-prefixed string (matches the existing `partial_coverage` / `deduped_duplic
 style so callers can match programmatically), with human detail:
 
 ```
-stale_or_delisted_tail: {N} trailing zero-volume flat (O=H=L=C) bars through {last_date};
+trailing_zero_volume_tail: {N} trailing zero-volume flat (O=H=L=C) bars through {last_date};
 last real-volume bar {last_real_date} — likely suspended/delisted/halted or source forward-fill;
 treat the tail as non-tradeable
 ```
 
-- Constant `_STALE_OR_DELISTED_TAIL = "stale_or_delisted_tail"` near the other warning tokens.
+- Constant `_TRAILING_ZERO_VOLUME_TAIL = "trailing_zero_volume_tail"` near the other warning tokens.
 - `{last_real_date}` = `"none in window"` when the whole series is phantom.
 - Appended to `PriceHistory.warnings` via `replace()`; **bars are NOT dropped** (v1 = warn only).
 
@@ -113,12 +113,11 @@ def _phantom_tail_warning(hist, interval) -> tuple[str, ...]:
             run += 1
         else:
             break
-    if run < _PHANTOM_TAIL_MIN_RUN:          # = 10 (pending ratification)
+    if run < _PHANTOM_TAIL_MIN_RUN:          # = 10 (ratified)
         return ()
-    first_phantom = hist.bars[-run]
     last_real = hist.bars[-run - 1] if run < len(hist.bars) else None
     last_real_date = last_real.time.date().isoformat() if last_real else "none in window"
-    return (f"{_STALE_OR_DELISTED_TAIL}: {run} trailing zero-volume flat (O=H=L=C) bars "
+    return (f"{_TRAILING_ZERO_VOLUME_TAIL}: {run} trailing zero-volume flat (O=H=L=C) bars "
             f"through {hist.bars[-1].time.date().isoformat()}; last real-volume bar "
             f"{last_real_date} — likely suspended/delisted/halted or source forward-fill; "
             f"treat the tail as non-tradeable",)
@@ -133,7 +132,7 @@ return replace(hist, attempts=attempts, warnings=warnings)
 ## 7. Test plan (synthetic, offline; TDD red-first; `tests/test_client.py`)
 Using the existing `FakeSource` + `_history_through`/`synth.make_history` fixtures:
 - **Multi-source/ticker fixtures:** a D1 series with a trailing `V==0, O==H==L==C` run ≥ threshold →
-  `stale_or_delisted_tail` warning naming the run length, through-date, and last real bar; **bars
+  `trailing_zero_volume_tail` warning naming the run length, through-date, and last real bar; **bars
   still returned** (not dropped). Build FLC/HAI-shaped (long run) and TGG-shaped fixtures.
 - **Threshold boundary:** run length exactly `THRESHOLD` → warn; `THRESHOLD-1` → no warn.
 - **Normal illiquid tail:** 1–2 trailing zero-volume bars → NO warning (not noisy).
@@ -155,11 +154,12 @@ Using the existing `FakeSource` + `_history_through`/`synth.make_history` fixtur
   worst harm meanwhile.
 - **Intraday (H1/M*)** phantom semantics (zero-volume bars are normal off-hours) — v2.
 
-## 9. Open questions for the reviewer
-- **Q1 (threshold):** ratify `THRESHOLD = 10` D1 bars, or pick 5 / 14 per §4?
-- **Q2 (warning token):** `stale_or_delisted_tail` good, or prefer e.g. `trailing_zero_volume_tail`
-  (more mechanical, less interpretive — the cause is inferred)?
-- **Q3 (signature strictness):** require only `V==0 AND O==H==L==C` per bar (my pick), or ALSO require
-  the flat value to equal the last real close (stronger forward-fill proof, but misses drifted fills)?
-- **Q4 (liquidity):** v1 just propagates the warning into `LiquidityProfile.warnings`. Acceptable, or
-  do you want ADV to exclude the phantom tail now (that's effectively the trim follow-up)?
+## 9. Reviewer decisions (ratified — design gate, implemented in this change)
+- **Q1 (threshold):** `_PHANTOM_TAIL_MIN_RUN = 10` D1 bars — RATIFIED.
+- **Q2 (warning token):** the mechanical `trailing_zero_volume_tail` (states the observed fact); the
+  inferred cause ("likely suspended/delisted/halted or source forward-fill") stays in the human-detail
+  tail of the message, never in the token.
+- **Q3 (signature):** per-bar `V==0 AND O==H==L==C` ONLY — no `flat == last_real_close` requirement
+  (real tails drift across a couple of flat values, e.g. FLC 3500/3570).
+- **Q4 (liquidity):** v1 propagates the warning into `LiquidityProfile.warnings` (no production change
+  in `liquidity.py`); ADV-exclusion / trimming deferred to the §8 follow-ups.

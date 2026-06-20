@@ -7,6 +7,17 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Delisted/suspended phantom-tail warning** (#176) — `vnfin.prices` `get_history(...)` now appends a
+  soft `trailing_zero_volume_tail` warning to `PriceHistory.warnings` when a **D1** series ends in a run
+  of **≥10** trailing *phantom* bars — each `volume == 0` and `open == high == low == close` (a flat
+  carried-forward price) — the forward-fill some sources emit after a symbol is suspended/delisted
+  instead of ending the series at the last real trading day. The warning names the run length,
+  through-date, and last real-volume bar (`"none in window"` when the whole window is phantom); **bars
+  are kept, not dropped** (v1 warns only). `LiquidityProfile` inherits the warning. Intraday is
+  unaffected (zero-volume bars are normal off-hours). All changes are additive. See
+  [`docs/architecture/failover-and-validation.md`](docs/architecture/failover-and-validation.md),
+  [`docs/design/price-phantom-tail.md`](docs/design/price-phantom-tail.md).
+  ([#176](https://github.com/hungson175/vnfin/issues/176))
 - **Fund bond holdings + asset allocation** (#173) — `vnfin.funds` `holdings(product_id)` now merges
   per-security **equity** (`productTopHoldingList`) **and bond** (`productTopHoldingBondList`) rows into
   one `tuple[FundHolding]`, so a bond or balanced fund returns its real positions instead of a bare

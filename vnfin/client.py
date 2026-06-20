@@ -28,6 +28,18 @@ from .failover import FailoverClient, _fetched_at_utc_reason, _warnings_reason
 from .models import AdjustmentPolicy, Interval, PriceBar, PriceHistory
 from .validation import validate_date_range, validate_non_empty_string
 
+# Issue #176 — minimum trailing run of phantom (zero-volume, O==H==L==C) D1 bars
+# before we warn. RATIFIED at 10: two calendar weeks of flat no-real-trading right
+# up to the window end is abnormal for a listed name (halted/suspended or a source
+# forward-fill), while a normal 1–2-day illiquid tail stays quiet. Catches ROS(~14)
+# with margin and all the egregious 600–800-bar delisted cases.
+_PHANTOM_TAIL_MIN_RUN = 10
+
+# Token-prefixed warning so callers can match programmatically. The token states
+# only the OBSERVED FACT (a trailing zero-volume tail); the inferred cause lives in
+# the human-detail portion of the message, never in the token.
+_TRAILING_ZERO_VOLUME_TAIL = "trailing_zero_volume_tail"
+
 
 def _price_unit(source):
     """Declared price unit of a source (``"VND"`` / ``"points"`` / ``None``)."""
@@ -177,10 +189,57 @@ class FailoverPriceClient:
 
     @staticmethod
     def _finalize(hist, attempts, symbol, interval, start, end) -> PriceHistory:
-        warnings = tuple(hist.warnings) + FailoverPriceClient._coverage_warnings(
-            hist, start, end
+        warnings = (
+            tuple(hist.warnings)
+            + FailoverPriceClient._coverage_warnings(hist, start, end)
+            + FailoverPriceClient._phantom_tail_warning(hist, interval)
         )
         return replace(hist, attempts=attempts, warnings=warnings)
+
+    @staticmethod
+    def _phantom_tail_warning(hist, interval) -> tuple[str, ...]:
+        """Issue #176: warn on a delisted/suspended phantom trailing-tail.
+
+        After a symbol is suspended/delisted, some sources keep emitting a trailing
+        run of forward-filled phantom bars instead of ending the series at the last
+        real trading day. A *phantom* bar has ``volume == 0`` AND
+        ``open == high == low == close`` (a flat carried-forward price). This is a
+        wrong-but-plausible typed result that silently corrupts survivorship-aware
+        backtests, so we WARN (v1 never drops bars).
+
+        Detection (D1 only — intraday zero-volume bars are normal off-hours):
+        count the maximal TRAILING run of phantom bars (iterate from the end, break
+        on the first non-phantom bar). A single ``volume > 0`` bar (limit-locked
+        real trading) or a non-flat bar breaks the run. We warn iff the run reaches
+        :data:`_PHANTOM_TAIL_MIN_RUN`. The per-bar signature is exact: ``volume`` is
+        an ``int`` so ``== 0`` is exact, and a forward-fill copies the identical
+        float so ``==`` (no epsilon) is correct. The flat value is NOT required to
+        equal the last real close — real tails drift across a couple of flat values.
+
+        "Last real bar" is the bar immediately before the run starts. When the whole
+        in-window series is the run there is no real bar; the message says
+        ``"none in window"``.
+        """
+        if interval is not Interval.D1 or not hist.bars:
+            return ()
+        run = 0
+        for bar in reversed(hist.bars):
+            if bar.volume == 0 and bar.open == bar.high == bar.low == bar.close:
+                run += 1
+            else:
+                break
+        if run < _PHANTOM_TAIL_MIN_RUN:
+            return ()
+        through = hist.bars[-1].time.date().isoformat()
+        # Guard the index when the entire series is the run (no real bar in-window).
+        last_real = hist.bars[-run - 1] if run < len(hist.bars) else None
+        last_real_date = last_real.time.date().isoformat() if last_real else "none in window"
+        return (
+            f"{_TRAILING_ZERO_VOLUME_TAIL}: {run} trailing zero-volume flat "
+            f"(O=H=L=C) bars through {through}; last real-volume bar "
+            f"{last_real_date} — likely suspended/delisted/halted or source "
+            f"forward-fill; treat the tail as non-tradeable",
+        )
 
     @staticmethod
     def _coverage_warnings(hist, start, end, tolerance_days: int = 7) -> tuple[str, ...]:

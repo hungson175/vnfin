@@ -127,7 +127,8 @@ src = vnfin.prices.source()                # SSIiBoardSource
   value_unit ('VND'), warnings, attempts`.
 - **Gotchas:** `start`/`end` required & validated up front (→ `InvalidData`). Daily is guaranteed;
   intraday is best-effort/capability-gated. Coverage shortfalls are soft `warnings`
-  (`partial_start_coverage`/`partial_end_coverage`), not errors.
+  (`partial_start_coverage`/`partial_end_coverage`), not errors. A D1 series that ends in a long run of
+  forward-filled phantom bars (delisted/suspended) adds a `trailing_zero_volume_tail` warning.
 
 ### 5.2 `vnfin.fundamentals` — financial statements (raw VND)
 

@@ -136,6 +136,10 @@ Coverage warnings (soft, non-failing) are appended in `_finalize`:
 - `partial_start_coverage` — first bar >7 days after requested start
 - `partial_end_coverage` — last bar >7 days before the expected latest trading day
   (VN trading-calendar aware via `calendar.expected_latest_trading_day`)
+- `trailing_zero_volume_tail` — a trailing run of ≥10 (D1) bars each with `volume == 0` and
+  `open == high == low == close` (a flat carried-forward price): a delisted/suspended/forward-filled
+  phantom tail. Bars are kept, not dropped (warn-only); intraday is exempt (zero-volume bars are normal
+  off-hours). Inherited by `LiquidityProfile.warnings`
 
 ## Transport layer (`vnfin/transport.py`)
 

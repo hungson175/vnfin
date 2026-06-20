@@ -195,3 +195,20 @@ def test_zero_close_rejected():
 def test_zero_volume_with_positive_close_allowed():
     p = from_price_history(_hist([_bar(date(2025, 1, 2), 100.0, 0)]))
     assert p.avg_daily_value_vnd == 0.0 and len(p) == 1
+
+
+# Issue #176 — a LiquidityProfile built from a phantom-tail history carries the
+# trailing_zero_volume_tail warning through (v1 = propagate, no new code in liquidity).
+def test_phantom_tail_warning_propagates_into_liquidity_profile():
+    warning = (
+        "trailing_zero_volume_tail: 12 trailing zero-volume flat (O=H=L=C) bars "
+        "through 2024-01-13; last real-volume bar 2024-01-01 — likely "
+        "suspended/delisted/halted or source forward-fill; treat the tail as non-tradeable"
+    )
+    # Real day + a flat zero-volume phantom tail; the history already carries the
+    # phantom warning (as _finalize would have attached it).
+    bars = [_bar(date(2025, 1, 2), 100.0, 10)]
+    bars += [_bar(date(2025, 1, 3 + i), 35.0, 0) for i in range(12)]
+    p = from_price_history(_hist(bars, warnings=(warning,)))
+    assert any(w.startswith("trailing_zero_volume_tail") for w in p.warnings)
+    assert "traded_value_estimated_from_close_x_volume" in p.warnings
