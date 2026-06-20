@@ -197,8 +197,9 @@ class FmarketFundSource(HttpDataSource):
         rows = _require_array(parsed.get("data"), who="nav-history data")
         if rows is None or len(rows) == 0:
             raise EmptyData(f"fmarket: no NAV history for product {product_id}")
-        seen_dates: set[date] = set()
+        seen: dict[date, float] = {}
         points: list[NavPoint] = []
+        deduped = 0
         for r in rows:
             # Issue #144: parse navDate FIRST and skip out-of-window rows BEFORE the
             # productId / value / duplicate guards — the broad fetch legitimately
@@ -220,15 +221,28 @@ class FmarketFundSource(HttpDataSource):
                         f"fmarket: nav row productId {row_pid!r} != requested {fid}"
                     )
             point = self._parse_nav_point(r)
-            if point.date in seen_dates:
-                raise InvalidData(
-                    f"fmarket: duplicate navDate {point.date.isoformat()} for product {product_id}"
-                )
-            seen_dates.add(point.date)
+            # Issue #158: a duplicate navDate within the window is only fatal when the NAV
+            # CONFLICTS. An identical-value duplicate is harmless provider repetition —
+            # dedupe it (keep first) and warn; a different NAV for the same date is
+            # ambiguous data and fails closed.
+            if point.date in seen:
+                if point.nav != seen[point.date]:
+                    raise InvalidData(
+                        f"fmarket: conflicting navDate {point.date.isoformat()} for product "
+                        f"{product_id} ({seen[point.date]} vs {point.nav})"
+                    )
+                deduped += 1
+                continue
+            seen[point.date] = point.nav
             points.append(point)
         points.sort(key=lambda p: p.date)
         if not points:
             raise EmptyData(f"fmarket: no NAV history for product {product_id} in range")
+        warnings: tuple[str, ...] = ()
+        if deduped:
+            warnings = (
+                f"deduped {deduped} duplicate navDate row(s) with identical NAV",
+            )
         return NavHistory(
             product_id=fid,
             points=tuple(points),
@@ -236,6 +250,7 @@ class FmarketFundSource(HttpDataSource):
             currency="VND",
             value_unit="VND/unit",  # NAV is money per fund unit
             fetched_at_utc=datetime.now(timezone.utc),
+            warnings=warnings,
         )
 
     def holdings(self, product_id: int) -> tuple[FundHolding, ...]:

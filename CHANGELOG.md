@@ -7,6 +7,10 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Fmarket NAV duplicate-date handling** — ``nav_history`` now dedupes a duplicate ``navDate``
+  whose NAV is identical (keeping one point and adding a ``deduped ... duplicate navDate`` warning)
+  and raises ``InvalidData`` only when a duplicate date carries a *conflicting* NAV. Previously any
+  duplicate date raised. ([#158](https://github.com/hungson175/vnfin/issues/158))
 - **VNDirect statement row type guard** — the VNDirect statement parser now rejects a non-object
   row with ``InvalidData`` (``statement row is not an object``) before dereferencing it, mirroring
   the ratios path, instead of leaking a raw ``AttributeError``.

@@ -782,14 +782,15 @@ def test_nav_history_missing_envelope_status_and_code_raises_invalid():
 
 
 def test_nav_history_duplicate_nav_date_raises_invalid():
-    # Issue #66 (Fmarket part): duplicate navDate values within one response must
-    # raise InvalidData because the series would otherwise contain ambiguous observations.
+    # Issue #66 + #158 (Fmarket part): a duplicate navDate with a CONFLICTING NAV must
+    # raise InvalidData (ambiguous observation); identical-value duplicates dedupe (see
+    # test_nav_history_in_window_identical_duplicate_deduped_with_warning).
     rows = [
         {"navDate": "2024-01-02", "nav": 10100.0, "productId": FAKE_ID_A},
         {"navDate": "2024-01-03", "nav": 10200.0, "productId": FAKE_ID_A},
         {"navDate": "2024-01-02", "nav": 10300.0, "productId": FAKE_ID_A},
     ]
-    with pytest.raises(InvalidData, match="duplicate navDate"):
+    with pytest.raises(InvalidData, match="conflicting navDate"):
         _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
 
 
@@ -1419,11 +1420,32 @@ def test_nav_history_out_of_window_duplicate_not_fatal():
     assert [p.date for p in hist.points] == [date(2024, 4, 4)]
 
 
-def test_nav_history_in_window_duplicate_still_fatal():
-    full = [_nav_row("2024-04-04"), _nav_row("2024-04-04")]
+def test_nav_history_in_window_conflicting_duplicate_fatal():
+    # #158: a duplicate navDate with a CONFLICTING NAV is fatal.
+    full = [_nav_row("2024-04-04", nav=100.0), _nav_row("2024-04-04", nav=101.0)]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
-    with pytest.raises(InvalidData, match="duplicate navDate"):
+    with pytest.raises(InvalidData, match="conflicting navDate"):
         src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+
+
+def test_nav_history_in_window_identical_duplicate_deduped_with_warning():
+    # #158: a duplicate navDate with the SAME NAV is deduped (kept once) + warned, not fatal.
+    full = [
+        _nav_row("2024-04-04", nav=100.0),
+        _nav_row("2024-04-04", nav=100.0),
+        _nav_row("2024-04-05", nav=101.0),
+    ]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+    assert [p.date for p in hist.points] == [date(2024, 4, 4), date(2024, 4, 5)]
+    assert any("dedup" in w.lower() and "navdate" in w.lower() for w in hist.warnings)
+
+
+def test_nav_history_no_duplicates_has_no_dedupe_warning():
+    full = [_nav_row("2024-04-04", nav=100.0), _nav_row("2024-04-05", nav=101.0)]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+    assert hist.warnings == ()
 
 
 @pytest.mark.parametrize("bad", ["not-a-date", "2024-13-01", "20240101", 123, []])
