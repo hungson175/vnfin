@@ -12,8 +12,21 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-20 ~20:25 +07_
+_Last synced: 2026-06-20 22:13 +07_
 
+> **NOW: #177 S&P 500 world-index — ACTIVE (Boss GREENLIT 22:09, TL handoff
+> handoff-202606202209).** New source adapter (Alpha Vantage `TIME_SERIES_DAILY` SPY, BYOK reusing
+> `ALPHAVANTAGE_API_KEY`, redact key, keyless→skip) PRIMARY + Stooq `^SPX` keyless best-effort
+> FALLBACK + new lean accessor `indices.world(symbol="SPY")` (PriceHistory-shaped) + local cache (AV
+> 25/day). FRED ruled out; SPY-as-proxy (not ^GSPC), SPY-only v1, document proxy provenance. **NEW
+> adapter+accessor+source-legal ⇒ SHORT DESIGN NOTE first → reviewer lead quick-gate → TDD → Codex×2 →
+> push+close.** **#178 gold = QUEUED next** (separate item, NOT a batch): `gold.world_reference_history_vnd()`
+> = existing Stooq world-gold × USD/VND FX × (31.1035/37.5) → VND/lượng, MANDATORY `world_reference_*`
+> naming + `premium_note` (excludes +10-21% VN premium; NOT SJC); reserve `gold.domestic_history()` → clear
+> source-gap diagnostic, never the synthesis. Likely straight to TDD→Codex×2 (composes existing primitives).
+> Source-hunt follow-up filed as **#182** (refs #178/#170). state/ watermark = reviewer. Clean-room: zero
+> VNStock both. Specs: spec-202606201815-issue177 / -issue178; TL handoff handoff-202606202209.
+>
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
 > `aa72dca` per-model_type itemcode map + `0a28339` reviewer cosmetics; Codex×2 APPROVE review-202606201727;
@@ -335,23 +348,20 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   trailing zero-vol O=H=L=C run and **WARN** (no silent drop). Threshold = **design-first** (how long a
   run / what tolerance qualifies as phantom). Design-first → converge with reviewer before coding; Codex x2.
 
-## Boss-filed vf-advisor features (#177/#178/#179 — design-first, AFTER the HIGH bugs)
+## Boss-filed vf-advisor features (#177/#178/#179)
 
 Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a currently-MOCKED series.
-Reviewer ACCEPTED all three, **sequenced AFTER the HIGH correctness bugs** (#157 bank+ratios, #176,
-#173-unlisted); the app currently works on mocks so these are additive value, not correctness.
-Reviewer (TL) is doing the source-identification design IN PARALLEL — **no coder action yet**. Boss
-may override to prioritize now (e.g. for a demo); default = bugs first. (review-202606201628 §B.)
-- **#177 — US/global equity index (S&P 500/SPY)** — concretizes #156. Clean source: prefer **BYOK FRED
-  `SP500`** (matches existing optional FRED macro key, US-gov, clean-room-safe) over Stooq `^SPX`
-  (Stooq needs a terms/redistribution check). Expose explicit units + `source`. Design-first.
-- **#178 — VN domestic gold history (VND/lượng)** — concretizes #170. ⚠️ **Data-integrity caveat:**
-  world-gold USD/oz × USD/VND ≠ VN domestic gold (large, time-varying VN premium). ACCEPT a REAL
-  domestic gold history (SJC/BTMC/PNJ historical) as the primitive (sourcing-gated). Any world-implied
-  series must be a clearly-LABELED "world-gold-implied VND reference (excludes VN domestic premium)"
-  diagnostic, NEVER the domestic price. Decline a bare synthesis as the primary answer. Design-first.
-- **#179 — Monthly CPI YoY + SBV policy rate** — concretizes #149. Clean sources: GSO (CPI) / SBV
-  (policy rate) / DBnomics/FRED for VN CPI. Monthly periodic macro (not real-time). Design-first.
+**ALL THREE Boss-GREENLIT (2026-06-20).** #179 ✅ DONE+CLOSED. #177 ACTIVE (see NOW). #178 QUEUED next.
+- **#177 — US/global equity index (S&P 500/SPY)** — **ACTIVE.** AV `TIME_SERIES_DAILY` SPY (BYOK) PRIMARY
+  + Stooq `^SPX` keyless best-effort FALLBACK; FRED RULED OUT (10y cap + redistribution-prohibited).
+  `indices.world(symbol="SPY")` PriceHistory-shaped; SPY-as-proxy v1, documented; local cache. Design
+  note → lead quick-gate → TDD → Codex×2. (TL handoff handoff-202606202209.)
+- **#178 — VN gold (world-reference line)** — **QUEUED.** Ship `gold.world_reference_history_vnd()` =
+  Stooq world-gold × USD/VND × (31.1035/37.5) → VND/lượng, MANDATORY `world_reference_*` + `premium_note`
+  (excludes +10-21% VN premium; NOT SJC); reserve `gold.domestic_history()` → source-gap diagnostic.
+  Source-hunt follow-up = **#182**. Likely straight to TDD→Codex×2.
+- **#179 — Monthly CPI YoY + SBV policy rate** — ✅ **DONE+PUSHED+CLOSED** (`66c7bdf..088220c`; Codex×2
+  APPROVE). 2 new MacroIndicator members on the keyless DBnomics path; see #179 snapshot block above.
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
