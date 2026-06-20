@@ -168,6 +168,22 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   ranking/advice/screener-with-strategy, blind external ingestion, generic item_<code> as
   investor-ready, silent bank/non-bank mixing. Spec: `~/tools/vnfin-oss-reviewer/reviews/spec-202606201222-issue157-fundamentals-metrics.md`.
 
+## Next (after #157 rev2.4 design is sent — BEFORE any large #157 implementation)
+
+- **#168 — HIGH-priority data-correctness BUG: price/index namespace type confusion** (reviewer spec
+  review-202606201318). Price/index namespaces must **fail loud on wrong asset type**, not silently
+  return wrong-typed data:
+  1. known index (`VNINDEX`/`VN30`) via `prices.history()` → raise (not VND security prices);
+  2. known equity (`FPT`) via `indices.index_history()` → raise (not index points);
+  3. liquidity (calls `prices.history`) **inherits** the price guard;
+  4. TDD-first + boundary tests + document public behavior;
+  5. NOT via broad provider pass-through / scraping / silent-warning-only.
+  **Design nuance to settle first (discuss w/ reviewer):** indices are a CLOSED known set, equities
+  are OPEN-ended → guard is asymmetric (index_history allow-lists known indices; prices.history
+  deny-lists known indices; unknown symbols still pass to price providers). Investigate existing
+  known-index registry / symbol classifier in `vnfin/indices/` + `_contracts` before coding.
+  Sequencing: do AFTER the tiny #157 rev2.4 design patch, BEFORE #157 implementation.
+
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
 - _(none)_
