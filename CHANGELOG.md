@@ -19,7 +19,10 @@ All notable changes to `vnfin` are documented here. The format follows
   `start`/`end` are interpreted as an inclusive **calendar-year** window — each year's gold mean is
   computed from the full calendar year (the fetch window is snapped to `Jan-1…Dec-31`), matching the
   FX leg so a mid-year bound never yields a partial-year mean; the world-gold leg's own soft
-  `partial_coverage` warning (a gappy-but-accepted series) is forwarded (namespaced by leg).
+  `partial_coverage` warning (a gappy-but-accepted series) is forwarded (namespaced by leg). The one
+  unavoidable partial year — the **in-progress current year**, whose mean is only year-to-date —
+  carries its own mechanical `world_reference_trailing_year_incomplete` warning, flagged independently
+  of the (dilutable) coverage aggregate so the trailing point is never read as a settled full-year value.
   **This is the world-gold-implied VND value, NOT the VN domestic (SJC/BTMC) price** — domestic gold
   trades a large, time-varying premium (historically **+10–21%**) above it, so the series understates
   the domestic price. It self-discloses **redundantly**: the accessor name, `product="XAU/VND

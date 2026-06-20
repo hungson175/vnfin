@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import math
 from datetime import date, datetime, timezone
-from typing import Optional
 
 from ..exceptions import EmptyData, InvalidData
 from ..fx.history_models import FXHistory
@@ -62,9 +61,24 @@ _PREMIUM_NOTE = (
 _ANNUAL_BASIS_NOTE = (
     "world_reference_annual_basis: one point per calendar year = annual-average world gold "
     "(USD/oz) × annual-average USD/VND (World Bank period-average) × 37.5/31.1035 (g, "
-    "oz→lượng); stamped Jan-1; not a daily series"
+    "oz→lượng); stamped Jan-1; not a daily series; the latest point may be the in-progress "
+    "current year (a year-to-date partial mean, flagged by "
+    "world_reference_trailing_year_incomplete)"
 )
 _PARTIAL_COVERAGE_TOKEN = "world_reference_partial_year_coverage"
+_TRAILING_YEAR_TOKEN = "world_reference_trailing_year_incomplete"
+
+
+def _today() -> date:
+    """Today's date (UTC) — wrapped so tests can PIN the trailing-year check (the #172/#179
+    injection pattern, never random). NEVER used for ``fetched_at_utc``, which stays a real
+    wall-clock stamp; this only decides whether the current (in-progress) year is emitted.
+
+    Only ``.year`` is consumed, and UTC is deliberate: vs Vietnam (UTC+7) the UTC year can lag
+    by at most the ~7h window of VN Jan-1 00:00–06:59. That can only make a JUST-completed year
+    still read as "in progress" (a self-clearing, bounded false-positive) — it can never
+    suppress a genuinely partial year, so it honors the prefer-bounded-false-positive principle."""
+    return datetime.now(timezone.utc).date()
 
 
 def _synthesize_world_reference(gold_hist: GoldHistory, fx_hist: FXHistory) -> GoldHistory:
@@ -130,6 +144,24 @@ def _synthesize_world_reference(gold_hist: GoldHistory, fx_hist: FXHistory) -> G
             f"observation — {'; '.join(parts)}"
         )
 
+    # M1 (#178): if the CURRENT calendar year is emitted, its annual mean is only a YEAR-TO-DATE
+    # average — a partial-year point, the SAME 'partial mean served as a trusted annual point'
+    # class as the boundary-year bug, just on the trailing edge. The gold leg's `partial_coverage`
+    # (a WINDOW-aggregate) does NOT catch this: a long window of complete prior years dilutes the
+    # in-progress year's low coverage back above the threshold, so that signal goes silent. Flag
+    # it INDEPENDENTLY, keyed only on today's year. (Currently latent behind the World Bank FX lag
+    # dropping the current year — environmental, not code-enforced — so enforce it here.) Key on
+    # the current year being IN `common` (not merely == common[-1]) so it is still caught if a
+    # later-dated year is somehow emitted too — unreachable via the public accessor, but robust on
+    # any direct _synthesize call.
+    current_year = _today().year
+    if current_year in common:
+        warnings.append(
+            f"{_TRAILING_YEAR_TOKEN}: the emitted year {current_year} is the current calendar "
+            f"year and still in progress, so its annual mean is a YEAR-TO-DATE partial average "
+            f"— not a full-year mean like the settled points; treat it as provisional"
+        )
+
     return GoldHistory(
         product=_PRODUCT,
         unit=_VND_PER_LUONG,
@@ -156,9 +188,12 @@ def world_reference_history_vnd(
 
     ``start``/``end`` are required and interpreted as an inclusive **calendar-year** window:
     any portion of a year yields that year's annual point, computed from the FULL calendar
-    year (so a mid-year ``start``/``end`` never produces a partial-year mean). A multi-year
-    window exceeds CurrencyApi's coverage/range, so it cleanly fails over to Stooq (the
-    long-history world-gold source). A total failure of either leg propagates
+    year (so a mid-year ``start``/``end`` never produces a partial-year mean). The ONE
+    unavoidable partial year is the **in-progress current year**: if the latest emitted point
+    is the current calendar year, its mean is only a year-to-date average — flagged with a
+    mechanical ``world_reference_trailing_year_incomplete`` warning so it is never mistaken for
+    a full-year point. A multi-year window exceeds CurrencyApi's coverage/range, so it cleanly
+    fails over to Stooq (the long-history world-gold source). A total failure of either leg propagates
     (``AllSourcesFailed`` / ``EmptyData``); a window with no overlapping gold+FX years raises
     :class:`EmptyData` (no silent half-result).
 

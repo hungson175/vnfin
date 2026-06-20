@@ -69,6 +69,7 @@ mechanical tokens on `GoldHistory.warnings`:
 - `world_reference_annual_basis: one point per calendar year = annual-avg gold × annual USD/VND × 37.5/31.1035; stamped Jan-1; not a daily series` — always present.
 - `world_reference_partial_year_coverage: …` — only when some requested years are dropped for lack of a paired gold-or-FX observation (an honest intersection; never a silent half-result). An **empty** overlap raises `EmptyData`.
 - `world_reference_gold_leg_partial_coverage: …` (and `world_reference_fx_leg_*`) — the world-gold failover client accepts a *gappy-but-not-rejected* series (coverage 50–90% of trading days) and attaches a soft `partial_coverage` warning; that is the only signal a year's annual mean came from an incomplete subset of days, so it is **forwarded** (namespaced by leg) onto the synthesized result — never dropped.
+- `world_reference_trailing_year_incomplete: …` — only when the **latest emitted year is the current calendar year**: that year is still in progress, so its annual mean is a *year-to-date* partial average, not a full-year mean. This is flagged **independently** of the gold-leg `partial_coverage` aggregate (a long window of complete prior years dilutes the in-progress year's coverage back above the threshold, silencing that signal), keyed only on today's year — so the trailing point is never mistaken for a settled full-year value.
 
 ```python
 from datetime import date

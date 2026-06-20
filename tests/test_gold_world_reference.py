@@ -227,6 +227,52 @@ def test_synthesis_forwards_gold_leg_partial_coverage_warning():
     assert any("partial_coverage" in w for w in out.warnings)
 
 
+def test_synthesis_warns_when_trailing_year_is_in_progress_current_year(monkeypatch):
+    # M1 (#178): the latest emitted year being the CURRENT calendar year means its annual mean
+    # is only a YEAR-TO-DATE partial average, not a full-year mean — the SAME 'partial mean
+    # served as a trusted annual point' class as the boundary-year bug. It must warn
+    # INDEPENDENT of the gold leg's window-aggregate `partial_coverage` (a long window of
+    # complete prior years dilutes the in-progress year's low coverage above the threshold, so
+    # that signal goes silent). Pin "today" into 2024 -> latest emitted year (2024) in progress.
+    monkeypatch.setattr("vnfin.gold.world_reference._today", lambda: date(2024, 6, 30))
+    gold = _gold_usd_oz(
+        {date(2022, 6, 1): 1900.0, date(2023, 6, 1): 2000.0, date(2024, 6, 1): 2100.0}
+    )
+    fx = _fx_usd_vnd({2022: 24000.0, 2023: 24500.0, 2024: 25000.0})
+    out = _synthesize_world_reference(gold, fx)
+    trailing = [w for w in out.warnings if w.startswith("world_reference_trailing_year_incomplete")]
+    assert len(trailing) == 1
+    assert "2024" in trailing[0]
+    # No gold-leg partial_coverage was injected -> the warning is INDEPENDENT of that aggregate.
+    assert not any("world_reference_gold_leg_partial_coverage" in w for w in out.warnings)
+
+
+def test_synthesis_trailing_warning_robust_to_a_later_emitted_year(monkeypatch):
+    # Defensive (adversarial-verify finding): the trailing-year warning keys on the current
+    # year being EMITTED, not merely on being the LAST bar — so an in-progress current year is
+    # flagged even if a later-dated year is also emitted. Unreachable via the public accessor
+    # (World Bank FX cannot supply a future-year period-average), but possible on a direct
+    # _synthesize call; the old `common[-1] == today.year` check silently missed it (same
+    # 'partial mean served as a trusted annual point' class as the M1 bug).
+    monkeypatch.setattr("vnfin.gold.world_reference._today", lambda: date(2024, 6, 30))
+    gold = _gold_usd_oz({date(2024, 6, 1): 2100.0, date(2025, 6, 1): 2200.0})
+    fx = _fx_usd_vnd({2024: 25000.0, 2025: 26000.0})
+    out = _synthesize_world_reference(gold, fx)
+    trailing = [w for w in out.warnings if w.startswith("world_reference_trailing_year_incomplete")]
+    assert len(trailing) == 1
+    assert "2024" in trailing[0]  # the in-progress current year, even though 2025 is the last bar
+
+
+def test_synthesis_no_trailing_year_warning_when_all_years_complete(monkeypatch):
+    # "today" is in 2026 -> the latest emitted year (2024) is a fully-complete PAST year, a
+    # trustworthy full-year mean -> no trailing-year warning (no false positive).
+    monkeypatch.setattr("vnfin.gold.world_reference._today", lambda: date(2026, 1, 15))
+    gold = _gold_usd_oz({date(2023, 6, 1): 2000.0, date(2024, 6, 1): 2100.0})
+    fx = _fx_usd_vnd({2023: 24500.0, 2024: 25000.0})
+    out = _synthesize_world_reference(gold, fx)
+    assert not any(w.startswith("world_reference_trailing_year_incomplete") for w in out.warnings)
+
+
 def test_synthesis_bars_strictly_ascending():
     gold = _gold_usd_oz(
         {date(2021, 6, 1): 1800.0, date(2022, 6, 1): 1900.0, date(2023, 6, 1): 2000.0}
