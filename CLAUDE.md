@@ -112,6 +112,25 @@ reviewer (the main agent integrates and routes).
 reviewer → on approval push + close + advance watermark. Always short tm-send messages (3–5 lines +
 a file reference; long messages do not send — see tm-send routing).
 
+### Workflows for faster, parallel work (Boss directive 2026-06-20)
+
+Use the **Workflow tool (multi-agent orchestration)** to resolve bugs/features faster whenever the
+work is genuinely parallelizable — Boss has opted in for this repo. Reach for a workflow when:
+
+- **a batch of independent bug fixes / issues** can each be implemented + verified in parallel
+  (pipeline: implement → adversarially verify per item);
+- **a multi-dimension review** (correctness / tests / docs / clean-room) should fan out then verify;
+- **a broad sweep/audit/migration** across many files that one context shouldn't hold;
+- **independent domains** built concurrently (git worktrees to avoid write conflicts), merged only
+  on green integration tests.
+
+Keep using a **single `fork` sub-agent** for one scoped TDD job (the common case), and stay **inline**
+for trivial edits or a single coherent document (e.g. a design-doc revision — NOT worth a workflow).
+The main agent still **integrates on the merged tree** and **routes every change through
+`vnfin-oss-reviewer`** — a workflow changes *how fast the work fans out*, never the
+integrate-then-reviewer-gate discipline. Scale the fan-out to the task; don't spawn agents for work
+that isn't parallel.
+
 ## Testing discipline
 
 TDD is mandatory — **write the failing test first, then the code** (Red → Green → Refactor). Follow the global reference `~/.claude/refs/testing.md` for coverage targets, test categories (normal / boundary / error / edge), and the VCR cassette strategy.

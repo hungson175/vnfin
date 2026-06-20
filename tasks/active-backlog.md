@@ -81,8 +81,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     - **#157 addendum** (poller triage review-202606201101): fundamentals-metrics addendum
       accepted/HIGH-PRIORITY but PARKED for AFTER #159 — do NOT switch from #159 blocker fix.
       Future scope: canonical metrics + bank/non-bank mappings + coverage/source-health diagnostics;
-      OUT: advice/ranking/screener app helpers/blind third-party ingestion. (Recommended next after
-      #159 per reviewer queue.)
+      OUT: advice/ranking/screener app helpers/blind third-party ingestion. (NOW ACTIVE — see Now.)
+    - **#166** (poller triage review-202606201304): index volume semantics — ACCEPT design-first/
+      docs-diagnostics gap, queued BEHIND #157. No coder action now.
+    - **#167** (poller triage review-202606201304): VN equity universe / symbol discovery — ACCEPT
+      design-first core data primitive, likely high-value AFTER #157. No coder action now.
 - **Phase R0 refactor audit: DONE** (APPROVED, review-202606200818; report pushed `211321e`).
   No invariant violations; no do-now refactor. C1 (FX currency-code DRY)/C2/C3 defer; C4/C5/C6
   do-not-do. Report: `tasks/refactor-audit-2026-06-20.md`.
@@ -144,16 +147,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#157 fundamentals metrics — DESIGN REV2.2 AWAITING RE-REVIEW** (spec spec-202606201222; design
-  iterations: `1616ff6` → BLOCK 8 (review-202606201230) → rev2 `a0a00cc` → BLOCK 7 spec-precision
-  (review-202606201245) + read-only BLOCK 2 → rev2.1 `6fbe694` → rev2.2 `3a38a19`). No code until
-  reviewer approves. Rev2.2 resolves all spec-precision blockers: typed `StatementFetchResult` pure
-  seam (encodes failures) + 2 transformers + explicit fiscal-date alignment; `StatementCoverageStatus`/
-  `RatioCoverageStatus` enums + `MetricCoverageItem` (no loose str/tuple); `codes_by_source` namespaced
-  map (v1 vndirect-only, generic code fields removed); exact reason table; exact df columns/attrs
-  (no `source` attr); `cash_end_of_period` approved, §12 closed (no open Qs). Module `metric_api.py`,
-  full-catalog invariant, zero-ratio-fetch, lineage via code->LineItem all retained.
-  Deliverable: `docs/design/fundamentals-metrics.md` (design-only). On APPROVE → delegate TDD impl to sub-agent. Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
+- **#157 fundamentals metrics — DESIGN REV2.3 AWAITING RE-REVIEW** (spec spec-202606201222). Design
+  iterations: `1616ff6` → BLOCK×8 (review-202606201230) → `a0a00cc` → BLOCK×7 (review-202606201245) +
+  read-only BLOCK×2 → `6fbe694` rev2.1 → `3a38a19` rev2.2 → BLOCK×6 public-contract/TDD-precision
+  (review-202606201300) → rev2.3. No code until reviewer approves. Rev2.3 resolves the 6: B1
+  AllSourcesFailed/NOT_SERVED classification; B2 NOT_SERVED responsible-source metadata; B3 `limit`
+  on the pure transformer seam; B4 exact enum `.value`s + interpolation rules (UNAPPLICABLE→
+  NOT_APPLICABLE); B5 `metric_catalog(applies_to)` filter semantics (bank→BANK+BOTH etc., invalid→
+  VnfinError); B6 exact df attr value types (period.value/date.isoformat()/statement_sources tuple).
+  Doc now implementation-ready. Deliverable: `docs/design/fundamentals-metrics.md` (design-only).
+  On APPROVE → delegate TDD impl (consider a Workflow for parallel test/impl slices per new CLAUDE.md). Additive, OFFLINE layer on top of existing `get_financials()` + `itemcodes.py` (no new
   external source). v1: canonical metric catalog (corporate + bank headline mapped, per spec codes) +
   5 derived (gross/net margin, liab/equity, cash/assets, OCF margin) + coverage diagnostics. API:
   `metric_catalog()`, `explain_metric(id)`, `metrics(symbol, period)`, `explain_metric_coverage(...)`.

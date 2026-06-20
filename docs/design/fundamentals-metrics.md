@@ -1,9 +1,10 @@
 # Design — fundamentals metrics & coverage diagnostics (#157)
 
-**Status:** DESIGN (rev 2.2 — resolves both design-review rounds: 8 blockers review-202606201230 and
-7 spec-precision blockers review-202606201245: typed statement-result seam, fully-typed coverage
-enums/records, explicit VNDirect-namespaced codes, exact reason table, exact dataframe contract).
-Must be APPROVED before any code.
+**Status:** DESIGN (rev 2.3 — resolves three design-review rounds: 8 blockers (review-202606201230),
+7 spec-precision (review-202606201245), 6 public-contract/TDD-precision (review-202606201300): typed
+statement-result seam w/ `limit` + AllSourcesFailed/NOT_SERVED classification, fully-typed coverage
+enums w/ exact values, namespaced codes, exact reason+interpolation table, catalog filter semantics,
+exact DataFrame column+attr value types). Implementation-ready; must be APPROVED before any code.
 **Scope:** an **additive, offline** canonical-metrics + coverage-diagnostics layer on top of the
 existing `vnfin.fundamentals` reports — fundamental **data primitives and diagnostics** for
 long-term investors, *not* an advice/ranking/screener layer.
@@ -122,38 +123,48 @@ def explain_metric_coverage(
     timeout: float = 25.0,
 ) -> MetricCoverage: ...
 
-# B1: a TYPED per-statement fetch result so the pure seam can encode FAILURES (source_error /
-# not_served), not just successes. The wrappers fetch each statement, catch recoverable SourceErrors,
-# and build one of these per statement; the pure transformers consume them — no hidden wrapper logic.
+# B1/B2: a TYPED per-statement fetch result so the pure seam can encode FAILURES (source_error /
+# not_served), not just successes. The wrappers fetch each statement, catch recoverable errors, and
+# build one of these per statement; the pure transformers consume them — no hidden wrapper logic.
 @dataclass(frozen=True)
 class StatementFetchResult:
     statement: StatementType
     reports: tuple[FinancialReport, ...]      # () when the fetch failed / not served
     status: StatementCoverageStatus           # OK | MISSING | SOURCE_ERROR | NOT_SERVED
-    source: Optional[str]                     # succeeding source (None on failure)
-    detail: Optional[str] = None              # SourceError message class on failure
+    # B2: role depends on status — OK: succeeding source; NOT_SERVED: the responsible source
+    # (e.g. "cafef" for cashflow); SOURCE_ERROR/MISSING: None (no single responsible source).
+    source: Optional[str]
+    detail: Optional[str] = None              # error message/class on failure
 
-# Private PURE transformers (B1/B4) — NO network. Synthetic tests build StatementFetchResults
-# (success AND failure) and call these directly, so unit tests need no fake HTTP plumbing.
+# Private PURE transformers (B1/B3/B4) — NO network. Synthetic tests build StatementFetchResults
+# (success AND failure) and call these directly, so unit tests need no fake HTTP plumbing. `limit`
+# is on the seam (B3) so the union-align + cap behavior is unit-tested without HTTP.
 def _metrics_from_statement_results(
-    symbol, period, is_bank, results: tuple[StatementFetchResult, ...],
+    symbol, period, is_bank, results: tuple[StatementFetchResult, ...], limit: int,
 ) -> tuple[MetricReport, ...]: ...
 def _coverage_from_statement_results(
-    symbol, period, is_bank, results: tuple[StatementFetchResult, ...],
+    symbol, period, is_bank, results: tuple[StatementFetchResult, ...], limit: int,
 ) -> MetricCoverage: ...
 ```
 
-**Fiscal-date alignment (B1):** align statements by the **union of fiscal dates across the
+**Fiscal-date alignment (B1/B3):** align statements by the **union of fiscal dates across the
 successful statements**, newest-first; a metric whose statement has no report at a given date →
-`MISSING`; cap the period list to `limit` **after** alignment. The fetching wrappers
-(`metrics`/`explain_metric_coverage`) call `get_financials` per statement (catching recoverable
-`SourceError` → a failed `StatementFetchResult`) then delegate to the pure transformers above.
-`source` wins over `sources` (matching the existing `get_financials` helper).
+`MISSING`; cap the period list to `limit` **after** alignment (the pure transformers take `limit`).
+**Wrapper error classification (B1):** the wrappers call `get_financials` per statement and map
+failures to a failed `StatementFetchResult` — a recoverable **`SourceError`** (direct/single-source)
+**and** a chain-level **`AllSourcesFailed`** (note: `AllSourcesFailed` is NOT a `SourceError`, so it
+is caught explicitly) both → `status=SOURCE_ERROR, source=None, detail=<exc class/msg>`; the
+specific CafeF-cashflow case (CafeF doesn't serve cashflow) → `status=NOT_SERVED, source="cafef"`.
+No failed-attempt trail is exposed (C1). `source` wins over `sources` (matching `get_financials`).
 
 - `metrics()`/`explain_metric_coverage()` mirror `get_financials`' injection knobs (`is_bank`,
   `limit`, `source`/`sources`, `http_get`, `timeout`, `max_attempts`) so tests can inject a fake
   `http_get` or a stub `source`, and callers keep the same controls.
 - `metric_catalog()`/`explain_metric()` make **zero** network calls (pure registry).
+- **`metric_catalog(applies_to)` filter (B5):** `None` → full catalog; `"bank"`/`AppliesTo.BANK` →
+  `BANK + BOTH` metrics; `"corporate"`/`"non_bank"`/`AppliesTo.CORPORATE` → `CORPORATE + BOTH`
+  metrics (i.e. `BOTH` is always included for an entity-typed filter); any other string →
+  `VnfinError`. `explain_metric(id)` raises `VnfinError` on an unknown id.
 - The pure `_metrics_from_statement_results(...)` / `_coverage_from_statement_results(...)`
   transformers are the TDD seam: synthetic `StatementFetchResult`s (success + failure) →
   `MetricReport`s / `MetricCoverage` with **no HTTP**.
@@ -217,12 +228,22 @@ under a different code — a silent all-MISSING trap.
 class MetricId(str, Enum):           # stable canonical ids, e.g. "net_income", "gross_margin"
     NET_REVENUE = "net_revenue"; GROSS_PROFIT = "gross_profit"; ...   # full list in §6
 
-class MetricCategory(str, Enum):     # PROFITABILITY | LIQUIDITY | LEVERAGE | CASHFLOW | SIZE | ...
-class MetricKind(str, Enum):         # RAW_MAPPED | PROVIDER_NATIVE | DERIVED
-class AppliesTo(str, Enum):          # CORPORATE | BANK | BOTH
-class MetricAvailability(str, Enum): # AVAILABLE | MISSING | BLOCKED | NOT_APPLICABLE | UNSUPPORTED
-class StatementCoverageStatus(str, Enum):  # B2: OK | MISSING | SOURCE_ERROR | NOT_SERVED
-class RatioCoverageStatus(str, Enum):      # B2: NOT_REQUESTED (v1) — extends when ratios ship
+# B4: EXACT enum members + values (lower_snake of the member name). Tests + the public API snapshot
+# bind to these strings; DataFrame enum columns serialize the `.value`.
+class MetricCategory(str, Enum):
+    PROFITABILITY="profitability"; LIQUIDITY="liquidity"; LEVERAGE="leverage"
+    CASHFLOW="cashflow"; SIZE="size"
+class MetricKind(str, Enum):
+    RAW_MAPPED="raw_mapped"; PROVIDER_NATIVE="provider_native"; DERIVED="derived"
+class AppliesTo(str, Enum):
+    CORPORATE="corporate"; BANK="bank"; BOTH="both"
+class MetricAvailability(str, Enum):
+    AVAILABLE="available"; MISSING="missing"; BLOCKED="blocked"
+    NOT_APPLICABLE="not_applicable"; UNSUPPORTED="unsupported"
+class StatementCoverageStatus(str, Enum):
+    OK="ok"; MISSING="missing"; SOURCE_ERROR="source_error"; NOT_SERVED="not_served"
+class RatioCoverageStatus(str, Enum):
+    NOT_REQUESTED="not_requested"   # v1 only; extends when ratios ship
 
 @dataclass(frozen=True)
 class MetricSourceCodes:             # B3: codes for ONE source namespace (no cross-namespace mixing)
@@ -270,8 +291,9 @@ class MetricValue:
 class StatementProvenance:           # per-statement outcome for one fiscal period
     statement: StatementType
     status: StatementCoverageStatus  # B2: typed enum (OK/MISSING/SOURCE_ERROR/NOT_SERVED)
-    source: Optional[str]            # SUCCEEDING source (C1: no failed-attempt trail in v1)
-    detail: Optional[str] = None     # e.g. the SourceError message class
+    # B2: OK -> succeeding source; NOT_SERVED -> responsible source (e.g. "cafef"); else None.
+    source: Optional[str]            # (C1: no failed-attempt trail in v1)
+    detail: Optional[str] = None     # error message/class on failure
 
 @dataclass(frozen=True)
 class MetricReport:                  # all metrics for one symbol + one fiscal period
@@ -285,11 +307,15 @@ class MetricReport:                  # all metrics for one symbol + one fiscal p
     statement_sources: tuple[StatementProvenance, ...]
     warnings: tuple[str, ...] = ()   # incl. "mixed_source" when a value's inputs span >1 source
     def get(self, metric_id) -> Optional[MetricValue]: ...   # B6: returns a value even when unavailable
-    # to_dataframe() — one row per metric. EXACT fixed columns (B6, deterministic):
-    #   metric_id, name, value, value_unit, kind, availability, reason, category, applies_to,
-    #   fiscal_date, input_codes, input_sources
-    #   (input_codes/input_sources are tuples joined to comma-strings; empty for unavailable metrics).
-    # EXACT df.attrs: symbol, period, fiscal_date, is_bank, statement_sources.
+    # to_dataframe() — one row per metric. EXACT fixed columns (B6, deterministic), enum columns
+    # serialize the `.value` string:
+    #   metric_id (MetricId.value), name (str), value (float|None), value_unit (str),
+    #   kind (MetricKind.value), availability (MetricAvailability.value), reason (str|None),
+    #   category (MetricCategory.value), applies_to (AppliesTo.value), fiscal_date (date.isoformat()),
+    #   input_codes (comma-joined str, "" if none), input_sources (comma-joined str, "" if none).
+    # EXACT df.attrs value types (B6):
+    #   symbol=str, period=Period.value, fiscal_date=date.isoformat(), is_bank=bool,
+    #   statement_sources = tuple of (statement.value, status.value, source|None, detail|None).
     # MUST NOT set df.attrs["source"] (C2: there is no single report source).
     def to_dataframe(self) -> "pd.DataFrame": ...
 
@@ -375,8 +401,13 @@ them verbatim). `{…}` are substituted; string literals use single quotes as sh
 | derived denominator negative | `MISSING` | `denominator {input_id} is negative ({value})` |
 | derived denominator non-finite/NaN | `MISSING` | `denominator {input_id} is not finite` |
 
-`UNAPPLICABLE`/`UNSUPPORTED` are reserved for v2 metric kinds (valuation/ROE-family) absent from the
-v1 catalog. All examples and tests in §9 reference these exact strings.
+**Interpolation rules (B4):** `{statement}` = `StatementType.value`; `{input_id}`/`{id}` =
+`MetricId.value`; `{availability}` = `MetricAvailability.value`; `{fiscal_date}` = `date.isoformat()`;
+`{source}` = source name string; `{code}` = the VNDirect item code string; `{value}` = `repr(float)`.
+String literals use single quotes exactly as shown. `MetricAvailability.NOT_APPLICABLE` is the
+enum member (there is no `UNAPPLICABLE`). `UNSUPPORTED` is reserved for v2 metric kinds
+(valuation/ROE-family) absent from the v1 catalog. All examples and tests in §9 reference these
+exact strings.
 
 ### Coverage (`explain_metric_coverage`)
 
@@ -581,7 +612,8 @@ Build `FinancialReport`/`LineItem` fixtures in-memory (fake round numbers) — n
 - [x] Test matrix (§9).
 - [x] Source / legal statement (§8).
 - [x] **rev2:** all 8 review blockers (B1-B8, review-202606201230) resolved (§11).
-- [x] **rev2.2:** all 7 spec-precision blockers (review-202606201245) resolved (§12); no open questions.
+- [x] **rev2.2:** all 7 spec-precision blockers (review-202606201245) resolved (§12).
+- [x] **rev2.3:** all 6 public-contract/TDD-precision blockers (review-202606201300) resolved (§13).
 - [ ] **No implementation code** until the reviewer approves this revised design.
 
 ## 11. Blocker resolutions (review-202606201230) + reviewer-answered questions
@@ -634,3 +666,25 @@ remain — implementation-ready):
   is_bank, statement_sources`); **`df.attrs["source"]` explicitly forbidden** (C2) (§4).
 - **B7 cash id:** reviewer approved `cash_end_of_period` (VNDirect `35000`) — **resolved, no open
   question.** Also added "`source` wins over `sources`" to the signature notes (§3, non-blocker #2).
+
+## 13. REV2.3 blocker resolutions (review-202606201300)
+
+The REV2.2 re-review raised 6 public-contract/TDD-precision blockers; all resolved (no open questions):
+
+- **B1 `AllSourcesFailed` classification:** the wrappers catch both a direct/single-source
+  `SourceError` **and** a chain-level `AllSourcesFailed` (which is NOT a `SourceError`, so caught
+  explicitly) → `StatementFetchResult(status=SOURCE_ERROR, source=None, detail=…)`, except the CafeF
+  cashflow case → `NOT_SERVED, source="cafef"` (§3).
+- **B2 `NOT_SERVED` source metadata:** `StatementFetchResult.source`/`StatementProvenance.source`
+  redefined — OK→succeeding source, NOT_SERVED→responsible source (e.g. `"cafef"`), else `None`;
+  reason table `not served by source '{source}'` now well-defined (§3/§4/§5).
+- **B3 `limit` on the pure seam:** both pure transformers take `limit`; union-align + cap is unit-
+  tested with no HTTP (§3, §9).
+- **B4 exact enum values + interpolation:** enum members spelled with `.value` strings; interpolation
+  rules (`{statement}=statement.value`, `{input_id}=metric_id.value`, `{fiscal_date}=date.isoformat()`,
+  …); `UNAPPLICABLE` corrected to `NOT_APPLICABLE`; DataFrame enum columns serialize `.value` (§4/§5).
+- **B5 `metric_catalog(applies_to)` semantics:** `None`→full; `bank`→BANK+BOTH; `corporate`/`non_bank`→
+  CORPORATE+BOTH; invalid→`VnfinError` (§3).
+- **B6 DataFrame attr value types:** `period=Period.value`, `fiscal_date=date.isoformat()`,
+  `statement_sources`=tuple of `(statement.value, status.value, source|None, detail|None)`; enum
+  columns `.value`; no `source` attr (§4).
