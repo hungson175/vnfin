@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-19 ~10:12 +07_
+_Last synced: 2026-06-20 ~16:18 +07_
 
 ---
 
@@ -186,6 +186,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     NEVER a wrong human label on a value. #157 bank canonical metrics build on the corrected map +
     blocked/missing diagnostics. Verified anchors → synthetic offline tests. Codex x2 review against
     these anchors. Spec: `~/tools/vnfin-oss-reviewer/reviews/review-202606201553-issue157-bank-fundamentals-mislabel-VERIFIED.md`.
+  - **#157 RATIOS-GUARD INPUT (HIGH; reviewer-reproduced, review-202606201617) — group with the
+    bank-mislabel as "#157 fundamentals base-layer fixes"; do NOT interrupt current work.** Repro:
+    `get_financials('FPT','ratios','annual')` → `AllSourcesFailed` (vndirect: `currency None != chain
+    unit VND`; cafef: `ratio ReportType: expected string got NoneType`) → ratios (P/E, P/B, ROE, ROA)
+    fully unavailable. FIX (3 parts): (1) make the failover unit-consistency guard **statement-type-
+    aware** — `ratios` is dimensionless so chain unit = `None` (currency=`None` is CONSISTENT, not a VND
+    mismatch); KEEP VND homogeneity for income/balance/cashflow; a ratios report arriving WITH a
+    monetary currency stays rejected (don't blanket-disable). (2) harden the cafef ratios parser to
+    tolerate null/absent `ReportType` (coerce/skip). (3) after fix, confirm annual-vs-TTM period mapping
+    (annual ratios surfaced a 2026-06-30 TTM-looking date). Codex x2 review when it lands. Both #157
+    base-layer fixes (bank-mislabel + ratios-guard) land BEFORE the canonical metric catalog builds on
+    the corrected base. Spec: `~/tools/vnfin-oss-reviewer/reviews/review-202606201617-issue157-ratios-currency-guard-VERIFIED.md`.
 
 ## Next / in-flight bugs (BEFORE large #157 implementation)
 
@@ -208,22 +220,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     product {id} ends at {latest}, before requested {start}..{end}"` (data-gap only, true for closed
     funds); else `EmptyData` (unchanged — pre-inception + sparse/weekend straddle). Add `StaleData`
     to exceptions.__all__ (additive; snapshot regen at release). 8 synthetic offline tests.
-  - **#173 bond holdings → OPTION A (parse `productTopHoldingBondList`). NOW (WIP).** Reviewer's
-    independent live probe (review-202606201528) SUPERSEDES the B-reframe: `productTopHoldingBondList`
-    EXISTS (VFF/ABBF = 10 bond rows each, stock list empty, SAME row shape as equity:
-    `{stockCode, netAssetPercent, industry, price=None, type:'BOND', updateAt, id}`). 22 BOND funds +
-    1 at-par BALANCED currently return bare EmptyData = category-wide HIGH blind spot. Spec
-    (8 points): (1) parse `productTopHoldingBondList` in `holdings()` reusing `_parse_holding` (bond
-    codes `BAF126003` pass `canonical_security_symbol`), combine with equity rows; (2) additive
-    `FundHolding.instrument_type: str = "STOCK"` from row `type` (STOCK/BOND), return stays
-    `tuple[FundHolding,...]`; (3) as-of from per-row `updateAt` epoch (NOT `updateAssetHoldingTime`=null);
-    (4) BOTH lists empty → `EmptyData` "no holdings published yet" (e.g. VBIF); (5) dedup + COMBINED
-    weight≤100 guard, preserve #21 identity guards + equity behavior; (6) NEW sibling accessor
-    `asset_allocation(product_id) -> AssetAllocation` (productAssetHoldingList BOND/CASH/STOCK %);
-    (7) **sweep recon docs repo-wide** (funds-fmarket.md + research/2026-06-18-funds.md + design doc)
-    correcting the now-STALE "no per-bond list" claim — [[feature-flips-stale-fact-sweep-whole-repo]];
-    (8) synthetic tests. Additive public API (instrument_type + AssetAllocation + accessor; snapshot
-    regen at release). Codex x2 review again. NonEquityHoldings(EmptyData) from B-reframe = DROPPED.
+  - **#173 bond holdings → OPTION A. ✅ DONE — pushed `6c37e7c..15ab705`, #173 CLOSED**
+    (reviewer Codex×2 BOTH APPROVE, review-202606201616; my own adversarial-verify Workflow = 0
+    confirmed defects). `holdings()` merges `productTopHoldingList`+`productTopHoldingBondList` into
+    `tuple[FundHolding,...]`; additive `FundHolding.instrument_type` (fail-closed unknown) +
+    `as_of_utc` (per-row `updateAt` epoch-ms, never fabricated); new `asset_allocation(id) ->
+    AssetAllocation` (+`AssetClassWeight`, STOCK/BOND/CASH, no forced sum≈100, fail-closed class);
+    EmptyData only when both lists empty; combined dedup+weight guard; #21 factored into shared
+    `_fetch_detail_data`. Repo-wide stale-fact sweep done ([[feature-flips-stale-fact-sweep-whole-repo]]).
+    Suite 2917 green; funds cov 96%; all-additive. **Non-blocking nits (reviewer N1/N2, follow-up):**
+    (N1) `asset_allocation` redundant `data.get("code")` re-read; (N2) unused `seen_codes=None`
+    default branch — see Non-blocking follow-ups. N3 snapshot regen = release-time.
 
 
 - **#171 — docs/diagnostics polish: world-gold opt-in Stooq path** (poller triage review-202606201355).
@@ -266,6 +273,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
+- **#173 N1/N2 (reviewer nits, review-202606201616, reviewed-follow-up — re-review before push):**
+  N1 = `asset_allocation()` re-reads `data.get("code")` redundantly (factor with `holdings()`);
+  N2 = the `seen_codes=None` default branch on `_parse_holding`/`_parse_asset_class` is now never hit
+  (both callers pass a set) — drop or keep as defensive. Cosmetic; bundle into a future funds touch.
 - #69: `quote_asset=None` + a normalized (currency-form) `price_unit` is currently accepted;
   a stricter "quote_asset mandatory" policy would be a separate follow-up (reviewer note 14:21).
 - #130: `model_type` allow-list is fixed to {1,2,3,101,102,103}; widen only if an official set is documented.
