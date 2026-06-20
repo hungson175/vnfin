@@ -285,6 +285,10 @@ class HttpDataSource:
         # ``(url, params, headers)`` signature; POST callers additionally pass
         # ``json_body`` as a 4th positional arg. The default client accepts both.
         self._http_get = http_get or self._default_http_get
+        # Only the default fetcher accepts a ``binary=`` kwarg; an injected stub does not.
+        # Record this at construction time — a bound-method ``is`` check on ``_http_get``
+        # is unreliable (a fresh bound method per attribute access ⇒ ``is`` always False).
+        self._http_get_is_default = http_get is None
         self._timeout = _validate_positive_number(timeout, "timeout")
 
         # --- retry/backoff (opt-in) -------------------------------------- #
@@ -460,7 +464,7 @@ class HttpDataSource:
         returns ``bytes`` for a binary endpoint, exactly as it returns ``str`` for text.
         """
         # An injected stub never accepts ``binary=``; only the default fetcher does.
-        use_default = self._http_get is self._default_http_get
+        use_default = self._http_get_is_default
         attempt = 0
         while True:
             try:

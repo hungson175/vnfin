@@ -716,6 +716,36 @@ def test_default_http_get_returns_content_when_binary_true():
             del sys.modules["httpx"]
 
 
+def test_request_bytes_routes_binary_to_default_fetcher(monkeypatch):
+    """Regression (#185): when NO http_get is injected, the DEFAULT fetcher is in use and
+    it is the only fetcher that accepts ``binary=``. ``_fetch_with_retry`` must detect the
+    default fetcher and forward ``binary=True`` to it.
+
+    The original detection was a bound-method identity check
+    (``self._http_get is self._default_http_get``), which is ALWAYS False — Python creates
+    a fresh bound-method object on every attribute access (``==`` is True, ``is`` is not).
+    So ``binary=`` was never forwarded at RUNTIME: the default fetcher returned
+    ``resp.text`` (a lossy str), ``_request_bytes`` rejected the str as ``InvalidData``, and
+    every real ``.xlsx`` fetch failed server-side — the #185 CMO gold leg only ever worked
+    with injected byte stubs in tests, never in production. Detection must therefore be a
+    construction-time flag, not a bound-method ``is`` check."""
+    probe = _Probe()  # no injected http_get -> the default fetcher is in use
+    seen = {}
+
+    def _spy(url, params=None, headers=None, binary=False):
+        seen["binary"] = binary
+        # bytes only when binary= is correctly forwarded; a lossy str otherwise (which
+        # _request_bytes would reject as InvalidData, exactly as the real bug manifested).
+        return b"PK\x03\x04OOXML" if binary else "lossy-text-decode"
+
+    # Stand in for the (uncovered, network-bound) default fetcher so the routing — not the
+    # network — is what's under test.
+    monkeypatch.setattr(probe, "_http_get", _spy)
+    out = probe._request_bytes(FAKE_URL)
+    assert seen.get("binary") is True
+    assert out == b"PK\x03\x04OOXML"
+
+
 def test_request_text_still_works_after_binary_addition():
     """Regression: the existing text path is unchanged by the binary addition."""
     probe = _Probe(http_get=_capture("plain text"))
