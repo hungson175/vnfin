@@ -31,6 +31,7 @@ from vnfin.macro import (
     default_macro_sources,
     get_indicator,
 )
+from vnfin.macro.dbnomics import _SERIES_END_GAP
 
 
 # ---- fake sources (declare unit_for + get_indicator like the real ones) ----
@@ -1132,3 +1133,18 @@ def test_inflation_still_worldbank_annual_after_179():
     assert res.source == "worldbank"
     assert res.unit == "%"
     assert res.frequency.value == "annual"
+
+
+def test_series_end_gap_warning_survives_failover_finalize(monkeypatch):
+    # Hardening: the monthly series_end_gap warning must survive the full MacroClient
+    # path (FailoverClient._finalize), not just the source in isolation. A regression
+    # that dropped source warnings in _finalize would be caught here. Pin _today far
+    # past the last obs so the gap fires deterministically.
+    monkeypatch.setattr("vnfin.macro.dbnomics._today", lambda: date(2026, 6, 1))
+    dbn_text = _dbn_monthly("M.ZZ.FPOLM_PA", ["2023-10-01", "2023-11-01", "2023-12-01"], [5.0, 4.5, 4.5])
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: json.dumps([{"total": 0}, None]))
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: json.dumps({"values": {}}))
+    dbn = DBnomicsSource(http_get=lambda u, p, h: dbn_text)
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.POLICY_RATE)
+    assert res.source == "dbnomics"
+    assert any(w.startswith(f"{_SERIES_END_GAP}:") for w in res.warnings)
