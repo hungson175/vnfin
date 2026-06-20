@@ -68,6 +68,11 @@ _KNOWN_INDEX_IDENTIFIERS: frozenset[str] = _VALUE_HISTORY_INDICES | frozenset(
         # (HNXUpcomIndex). Deny-only: rejected from the price path; NOT value-history
         # allow-listed (no per-symbol value-history test). (#168 review-202606201352)
         "HNXUPCOMINDEX",
+        # Bare "HNX" short alias of the HNX index (HNXINDEX). Deny-listed so the PRICE
+        # path rejects it; the INDEX path canonicalizes it to HNXINDEX (see _INDEX_ALIASES /
+        # resolve_index_alias) so index_history("HNX") routes to the value-history series.
+        # (#168 reopen review-202606201410)
+        "HNX",
         # 10 HOSE sector indices (docs/research/2026-06-18-indices.md)
         "VNCOND",
         "VNCONS",
@@ -81,6 +86,25 @@ _KNOWN_INDEX_IDENTIFIERS: frozenset[str] = _VALUE_HISTORY_INDICES | frozenset(
         "VNUTI",
     }
 )
+
+
+#: Index-namespace aliases: a short/colloquial selector -> its canonical value-history
+#: identifier. The INDEX path (``index_history`` / ``index_history_stitched``) resolves these
+#: AFTER ``canonical_security_symbol`` so a caller using the short form is routed to the
+#: supported series and the fetch uses the canonical id. The PRICE path does NOT resolve
+#: aliases — it only deny-lists (every alias here is also in ``_KNOWN_INDEX_IDENTIFIERS``).
+#: (#168 reopen review-202606201410: HNX -> HNXINDEX.)
+_INDEX_ALIASES: dict[str, str] = {"HNX": "HNXINDEX"}
+
+
+def resolve_index_alias(value) -> str:
+    """Map a known index alias (e.g. ``HNX``) to its canonical value-history id (``HNXINDEX``).
+
+    Identity for non-aliased input. Expects an already-canonicalized symbol (the index guards
+    call this right after ``canonical_security_symbol``); a non-string returns ``""`` (it will
+    then fail the allow-list check). Used only by the index path, never the price deny-list.
+    """
+    return _INDEX_ALIASES.get(_normalize(value), _normalize(value))
 
 
 def _normalize(value) -> str:

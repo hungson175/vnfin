@@ -33,7 +33,7 @@ from .keys import (
     canonical_provider_key,
     canonical_security_symbol,
 )
-from .index_registry import is_known_index, is_value_history_index
+from .index_registry import is_known_index, is_value_history_index, resolve_index_alias
 from .results import non_empty_reason, result_type_reason
 from .rows import reject_duplicate, require_list, require_object
 from .timeseries import (

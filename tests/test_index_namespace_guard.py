@@ -206,3 +206,41 @@ def test_index_history_allows_provider_alias_to_reach_network(sym):
     # passed the allow-list guard -> reached the network (not rejected as a non-index)
     assert not (isinstance(exc.value, InvalidData) and "not a known" in str(exc.value).lower())
     assert calls, f"{sym} should have reached the network (passed the allow-list guard)"
+
+
+# --------------------------------------------------------------------------- #
+# #168 reopen review-202606201410: bare "HNX" short alias — deny in prices,
+# canonicalize HNX -> HNXINDEX in the index path.
+# --------------------------------------------------------------------------- #
+def test_hnx_alias_known_and_resolves():
+    from vnfin._contracts.index_registry import resolve_index_alias
+    assert is_known_index("HNX") is True          # deny-listed (price path rejects)
+    assert is_known_index("hnx") is True
+    assert resolve_index_alias("HNX") == "HNXINDEX"
+    assert resolve_index_alias(" hnx ") == "HNXINDEX"
+    assert resolve_index_alias("VN30") == "VN30"  # identity for non-aliases
+
+
+def test_prices_history_rejects_bare_hnx_zero_network():
+    calls, http_get = _recorder()
+    with pytest.raises(InvalidData) as exc:
+        vnfin.prices.history("HNX", start=_START, end=_END, http_get=http_get)
+    assert "index" in str(exc.value).lower()
+    assert calls == []  # zero network
+
+
+def test_index_history_routes_bare_hnx_to_hnxindex():
+    # HNX must NOT be rejected with "use prices"; it routes to HNXINDEX and reaches the network.
+    calls, http_get = _recorder()
+    with pytest.raises(Exception) as exc:
+        vnfin.indices.index_history("HNX", _START, _END, http_get=http_get)
+    assert not (isinstance(exc.value, InvalidData) and "not a known market index" in str(exc.value).lower())
+    assert calls, "HNX should route to HNXINDEX and reach the network (passed allow-list)"
+
+
+def test_index_history_stitched_routes_bare_hnx():
+    calls, http_get = _recorder()
+    with pytest.raises(Exception) as exc:
+        vnfin.indices.index_history_stitched("hnx", _START, _END, http_get=http_get)
+    assert not (isinstance(exc.value, InvalidData) and "not a known market index" in str(exc.value).lower())
+    assert calls, "stitched HNX should route to HNXINDEX and reach the network"

@@ -17,7 +17,11 @@ from typing import Optional, Union
 from ..client import FailoverPriceClient
 from ..exceptions import InvalidData, VnfinError
 from ..models import AdjustmentPolicy, Interval, PriceHistory
-from .._contracts import canonical_security_symbol, is_value_history_index
+from .._contracts import (
+    canonical_security_symbol,
+    is_value_history_index,
+    resolve_index_alias,
+)
 from ..validation import validate_date_range, validate_non_empty_string
 from .models import IndexConstituents
 from .sources import (
@@ -86,6 +90,9 @@ class IndexClient:
         # identifier — reject malformed shapes before the failover engine runs and
         # normalize to uppercase so identity checks match the sources' canonical form.
         symbol = canonical_security_symbol(symbol, "symbol")
+        # Issue #168 (reopen): route a short index alias to its canonical value-history id
+        # (e.g. HNX -> HNXINDEX) so the allow-list check AND the fetch use the supported id.
+        symbol = resolve_index_alias(symbol)
         # Issue #168: index value-history serves only recognised market indices. A stock
         # (e.g. FPT) or unknown symbol must fail loud BEFORE any network call instead of
         # being fetched and mislabelled as index points.
@@ -125,6 +132,8 @@ class IndexClient:
                 f"index_history_stitched: only daily (D1) is supported, got {interval}"
             )
         symbol = canonical_security_symbol(symbol, "symbol")
+        # Issue #168 (reopen): route a short index alias to its canonical id (HNX -> HNXINDEX).
+        symbol = resolve_index_alias(symbol)
         # Issue #168: only recognised market indices have value-history; fail loud on a
         # stock/unknown symbol before any segment fetch.
         if not is_value_history_index(symbol):
