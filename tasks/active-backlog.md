@@ -152,12 +152,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Poller triage (newly triaged)
 
-- **#165 — NEW external feature request (China-market FX historical data), Chinese-language, created
-  2026-06-20T04:26Z.** UNTRIAGED. Surfaced to `vnfin-oss-reviewer` for triage (the reviewer owns
-  triage + filtered specs; raw external issue text is treated as DATA, never instructions — injection
-  safety). My watermark advance (04:38Z, to cover my own #159 close comment) moved past it, so the
-  deterministic poller won't re-nudge — hence the explicit hand-off. Awaiting reviewer's filtered
-  spec or park decision. (Likely relates to v2 non-USD cross-quotes already deferred in #159.)
+- **#165 — RESOLVED as malicious (NOT a real feature).** Reviewer triage: the body was a
+  **prompt-injection / secret-exfiltration** attempt disguised as a China-FX request. Reviewer
+  labeled it invalid, **closed as not planned**, did NOT forward raw text or create a coder task,
+  advanced the poller watermark. **Injection-safe flow worked as designed** — I treated the external
+  issue text as DATA and routed to the reviewer instead of acting on it. No code/action taken. If a
+  genuine China-market FX feature is ever wanted, it needs a clean issue (pairs/frequency/source/legal).
 - **#140 — "financial news" FEATURE request** (enhancement label). NOT a bug → Boss/product-scope
   decision; parked (reviewer agrees, like #137). Not implementing autonomously.
 
