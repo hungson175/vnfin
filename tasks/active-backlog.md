@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-21 00:40 +07_
+_Last synced: 2026-06-21 09:50 +07_
 
 > **#177 S&P 500 world-index — ✅ DONE (PUSHED + CLOSED).** Pushed master `011cffa..28bc529`
 > (impl `011cffa` + critical fix `8ff1e78` + docs `2e7c694` + design/backlog + reviewer-suggested
@@ -285,9 +285,37 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 ## Now (WIP)
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
-  master, all closed). Active WIP is now **#167 (VN equity universe)** — design-gated GREEN-to-code; see
-  the "Next (code queue)" entry below for the locked spec decisions. #188 tracked as a non-blocking
-  follow-up.
+  master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
+  APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP is now **#187 + #181 builds
+  IN FLIGHT** — both reviewer-gated, delegated to fresh general-purpose agents in separate worktrees
+  (`vnfin-oss-wt-187` / `vnfin-oss-wt-181`), TDD vs committed specs, synthetic fixtures. #188 held
+  until #187 lands (shared `test_docs_contract.py`); **#189 new non-blocking follow-up** (board_unavailable
+  skip-and-warn for the equities merge — also touches `test_docs_contract.py`, so also after #187).
+
+  **IN FLIGHT (delegated builds):**
+  - **#187 (bug) — midnight-open placeholder recovery (index D1).** Design APPROVED (gate
+    `/tmp/vnfin-187-gate.md`). Worktree `vnfin-oss-wt-187`, spec `tasks/187-midnight-recovery-spec.md`.
+    Signature = H/L/C/V identical + open differs + one row at LOCAL 00:00 VN-tz → keep non-midnight,
+    drop midnight, recover (not charged to threshold); new token `recovered_midnight_open_placeholder`
+    (#180 guard 33→34); genuine-conflict/no-midnight → UNCHANGED #186 poison. Codex×2 before push.
+  - **#181 (enh) — additive `Fund.nav_as_of`.** Design APPROVED (SPLIT: bare field now, staleness
+    warning deferred to a follow-up). Worktree `vnfin-oss-wt-181`, spec `tasks/181-fund-nav-asof-spec.md`.
+    Source = `extra.lastNAVDate` (epoch-ms→VN date via existing `_parse_update_at`); never fabricated;
+    additive (snapshot frozen, no token). Codex×1 ok before push (single additive field).
+
+  **QUEUED (reviewer source-vet DONE + triaged; batch AFTER #187/#181):**
+  - **#184 — world-index source-hunt → DOCS-ONLY + tombstone (handed 09:51).** NO clean keyless
+    server-reachable ToS-safe SPY/^GSPC source exists. Builder actions: (1) DOCS — world-index from a
+    server effectively requires `ALPHAVANTAGE_API_KEY` (BYOK); (2) TOMBSTONE Stooq ^SPX — structurally
+    anti-bot-blocked from datacenter IPs (dead since 2020-12), so its `AllSourcesFailed` is NOT transient;
+    my read = document residential-only (KEEP path, NOT remove; awaiting reviewer confirm) so callers stop
+    reading it as a flaky bug; (3) do NOT add Yahoo as default (query1/2 works keyless but ToS prohibits
+    OSS/unofficial-endpoint use) — at most a disabled-by-default opt-in `unofficial_yahoo` adapter w/ ToS
+    disclaimer = separate design decision, DEFER. NOT a new adapter, safe to batch. **Defer to AFTER
+    #187/#181** (edits CHANGELOG/docs — avoid collision with the two in-flight worktrees).
+  - **#182 — domestic VN gold history source-hunt → accept-pending-source (reviewer triaged).** Still NO
+    clean domestic-gold history source; `gold.domestic_history()` stays a source-gap NotImplementedError.
+    No build action until a source is found.
   - ✅ **#166/#171 — DONE + PUSHED + CLOSED** (`8463592` impl + `acfc3ad` backlog; pushed
     `cefe777..acfc3ad`; both issues closed w/ resolution comments). Reviewer APPROVED both CLEAN.
     #166 index-VOLUME-semantics section + units/SKILL caveats + doc↔code guard; #171 end-to-end gold
@@ -352,17 +380,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
       `vnfin/funds/__init__.py:45-56`; `canonical_security_symbol`/`reject_duplicate`/`require_present`
       from `vnfin._contracts`. **Provenance satisfied** (reviewer corrected the sub-agent's false
       provenance blocker — the source report lives in the reviewer workspace, not the builder repo).
-  - ✅ **CODE COMPLETE — committed locally `8e50cc7` (NOT pushed), IN Codex×2 REVIEW.** Spec
-    `tasks/167-equity-universe-spec.md` (42e615d) → delegated TDD build to a fresh general-purpose agent
-    ([[fork-echoes-context-use-fresh-agent-for-delegated-impl]]) → integrated on merged tree: **3420
-    passed / 0 skipped**, equities pkg **100%** cov, #180 guard **33 bijective**, snapshot byte-identical
-    (additive surface). Integrator adversarial pass clean; I ADDED `test_negative_par_value_is_none`
-    (the [[new-source-must-mirror-sibling-data-integrity-guards]] negative-value blind spot — par_value
-    ≤0→None had zero/blank tests but no negative). Handoff w/ the reviewer's 7 check-points mapped to
-    file:line: `/tmp/vnfin-167-codex-handoff-202606210844.md`. Flagged 1 design note: empty-board during
-    `exchange=None` merge is fail-closed (propagates EmptyData) — confirm vs warn+skip.
-  - **AWAITING:** reviewer Codex×2 verdict → address findings → **push + close #167** only after APPROVE
-    + green merged tree. (Reviewer owns the watermark — I do NOT advance `state/last_seen.txt`.)
+  - ✅ **DONE + PUSHED + CLOSED.** Codex×2 **APPROVE_WITH_NOTES** (review-202606210945-167-equities-codex-x2;
+    A=correctness zero-blockers, B=clean-room/scope; all 7 check-points PASS). Pushed master
+    `d35b712..e9d0c42` (spec `42e615d` + code `8e50cc7` + backlog); #167 closed with resolution comment.
+    Merged tree **3420 passed**, equities pkg **100%** cov, #180 guard **33 bijective**, snapshot FROZEN
+    (additive). Integrator adversarial pass clean; I ADDED `test_negative_par_value_is_none`
+    ([[new-source-must-mirror-sibling-data-integrity-guards]] negative-value blind spot). Watermark left
+    to reviewer (I do NOT advance `state/last_seen.txt`).
+  - 📋 **#189 — non-blocking follow-up (filed by reviewer).** `exchange=None` merge has no try/except per
+    board (`vnfin/equities/sources.py:152-169`) → a SINGLE board's EmptyData/SourceUnavailable aborts all
+    three. Spec-conformant as written (NOT a blocker), but harden via `board_unavailable` skip-and-warn +
+    the missing test. New token → #180 guard +1, so schedule AFTER #187 (shared `test_docs_contract.py`).
 - **#163 — dividends / corp-actions** — ACCEPTED in scope but **BLOCKED**: source choice (clean-thin
   HOSE-JSON vs full-but-HTML HNX/VSDC scrape vs paid FiinGroup-BYOK) is a legal/product decision the
   reviewer escalated to Boss. **Do NOT start until reviewer sends the chosen-source spec.**
