@@ -521,22 +521,40 @@ def test_index_identical_5tuple_still_dedupes_not_recovered():
 
 
 def test_index_recovered_date_not_charged_to_failover_threshold():
-    # #187 invariant: the recovered date must NOT count toward the failover threshold. Craft a
-    # payload where, if the recovered date WERE charged (poisoned: +2 bad rows), bad_inrange
-    # would exceed max(floor=3, 10% * considered) and fail over; with recovery it must serve.
-    # 3 genuine isolated bad rows + 1 recovered-placeholder date + several clean dates.
-    # If recovery charged: bad_inrange = 3 + 2 = 5 over ~ considered ~ 9 -> 5 > max(3, 0.9) -> raise.
-    # With recovery: bad_inrange = 3, considered backs out the dropped placeholder -> serves.
-    rows = [
-        ("2024-06-03", 1000.0, 1010.0, 995.0, 1005.0, 100_000_000),
-        ("2024-06-04", 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
-        ("2024-06-05", 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
-        ("2024-06-06", -1.0, -1.0, -1.0, -1.0, 130_000_000),   # bad row 1 (non-positive)
-        ("2024-06-07", -1.0, -1.0, -1.0, -1.0, 140_000_000),   # bad row 2
-        ("2024-06-08", -1.0, -1.0, -1.0, -1.0, 150_000_000),   # bad row 3
-    ]
+    # #187 invariant + #191 NOTE-B (HARDENED): the recovery's ``considered -= 1`` back-out
+    # (udf.py: the line inside the recovery block) must keep the dropped midnight placeholder OUT
+    # of the failover denominator. This fixture is engineered so the FRACTION term
+    # (_QUARANTINE_FRACTION * considered) — NOT the abs floor of 3 — is the BINDING term, so that
+    # deleting the back-out alone is mutation-killed (the prior #5 fixture sat at the floor, where
+    # removing the back-out left the suite green; see review-202606211004-187 NOTE-B).
+    #
+    # Accounting (recovery pair = 1 midnight placeholder + 1 real row, both in-range):
+    #   * 34 clean dates + 4 genuinely-bad (non-positive) dates + the 06-11 recovery pair.
+    #   * bad_inrange = 4 (only the 4 bad dates; recovery never charges bad_inrange).
+    #   * WITH the back-out: each recovery row did considered += 1 (=> +2), then the back-out
+    #     reclaims the dropped placeholder (-1) => the recovered date nets +1. considered = 39.
+    #     trip test: 4 > max(3, 0.10*39=3.9) -> 4 > 3.9 -> TRUE -> InvalidData (fails over).
+    #   * WITHOUT the back-out (mutation): the placeholder pads considered to 40, diluting the
+    #     fraction: 4 > max(3, 0.10*40=4.0) -> 4 > 4.0 -> FALSE -> the source WRONGLY SERVES.
+    #
+    # So the back-out being present is the SOLE reason the marginally-broken source correctly
+    # fails over here; deleting it flips this assertion from "raises" to "serves" (red).
+    #
+    # NOTE (deviation from spec prose): the spec's (B) sentence says removing the back-out flips
+    # the result *to* InvalidData. That direction is mathematically IMPOSSIBLE: removing the
+    # back-out only RAISES ``considered``, which can never turn a serve into a raise (the trip
+    # threshold is non-decreasing in ``considered``). The achievable, mutation-killing fixture is
+    # the inverse and matches the cited authoritative NOTE-B verbatim ("a fixture where
+    # _QUARANTINE_FRACTION * considered is the binding term so the denominator back-out is
+    # killed"): WITH the back-out the source RAISES; deleting it makes it SERVE.
+    clean_dates = [date(2024, 1, 1) + __import__("datetime").timedelta(days=k) for k in range(34)]
+    bad_dates = [date(2024, 1, 1) + __import__("datetime").timedelta(days=34 + k) for k in range(4)]
+    # none of these collide with 2024-06-11 (the fixed recovery date)
+    assert date(2024, 6, 11) not in clean_dates and date(2024, 6, 11) not in bad_dates
+    rows = [(d.isoformat(), 1000.0, 1010.0, 995.0, 1005.0, 100_000_000) for d in clean_dates]
+    rows += [(d.isoformat(), -1.0, -1.0, -1.0, -1.0, 100_000_000) for d in bad_dates]  # 4 bad
     payload = json.loads(_bare_udf(rows=rows))
-    # append the midnight-placeholder + real pair for 06-11 (explicit epochs)
+    # append the midnight-placeholder + real pair for 06-11 (explicit epochs -> the recovery pair)
     payload["t"] += [_T_0611_MIDNIGHT, _T_0611_0700]
     payload["o"] += [_MIDNIGHT_OPEN_0611, _REAL_OPEN_0611]
     payload["h"] += [1020.0, 1020.0]
@@ -544,12 +562,13 @@ def test_index_recovered_date_not_charged_to_failover_threshold():
     payload["c"] += [1018.0, 1018.0]
     payload["v"] += [120_000_000, 120_000_000]
     s = VPSIndexSource(http_get=_get(json.dumps(payload)))
-    # must SERVE (no InvalidData/failover) — the recovered date does not tip the threshold
-    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
-    assert any(b.time.date() == date(2024, 6, 11) for b in h.bars)
-    bars_0611 = [b for b in h.bars if b.time.date() == date(2024, 6, 11)]
-    assert len(bars_0611) == 1 and bars_0611[0].open == pytest.approx(_REAL_OPEN_0611)
-    assert any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+    # a window wide enough to hold all 39 distinct in-range dates + the 06-11 recovery pair
+    window = (date(2024, 1, 1), date(2024, 12, 31))
+    # WITH the back-out present, the fraction term binds (4 > 3.9) and the source fails over:
+    # the in-range quality failures exceed the threshold -> InvalidData. Deleting the back-out
+    # (mutation) pads considered to 40, 4 <= 4.0, and the source would WRONGLY serve.
+    with pytest.raises(InvalidData):
+        s.get_history("VNINDEX", Interval.D1, *window)
 
 
 def test_index_midnight_recovery_is_vn_tz_not_naive_utc():
@@ -586,10 +605,21 @@ def test_index_midnight_recovery_is_vn_tz_not_naive_utc():
 
 
 def test_equity_exact_timestamp_duplicate_unaffected_by_midnight_recovery():
-    # #187 invariant: equity / intraday (exact-timestamp key, dedup_by_date == False) is
-    # UNAFFECTED — the recovery path lives inside the dedup_by_date branch only. An equity
-    # source with a duplicate timestamp whose H/L/C/V match and open differs (the index
-    # recovery signature) must STILL poison the timestamp (drop both) — never recover.
+    # #187 invariant-7 + #191 NOTE-A (HARDENED): equity / intraday (exact-timestamp key,
+    # dedup_by_date == False) is UNAFFECTED — the recovery path is physically nested inside the
+    # ``if dedup_by_date:`` branch and is keyed by date, neither of which applies to equities.
+    #
+    # The PRIOR fixture used TWO identical VN-MIDNIGHT timestamps, which proved this only
+    # incidentally: with both rows at midnight, ``prev_is_mid == this_is_mid`` so the recovery
+    # signature can never fire even if the gate were opened -> opening the gate would NOT flip
+    # the test (blind spot, see review-202606211004-187 NOTE-A).
+    #
+    # Hardened fixture: ONE VN-midnight row (00:00 +07) + ONE non-midnight row (09:00 +07) that
+    # together form the exact index recovery signature (H/L/C/V identical, only ``open`` differs,
+    # exactly one row at VN-midnight). On the equity (exact-timestamp) path these are two DISTINCT
+    # keys, so BOTH bars must SERVE untouched. If a mutation opened the recovery gate to equities
+    # (e.g. date-keying them), the signature WOULD fire and silently drop the midnight bar -> 1
+    # bar -> this test goes red. That directly kills the gate-opening mutation.
     class _EquityUDF(VPSIndexSource):
         # an equity-like UDF: turn OFF date-dedupe + restore equity money scale/unit so it
         # exercises the exact-timestamp (dedup_by_date == False) branch, not the index branch.
@@ -597,16 +627,19 @@ def test_equity_exact_timestamp_duplicate_unaffected_by_midnight_recovery():
         PRICE_SCALE = 1.0  # keep point-scale so the index scale guard passes; irrelevant here
         _DEDUPE_IDENTICAL_DUPLICATE_BARS = False
 
-    # Same EXACT timestamp (00:00 +07 midnight) twice, H/L/C/V identical, open differs — the
-    # index recovery signature, but on an equity source it must poison (no recovery path).
+    # _T_0611_MIDNIGHT = 00:00 +07 (the index midnight placeholder marker); _T_0611_0900 = 09:00
+    # +07 (a real, non-midnight session time). Recovery signature: H/L/C/V identical, open differs.
     rows = [
-        (_T_0611_MIDNIGHT, _MIDNIGHT_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
-        (_T_0611_MIDNIGHT, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0611_MIDNIGHT, _MIDNIGHT_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),  # 00:00 +07
+        (_T_0611_0900, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),          # 09:00 +07
     ]
     s = _EquityUDF(http_get=_get(_udf_explicit_times(rows)))
-    # a lone conflicting pair -> zero bars -> EmptyData (poisoned, never recovered)
-    with pytest.raises(EmptyData):
-        s.get_history("VNINDEX", Interval.D1, *WIDE)
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    # exact-timestamp keying: both distinct timestamps survive — recovery never runs on equities.
+    assert len(h.bars) == 2
+    assert sorted(b.open for b in h.bars) == [pytest.approx(_MIDNIGHT_OPEN_0611), pytest.approx(_REAL_OPEN_0611)]
+    assert not any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+    assert not any("quarantined_invalid_bars" in w for w in h.warnings)
 
 
 # ------------------- B2: index sources must stay POINT-scaled -----------------
