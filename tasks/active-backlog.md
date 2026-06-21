@@ -35,17 +35,20 @@ _Last synced: 2026-06-21 11:2x +07_
 >     disclosure (`3d33859`) + Tier-3 diagnostic correction (`16d0042`) PUSHED (`60459ef..6282a5d`);
 >     issue CLOSED as source-gap-documented for **Tier-2** (historical PIT membership: no clean
 >     redistributable feed, HOSE = human PDFs) with 4 reopen criteria. Watermark = reviewer's.
->   - **#152** fixed-income — **✅ DESIGN APPROVED (Option B) + BUILT + GREEN → awaiting Codex×1**
->     (commit `dc39cef`, NOT pushed). Extended `vnfin.macro` w/ lending/deposit/real (WB FR.INR.*) +
->     `explain_fixed_income_coverage`; yield CURVE deferred (no `vnfin.bonds`). Additive, snapshot
->     frozen, NO new token, suite 3498. Built by fresh general-purpose agent vs `tasks/152-…design.md`.
->   - **#163** dividends/corp-actions (Boss-decided BUILD) — **SOURCE VERDICT IN + finfo PROBE VERIFIED.**
->     Architecture VALIDATED: **VSDC spine** (record/pay/ratio, ~2011, keyless) + **finfo ex-date leg**
->     (`api-finfo.vndirect.com.vn` /v4/events `effectiveDate`=ex-date, ~2022 floor — ALREADY the lib's
->     fundamentals host, low-bar Boss nod). HNX DROPPED (TLS). Cassette reconciliation APPROVED (synth
->     committed fixture + gitignored raw). Design note `tasks/163-corp-actions-design.md`; evidence
->     `tasks/163-finfo-exdate-probe-evidence.md`. **NEXT: send design gate + need VSDC field map from
->     reviewer; build VSDC spine now; finfo leg gates on Boss-nod + cassette.**
+>   - **#152** fixed-income — **✅ DONE + CLOSED** (Codex×1 APPROVE, zero blockers). `dc39cef` PUSHED
+>     (`6282a5d..f3cd479`); issue closed. Extended `vnfin.macro` w/ lending/deposit/real (WB FR.INR.*) +
+>     `explain_fixed_income_coverage`; yield CURVE deferred (no `vnfin.bonds`, reopen criteria in close
+>     comment). Additive, snapshot frozen, NO new token (#180 stays 37), suite 3498. Watermark=reviewer's.
+>   - **#163** dividends/corp-actions (Boss-decided BUILD) — **✅ DESIGN GATE CLEARED (reviewer Q1-6 + VSDC
+>     access spec, 12:07).** **NOW = building VSDC CASH spine.** New `corp_actions` domain (Q2 approve);
+>     VSDC = HTML SCRAPE `GET https://vsd.vn/vi/ad/{id}` (seq id ~197000, keyless, body fields: ticker/
+>     ISIN/exch, record date Ngày ĐKCC, pay date Ngày thanh toán, cash %+VND/sh; NO ex-date) → ID-window
+>     scrape+filter (NOT ASP.NET postback); CASH-first v1 (Q4); join (code,div_year,kind,ratio/cash)+ex≈rec-1bd
+>     tiebreak (Q3); total-return DEFER v2 (Q5). Tokens (Q6, #180/#188 in-change): `ex_date_unavailable`
+>     (MUST, on every row until finfo) + `corp_action_source_partial` (MUST) + `vsdc_parse_degraded` (rec).
+>     RISK: scrape fragile → tight parse-contract + synthetic-fixture pin + never-silent degrade. finfo leg
+>     HELD (Boss-nod+cassette). On green → **Codex x2** (new domain + scrape = higher risk). Steps: probe
+>     vsd.vn DOM (my net) → commit spec+synth fixture → delegate fresh-agent TDD build → integrate green.
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
