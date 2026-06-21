@@ -4,9 +4,9 @@ Operating discipline (Boss 2026-06-19): git history is the progress tracker (com
 every reviewer/poller task lands here FIRST, then is processed and removed/marked done with a
 commit/issue ref. See `/tmp/vnfin-operating-protocol-202606190959.md`.
 
-Goal (Boss 2026-06-19, updated ~18:01): **REFACTOR FIRST** — provider-boundary + typed-result
-contract refactor (`tasks/refactor-provider-contracts.md`), working with vnfin-oss-reviewer per
-phase. GitHub bug fixing is PAUSED (log only) until the contract foundation (Phase 1–2) lands.
+Goal (Boss standing directive, active 2026-06-21): **RESOLVE ALL GITHUB ISSUES** with
+vnfin-oss-reviewer — discuss + resolve autonomously, don't stop. Batch-flow active (cluster +
+fan out + integrate on merged tree). Refactor-first pause (2026-06-19) is LIFTED.
 
 Flow per item: design → discuss+converge with reviewer → TDD red-first → green (full suite +
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
@@ -31,9 +31,10 @@ _Last synced: 2026-06-21 11:2x +07_
 > - **WAVE 2 — ACTIVE (scoping DONE; digest `tasks/wave2-scoping-summary.md`; one gate at a time).**
 >   Scoping Workflow `wf_46081884-f22` (5 agents, VNStock-blacklist enforced) → durable digest committed.
 >   **ROLE BOUNDARY:** source ToS-verdict is the REVIEWER's; my agents only surface candidate lists.
->   - **#175** Tier-1 — **DESIGN APPROVED (reviewer 11:21) → BUILDING.** Token `current_snapshot_only`
->     PINNED; as_of stays None (no fabrication), snapshot frozen, #180 36→37 + #188 forward, Codex×1 on
->     merged tree. Note `tasks/175-tier1-as-of-disclosure-design.md`. Tier-2 (historical PIT) = reviewer
+>   - **#175** Tier-1 — **BUILT + GREEN → awaiting Codex×1 review** (commit `3d33859`, NOT pushed).
+>     Full suite 3470 pass/0 fail; #180 reverse + #188 forward bijection 36→37; snapshot byte-unchanged;
+>     `as_of` stays None (never fabricated, verified in diff). Token `current_snapshot_only`. Push+close
+>     on APPROVE. Note `tasks/175-tier1-as-of-disclosure-design.md`. Tier-2 (historical PIT) = reviewer
 >     source-gate later (no clean feed); Tier-3 (diagnostic + suggested_action fix) = small follow-up.
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (route
 >     close comment + 4 reopen criteria to reviewer; world-reference line + reserved diagnostic stand).
