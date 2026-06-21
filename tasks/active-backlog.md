@@ -39,8 +39,10 @@ _Last synced: 2026-06-21 11:2x +07_
 >     (`6282a5d..f3cd479`); issue closed. Extended `vnfin.macro` w/ lending/deposit/real (WB FR.INR.*) +
 >     `explain_fixed_income_coverage`; yield CURVE deferred (no `vnfin.bonds`, reopen criteria in close
 >     comment). Additive, snapshot frozen, NO new token (#180 stays 37), suite 3498. Watermark=reviewer's.
->   - **#163** dividends/corp-actions (Boss-decided BUILD) — **✅ BUILT + GREEN; AWAITING REVIEWER CODEX
->     x2.** New `corp_actions` domain; VSDC HTML SCRAPE `GET https://vsd.vn/vi/ad/{id}` (seq id ~197000,
+>   - **#163** dividends/corp-actions (Boss-decided BUILD) — **✅ DONE + PUSHED + CLOSED** (Codex×2
+>     APPROVE_WITH_NOTES 2026-06-21, `reviews/review-202606211542-163-descope-codex-x2-APPROVE.md`;
+>     `f3cd479..8e7df60` PUSHED; #163 CLOSED w/ de-scope resolution comment; 2 notes→v2 corpus.
+>     Watermark=reviewer's). New `corp_actions` domain; VSDC HTML SCRAPE `GET https://vsd.vn/vi/ad/{id}` (seq id ~197000,
 >     keyless: ticker/exch, record Ngày ĐKCC, pay Ngày thanh toán|Thời gian thực hiện, cash %+VND/sh; NO
 >     ex-date); CASH-first v1; total-return DEFER v2. Spine built by fresh agent (`ec2b0d7` feat +
 >     `197d9fd` docs vs spec `b37044a`). **Reviewer 2 MUST-ADDS folded in TDD-first (`1af8196`):** (1)
@@ -166,8 +168,12 @@ _Last synced: 2026-06-21 11:2x +07_
 >     on `56cde90` = CLEAN** (~50 inputs; all 15 real VN after-tax phrasings withheld; zero over-degrade FPs).
 >     ONE LOW-realism residual `thực được nhận` (inserted `được` breaks the bigram; fixing re-breaks the
 >     universal `thực hiện…được nhận` boilerplate → over-degrade every clean page) — NOT patched, DISCLOSED
->     to reviewer + tracked for v2 corpus. **ROUTED Codex x2 (round-7 handoff `/tmp/vnfin-163-round7-handoff-20260621.md`,
->     delta `7b35066..56cde90`); awaiting verdict → push whole corp_actions + close on APPROVE.**
+>     to reviewer + tracked for v2 corpus. **CODEX×2 APPROVE_WITH_NOTES (2026-06-21): A=core invariant
+>     0-wrong (22/24 attacks withheld, zero over-withhold); B=classifier genuinely deleted, token lockstep
+>     44 distinct, spine intact, inverted-tests load-bearing, snapshot frozen, 3584 green. 2 NON-blocking
+>     notes→v2 corpus (do NOT hold): N1 English after-tax (never on a VN gov depository; v2 fix=add `tax`
+>     to noun set, 0-over-withhold, verified), N2 `thực được nhận` (serves gross correctly, cash-qualifier,
+>     low realism). PUSHED `f3cd479..8e7df60` (whole `vnfin.corp_actions`) + #163 CLOSED.**
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
