@@ -226,6 +226,23 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **A real index trading day no longer vanishes to a midnight-open placeholder** (#187) — some
+  index-D1 UDF feeds (e.g. `vps_index`) emit **two same-date D1 rows**: one at VN-local 00:00 (+07)
+  and one at the real session time, **identical in high/low/close/volume** and differing **only in
+  `open`** (the 00:00 row is a synthetic midnight placeholder whose `open` is the prior session's
+  close). The shared UDF parse previously treated the pair as a #186 *conflict* and **poisoned the
+  whole date (dropped BOTH rows)**, so a genuine trading day disappeared. It now detects this exact
+  three-part signature — identical `(high, low, close, volume)`, differing `open`, and **exactly one**
+  row at VN-local 00:00:00 (computed on the VN timezone, not naive UTC) — **keeps the non-midnight
+  (real) row and drops the placeholder**. Because only `open` differs, the result is provably
+  non-lossy, so this is a **recovery, not a quarantine**: the date is served, it is **not** charged to
+  the failover threshold, and it is disclosed via a new, distinct, never-silent warning token
+  **`recovered_midnight_open_placeholder`** (added to the SKILL "Warning tokens" table; the #180
+  doc↔code lockstep guard now covers 34 tokens). A genuine conflict (any difference in high/low/close/
+  volume), or an open-only diff where neither row is at VN-midnight, still poisons unchanged; equity /
+  intraday (exact-timestamp keying) is unaffected. Order-independent (works whether the midnight or the
+  real row arrives first). **No public-API surface change.**
+  ([#187](https://github.com/hungson175/vnfin/issues/187))
 - **Four caller-facing `result.warnings` strings are now namespaced tokens** (#180) — `NavHistory`,
   `FinancialReport` (VNDirect + CafeF), and stitched-index results were appending free-form **prose**
   warnings (`"deduped N duplicate navDate row(s)…"`, `"skipped N row(s) with mismatched

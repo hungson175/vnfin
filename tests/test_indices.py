@@ -409,6 +409,206 @@ def test_index_systematically_broken_source_fails_over_to_next():
     assert "deduped_duplicate_daily_index_bars" not in h.warnings
 
 
+# ----- Issue #187: recover the midnight-open placeholder bar (index D1) -----
+# vps_index (and any index-D1 UDF source) emits TWO same-date D1 rows: one at VN-local
+# 00:00 (+07) and one at the real session time. The two rows are IDENTICAL in
+# high/low/close/volume and differ ONLY in `open` — the 00:00 row is a synthetic midnight
+# placeholder whose `open` == the prior session's close; the non-midnight row has the true
+# open. The old code treated them as a CONFLICTING same-date pair and poisoned the whole
+# date (dropped BOTH), losing a real trading day. The fix tests an exact 3-part recovery
+# signature, keeps the NON-MIDNIGHT (real) row, drops the midnight one, and recovers
+# (no poison, no failover charge) via a distinct `recovered_midnight_open_placeholder`
+# token. Synthetic fixtures only.
+
+# VN-local 2024-06-11 00:00:00 +07  == 2024-06-10 17:00:00 UTC  (the midnight placeholder)
+_T_0611_MIDNIGHT = int(datetime(2024, 6, 10, 17, 0, tzinfo=timezone.utc).timestamp())
+# VN-local 2024-06-11 07:00:00 +07  == 2024-06-11 00:00:00 UTC  (a REAL session time, NOT midnight)
+_T_0611_0700 = int(datetime(2024, 6, 11, 0, 0, tzinfo=timezone.utc).timestamp())
+# VN-local 2024-06-11 09:00:00 +07  == 2024-06-11 02:00:00 UTC  (another non-midnight session time)
+_T_0611_0900 = int(datetime(2024, 6, 11, 2, 0, tzinfo=timezone.utc).timestamp())
+
+# The REAL open for 06-11; the midnight placeholder carries the prior session's close
+# (06-10 close == 1010.0) as its `open` — documented here as FIXTURE PROVENANCE only (never a
+# runtime condition). Both opens stay within the shared [low=1008, high=1020] OHLC band so
+# neither row trips the OHLC-invariant guard; only `open` differs between the two rows.
+_REAL_OPEN_0611 = 1012.0
+_MIDNIGHT_OPEN_0611 = 1010.0  # == prior session close (06-10 close) — placeholder marker only
+
+
+def test_index_midnight_open_placeholder_recovered_midnight_first():
+    # #187 case 1: midnight placeholder FIRST (00:00 +07), then the real 07:00 +07 row.
+    # H/L/C/V identical, only `open` differs -> recover: keep the real row, drop the
+    # placeholder, surface recovered_midnight_open_placeholder, no quarantine/failover.
+    rows = [
+        (_T_0611_MIDNIGHT, _MIDNIGHT_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0611_0700, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0612, 1018.0, 1025.0, 1014.0, 1022.0, 130_000_000),
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    # exactly ONE bar for 06-11 (no poison, no drop), carrying the REAL open
+    bars_0611 = [b for b in h.bars if b.time.date() == date(2024, 6, 11)]
+    assert len(bars_0611) == 1
+    assert bars_0611[0].open == pytest.approx(_REAL_OPEN_0611)
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 11), date(2024, 6, 12)]
+    assert any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+    # recovery is NOT a quality failure: no quarantine warning, and 06-11 not quarantined
+    assert not any("quarantined_invalid_bars" in w for w in h.warnings)
+    assert "deduped_duplicate_daily_index_bars" not in h.warnings
+
+
+def test_index_midnight_open_placeholder_recovered_real_first():
+    # #187 case 2: real 07:00 +07 row FIRST, then the 00:00 +07 placeholder.
+    # Order-independent — identical recovered outcome.
+    rows = [
+        (_T_0611_0700, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0611_MIDNIGHT, _MIDNIGHT_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0612, 1018.0, 1025.0, 1014.0, 1022.0, 130_000_000),
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    bars_0611 = [b for b in h.bars if b.time.date() == date(2024, 6, 11)]
+    assert len(bars_0611) == 1
+    assert bars_0611[0].open == pytest.approx(_REAL_OPEN_0611)  # real open kept regardless of order
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 11), date(2024, 6, 12)]
+    assert any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+    assert not any("quarantined_invalid_bars" in w for w in h.warnings)
+
+
+def test_index_genuine_conflict_still_poisons_no_recovery():
+    # #187 invariant: a GENUINE conflict (H/L/C/V differ) must be UNCHANGED — the date is
+    # poisoned/dropped with a quarantine token and charged to the threshold; NO recovery.
+    rows = [
+        (_T_0611_MIDNIGHT, _MIDNIGHT_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0611_0700, _REAL_OPEN_0611, 1021.0, 1007.0, 1019.0, 121_000_000),  # H/L/C/V differ too
+        (_T_0612, 1018.0, 1025.0, 1014.0, 1022.0, 130_000_000),
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 12)]  # 06-11 dropped entirely
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)
+    assert not any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+
+
+def test_index_open_only_diff_neither_midnight_still_poisons():
+    # #187 invariant: an open-only diff where NEITHER row is at VN-midnight (07:00 and 09:00
+    # +07) is NOT the placeholder signature — UNCHANGED poison, no recovery.
+    rows = [
+        (_T_0611_0700, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0611_0900, 1013.0, 1020.0, 1008.0, 1018.0, 120_000_000),  # open differs, 09:00 +07
+        (_T_0612, 1018.0, 1025.0, 1014.0, 1022.0, 130_000_000),
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 12)]  # 06-11 poisoned (no midnight row)
+    assert any("quarantined_invalid_bars" in w for w in h.warnings)
+    assert not any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+
+
+def test_index_identical_5tuple_still_dedupes_not_recovered():
+    # #187 invariant: an IDENTICAL 5-tuple same-date duplicate still dedupes to the #162
+    # deduped_duplicate_daily_index_bars token (open is also identical) — NOT a recovery.
+    rows = [
+        (_T_0611_MIDNIGHT, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0611_0700, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),  # identical incl. open
+        (_T_0612, 1018.0, 1025.0, 1014.0, 1022.0, 130_000_000),
+    ]
+    s = VPSIndexSource(http_get=_get(_udf_explicit_times(rows)))
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert [b.time.date() for b in h.bars] == [date(2024, 6, 11), date(2024, 6, 12)]
+    assert "deduped_duplicate_daily_index_bars" in h.warnings
+    assert not any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+
+
+def test_index_recovered_date_not_charged_to_failover_threshold():
+    # #187 invariant: the recovered date must NOT count toward the failover threshold. Craft a
+    # payload where, if the recovered date WERE charged (poisoned: +2 bad rows), bad_inrange
+    # would exceed max(floor=3, 10% * considered) and fail over; with recovery it must serve.
+    # 3 genuine isolated bad rows + 1 recovered-placeholder date + several clean dates.
+    # If recovery charged: bad_inrange = 3 + 2 = 5 over ~ considered ~ 9 -> 5 > max(3, 0.9) -> raise.
+    # With recovery: bad_inrange = 3, considered backs out the dropped placeholder -> serves.
+    rows = [
+        ("2024-06-03", 1000.0, 1010.0, 995.0, 1005.0, 100_000_000),
+        ("2024-06-04", 1005.0, 1015.0, 1002.0, 1012.0, 110_000_000),
+        ("2024-06-05", 1012.0, 1020.0, 1008.0, 1018.0, 120_000_000),
+        ("2024-06-06", -1.0, -1.0, -1.0, -1.0, 130_000_000),   # bad row 1 (non-positive)
+        ("2024-06-07", -1.0, -1.0, -1.0, -1.0, 140_000_000),   # bad row 2
+        ("2024-06-08", -1.0, -1.0, -1.0, -1.0, 150_000_000),   # bad row 3
+    ]
+    payload = json.loads(_bare_udf(rows=rows))
+    # append the midnight-placeholder + real pair for 06-11 (explicit epochs)
+    payload["t"] += [_T_0611_MIDNIGHT, _T_0611_0700]
+    payload["o"] += [_MIDNIGHT_OPEN_0611, _REAL_OPEN_0611]
+    payload["h"] += [1020.0, 1020.0]
+    payload["l"] += [1008.0, 1008.0]
+    payload["c"] += [1018.0, 1018.0]
+    payload["v"] += [120_000_000, 120_000_000]
+    s = VPSIndexSource(http_get=_get(json.dumps(payload)))
+    # must SERVE (no InvalidData/failover) — the recovered date does not tip the threshold
+    h = s.get_history("VNINDEX", Interval.D1, *WIDE)
+    assert any(b.time.date() == date(2024, 6, 11) for b in h.bars)
+    bars_0611 = [b for b in h.bars if b.time.date() == date(2024, 6, 11)]
+    assert len(bars_0611) == 1 and bars_0611[0].open == pytest.approx(_REAL_OPEN_0611)
+    assert any("recovered_midnight_open_placeholder" in w for w in h.warnings)
+
+
+def test_index_midnight_recovery_is_vn_tz_not_naive_utc():
+    # #187 invariant: midnight is VN-local 00:00 (+07), NOT naive UTC 00:00.
+    # (a) 17:00 UTC == 00:00 +07 IS the midnight placeholder -> recovery fires.
+    # (b) 00:00 UTC == 07:00 +07 is NOT midnight: an open-only diff between a 00:00-UTC row
+    #     and another non-midnight row must POISON (no recovery), proving VN-tz not naive-UTC.
+    # (a)
+    rows_a = [
+        (_T_0611_MIDNIGHT, _MIDNIGHT_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),  # 00:00 +07
+        (_T_0611_0900, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),          # 09:00 +07
+        (_T_0612, 1018.0, 1025.0, 1014.0, 1022.0, 130_000_000),
+    ]
+    ha = VPSIndexSource(http_get=_get(_udf_explicit_times(rows_a))).get_history(
+        "VNINDEX", Interval.D1, *WIDE
+    )
+    assert any(b.time.date() == date(2024, 6, 11) for b in ha.bars)  # recovered, not dropped
+    assert any("recovered_midnight_open_placeholder" in w for w in ha.warnings)
+
+    # (b) 00:00 UTC (07:00 +07, NOT midnight) vs 09:00 +07, open-only diff -> poison, no recovery.
+    # A naive-UTC implementation would WRONGLY treat _T_0611_0700 (00:00 UTC) as midnight and
+    # recover here; the VN-tz check must NOT.
+    rows_b = [
+        (_T_0611_0700, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),  # 00:00 UTC == 07:00 +07
+        (_T_0611_0900, 1013.0, 1020.0, 1008.0, 1018.0, 120_000_000),           # 02:00 UTC == 09:00 +07
+        (_T_0612, 1018.0, 1025.0, 1014.0, 1022.0, 130_000_000),
+    ]
+    hb = VPSIndexSource(http_get=_get(_udf_explicit_times(rows_b))).get_history(
+        "VNINDEX", Interval.D1, *WIDE
+    )
+    assert [b.time.date() for b in hb.bars] == [date(2024, 6, 12)]  # 06-11 poisoned
+    assert not any("recovered_midnight_open_placeholder" in w for w in hb.warnings)
+    assert any("quarantined_invalid_bars" in w for w in hb.warnings)
+
+
+def test_equity_exact_timestamp_duplicate_unaffected_by_midnight_recovery():
+    # #187 invariant: equity / intraday (exact-timestamp key, dedup_by_date == False) is
+    # UNAFFECTED — the recovery path lives inside the dedup_by_date branch only. An equity
+    # source with a duplicate timestamp whose H/L/C/V match and open differs (the index
+    # recovery signature) must STILL poison the timestamp (drop both) — never recover.
+    class _EquityUDF(VPSIndexSource):
+        # an equity-like UDF: turn OFF date-dedupe + restore equity money scale/unit so it
+        # exercises the exact-timestamp (dedup_by_date == False) branch, not the index branch.
+        NAME = "equity_udf_187"
+        PRICE_SCALE = 1.0  # keep point-scale so the index scale guard passes; irrelevant here
+        _DEDUPE_IDENTICAL_DUPLICATE_BARS = False
+
+    # Same EXACT timestamp (00:00 +07 midnight) twice, H/L/C/V identical, open differs — the
+    # index recovery signature, but on an equity source it must poison (no recovery path).
+    rows = [
+        (_T_0611_MIDNIGHT, _MIDNIGHT_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+        (_T_0611_MIDNIGHT, _REAL_OPEN_0611, 1020.0, 1008.0, 1018.0, 120_000_000),
+    ]
+    s = _EquityUDF(http_get=_get(_udf_explicit_times(rows)))
+    # a lone conflicting pair -> zero bars -> EmptyData (poisoned, never recovered)
+    with pytest.raises(EmptyData):
+        s.get_history("VNINDEX", Interval.D1, *WIDE)
+
+
 # ------------------- B2: index sources must stay POINT-scaled -----------------
 # Indices are POINTS, never VND. The index adapters must never apply the x1000
 # equity price scaling. Guard against a misconfigured/wrong-scaled index source

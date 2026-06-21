@@ -552,6 +552,7 @@ _WARNING_TOKENS_180 = (
     "resampled_from_d1",
     "resample_partial_period",
     "deduped_duplicate_daily_index_bars",
+    "recovered_midnight_open_placeholder",
     "stitched_multi_source",
     "stitched_segment",
     "weights_not_available",

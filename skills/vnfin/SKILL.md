@@ -129,6 +129,7 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `resampled_from_d1` | `prices.history` / `index_history` | Series aggregated client-side from D1 to a coarser period (W1/MN1/Q1/Y1), not native to the interval. | #183 |
 | `resample_partial_period` | `prices.history` / `index_history` | An edge resampled period is incomplete relative to the window (bars kept, marked provisional). | #183 |
 | `deduped_duplicate_daily_index_bars` | `index_history` | Identical same-date duplicate index bar kept once; a *conflicting* same-date pair drops that date entirely. | #162 |
+| `recovered_midnight_open_placeholder` | `index_history` | A same-date D1 pair identical in high/low/close/volume but differing only in `open`, where exactly one row is at VN-local 00:00 — that midnight row is a synthetic open placeholder, so it is dropped and the real (non-midnight) row is kept. A *recovery* (not a quarantine): the date is served and is not charged to the failover threshold. | #187 |
 | `stitched_multi_source` | `index_history_stitched` | History stitched across per-calendar-year segments (each stitched year also emits a `stitched_segment` provenance line). | #147 |
 | `stitched_segment` | `index_history_stitched` | Per-segment provenance of a stitched series — which source served a given calendar year and how many bars (`stitched_segment: <year> <source> (<n> bars)`). | #147 |
 | `weights_not_available` | `index_constituents` | Membership only — no per-stock index weights (`weight=None`); never fabricated. | — |

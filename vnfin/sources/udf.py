@@ -25,6 +25,16 @@ from .base import VN_TZ, PriceSource
 # whole response (which made one bad bar in a 10y window block the entire VN-Index chart).
 QUARANTINED_INVALID_BARS = "quarantined_invalid_bars"
 
+# Issue #187: an index-D1 UDF feed (e.g. vps_index) emits TWO same-date D1 rows — one at
+# VN-local 00:00 (+07) and one at the real session time — IDENTICAL in high/low/close/volume,
+# differing ONLY in ``open``. The 00:00 row is a synthetic midnight-open placeholder (its
+# ``open`` == the prior session's close); the non-midnight row carries the true open. Treating
+# them as a #186 conflict poisoned the whole date (dropped BOTH) → a real trading day vanished.
+# Instead, on this exact signature we KEEP the non-midnight (real) row and drop the placeholder.
+# It is a RECOVERY, not a quality failure: not poisoned, not charged to the failover threshold,
+# disclosed via this distinct, never-silent token (separate from the identical-dedupe token).
+RECOVERED_MIDNIGHT_OPEN_PLACEHOLDER = "recovered_midnight_open_placeholder"
+
 # A systematically-broken source must still fail over: raise (→ failover) when the number
 # of quarantined rows exceeds ``max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION * n)``.
 # The FRACTION fails a mostly-bad response; the absolute FLOOR guarantees a few isolated
@@ -167,7 +177,7 @@ class UDFSource(HttpDataSource, PriceSource):
             exchange=self.EXCHANGE,
             provider_symbol=psym,
             fetched_at_utc=datetime.now(timezone.utc),
-            warnings=self._quarantine_warnings(),
+            warnings=self._quarantine_warnings() + self._recovery_warnings(),
         )
 
     def _quarantine_warnings(self) -> tuple[str, ...]:
@@ -184,6 +194,23 @@ class UDFSource(HttpDataSource, PriceSource):
         detail = "; ".join(f"{label}: {reason}" for label, reason in seen_pairs)
         return (
             f"{QUARANTINED_INVALID_BARS}: dropped {len(quarantined)} bar(s) — {detail}",
+        )
+
+    def _recovery_warnings(self) -> tuple[str, ...]:
+        """Issue #187: build the never-silent ``recovered_midnight_open_placeholder`` warning
+        (or no warning) from the synthetic midnight-open placeholder rows ``_build_bars``
+        recovered (kept the real row, dropped the placeholder). One entry per recovered DATE;
+        the human tail lists each recovered (date, reason) once."""
+        recovered = getattr(self, "_recovered", None)
+        if not recovered:
+            return ()
+        seen_pairs: list[tuple[str, str]] = []
+        for pair in recovered:
+            if pair not in seen_pairs:
+                seen_pairs.append(pair)
+        detail = "; ".join(f"{label}: {reason}" for label, reason in seen_pairs)
+        return (
+            f"{RECOVERED_MIDNIGHT_OPEN_PLACEHOLDER}: recovered {len(recovered)} bar(s) — {detail}",
         )
 
     def _build_bars(self, data, interval, lo=None, hi=None) -> list[PriceBar]:
@@ -245,6 +272,9 @@ class UDFSource(HttpDataSource, PriceSource):
         # pick). Structural/array-shape failures above this loop still HARD-RAISE.
         quarantined: list[tuple[str, str]] = []
         poisoned: set = set()
+        # Issue #187: dates recovered from a synthetic midnight-open placeholder (one
+        # (date, reason) per recovered date — drives the never-silent recovery warning).
+        recovered: list[tuple[str, str]] = []
         considered = 0
         bad_inrange = 0
         for i in range(n):
@@ -335,6 +365,37 @@ class UDFSource(HttpDataSource, PriceSource):
                         # count DISTINCT in-range dates (served-or-bad), not raw row copies.
                         considered -= 1
                         continue  # identical same-date bar -> dedupe (keep first, #162)
+                    # Issue #187: synthetic midnight-open placeholder. The two same-date rows
+                    # are IDENTICAL in (high, low, close, volume) and differ ONLY in ``open``,
+                    # and EXACTLY ONE of them is at VN-local 00:00:00 (``tm`` / ``prev.time``
+                    # are already .astimezone(VN_TZ), so .hour/.minute/.second ARE the VN-local
+                    # clock — not naive UTC). Keep the NON-MIDNIGHT (real) row and drop the
+                    # midnight placeholder. Provably non-lossy (only ``open`` differs), so it is
+                    # a RECOVERY, not a quality failure: not poisoned, not charged to the
+                    # failover threshold. (No "open == prior-close" runtime guard: at this point
+                    # bars are still in provider order — the sort is after the loop — so prior
+                    # close is not reliably available, and it is unnecessary.)
+                    prev_is_mid = (prev.time.hour, prev.time.minute, prev.time.second) == (0, 0, 0)
+                    this_is_mid = (tm.hour, tm.minute, tm.second) == (0, 0, 0)
+                    hlcv_identical = (prev.high, prev.low, prev.close, prev.volume) == (
+                        hp, lp, cp, vol
+                    )
+                    if hlcv_identical and prev.open != op and (prev_is_mid != this_is_mid):
+                        if this_is_mid:
+                            # current row is the placeholder -> keep the already-kept prev (real)
+                            pass
+                        else:
+                            # current row is the real one -> replace the midnight prev in bars
+                            bars = [b for b in bars if b is not prev]
+                            seen[key] = bar
+                            bars.append(bar)
+                        recovered.append(
+                            (tm.date().isoformat(),
+                             "midnight-open placeholder dropped, real open kept")
+                        )
+                        # the dropped placeholder must not dilute the failover denominator
+                        considered -= 1
+                        continue
                 # conflicting (index) or any duplicate (equity/intraday) -> poison the key:
                 # count the prior kept row + this row; the prior is removed from bars below.
                 poisoned.add(key)
@@ -369,6 +430,7 @@ class UDFSource(HttpDataSource, PriceSource):
             )
 
         self._quarantined = quarantined
+        self._recovered = recovered  # Issue #187: midnight-open placeholder recoveries
         bars.sort(key=lambda b: b.time)
         return bars
 
