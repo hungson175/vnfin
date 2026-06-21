@@ -98,9 +98,14 @@ _Last synced: 2026-06-21 11:2x +07_
 >     committed `0369b13` (`tasks/163-b2-fix2-spec.md`); impl DELEGATED to fresh agent TDD-first** (8
 >     fail-first #9.27–#9.34): dot-decimal ratio parser + net-of-tax candidate exclusion + alt-tranche
 >     count (`_CASH_MENTION_RE`) + cross-line degrade + par≥1000 guard + unique-confirm. ALL via existing
->     `vsdc_parse_degraded` (NO new token, tuple stays 43, NO snapshot regen). NEXT: integrate + gates on
->     merged tree + re-run all repros → re-submit (dot-decimal + par-confirm heaviest re-pass). Then #182
->     (reviewer source verdict+close) / #155 (design gate).
+>     `vsdc_parse_degraded` (NO new token, tuple stays 43, NO snapshot regen). **FIX-2 INTEGRATED + GREEN**
+>     (`c0f5f70`): impl applied verbatim per spec `0369b13`, my held `_crawl` except-comment fix folded in,
+>     + reviewer-required NEGATIVE guards #9.35 (clean single gross still SERVES, not degraded) / #9.36
+>     ('trước thuế' before-tax ≠ net marker). Both repro sets encoded green on merged tree (reviewer
+>     8.5%-no-par #9.27/#9.28 + my D1/D2/D3/L1 #9.29–#9.34 + cross-line #9.33). Full suite **3551 green**,
+>     tuple 43, snapshot clean. **AWAITING ROUND-3 RE-REVIEW** (handoff `/tmp/vnfin-163-round3-handoff-20260621.md`);
+>     dot-decimal + net-of-tax + par-confirm get heaviest re-pass. HOLDING push/close until APPROVE + green.
+>     Then #182 (reviewer source verdict+close) / #155 (design gate).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
