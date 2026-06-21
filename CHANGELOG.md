@@ -6,6 +6,16 @@ All notable changes to `vnfin` are documented here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+- **World-index deployment reality clarified** (#184) — `docs/sources/indices-world.md` (+ the skill
+  world-index entries and the adapter docstrings) now state explicitly that from a **server /
+  datacenter IP with no `ALPHAVANTAGE_API_KEY`**, `vnfin.indices.world("SPY", ...)` raising
+  `AllSourcesFailed` is the **expected** outcome — not a transient bug or a flaky test: the keyless
+  BYOK AV primary is skipped *and* the keyless Stooq `^SPX` fallback is structurally anti-bot-blocked
+  from datacenter IPs (residential-only, dead from servers since ~2020-12). Set the BYOK AV key to use
+  world-index server-side. No code or chain change; Stooq stays in the chain as the residential-only
+  keyless path. ([#184](https://github.com/hungson175/vnfin/issues/184))
+
 ### Added
 - **`Fund.nav_as_of` — the provider's own per-fund NAV date** (#181) — an additive optional
   `Optional[date]` field on the frozen `Fund` result, parsed from the Fmarket filter row's

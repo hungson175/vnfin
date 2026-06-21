@@ -26,6 +26,20 @@ is untouched.
 - **v1 supports `symbol="SPY"` only.** Any other symbol → a clear `InvalidData`. `symbol` is a
   defaulted param kept for forward-compat (future world indices), not because v1 accepts others.
 
+## Server-side / deployment reality — a keyless datacenter `AllSourcesFailed` is EXPECTED
+
+The two source facts compound on a typical **server / cloud / CI host (a datacenter IP)**:
+
+- **No `ALPHAVANTAGE_API_KEY`** → the BYOK AV primary is skipped *before any network call*.
+- **Stooq from a datacenter IP** → almost always the anti-bot HTML challenge → `SourceUnavailable`.
+
+So **on a datacenter host with no AV key, `vnfin.indices.world("SPY", ...)` raising `AllSourcesFailed`
+is the correct, EXPECTED outcome — not a transient bug or a flaky test.** Both legs are legitimately
+unavailable and the chain has nothing left to serve. To use world-index from a server, **set
+`ALPHAVANTAGE_API_KEY`** (BYOK): the AV primary then serves SPY directly and never depends on Stooq.
+The keyless Stooq `^SPX` fallback is **residential-only / best-effort** — the path for a developer on
+a residential IP, never something a server deployment should rely on.
+
 ## Sources
 
 | Adapter | Host | Auth | Instrument · unit | Role |
@@ -54,10 +68,13 @@ is untouched.
 
 - CSV GET `https://stooq.com/q/d/l/?s=^spx&i=d`, parsing `Date,Open,High,Low,Close,Volume` →
   daily bars (the S&P 500 **index level**, in points).
-- **Anti-bot challenge from server IPs.** From datacenter IPs Stooq often returns a JavaScript
-  challenge page (HTML) instead of CSV. The adapter detects that body and raises
-  `SourceUnavailable` (the chain moves on rather than choking) — so Stooq is effectively
-  unreachable from many hosts and is therefore the **fallback**, never the primary.
+- **Anti-bot challenge from datacenter IPs — residential-only / best-effort.** From datacenter IPs
+  Stooq has structurally returned a JavaScript challenge page (HTML) instead of CSV since ~2020-12,
+  so the CSV path is effectively dead from servers/cloud/CI. The adapter detects that body and raises
+  `SourceUnavailable` (the chain moves on rather than choking). It still works from **residential**
+  IPs, which is why it stays in the chain as the only keyless path — but it is best-effort and
+  **never** something a server deployment should rely on (see *Server-side / deployment reality*
+  above). Hence: **fallback, never primary.**
 - malformed CSV / non-positive prices / OHLC-invariant violation → `InvalidData`.
 
 ## Cross-instrument failover (the one real wrinkle) — `fallback_instrument_served`

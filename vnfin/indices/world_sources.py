@@ -14,11 +14,17 @@ and never touch the VN HOSE/HNX ``index_history`` path.
     :class:`~vnfin.exceptions.SourceUnavailable` BEFORE any network call (exact FRED
     BYOK pattern). Result unit: ``USD/share (SPY ETF, S&P 500 proxy)`` / ``USD``.
 
-(b) :class:`StooqIndexSource` — FALLBACK, keyless best-effort.
+(b) :class:`StooqIndexSource` — FALLBACK, keyless best-effort (**residential-only**).
     Stooq's daily ``^spx`` CSV (the S&P 500 **index level**, in *points*). Anti-bot
-    HTML/403 challenges surface as :class:`~vnfin.exceptions.SourceUnavailable`
-    (never a hard crash), so the chain falls through. Result unit: ``index points``
-    / ``points``.
+    HTML/403 challenges — structural from datacenter IPs since ~2020-12 — surface as
+    :class:`~vnfin.exceptions.SourceUnavailable` (never a hard crash), so the chain
+    falls through. Effectively dead from servers/cloud/CI; works from residential IPs.
+    Result unit: ``index points`` / ``points``.
+
+With no key on a datacenter host BOTH legs are legitimately unavailable, so
+``vnfin.indices.world("SPY", ...)`` raising :class:`~vnfin.exceptions.AllSourcesFailed`
+is the EXPECTED outcome there (not a flaky bug); set ``ALPHAVANTAGE_API_KEY`` to use
+world-index server-side. See ``docs/sources/indices-world.md``.
 
 **Cross-instrument note:** SPY (USD/share) and ^SPX (index points) are different
 instruments whose magnitudes differ ~10x. Only one leg is ever returned per call
@@ -259,7 +265,12 @@ class AlphaVantageIndexSource(HttpDataSource):
 
 
 class StooqIndexSource(HttpDataSource):
-    """Keyless best-effort Stooq daily ^SPX CSV adapter (S&P 500 index points)."""
+    """Keyless best-effort Stooq daily ^SPX CSV adapter (S&P 500 index points).
+
+    Residential-only: structurally anti-bot-blocked from datacenter IPs since ~2020-12,
+    so a datacenter ``SourceUnavailable`` from this adapter is expected, not a defect
+    (see ``docs/sources/indices-world.md``).
+    """
 
     NAME = "stooq"
     BASE_URL = "https://stooq.com/q/d/l/"

@@ -66,7 +66,7 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 | Fund NAV/holdings | `vnfin.funds.source().nav_history(fund_id, ...)` · `.holdings(fund_id)` (stocks+bonds) · `.asset_allocation(fund_id)` | `NavHistory` · `tuple[FundHolding]` · `AssetAllocation` |
 | Index value | `vnfin.indices.index_history(idx, start, end)` | `PriceHistory` · **points** (bar `volume` = constituent **shares**, directional proxy only — not exact for liquidity) |
 | Index members | `vnfin.indices.index_constituents(idx)` | `IndexConstituents` (no weights) |
-| World index (S&P 500) | `vnfin.indices.world("SPY", start=, end=)` | `PriceHistory` · `USD/share` (SPY) or `index points` (^SPX) |
+| World index (S&P 500) | `vnfin.indices.world("SPY", start=, end=)` | `PriceHistory` · `USD/share` (SPY) or `index points` (^SPX); **needs `ALPHAVANTAGE_API_KEY` on servers** — keyless Stooq fallback is residential-only, so a datacenter `AllSourcesFailed` is expected |
 | VN gold spot | `vnfin.gold.vn("btmc").get_quotes()` | `GoldQuote` · VND/lượng |
 | World gold | `vnfin.gold.world().get_history(start, end)` | `GoldHistory` · USD/oz |
 | Crypto OHLCV | `vnfin.crypto.client().get_klines(sym, vnfin.Interval.D1, start, end)` | `CryptoHistory` · USD |
