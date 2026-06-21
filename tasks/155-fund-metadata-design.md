@@ -5,11 +5,18 @@
 `#180` baseline), NOT origin's old state. Source ToS = REVIEWER's call.
 
 ## Field inventory (confirmed vs needs-probe)
-**Confirmed on the Fmarket detail doc (clean-room probe — exist in payload + committed fixtures):**
-- `management fee`, `inception` (`firstIssueAt`), `description`
-- `asset allocation` — already parsed (`AssetAllocation`, `models.py:151`)
-- `sector allocation` — `productIndustriesHoldingList`, present in payload + fixtures but currently
-  **UNPARSED** → net-new parse target.
+**Confirmed on the Fmarket payload (clean-room — verified present in committed synthetic fixtures
+`tests/test_funds.py`, 2026-06-21):**
+- `managementFee` — on the **fund LIST row** (`_fund_list_payload`, `1.0` for the equity fixture), so
+  `management_fee_pct` is free on the existing list call (no extra request → `include_metadata=True`
+  costs nothing). `inception` (`firstIssueAt`), `description` present in payload.
+- `asset allocation` — already parsed (`AssetAllocation`, `models.py:162`; keyed on
+  `assetType.{code,name}` + `assetPercent`).
+- `sector allocation` — `productIndustriesHoldingList`, shape
+  `[{"industry": <str>, "assetPercent": <float>}, …]` (e.g. `{"industry":"Fake industry one",
+  "assetPercent":50.0}`) — present in the holdings fixture but currently **UNPARSED** → net-new
+  `SectorWeight(industry: str, weight_pct: float)` parse target (mirror `AssetAllocation` but keyed on
+  a plain `industry` string, not an `assetType` object).
 
 **NOT confirmed — needs a reviewer-authorized live probe before we design fields for them:**
 `benchmark`, `risk-category`, `subscription/redemption fees`, `factsheet URL`. **Never fabricate** —
@@ -40,8 +47,10 @@ surface test is additive-green vs the frozen baseline.
 ## Warning tokens (#180/#188 lockstep — IN THIS CHANGE)
 2 new tokens (`fund_missing_fees`, `fund_partial_holdings`): add to the SKILL.md Warning-tokens table +
 `_WARNING_TOKENS_180` + emit as literals so #188's AST forward-discovery sees them
-([[new-warning-token-must-update-180-reference]]). Baseline is 37 after #175's `current_snapshot_only`
-→ this takes it to 39. **Gate on the sweep (doc↔code bijection green), not the count.**
+([[new-warning-token-must-update-180-reference]]). **Baseline moved: `_WARNING_TOKENS_180` = 42 once
+#163 lands (37 + #163's 5 corp-action tokens)**, so these 2 take it 42→44. The exact start count
+depends on #163 merging first — **gate on the doc↔code bijection sweep being green, NOT a magic
+count** ([[multi-hop-crawl-silent-loss-surfaces-checklist]] reinforces: gate on the sweep).
 
 ## TDD (fail-first; synthetic fixtures only)
 - Parse: synthetic fixture w/ `productIndustriesHoldingList` + mgmt-fee + `firstIssueAt` → `SectorWeight`
@@ -58,6 +67,7 @@ surface test is additive-green vs the frozen baseline.
    extra request) — OK?
 3. **`fund_partial_holdings` threshold** — bounded coverage% (warn if top-holdings sum < X%) vs blanket
    top-N? Recommend a coverage% bound (mirrors the staleness-warning bounded-false-positive principle).
-4. **2 new tokens** (`fund_missing_fees`, `fund_partial_holdings`) confirmed for #180/#188 (37→39)?
+4. **2 new tokens** (`fund_missing_fees`, `fund_partial_holdings`) confirmed for #180/#188 (42→44
+   post-#163; gate on the sweep not the count)?
 5. **Source verdict:** Fmarket `/res/products/{id}` detail endpoint (same domain as already-wired
    list/NAV) — approved for runtime fetch?
