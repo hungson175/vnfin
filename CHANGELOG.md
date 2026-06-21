@@ -236,6 +236,19 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **An `exchange=None` equity-universe merge no longer aborts when ONE board is down** (#189) —
+  `vnfin.equities.universe()` iterates HOSE→HNX→UPCOM and merges them. Previously a single board's
+  `_fetch_board` raising (`SourceUnavailable`/`EmptyData`/`InvalidData`) propagated and aborted the
+  **whole** merge, so the caller got nothing even though the other two boards succeeded — the wrong
+  failure mode for an all-boards listing. The merge now **skips-and-warns on a partial failure**: a
+  down board is skipped with a never-silent `board_unavailable: {board} — fetch skipped ({ExcType}):
+  {reason}` warning (added to the SKILL "Warning tokens" table) and the surviving boards still merge.
+  A skipped board contributes **only** that token (its three always-present honest-gap tokens come
+  from a *successful* fetch, so a skipped board emits none of them). On a **total** failure (all three
+  boards down → no securities), the merge **re-raises the last `SourceError`** rather than returning a
+  near-silent empty universe. A single-board call (`universe("HNX")`) is unchanged — it still raises
+  on failure (the skip-and-warn is merge-only). **No public-API surface change** (warning strings are
+  not public surface). ([#189](https://github.com/hungson175/vnfin/issues/189))
 - **A real index trading day no longer vanishes to a midnight-open placeholder** (#187) — some
   index-D1 UDF feeds (e.g. `vps_index`) emit **two same-date D1 rows**: one at VN-local 00:00 (+07)
   and one at the real session time, **identical in high/low/close/volume** and differing **only in

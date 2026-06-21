@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 
 from .._contracts import canonical_security_symbol, reject_duplicate, require_present
 from ..coerce import parse_provider_float
-from ..exceptions import EmptyData, InvalidData
+from ..exceptions import EmptyData, InvalidData, SourceError
 from ..transport import DEFAULT_UA, HttpDataSource
 from .models import EquitySecurity, EquityUniverse
 
@@ -154,8 +154,22 @@ class SsiIboardUniverseSource(HttpDataSource):
         seen: dict[str, str] = {}  # symbol -> board it was kept from
         warnings: list[str] = []
         dup_notes: list[str] = []
+        last_error: SourceError | None = None  # for the all-boards-down re-raise
         for board in _MERGE_ORDER:
-            board_universe = self._fetch_board(board)
+            # One board down must NOT abort the whole all-boards listing: skip-and-warn on
+            # a PARTIAL failure (the other boards still merge), but re-raise on a TOTAL
+            # failure (all boards down) so the caller gets the concrete cause, not a
+            # near-silent empty universe. A skipped board contributes ONLY this token —
+            # its 3 honest-gap tokens come from inside a *successful* _fetch_board return.
+            try:
+                board_universe = self._fetch_board(board)
+            except SourceError as exc:
+                last_error = exc
+                warnings.append(
+                    f"board_unavailable: {board} — fetch skipped "
+                    f"({type(exc).__name__}): {exc}"
+                )
+                continue
             for sec in board_universe.securities:
                 if sec.symbol in seen:
                     dup_notes.append(
@@ -167,6 +181,11 @@ class SsiIboardUniverseSource(HttpDataSource):
                 merged.append(sec)
             # preserve every board's honest-gap tokens, attributed by board
             warnings.extend(board_universe.warnings)
+
+        # TOTAL failure: no board contributed any securities AND at least one board raised
+        # → re-raise the LAST SourceError (preserves the concrete cause).
+        if not merged and last_error is not None:
+            raise last_error
 
         return EquityUniverse(
             board="ALL",

@@ -580,6 +580,8 @@ _WARNING_TOKENS_180 = (
     "listing_date_not_available",
     "sector_not_available",
     "cross_board_duplicate_symbol",
+    # #189 — a board skipped during the all-boards merge (partial availability).
+    "board_unavailable",
 )
 
 

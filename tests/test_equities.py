@@ -314,6 +314,106 @@ def test_exchange_none_no_cross_board_dup_has_no_dup_warning():
     assert not any(w.startswith("cross_board_duplicate_symbol") for w in res.warnings)
 
 
+# ------------- (8b) #189 board_unavailable skip-and-warn on merge -------------
+#
+# The merge skip path discriminates on the concrete ``SourceError`` SUBTYPE that
+# ``_fetch_board`` raises (its ``{ExcType}``). The fake ``http_get`` is wrapped by the
+# transport layer, which re-wraps any in-callable raise as ``SourceUnavailable`` — that
+# would hide the real subtype. So these tests inject at the ``_fetch_board`` boundary:
+# ``_patch_fetch_board`` returns a stand-in that serves a real per-board universe for
+# the healthy boards and re-raises the designated ``SourceError`` for the down board(s).
+
+
+def _patch_fetch_board(monkeypatch, src, *, payloads=None, raising=None):
+    """Patch ``src._fetch_board`` to raise per-board ``SourceError`` (``raising``) or to
+    return that board's real universe parsed from ``payloads`` (synthetic), so the merge
+    sees the concrete exception subtype unwrapped."""
+    payloads = payloads or {}
+    raising = raising or {}
+    real_fetch = SsiIboardUniverseSource._fetch_board
+
+    def _fake(self, board):
+        if board in raising:
+            raise raising[board]
+        parsed = source(http_get=_get(payloads[board]))
+        return real_fetch(parsed, board)
+
+    monkeypatch.setattr(src, "_fetch_board", _fake.__get__(src, type(src)))
+
+
+def test_exchange_none_skips_unavailable_board_and_warns(monkeypatch):
+    s = source(http_get=_raising(AssertionError("merge must go through _fetch_board")))
+    _patch_fetch_board(
+        monkeypatch,
+        s,
+        payloads={
+            "HOSE": _payload([_row("HOSE1", "HOSE")]),
+            "UPCOM": _payload([_row("UP1", "UPCOM")]),
+        },
+        raising={"HNX": SourceUnavailable("ssi_iboard_universe: HNX boom")},
+    )
+    res = s.universe()
+    # partial failure does NOT abort the merge
+    assert res.board == "ALL"
+    assert set(res.symbols) == {"HOSE1", "UP1"}
+    # the skipped board is disclosed with a board_unavailable warning
+    assert any(w.startswith("board_unavailable: HNX") for w in res.warnings)
+    # a skipped board contributes NONE of its 3 honest-gap tokens
+    assert not any(w.startswith("partial_universe_coverage") and "HNX" in w for w in res.warnings)
+    assert not any(w.startswith("listing_date_not_available") and "HNX" in w for w in res.warnings)
+    assert not any(w.startswith("sector_not_available") and "HNX" in w for w in res.warnings)
+    # the surviving boards still attribute their honest-gap tokens
+    for board in ("HOSE", "UPCOM"):
+        assert any(w.startswith("partial_universe_coverage") and board in w for w in res.warnings)
+
+
+def test_exchange_none_all_boards_unavailable_raises(monkeypatch):
+    s = source(http_get=_raising(AssertionError("merge must go through _fetch_board")))
+    _patch_fetch_board(
+        monkeypatch,
+        s,
+        raising={
+            "HOSE": SourceUnavailable("ssi_iboard_universe: HOSE down"),
+            "HNX": EmptyData("ssi_iboard_universe: HNX empty"),
+            "UPCOM": SourceUnavailable("ssi_iboard_universe: UPCOM down"),
+        },
+    )
+    # all three boards raised → re-raise the LAST SourceError, never a silent empty universe
+    with pytest.raises(SourceUnavailable):
+        s.universe()
+
+
+def test_single_board_unavailable_still_raises(monkeypatch):
+    # exchange="HNX" asks for exactly that board; on failure it STILL raises (merge-only skip).
+    s = source(http_get=_raising(AssertionError("single board must go through _fetch_board")))
+    _patch_fetch_board(
+        monkeypatch,
+        s,
+        raising={"HNX": SourceUnavailable("ssi_iboard_universe: HNX boom")},
+    )
+    with pytest.raises(SourceUnavailable):
+        s.universe("HNX")
+
+
+def test_board_unavailable_token_format_stable(monkeypatch):
+    s = source(http_get=_raising(AssertionError("merge must go through _fetch_board")))
+    _patch_fetch_board(
+        monkeypatch,
+        s,
+        payloads={
+            "HOSE": _payload([_row("HOSE1", "HOSE")]),
+            "UPCOM": _payload([_row("UP1", "UPCOM")]),
+        },
+        raising={"HNX": EmptyData("ssi_iboard_universe: no equities for board HNX")},
+    )
+    res = s.universe()
+    tok = next(w for w in res.warnings if w.startswith("board_unavailable:"))
+    # board_unavailable: {board} — fetch skipped ({ExcType}): {reason}
+    assert tok.startswith("board_unavailable: HNX")
+    assert "fetch skipped" in tok
+    assert "(EmptyData)" in tok
+
+
 # -------------------- (9) NAME-mislabel regression ---------------------------
 
 
