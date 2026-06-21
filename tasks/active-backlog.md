@@ -139,8 +139,11 @@ _Last synced: 2026-06-21 11:2x +07_
 >     POSITIVE detection); window ≤2→≤4 so `chưa khấu trừ thuế`/`trước khi khấu trừ thuế` stay gross; bare
 >     `không khấu trừ` now degrades (safe). Tests #9.53–#9.55 (3 fail-first on 6e2c71a). Merged-tree: 3570
 >     passed, tuple 43, snapshot frozen; all must-stay-green + BLOCK4 inversions intact; 0 misclassified.
->     Handoff `/tmp/vnfin-163-round6-handoff-20260621.md`. NOTE fast-follow: English/spelled-out markers +
->     contrived VAT-clause over-veto (low realism). HOLDING push/close until APPROVE + green. Then #182 / #155.
+>     Handoff `/tmp/vnfin-163-round6-handoff-20260621.md`. NOTE fast-follow (post-#163, all SAFE/over-degrade or
+>     low-realism, none silent-wrong): English/spelled-out markers; contrived VAT-clause over-veto; **sau+thue
+>     strong rule uses SET membership so 'trước thuế … sau khi trừ phí' false-positive-degrades (reviewer
+>     round-6 edge) — tighten to sau-BEFORE-thue positionally**; malformed `8.5.0%`→5.0; `/cp` not in `_RATIO_RE`.
+>     HOLDING push/close until reviewer APPROVE + my parallel adversarial hunter on 7b35066 returns clean. Then #182 / #155.
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
