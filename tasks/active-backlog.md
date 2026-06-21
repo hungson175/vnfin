@@ -174,11 +174,16 @@ _Last synced: 2026-06-21 11:2x +07_
 >     notes→v2 corpus (do NOT hold): N1 English after-tax (never on a VN gov depository; v2 fix=add `tax`
 >     to noun set, 0-over-withhold, verified), N2 `thực được nhận` (serves gross correctly, cash-qualifier,
 >     low realism). PUSHED `f3cd479..8e7df60` (whole `vnfin.corp_actions`) + #163 CLOSED.**
->   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
->     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
->   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
->     Fmarket fields + reviewer-authorized probe spec for 4 unconfirmed). HOLDING (gate after #163).
->   - Reviewer's stated W2 gate order after #175: #152 (done) / #163 (active) / #155.
+>   - **#182** gold domestic history — **✅ DONE + CLOSED** (reviewer ruled CLOSE-NOW-with-reopen-criteria
+>     2026-06-21, #178 pattern; draft approved as-is, posted; no code change; world-reference gold line
+>     stands; 4 reopen gates = the source-watch; giavangonline probe SKIPPED — fails reopen-crit #3 anyway).
+>     Watermark=reviewer's.
+>   - **#155** fund metadata — **design note READY + FACT-CHECKED** `tasks/155-fund-metadata-design.md`.
+>     Sub-agent fact-check (line-cited) caught a gate-blocker: `inception`/`description` NOT in fixtures
+>     (grep=0) → demoted to probe-gated; only `management_fee_pct` (Optional, equity-row-only) + `SectorWeight`
+>     (off existing holdings endpoint, NO new request) confirmed. Tuple already 44→46. ROUTED to reviewer
+>     design gate (live-probe authorization + 2 tokens = his call). **ONLY remaining open issue.**
+>   - Reviewer's W2 gate order: #152 ✅ / #163 ✅ / #182 ✅ / #155 (final, in design gate).
 >
 > **#188 forward-discovery guard — ✅ DONE + PUSHED + CLOSED** (`ae7829d..60459ef`; Codex×1 APPROVE +
 > 1 doc-comment must-fix folded). AST forward-discovers emitted `.warnings` tokens, asserts
