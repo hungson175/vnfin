@@ -796,6 +796,62 @@ def record(attempts, src):
     assert _extract_warning_tokens_from_source(snippet) == set()
 
 
+# --- #192 def-use trace: locals that FLOW INTO a warnings sink (close the #188 blind spot) - #
+
+def test_extract_traces_dup_notes_style_accumulator():
+    """#192 — a local accumulator named something OTHER than ``*warnings`` (``dup_notes`` /
+    ``warns`` / ``note``) whose contents demonstrably FLOW INTO a ``warnings=`` sink (or a
+    ``_*warnings`` helper return) must be forward-discovered. These are the three real
+    blind-spot shapes that ship FIVE documented tokens today:
+
+    - ``dup_notes`` → ``warnings=tuple(warnings) + tuple(dup_notes)`` (kwarg BinOp, tuple-wrapped)
+    - ``warns``     → ``warns.append(...)`` then ``return tuple(warns)`` inside a ``_*warnings`` helper
+    - ``note``      → ``warnings=tuple(r.warnings) + (note,)`` (kwarg BinOp, tuple-element)
+    """
+    snippet = '''
+def _merged_universe(self):
+    warnings = []
+    dup_notes = []
+    for sec in secs:
+        dup_notes.append(f"cross_board_duplicate_symbol: {sec.symbol} kept from {board}")
+    return EquityUniverse(warnings=tuple(warnings) + tuple(dup_notes))
+
+def _coverage_warnings(hist, start, end):
+    warns = []
+    warns.append(f"partial_start_coverage: first bar {first} after start {sd}")
+    warns.append(f"partial_end_coverage: last bar {last} before end {ed}")
+    return tuple(warns)
+
+def _with_skip_warning(reports, skipped):
+    note = f"skipped_period_rows: {skipped} period row(s)"
+    return [replace(r, warnings=tuple(r.warnings) + (note,)) for r in reports]
+'''
+    assert _extract_warning_tokens_from_source(snippet) == {
+        "cross_board_duplicate_symbol",
+        "partial_start_coverage",
+        "partial_end_coverage",
+        "skipped_period_rows",
+    }
+
+
+def test_extract_does_not_trace_local_that_never_reaches_a_warnings_sink():
+    """#192 NEGATIVE — proves we trace FLOW, not the variable NAME. A local ``note`` that is
+    logged/returned plainly but NEVER flows into a ``warnings=`` arg (nor a ``_*warnings``
+    helper return) must NOT be surfaced. Broadening the name regex would red this incorrectly.
+    """
+    snippet = '''
+def do_thing(reports):
+    note = "debug: not a warning"
+    logger.info(note)
+    return note
+
+def other(reports):
+    warns = ["skipped_period_rows: should NOT leak — never reaches a warnings sink"]
+    return [r for r in reports if warns]
+'''
+    assert _extract_warning_tokens_from_source(snippet) == set()
+
+
 # --- coverage-rule REVIEWER REFINEMENT (exact vs declared-family-prefix) ---------------- #
 
 def test_covered_exact_token_does_not_prefix_absorb_but_family_prefix_does():
