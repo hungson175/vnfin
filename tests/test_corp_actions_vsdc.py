@@ -1094,6 +1094,59 @@ def test_parse_inversion_par_does_not_rubber_stamp_net_with_stray_before():
     assert "vsdc_parse_degraded" in ev.warnings
 
 
+def test_parse_fee_deduction_clause_does_not_veto_net_leading_marker():
+    """#9.53 (fix-4 ADJACENCY-GAMING, reviewer BLOCK5) — khấu/trừ are ALSO the ordinary verbs for
+    deducting FEES (khấu trừ phí), so a fee clause carrying a before-word ('chưa khấu trừ phí lưu
+    ký') must NOT veto a genuine after-tax ratio ('khấu trừ thuế 10%'): the net 10 must be degraded,
+    never served as gross. Leading net marker + trailing fee clause; no par → ratio None + degraded
+    (≠ 10). The veto target is the tax NOUN (thuế/TNCN), not the bare deduction verbs."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: khấu trừ thuế 10%/cổ phiếu, chưa khấu trừ phí lưu ký '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_fee_deduction_bare_tru_does_not_veto_net():
+    """#9.54 (fix-4 ADJACENCY-GAMING, reviewer BLOCK5) — bare 'trừ' on a fee clause ('chưa trừ phí
+    quản lý') must not veto an after-tax ratio ('đã trừ thuế 12%'): ratio None + degraded (≠ 12),
+    no par."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: đã trừ thuế 12%/cổ phiếu, chưa trừ phí quản lý '
+        '(01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct is None
+    assert ev.ratio_pct != 12.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_fee_deduction_khong_tru_phi_does_not_veto_net_tncn():
+    """#9.55 (fix-4 ADJACENCY-GAMING, reviewer BLOCK5) — 'không trừ phí dịch vụ' (a fee clause) must
+    not veto a 'thuế TNCN' after-tax ratio: the tax NOUN (thuế/TNCN) is the veto target, not the verb
+    trừ. The 8% net → ratio None + degraded (≠ 8), no par."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: thuế TNCN 8%/cổ phiếu, không trừ phí dịch vụ '
+        '(01 cổ phiếu được nhận 800 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 800.0
+    assert ev.ratio_pct is None
+    assert ev.ratio_pct != 8.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
 def test_dividends_no_seed_found_discloses_not_silent_empty():
     """#9.25 (NOTE-1) — when no-seed auto-discovery exhausts its recent-ID window WITHOUT
     finding a seed page for the ticker, the empty history must be DISTINGUISHABLE from a genuine

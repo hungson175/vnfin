@@ -157,6 +157,31 @@ trap+net+edge+inversion matrix.
 (par no longer rubber-stamps the net). NOTE fast-follow: English/spelled-out markers (after-tax / thuế
 thu nhập cá nhân) bypass — low realism, broaden-or-note.
 
+## Round-6 addendum — the before-veto must target the TAX NOUN, not the fee verbs (reviewer BLOCK5, convergent)
+Round-5's adjacency veto keyed on `_TAXISH_TOKENS = {thue, khau, tru, tncn}` — but `khấu`/`trừ` are
+ALSO the ordinary verbs for deducting FEES (`khấu trừ phí` / `trừ phí`). So a genuine after-tax ratio
+beside a FEE clause carrying a before-word fired the veto on the FEE and flipped net→gross:
+`khấu trừ thuế 10%/cổ phiếu, chưa khấu trừ phí lưu ký (…1000 đồng)` → `ratio_pct=10.0` (the NET) served
+as gross, NOT degraded (the `chưa` is adjacent to the `khấu/trừ` that qualifies `phí`, not the tax).
+Higher realism than BLOCK4 (VN notices routinely list `phí lưu ký`/`phí quản lý` next to the tax
+treatment). Found independently by me + reviewer BLOCK5
+(`reviews/review-202606211431-163-vsdc-rereview-BLOCK5.md`). Same silent-wrong class.
+
+**Fix (one token-set change + window widen):** the before-veto adjacency target is now the TAX NOUN
+only — `_TAX_NOUN_TOKENS = {thue, tncn}` (NOT the verbs `khau`/`tru`, which stay only for POSITIVE
+ambiguous-net detection). Window widened ≤2→≤4 tokens so `chưa khấu trừ thuế` (thuế at offset 3) and
+`trước khi khấu trừ thuế` (offset 4) still resolve GROSS, while a fee clause (`chưa khấu trừ phí` /
+`không trừ phí` — no `thuế`/`TNCN` following) no longer vetoes. Bare `không khấu trừ` (no `thuế`/`TNCN`)
+now degrades instead of serving gross — the SAFE direction; no test asserts it served. Validated 0
+misclassified across the full trap+net+edge+inversion+fee-gaming matrix.
+
+**Tests #9.53–#9.55** (3 fail-first on round-5 `6e2c71a` — net served as gross 10/12/8):
+#9.53 `khấu trừ thuế 10%/cổ phiếu, chưa khấu trừ phí lưu ký`→degrade (leading marker + trailing fee);
+#9.54 `đã trừ thuế 12%/cổ phiếu, chưa trừ phí quản lý`→degrade (bare `trừ` on fee);
+#9.55 `thuế TNCN 8%/cổ phiếu, không trừ phí dịch vụ`→degrade (tax noun is the veto target, not `trừ`).
+NOTE fast-follow (contrived, out of scope): a before-word on a non-dividend `thuế GTGT`/VAT clause
+within 4 tokens of a genuine net could still over-veto — beyond realism (dividends carry no VAT).
+
 ## Out of scope (do NOT do)
 No new warning token. No snapshot regen / `dump_api_surface.py`. No push, no issue close, no tm-send,
 no git. NOTE fast-follows tracked separately (backlog), NOT in this commit: (a) malformed `8.5.0%`

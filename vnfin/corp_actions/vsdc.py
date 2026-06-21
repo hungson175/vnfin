@@ -137,7 +137,7 @@ def _parse_vn_number(token: str) -> Optional[float]:
 
 # Net-of-tax detection vocab (accent-stripped, lowercased — see _segment_is_net).
 _BEFORE_TAX_TOKENS = frozenset({"truoc", "chua", "khong", "mien"})  # before / not-yet / not / exempt
-_TAXISH_TOKENS = frozenset({"thue", "khau", "tru", "tncn"})         # tax / withholding / deduct / PIT
+_TAX_NOUN_TOKENS = frozenset({"thue", "tncn"})  # the TAX NOUNS — NOT the verbs khấu/trừ (also fee verbs)
 
 
 def _segment_is_net(text: str) -> bool:
@@ -153,10 +153,12 @@ def _segment_is_net(text: str) -> bool:
       - a standalone NET / ròng token
 
     AMBIGUOUS deduction markers (đã trừ / khấu trừ thuế, thuế TNCN, bare khấu trừ) are net UNLESS a
-    before/not-yet/not/exempt word DIRECTLY qualifies the tax phrase — i.e. the before-word sits
-    adjacent (within 2 tokens) to a tax/deduction token: 'trước thuế', 'trước thuế TNCN',
-    'chưa khấu trừ thuế', 'không khấu trừ', 'miễn thuế', 'trước khi khấu trừ thuế' -> GROSS. A
-    before-word on a different noun ('đã trừ thuế … chưa gồm phí') is NOT adjacent -> stays net.
+    before/not-yet/not/exempt word GOVERNS THE TAX NOUN — i.e. a 'thuế'/'TNCN' token follows the
+    before-word within 4 tokens: 'trước thuế', 'trước thuế TNCN', 'chưa khấu trừ thuế', 'miễn thuế',
+    'trước khi khấu trừ thuế' -> GROSS. The veto's target is the tax NOUN, NOT the verbs khấu/trừ —
+    those are ALSO the ordinary verbs for deducting FEES (khấu trừ phí / trừ phí), so a before-word on
+    a fee clause ('khấu trừ thuế … chưa khấu trừ phí', 'đã trừ thuế … chưa trừ phí', 'thuế TNCN …
+    không trừ phí') is NOT adjacent to a tax noun -> stays net (degrades, never leaks the net rate).
     """
     toks = re.findall(r"[a-z0-9]+", _strip_accents(text))  # ordered, for adjacency check
     tokset = set(toks)
@@ -167,10 +169,13 @@ def _segment_is_net(text: str) -> bool:
         return True
     if tokset & {"net", "rong"}:
         return True
-    # AMBIGUOUS markers: a before-word flips to GROSS only when adjacent (≤2 tokens) to a tax token.
+    # AMBIGUOUS markers: a before-word flips to GROSS only when it GOVERNS A TAX NOUN — a thuế/TNCN
+    # token follows it within 4 tokens. Targeting the tax NOUN (not the verbs khấu/trừ, which also
+    # deduct FEES) keeps 'chưa khấu trừ thuế'/'trước khi khấu trừ thuế' gross while a fee clause
+    # ('chưa khấu trừ phí'/'không trừ phí') no longer vetoes a genuine 'khấu trừ thuế' net rate.
     before_qualifies_tax = any(
         toks[i] in _BEFORE_TAX_TOKENS
-        and any(toks[j] in _TAXISH_TOKENS for j in range(i + 1, min(i + 3, len(toks))))
+        and any(toks[j] in _TAX_NOUN_TOKENS for j in range(i + 1, min(i + 5, len(toks))))
         for i in range(len(toks))
     )
     if before_qualifies_tax:
