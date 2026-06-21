@@ -352,9 +352,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
       `vnfin/funds/__init__.py:45-56`; `canonical_security_symbol`/`reject_duplicate`/`require_present`
       from `vnfin._contracts`. **Provenance satisfied** (reviewer corrected the sub-agent's false
       provenance blocker — the source report lives in the reviewer workspace, not the builder repo).
-  - **NEXT ACTION:** write committed impl spec → delegate TDD build to a FRESH general-purpose agent
-    against the spec ([[fork-echoes-context-use-fresh-agent-for-delegated-impl]]) → integrate + full
-    suite + 29→33 sweep on merged tree → reviewer code review (Codex×2) → push+close.
+  - ✅ **CODE COMPLETE — committed locally `8e50cc7` (NOT pushed), IN Codex×2 REVIEW.** Spec
+    `tasks/167-equity-universe-spec.md` (42e615d) → delegated TDD build to a fresh general-purpose agent
+    ([[fork-echoes-context-use-fresh-agent-for-delegated-impl]]) → integrated on merged tree: **3420
+    passed / 0 skipped**, equities pkg **100%** cov, #180 guard **33 bijective**, snapshot byte-identical
+    (additive surface). Integrator adversarial pass clean; I ADDED `test_negative_par_value_is_none`
+    (the [[new-source-must-mirror-sibling-data-integrity-guards]] negative-value blind spot — par_value
+    ≤0→None had zero/blank tests but no negative). Handoff w/ the reviewer's 7 check-points mapped to
+    file:line: `/tmp/vnfin-167-codex-handoff-202606210844.md`. Flagged 1 design note: empty-board during
+    `exchange=None` merge is fail-closed (propagates EmptyData) — confirm vs warn+skip.
+  - **AWAITING:** reviewer Codex×2 verdict → address findings → **push + close #167** only after APPROVE
+    + green merged tree. (Reviewer owns the watermark — I do NOT advance `state/last_seen.txt`.)
 - **#163 — dividends / corp-actions** — ACCEPTED in scope but **BLOCKED**: source choice (clean-thin
   HOSE-JSON vs full-but-HTML HNX/VSDC scrape vs paid FiinGroup-BYOK) is a legal/product decision the
   reviewer escalated to Boss. **Do NOT start until reviewer sends the chosen-source spec.**
