@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-21 09:50 +07_
+_Last synced: 2026-06-21 10:01 +07_
 
 > **#177 S&P 500 world-index — ✅ DONE (PUSHED + CLOSED).** Pushed master `011cffa..28bc529`
 > (impl `011cffa` + critical fix `8ff1e78` + docs `2e7c694` + design/backlog + reviewer-suggested
@@ -286,8 +286,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
-  APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP is now **#187 + #181 builds
-  IN FLIGHT** — both reviewer-gated, delegated to fresh general-purpose agents in separate worktrees
+  APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 ✅ DONE+PUSHED+CLOSED**
+  (Codex×1 APPROVE zero-blockers, `1cc8a44`); **#187 Codex×2 IN FLIGHT** (hold ff-merge for the
+  consolidated verdict). Both delegated to fresh general-purpose agents in separate worktrees
   (`vnfin-oss-wt-187` / `vnfin-oss-wt-181`), TDD vs committed specs, synthetic fixtures. #188 held
   until #187 lands (shared `test_docs_contract.py`); **#189 new non-blocking follow-up** (board_unavailable
   skip-and-warn for the equities merge — also touches `test_docs_contract.py`, so also after #187).
@@ -297,18 +298,23 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     `/tmp/vnfin-187-gate.md`). Worktree `vnfin-oss-wt-187`, spec `tasks/187-midnight-recovery-spec.md`.
     Signature = H/L/C/V identical + open differs + one row at LOCAL 00:00 VN-tz → keep non-midnight,
     drop midnight, recover (not charged to threshold); new token `recovered_midnight_open_placeholder`
-    (#180 guard 33→34); genuine-conflict/no-midnight → UNCHANGED #186 poison. Codex×2 before push.
-  - **#181 (enh) — additive `Fund.nav_as_of`.** Design APPROVED (SPLIT: bare field now, staleness
-    warning deferred to a follow-up). Worktree `vnfin-oss-wt-181`, spec `tasks/181-fund-nav-asof-spec.md`.
-    Source = `extra.lastNAVDate` (epoch-ms→VN date via existing `_parse_update_at`); never fabricated;
-    additive (snapshot frozen, no token). Codex×1 ok before push (single additive field).
+    (#180 guard 33→34); genuine-conflict/no-midnight → UNCHANGED #186 poison. **Codex×2 IN FLIGHT at
+    `61e6dd7`** (branch `issue-187-midnight-recovery` rebased onto master; merged tree master+#181+#187
+    = 3444 passed, snapshot frozen, #180 guard 33→34 bidirectional). **Hold ff-merge for the consolidated
+    verdict**; master stays at `1cc8a44`. Handoff (9 invariants→test names): `/tmp/vnfin-187-codex-handoff-202606211000.md`.
+  - **#181 (enh) — additive `Fund.nav_as_of` — ✅ DONE + PUSHED + CLOSED.** Codex×1 **APPROVE** zero
+    blockers (review-202606210958-181-nav-as-of-approve; pinned SHA `1cc8a44`, all 7 check-points PASS).
+    Pushed master `e9d0c42..1cc8a44` (spec `d064244` + impl `1cc8a44`); #181 closed with resolution
+    comment. Source = `extra.lastNAVDate` via existing `_parse_update_at`→`VN_TZ.date()`; distractors
+    ignored; never-fabricated; additive (snapshot frozen, NO token). **Deferred list-level staleness
+    warning (`fund_nav_stale` + clock seam + bounded threshold) filed as #190** (design-first).
 
   **QUEUED (reviewer source-vet DONE + triaged; batch AFTER #187/#181):**
   - **#184 — world-index source-hunt → DOCS-ONLY + tombstone (handed 09:51).** NO clean keyless
     server-reachable ToS-safe SPY/^GSPC source exists. Builder actions: (1) DOCS — world-index from a
     server effectively requires `ALPHAVANTAGE_API_KEY` (BYOK); (2) TOMBSTONE Stooq ^SPX — structurally
     anti-bot-blocked from datacenter IPs (dead since 2020-12), so its `AllSourcesFailed` is NOT transient;
-    my read = document residential-only (KEEP path, NOT remove; awaiting reviewer confirm) so callers stop
+    decision (reviewer CONFIRMED 09:54) = document residential-only (KEEP path, NOT remove) so callers stop
     reading it as a flaky bug; (3) do NOT add Yahoo as default (query1/2 works keyless but ToS prohibits
     OSS/unofficial-endpoint use) — at most a disabled-by-default opt-in `unofficial_yahoo` adapter w/ ToS
     disclaimer = separate design decision, DEFER. NOT a new adapter, safe to batch. **Defer to AFTER
