@@ -435,6 +435,62 @@ def test_metrics_layer_public_surface_offline():
     assert {"symbol", "period", "periods"} <= cov_fields
 
 
+# Issue #166 — index VOLUME semantics must be documented (shares passthrough, directional only)
+# and the doc's scale claim must stay in lockstep with the code: the index adapters keep
+# VOLUME_SCALE = 1.0 (no constituent aggregation), only PRICE_SCALE is overridden to points.
+def test_index_volume_semantics_documented_and_in_lockstep_with_code():
+    # (a) code: the scale literals the doc cites really exist.
+    udf = _read("vnfin/sources/udf.py")
+    idx = _read("vnfin/indices/sources.py")
+    assert "VOLUME_SCALE = 1.0" in udf, "base UDF source no longer keeps VOLUME_SCALE = 1.0"
+    assert "PRICE_SCALE = 1.0" in idx, "index adapters no longer override PRICE_SCALE = 1.0"
+
+    # (b) source doc: the dedicated VOLUME-semantics section exists and states the contract.
+    src = _read("docs/sources/indices-constituents.md")
+    assert "Index VOLUME semantics" in src, "indices doc missing the VOLUME-semantics section"
+    for needle in ("VOLUME_SCALE = 1.0", "no constituent", "directional"):
+        assert needle in src, f"indices doc VOLUME section missing {needle!r}"
+
+    # (c) units.md indices row + SKILL.md index-value row must carry the volume caveat too,
+    # so a caller reading either quick reference learns volume is a passthrough proxy.
+    units = _read("docs/units.md")
+    assert "shares" in units and "volume" in units.lower()
+    skill = _read("skills/vnfin/SKILL.md")
+    assert "directional proxy" in skill, "SKILL.md index row missing the volume caveat"
+
+
+# Issue #171 — the end-to-end gold coverage & backup map must exist in the hub doc and stay tied
+# to the real accessors; the daily + annual sibling docs must cross-link to it for discoverability.
+def test_gold_coverage_map_documented_and_cross_linked():
+    import vnfin.gold as gold
+
+    # (a) code: the accessors the map names really exist with the documented behavior.
+    assert callable(gold.world_reference_history_vnd)
+    assert callable(gold.vn) and callable(gold.world)
+    try:
+        gold.domestic_history()
+        raise AssertionError("gold.domestic_history() must raise NotImplementedError (reserved)")
+    except NotImplementedError:
+        pass
+
+    # (b) hub doc: the coverage-map section names all three live paths + the never-silent backups.
+    hub = _read("docs/sources/gold-world-reference.md")
+    assert "End-to-end gold coverage & backup paths" in hub, "gold hub missing the coverage map"
+    for needle in (
+        "world_reference_history_vnd",
+        "gold.world()",
+        'gold.vn("btmc"',
+        "domestic_history()",
+        "world_reference_gold_source_fallback",
+        "opt-in",
+    ):
+        assert needle in hub, f"gold coverage map missing {needle!r}"
+
+    # (c) the daily + annual sibling docs cross-link back to the hub map.
+    assert "gold-world-reference.md#end-to-end-gold-coverage" in _read("docs/sources/gold-adapters.md")
+    assert "gold-world-reference.md#end-to-end-gold-coverage" in _read("docs/sources/cmo-gold-annual.md")
+
+
 def test_metrics_layer_documented_everywhere():
     """Public-API change ⇒ docs + skill + CHANGELOG in the SAME change. Each of the four
     documentation surfaces must document the new metrics entry points (so dropping any one

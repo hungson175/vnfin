@@ -31,6 +31,26 @@ The underlying price sources are **not modified** — composition/subclassing on
 
 Default failover order: `vps_index → ssi_index → vndirect_index`.
 
+### Index VOLUME semantics — shares, a passthrough, directional only (#166)
+
+The `volume` on an index bar is the **aggregate share volume of the index's constituents** for
+that session, measured **in shares** (not points, not VND). vnfin does **no constituent-level
+aggregation** — the field is a direct passthrough of the provider's UDF `v` value. The index
+adapters (`vnfin/indices/sources.py`) override only `PRICE_SCALE → 1.0` (points, not ×1000 VND);
+they **inherit `VOLUME_SCALE = 1.0`** from the base UDF source (`vnfin/sources/udf.py`), so the
+raw provider volume is passed through unscaled. Treat it as a **directional liquidity proxy over
+time**, not an exact figure:
+
+- **Opaque definition.** Whether a provider's index volume counts matched orders only, or also
+  includes put-through / block trades, is undocumented and may differ per provider — as may the
+  exact constituent set behind it.
+- **Cross-source comparability is limited.** The same date can carry a different volume from
+  `vps_index` vs `ssi_index` vs `vndirect_index`, and failover can switch sources mid-window,
+  mixing definitions. (SSI's UPCOM volume is unreliable — see the UPCOM note in the table above.)
+- **For exact liquidity / drawdown work, do not rely on index volume.** Fetch constituent prices +
+  volumes via `index_constituents` + `prices.history` and aggregate client-side instead. There is
+  no vnfin-level cross-check that index volume equals the sum of constituent volumes.
+
 ### Symbol aliasing (canonical → provider)
 
 Canonical symbols accepted: `VNINDEX, VN30, HNXINDEX, HNX30, UPCOM, VNALLSHARE`

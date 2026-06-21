@@ -13,6 +13,32 @@ timeout=25.0, max_attempts=3)`** → a `GoldHistory` in **VND/lượng**, **one 
 year** (Jan-1 stamped). `vnfin.gold.domestic_history(...)` is **reserved but not implemented**
 (see the bottom of this file).
 
+## End-to-end gold coverage & backup paths (#171)
+
+vnfin exposes gold through distinct paths; this is the full coverage + opt-in/backup map so you
+pick the right one and always know when a backup engaged.
+
+| Path | Accessor | Unit | Coverage | Primary → backup |
+|---|---|---|---|---|
+| VN domestic **spot** | `gold.vn("btmc"\|"pnj").get_quotes()` | VND/lượng | current snapshot only (no history) | single dealer; no failover |
+| World gold **daily** | `gold.world().get_history(start, end)` | USD/oz | CurrencyApi ≈2024-03→today (~1100-day cap) | CurrencyApi default; **Stooq full-history is opt-in** (anti-bot-blocked from datacenters) — see [`gold-adapters.md`](gold-adapters.md) |
+| World-reference **annual** | `gold.world_reference_history_vnd(start, end)` | VND/luong | **1960→present**, one point per calendar year | **World Bank CMO annual PRIMARY** → daily `CurrencyApi→Stooq` averaged-to-annual FALLBACK (disclosed) — see [`cmo-gold-annual.md`](cmo-gold-annual.md) |
+| _reserved_ | `gold.domestic_history()` | — | — | `NotImplementedError` (source-gap #182); **never** silently falls back to this synthesis |
+
+**Which to use.** For a long multi-year VND gold chart (incl. server-side), use
+`world_reference_history_vnd` — its CMO annual primary is reachable from datacenter hosts and needs
+**no opt-in**. For daily spot or a recent daily USD/oz series, use `gold.world()`. The daily Stooq
+backup is **opt-in only** (append `StooqGoldSource()` to the chain) because it is anti-bot-blocked
+from many hosts.
+
+**Backups are never silent.**
+- World-reference CMO primary fails → `world_reference_gold_source_fallback` on the result, plus any
+  `world_reference_gold_leg_*` warnings forwarded from the daily fallback leg.
+- A gappy-but-accepted daily leg → `partial_coverage` (forwarded as
+  `world_reference_gold_leg_partial_coverage`).
+- Everything unreachable → raises `AllSourcesFailed` (loud) — never an empty or silently-partial
+  result.
+
 ## What it is — and emphatically is NOT
 
 It is the **world-gold-implied VND value of a lượng**: the international gold price expressed in

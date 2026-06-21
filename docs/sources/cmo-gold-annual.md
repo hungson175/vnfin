@@ -4,6 +4,10 @@
 · **Source name:** `worldbank_cmo_gold` · **Auth:** none (no key) · **Class:** `WorldBankCmoGoldSource`
 (internal — not part of the public API surface).
 
+> **Where this fits:** this is the **annual extended-history primary** in the end-to-end gold
+> coverage map — see [`gold-world-reference.md` § End-to-end gold coverage & backup paths](gold-world-reference.md#end-to-end-gold-coverage--backup-paths-171)
+> for daily vs annual, primary vs fallback, and the opt-in/backup story across all gold paths.
+
 ## Endpoint & contract
 
 Annual world-gold (XAU/USD, USD per troy ounce) history is served by the World Bank **Commodity

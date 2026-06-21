@@ -50,6 +50,11 @@ failed. Cross-checked live: BTMC & PNJ both quote SJC 14,880,000 buy / 15,130,00
 
 ## World (XAU/USD, USD per troy ounce)
 
+> These are the **daily** world-gold adapters. For long extended history (1960+) the annual
+> World Bank CMO source is used instead — see [`gold-world-reference.md` § End-to-end gold coverage
+> & backup paths](gold-world-reference.md#end-to-end-gold-coverage--backup-paths-171) for the full
+> daily-vs-annual / primary-vs-fallback / opt-in map.
+
 | Adapter | Host | Auth | History | Default chain? |
 |---|---|---|---|---|
 | `GoldApiSource` | `api.gold-api.com/price/{XAU,XAG}` | none | **spot only** (single tick; `?date=` unsupported) | no (spot only) |
