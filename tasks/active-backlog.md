@@ -116,8 +116,13 @@ _Last synced: 2026-06-21 11:2x +07_
 >     allowlist + leading-gap/last-candidate-tail attribution + net excluded from `gross_cands` (→ from par).
 >     Tests #9.37–#9.42 (incl. par-confirms-net + negative trailing-`trước thuế`). NO new token (tuple 43),
 >     NO snapshot regen. NOTE fast-follows (out of scope): malformed `8.5.0%`→5.0; `/cp` in `_CASH_MENTION_RE`
->     not `_RATIO_RE`. NEXT: converge reviewer → delegate impl → integrate+gates+all repros → re-submit (round-4).
->     HOLDING push/close until APPROVE + green. Then #182 (reviewer source verdict+close) / #155 (design gate).
+>     not `_RATIO_RE`. **Reviewer 14:14 VALIDATED fix-3** (retracted blunt gap-list parts) + 2 edge flags:
+>     (A) `trước thuế TNCN` would over-degrade a gross ratio; (B) bare `khấu trừ` (thuế omitted) missed-net.
+>     Both FOLDED IN: `_segment_is_net` gets a before/not-yet/exempt override (`trước/chưa/không/miễn` win →
+>     GROSS) + a bare `khấu`+`trừ` net rule; tests #9.43–#9.45. **ROUND-4 SUBMITTED — commit `ca2cce0`**
+>     (base fix-3 by delegated agent + edges layered TDD-first by me). Merged-tree: 3560 passed, tuple 43,
+>     snapshot clean, #9.35/#9.36/#9.42 no-over-degrade green. Handoff `/tmp/vnfin-163-round4-handoff-20260621.md`.
+>     HOLDING push/close until APPROVE + green merged tree. Then #182 (reviewer source verdict+close) / #155 (design gate).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
