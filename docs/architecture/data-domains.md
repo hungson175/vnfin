@@ -279,6 +279,11 @@ single-source legs for long-horizon allocation workflows.
 - `explain_fx_coverage(base, quote, start, end, *, frequency) -> RequestDiagnostic` — classifies an
   FX-history request as `ok` / `coverage_gap` / `unsupported_pair` / `unsupported_frequency` vs the
   World Bank `PA.NUS.FCRF` annual USD/VND leg (`coverage_start=1983`).
+- `explain_fund_coverage() -> RequestDiagnostic` (issue #155) — states VN open-ended fund metadata
+  coverage: a confirmed Fmarket core (`management_fee_pct`, `inception_date`, `description`,
+  `sector_weights`, asset allocation) vs the source-missing/deferred fields (`benchmark`,
+  `risk-category`, a flat sub/redemption fee — tiered `productFeeList[]` only, factsheet URL);
+  status `metadata_core_available` (`domain="funds"`, `source="fmarket"`).
 
 **Not a live health monitor.** For live checks, use `scripts/healthcheck.py`.
 

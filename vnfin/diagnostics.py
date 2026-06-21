@@ -47,6 +47,7 @@ __all__ = [
     "explain_fx_coverage",
     "explain_fixed_income_coverage",
     "explain_corp_actions_coverage",
+    "explain_fund_coverage",
 ]
 
 # World Bank VNM PA.NUS.FCRF: the official API currently returns its first non-null
@@ -314,6 +315,39 @@ _CORP_ACTIONS_CAPS: tuple[SourceCapability, ...] = (
     ),
 )
 
+_FUND_COVERAGE_CAPS: tuple[SourceCapability, ...] = (
+    SourceCapability(
+        domain="funds",
+        endpoint="fund_metadata",
+        source="fmarket",
+        instruments=("VN open-ended mutual fund metadata",),
+        granularity="snapshot",
+        coverage_start=None,  # no documented historical floor for the static metadata
+        coverage_end=None,    # rolling / unknown end
+        is_default=True,
+        is_opt_in=False,
+        is_single_source=True,
+        limitations=(
+            "AVAILABLE: management_fee_pct (annual %, on the LIST row; equity rows only, "
+            "None when absent), inception_date + description (DETAIL doc), sector_weights "
+            "+ asset allocation (DETAIL doc) — all best-effort, never fabricated",
+            "benchmark and risk-category are ABSENT from the Fmarket detail document "
+            "(source-missing) — not served, never fabricated",
+            "subscription/redemption fees exist only as a tiered fee SCHEDULE "
+            "(productFeeList[]), NOT a flat scalar, so no flat sub/redemption fee is served "
+            "(a flat mapping would be fabrication) — deferred to a typed model in v2",
+            "no unambiguous factsheet URL (only an unlabeled productDocuments[] list + a "
+            "websiteURL) — the factsheet document is unknowable, so it is not served (never "
+            "fabricated) — deferred",
+        ),
+        suggested_action=(
+            "vnfin.funds.source().list_funds() for management_fee_pct (read "
+            "result.warnings: fund_missing_fees); .asset_allocation(id) for sector_weights / "
+            "inception_date / description / fund_partial_holdings"
+        ),
+    ),
+)
+
 
 def source_capabilities() -> tuple[SourceCapability, ...]:
     """Return immutable coverage metadata for the source-limited legs (offline)."""
@@ -323,6 +357,7 @@ def source_capabilities() -> tuple[SourceCapability, ...]:
         + _FX_HISTORY_CAPS
         + _FIXED_INCOME_CAPS
         + _CORP_ACTIONS_CAPS
+        + _FUND_COVERAGE_CAPS
     )
 
 
@@ -620,6 +655,75 @@ def explain_corp_actions_coverage() -> RequestDiagnostic:
         request={},
         status="ex_date_unavailable",
         sources=_CORP_ACTIONS_CAPS,
+        notes=notes,
+        suggested_actions=suggested_actions,
+    )
+
+
+def explain_fund_coverage() -> RequestDiagnostic:
+    """Explain VN open-ended fund metadata coverage (issue #155; no network).
+
+    v1 serves a CONFIRMED metadata core off the Fmarket public API — exactly what is
+    present in the live list/detail documents, never fabricated:
+
+    * ``management_fee_pct`` — the annual management fee (percent), on the **LIST** row
+      (free, no extra request) but on equity rows ONLY, so it is ``None`` when the
+      provider omits it (``fund_missing_fees`` enumerates the funds with no disclosed
+      fee on a ``list_funds`` result);
+    * ``inception_date`` (first-issue date) and ``description`` (free-text blurb) — off
+      the **DETAIL** document (``/res/products/{id}``);
+    * ``sector_weights`` (per-industry breakdown) and the asset-class allocation — off
+      the same DETAIL document; ``fund_partial_holdings`` warns when the disclosed top
+      holdings cover below the documented coverage bound.
+
+    It states the SOURCE-MISSING metadata explicitly so a caller never expects it:
+
+    * ``benchmark`` and ``risk-category`` are ABSENT from the detail document (not served);
+    * subscription/redemption fees exist only as a tiered fee SCHEDULE
+      (``productFeeList[]``), NOT a flat scalar — a flat mapping would be fabrication, so
+      a flat sub/redemption fee is DEFERRED (its own typed model in v2);
+    * no unambiguous factsheet URL (only an unlabeled ``productDocuments[]`` + a
+      ``websiteURL``) — the factsheet document is unknowable, so it is DEFERRED.
+
+    Coverage facts live in ``notes`` / ``suggested_actions``; the ``status`` is
+    ``metadata_core_available``. Result-level warning tokens (``fund_missing_fees``,
+    ``fund_partial_holdings``, ``fund_nav_stale``) live on the actual results, never
+    here. Offline — no provider call.
+    """
+    notes = (
+        # (a) what IS available — the confirmed metadata core
+        "v1 serves a confirmed Fmarket metadata core: the management fee "
+        "(management_fee_pct, annual %, on the LIST row — vnfin.funds.source().list_funds(); "
+        "equity rows only, None when absent), inception_date and description (DETAIL doc), "
+        "sector_weights (per-industry/sector breakdown) and the asset-class allocation "
+        "(DETAIL doc — .asset_allocation(id)). Nothing is fabricated.",
+        # (b) benchmark + risk-category are source-missing
+        "benchmark and risk-category are UNAVAILABLE — they are absent from the Fmarket "
+        "detail document (source-missing), so they are not served and never fabricated.",
+        # (c) sub/redemption fees are a tiered schedule, not a flat scalar
+        "a flat subscription/redemption fee is UNAVAILABLE — these exist only as a tiered "
+        "fee SCHEDULE (productFeeList[]: fee + feeUnitType + holding-tier program), not a "
+        "flat scalar; mapping it flat would be fabrication, so it is DEFERRED to a typed "
+        "fee-schedule model in v2.",
+        # (d) no unambiguous factsheet URL
+        "a factsheet URL is UNAVAILABLE — the detail document carries only an unlabeled "
+        "productDocuments[] list plus a websiteURL, so which document is the factsheet is "
+        "unknowable; it is DEFERRED rather than guessed.",
+    )
+    suggested_actions = (
+        "vnfin.funds.source().list_funds() for management_fee_pct (read result.warnings: "
+        "fund_missing_fees / fund_nav_stale); use include_metadata=False for a fee-agnostic list",
+        "vnfin.funds.source().asset_allocation(id) for sector_weights / inception_date / "
+        "description / the asset-class split (read result.warnings: fund_partial_holdings)",
+        "benchmark, risk-category, a flat sub/redemption fee, and a factsheet URL are not "
+        "available in v1 — wait for v2 (sub/redemption is a deferred typed fee-schedule model)",
+    )
+    return RequestDiagnostic(
+        domain="funds",
+        endpoint="fund_metadata",
+        request={},
+        status="metadata_core_available",
+        sources=_FUND_COVERAGE_CAPS,
         notes=notes,
         suggested_actions=suggested_actions,
     )

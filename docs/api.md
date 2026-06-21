@@ -242,6 +242,13 @@ never fabricated data:
   scrape), `ex_date` is **UNAVAILABLE** (depository publishes none; finfo enrichment leg
   held for v2 with a pre-2022 floor), and STOCK/RIGHTS/BONUS are deferred to v2 (status
   `ex_date_unavailable`).
+- `vnfin.diagnostics.explain_fund_coverage() -> RequestDiagnostic` (issue #155) — state the
+  VN open-ended fund metadata coverage: v1 serves a confirmed Fmarket core
+  (`management_fee_pct` on the LIST row, plus `inception_date` / `description` /
+  `sector_weights` / asset allocation off the DETAIL doc), while `benchmark`,
+  `risk-category`, a flat subscription/redemption fee (a tiered `productFeeList[]` schedule
+  only), and a factsheet URL are **source-missing / deferred** (status
+  `metadata_core_available`; never fabricated).
 
 `SourceCapability` and `RequestDiagnostic` are frozen dataclasses. This is preflight
 metadata, not a live health monitor (use `scripts/healthcheck.py` for live checks). See

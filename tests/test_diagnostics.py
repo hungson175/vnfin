@@ -232,3 +232,51 @@ def test_fixed_income_coverage_in_source_capabilities_registry():
     # World Bank annual rates + the DBnomics policy proxy are both registered
     assert any("worldbank" in s for s in sources)
     assert any("dbnomics" in s for s in sources)
+
+
+# --- Issue #155: explain_fund_coverage() (offline) -------------------------
+from vnfin.diagnostics import explain_fund_coverage
+
+
+def test_fund_coverage_is_offline_and_on_namespace():
+    import vnfin.diagnostics as diag
+
+    d = explain_fund_coverage()
+    assert isinstance(d, RequestDiagnostic)
+    # exposed on the package namespace like the siblings
+    assert diag.explain_fund_coverage() == d
+    assert callable(vnfin.diagnostics.explain_fund_coverage)
+
+
+def test_fund_coverage_in_dunder_all():
+    import vnfin.diagnostics as diag
+
+    assert "explain_fund_coverage" in diag.__all__
+
+
+def test_fund_coverage_enumerates_available_metadata():
+    d = explain_fund_coverage()
+    blob = " ".join(d.notes).lower()
+    # what IS available (#155 confirmed core): management fee, sector weights,
+    # asset allocation, inception date, description.
+    for kind in ("management fee", "sector", "asset", "inception", "description"):
+        assert kind in blob, kind
+
+
+def test_fund_coverage_discloses_source_missing_metadata():
+    d = explain_fund_coverage()
+    blob = " ".join(d.notes + d.suggested_actions).lower()
+    sources_blob = " ".join(" ".join(c.limitations).lower() for c in d.sources)
+    full = blob + " " + sources_blob
+    # the 4 deferred/source-missing fields per the live probe.
+    assert "benchmark" in full
+    assert "risk" in full
+    assert "fee schedule" in full or "fee-schedule" in full or "subscription" in full or "redemption" in full
+    assert "factsheet" in full
+
+
+def test_fund_coverage_in_source_capabilities_registry():
+    caps = source_capabilities()
+    fund_caps = [c for c in caps if c.domain == "funds"]
+    assert fund_caps, "fund metadata capabilities missing from source_capabilities()"
+    assert any(c.source == "fmarket" for c in fund_caps)
