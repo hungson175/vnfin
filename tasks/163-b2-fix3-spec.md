@@ -34,25 +34,38 @@ def _segment_is_net(text: str) -> bool:
     """True when a ratio segment is qualified by a net-of-tax phrase, so its `%` is an AFTER-TAX
     figure that must NEVER be served as the gross dividend ratio. Detected by TOKEN co-occurrence
     (word-boundary, accent-stripped) — NOT substring — so 'thực hiện' (every page), 'trước thuế'
-    (gross), 'internet', 'trong' do NOT register as net:
-      - thực nhận / thực lĩnh / thực lãnh  (net received)
-      - sau … thuế                          (after tax; incl. 'sau khi … thuế')
-      - thuế + trừ / khấu / TNCN            (đã trừ / khấu trừ thuế, thuế TNCN)
+    (gross), 'internet', 'trong' do NOT register as net.
+
+    A BEFORE-tax / not-yet-deducted / exempt qualifier means the `%` is still GROSS, even when tax
+    words are present — these WIN over every net rule (else 'trước thuế TNCN' or 'chưa khấu trừ thuế'
+    would be wrongly degraded):
+      - trước / chưa / không / miễn  (before / not-yet / not / exempt) -> GROSS
+    Net markers (only when no before/negation token is present):
+      - thực nhận / thực lĩnh / thực lãnh   (net received)
+      - sau … thuế                           (after tax; incl. 'sau khi … thuế')
+      - thuế + trừ / khấu / TNCN             (đã trừ / khấu trừ thuế, thuế TNCN)
+      - khấu + trừ                           (bare withholding, even if 'thuế' is omitted)
       - a standalone NET / ròng token
     """
     toks = set(re.findall(r"[a-z0-9]+", _strip_accents(text)))
+    if toks & {"truoc", "chua", "khong", "mien"}:   # before/not-yet/not/exempt => GROSS
+        return False
     if "thuc" in toks and toks & {"nhan", "linh", "lanh"}:
         return True
     if "sau" in toks and "thue" in toks:
         return True
     if "thue" in toks and toks & {"tru", "khau", "tncn"}:
         return True
+    if "khau" in toks and "tru" in toks:            # bare 'khấu trừ' (withholding); 'thuế' may be omitted
+        return True
     if toks & {"net", "rong"}:
         return True
     return False
 ```
 (`_strip_accents` already lowercases, so `[a-z0-9]+` tokenizes the stripped text. Remove the old
-`_NET_MARKERS` tuple entirely — it has no other references, verified by grep.)
+`_NET_MARKERS` tuple entirely — it has no other references, verified by grep. The before/negation
+guard MUST be the FIRST check so it overrides the tax rules. Validated against all traps + both
+reviewer edges + the `chưa/không/miễn khấu trừ` gross-negations — ALL CORRECT.)
 
 ### EDIT 2 — rewrite the candidate loop (lines 314–325) for token-detection + last-candidate tail
 Replace exactly this block:

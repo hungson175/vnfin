@@ -135,9 +135,37 @@ def _parse_vn_number(token: str) -> Optional[float]:
     return val
 
 
-# Net-of-tax markers (accent-stripped): a "%" candidate or cash qualified by one of these is an
-# AFTER-TAX figure, never the gross dividend ratio.
-_NET_MARKERS = ("sau thue", "thuc nhan", "thuc linh", "thuc lanh", "sau khi tru thue")
+def _segment_is_net(text: str) -> bool:
+    """True when a ratio segment is qualified by a net-of-tax phrase, so its `%` is an AFTER-TAX
+    figure that must NEVER be served as the gross dividend ratio. Detected by TOKEN co-occurrence
+    (word-boundary, accent-stripped) — NOT substring — so 'thực hiện' (every page), 'trước thuế'
+    (gross), 'internet', 'trong' do NOT register as net.
+
+    A BEFORE-tax / not-yet-deducted / exempt qualifier means the '%' is still GROSS even when tax
+    words are present — these WIN over every net rule (else 'trước thuế TNCN' or 'chưa khấu trừ thuế'
+    would be wrongly degraded):
+      - trước / chưa / không / miễn  (before / not-yet / not / exempt) -> GROSS
+    Net markers (only when no before/negation token is present):
+      - thực nhận / thực lĩnh / thực lãnh  (net received)
+      - sau … thuế                          (after tax; incl. 'sau khi … thuế')
+      - thuế + trừ / khấu / TNCN            (đã trừ / khấu trừ thuế, thuế TNCN)
+      - khấu + trừ                          (bare withholding, even if 'thuế' is omitted)
+      - a standalone NET / ròng token
+    """
+    toks = set(re.findall(r"[a-z0-9]+", _strip_accents(text)))
+    if toks & {"truoc", "chua", "khong", "mien"}:  # before/not-yet/not/exempt => GROSS, wins over tax rules
+        return False
+    if "thuc" in toks and toks & {"nhan", "linh", "lanh"}:
+        return True
+    if "sau" in toks and "thue" in toks:
+        return True
+    if "thue" in toks and toks & {"tru", "khau", "tncn"}:
+        return True
+    if "khau" in toks and "tru" in toks:  # bare 'khấu trừ' (withholding); 'thuế' may be omitted
+        return True
+    if toks & {"net", "rong"}:
+        return True
+    return False
 
 # A per-share cash amount in EITHER VSDC phrasing — "…được nhận 1.200 đồng" OR
 # "…số tiền 1.200 đồng/cổ phiếu". Used only to COUNT tranches (multi-tranche detection); the
@@ -311,19 +339,28 @@ class VsdcCashDividendSource(CorpActionSource):
                 # DECIMAL-aware (8.5% -> 8.5, not 85) and bounded to a plausible ratio (0 < pct ≤
                 # 100). A candidate preceded (since the previous candidate) by a net-of-tax marker
                 # is flagged net and NEVER served as the gross ratio.
+                # A net marker binds to the candidate it sits beside: the gap BEFORE a candidate
+                # taints THAT candidate (a leading marker, e.g. "thực nhận sau thuế 10%"); the text
+                # AFTER the LAST candidate (up to the cash anchor) taints the last candidate (a
+                # trailing marker, e.g. "12%/cổ phiếu sau thuế (…)"). A marker BETWEEN two candidates
+                # binds to the following one (leading) — this is what lets a clean gross "12%; …sau
+                # thuế 10%" recover 12 via par. Net-tainted candidates are EXCLUDED from gross_cands,
+                # so they are never served AND never par-confirmed.
+                matches = list(_RATIO_RE.finditer(prefix))
                 gross_cands: list[float] = []
                 net_present = False
-                prev_end = 0
-                for rm in _RATIO_RE.finditer(prefix):
+                for i, rm in enumerate(matches):
                     pct = _parse_ratio_pct(rm.group("pct"))
-                    seg = _strip_accents(prefix[prev_end : rm.start()])
-                    prev_end = rm.end()
-                    if any(mk in seg for mk in _NET_MARKERS):
+                    left_start = matches[i - 1].end() if i > 0 else 0
+                    seg = prefix[left_start : rm.start()]
+                    if i == len(matches) - 1:
+                        seg = seg + " " + prefix[rm.end() :]
+                    if _segment_is_net(seg):
                         net_present = True
                         continue
                     if pct is not None and 0 < pct <= 100:
                         gross_cands.append(pct)
-                had_ratio_token = _RATIO_RE.search(prefix) is not None
+                had_ratio_token = bool(matches)
                 chosen: Optional[float] = None
                 if par is not None and cash_per_share is not None:
                     # par cross-check: confirm a gross candidate against the shown cash. A UNIQUE

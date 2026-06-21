@@ -824,6 +824,155 @@ def test_parse_before_tax_marker_does_not_trigger_net_exclusion():
     assert "vsdc_parse_degraded" not in ev.warnings
 
 
+def test_parse_trailing_net_marker_single_candidate_no_par_degrades():
+    """#9.37 (fix-3 trailing net, no par) — the net marker TRAILS the only candidate:
+    '11,4%/cổ phiếu sau thuế (…1.140 đồng)' with NO par. Placement-aware tail detection must
+    taint the candidate so it is excluded from gross_cands → ratio None + degraded, the literal
+    net 11.4 NEVER served."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 11,4%/cổ phiếu sau thuế (01 cổ phiếu được nhận 1.140 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1140.0
+    assert ev.ratio_pct is None  # trailing net marker excludes the candidate
+    assert ev.ratio_pct != 11.4  # the literal net rate is never served
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_trailing_net_marker_par_cannot_confirm_degrades():
+    """#9.38 (fix-3 trailing net + par) — '12%/cổ phiếu; 11,4%/cổ phiếu sau thuế (…1.140)' with
+    Mệnh giá 10.000. The trailing 'sau thuế' taints the LAST candidate (11.4) only; the gross 12
+    is clean but 12% × 10.000 = 1.200 ≠ 1.140 so par cannot confirm it, and the net 11.4 was
+    excluded so par never sees it → ratio None + degraded (par must NOT confirm the net)."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 12%/cổ phiếu; 11,4%/cổ phiếu sau thuế '
+        '(01 cổ phiếu được nhận 1.140 đồng)<br />- Ngày thanh toán: 10/04/2024<br />',
+        par=True,
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1140.0
+    assert ev.ratio_pct is None  # par does not confirm the net 11.4 (gross 12 mismatches net cash)
+    assert ev.ratio_pct != 11.4
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_par_does_not_confirm_excluded_net_candidate_degrades():
+    """#9.39 (fix-3 mechanism 3, worst case) — 'sau thuế 10%/cổ phiếu (…1.000 đồng)' + Mệnh giá
+    10.000: the net cash 1.000 satisfies 10% × 10.000 = 1.000, so a leaked net candidate would be
+    par-CONFIRMED and the wrong net 10 served. The net candidate must be EXCLUDED from gross_cands
+    so the par cross-check never sees it → ratio None + degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện sau thuế 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />',
+        par=True,
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # net excluded -> par never confirms it
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_unlisted_khau_tru_thue_phrasing_degrades():
+    """#9.40 (fix-3 robust phrasing) — the canonical tax term 'khấu trừ thuế' is NOT in the old
+    fixed allowlist; token-based detection ('thue' + 'khau'/'tru') must flag it: 'đã khấu trừ
+    thuế 10%/cổ phiếu (…1.000)' no par → ratio None + degraded, the net 10 never served."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện đã khấu trừ thuế 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # 'khấu trừ thuế' detected via token co-occurrence
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_unlisted_da_tru_thue_phrasing_degrades():
+    """#9.41 (fix-3 robust phrasing) — 'đã trừ thuế' ('thue' + 'tru') is another unlisted net
+    phrasing token-based detection must catch: 'đã trừ thuế: 10%/cổ phiếu (…1.000)' no par →
+    ratio None + degraded, the net 10 never served."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện đã trừ thuế: 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # 'đã trừ thuế' detected via token co-occurrence
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_trailing_before_tax_marker_not_over_matched():
+    """#9.42 (fix-3 NEGATIVE guard) — a TRAILING 'trước thuế' (BEFORE tax = GROSS) must NOT be
+    over-matched by the placement-aware tail scan: '12%/cổ phiếu trước thuế (…1.200)' no par →
+    ratio 12.0, NOT degraded. Guards that the token detection keys on net phrases, not the bare
+    word 'thuế', even on the tail."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 12%/cổ phiếu trước thuế (01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct == 12.0  # 'trước thuế' is gross; tail scan must not over-match
+    assert "vsdc_parse_degraded" not in ev.warnings
+
+
+def test_parse_truoc_thue_tncn_is_gross_not_over_degraded():
+    """#9.43 (fix-3 edge A NEGATIVE) — 'trước thuế TNCN' is BEFORE-tax = GROSS, even though it
+    carries the 'thuế'+'TNCN' tokens. The before-tax qualifier must WIN over the tax rule so the
+    ratio is served, not wrongly degraded: '12%/cổ phiếu trước thuế TNCN (…1.200)' no par →
+    ratio 12.0, NOT degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 12%/cổ phiếu trước thuế TNCN (01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct == 12.0  # 'trước' (before) overrides the thuế/TNCN tokens → gross
+    assert "vsdc_parse_degraded" not in ev.warnings
+
+
+def test_parse_bare_khau_tru_without_thue_token_degrades():
+    """#9.44 (fix-3 edge B POSITIVE) — 'đã thực hiện khấu trừ' (withholding performed) is net even
+    when the word 'thuế' is OMITTED: the bare 'khấu'+'trừ' co-occurrence must register as net so the
+    after-tax 10 is never served. No par → ratio None + degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: đã thực hiện khấu trừ 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # bare 'khấu trừ' detected even without 'thuế'
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_chua_khau_tru_thue_is_gross_not_over_degraded():
+    """#9.45 (fix-3 edge B NEGATIVE guard) — 'chưa khấu trừ thuế' (NOT-YET deducted) is GROSS; the
+    bare 'khấu trừ' net rule must NOT over-degrade it. The 'chưa' (not-yet) qualifier wins, same as
+    'trước'/'không'/'miễn': '10%/cổ phiếu chưa khấu trừ thuế (…1.000)' no par → ratio 10.0, NOT
+    degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu chưa khấu trừ thuế (01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct == 10.0  # 'chưa' (not-yet deducted) overrides bare khấu-trừ → gross
+    assert "vsdc_parse_degraded" not in ev.warnings
+
+
 def test_dividends_no_seed_found_discloses_not_silent_empty():
     """#9.25 (NOTE-1) — when no-seed auto-discovery exhausts its recent-ID window WITHOUT
     finding a seed page for the ticker, the empty history must be DISTINGUISHABLE from a genuine
