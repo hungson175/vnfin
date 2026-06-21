@@ -135,6 +135,31 @@ def _parse_vn_number(token: str) -> Optional[float]:
     return val
 
 
+# Net-of-tax markers (accent-stripped): a "%" candidate or cash qualified by one of these is an
+# AFTER-TAX figure, never the gross dividend ratio.
+_NET_MARKERS = ("sau thue", "thuc nhan", "thuc linh", "thuc lanh", "sau khi tru thue")
+
+# A per-share cash amount in EITHER VSDC phrasing — "…được nhận 1.200 đồng" OR
+# "…số tiền 1.200 đồng/cổ phiếu". Used only to COUNT tranches (multi-tranche detection); the
+# primary cash value is still extracted via _CASH_RE. Non-overlapping findall counts a single
+# "được nhận X đồng/cổ phiếu" once; a bare "10.000 đồng" (no anchor, no /cổ phiếu) is NOT matched,
+# so a par/face-value mention never inflates the count.
+_CASH_MENTION_RE = re.compile(
+    r"(?:được\s+nhận\s+|số\s+tiền\s+)[\d.]+\s*đồng|[\d.]+\s*đồng\s*/\s*(?:cổ\s*phiếu|cp)\b",
+    re.IGNORECASE,
+)
+
+
+def _parse_ratio_pct(token: str) -> Optional[float]:
+    """Parse a dividend RATIO percentage. Unlike a VND cash amount, a percentage never uses a
+    thousands separator — both '.' and ',' are DECIMAL points ('8.5' and '8,5' -> 8.5). (Cash keeps
+    _parse_vn_number, where '.' is thousands: '1.200' -> 1200.)"""
+    try:
+        return float(token.replace(",", "."))
+    except ValueError:
+        return None
+
+
 class VsdcCashDividendSource(CorpActionSource):
     """VSDC public cash-dividend announcement scrape adapter (VND per share).
 
@@ -251,15 +276,18 @@ class VsdcCashDividendSource(CorpActionSource):
 
         as_of = self._parse_as_of(html)
 
-        # Par value ("Mệnh giá") for the cash↔ratio cross-check (cash ≈ ratio/100 × par). When
-        # present it disambiguates the ratio on a bundled line — e.g. a net-of-tax "sau thuế"
-        # rate sitting between the gross ratio and the cash parenthetical.
+        # Par value ("Mệnh giá") for the cash↔ratio cross-check (cash ≈ ratio/100 × par). NOTE:
+        # real VSDC pages do NOT carry a par field, so the no-par branch below is the real-world
+        # path; par-confirm is a defensive bonus for the rare page that includes it. Trust only a
+        # plausible par (≥ 1000 VND) so a stray small number never mis-confirms (SECONDARY).
         par: Optional[float] = None
         par_raw = fields.get("Mệnh giá:")
         if par_raw:
             par_num = re.search(r"[\d.]+", par_raw)
             if par_num:
-                par = _parse_vn_number(par_num.group(0))
+                par_val = _parse_vn_number(par_num.group(0))
+                if par_val is not None and par_val >= 1000:
+                    par = par_val
 
         # Ratio + cash from the justify block (the cash parenthetical anchors the line).
         cash_per_share: Optional[float] = None
@@ -267,38 +295,53 @@ class VsdcCashDividendSource(CorpActionSource):
         ratio_uncertain = False
         pay_date: Optional[date] = None
         lines = self._justify_lines(html)
-        # Multi-tranche: a page listing >1 cash parenthetical (e.g. tạm ứng đợt 1 + đợt 2) is a
-        # single CashDividendEvent in v1, which surfaces only the FIRST tranche — the dropped
+        # Multi-tranche: a page listing >1 per-share cash amount (đợt 1 + đợt 2, in EITHER phrasing)
+        # is a single CashDividendEvent in v1 that surfaces only the FIRST tranche — the dropped
         # tranche(s) are DISCLOSED via the degraded token rather than silently lost.
-        cash_anchor_count = sum(len(_CASH_RE.findall(line)) for line in lines)
+        cash_anchor_count = sum(len(_CASH_MENTION_RE.findall(line)) for line in lines)
+        # A ratio token may live on a different justify line than the cash anchor; track whether the
+        # page states ANY ratio so a cash-found-but-unpaired result degrades (never silent).
+        any_ratio_token = any(_RATIO_RE.search(line) for line in lines)
         for line in lines:
             cash_m = _CASH_RE.search(line)
             if cash_m and cash_per_share is None:
                 cash_per_share = _parse_vn_number(cash_m.group("cash"))
-                # Candidate ratios are the `%/cổ phiếu` tokens BEFORE the cash parenthetical,
-                # bounded to a plausible per-share cash ratio (0 < pct ≤ 100); a >100 value is a
-                # parse artifact / misread and is never paired with the cash amount.
-                cands: list[float] = []
-                for rm in _RATIO_RE.finditer(line[: cash_m.start()]):
-                    pct = _parse_vn_number(rm.group("pct"))
+                prefix = line[: cash_m.start()]
+                # Candidate ratios are the `%/cổ phiếu` tokens BEFORE the cash parenthetical, parsed
+                # DECIMAL-aware (8.5% -> 8.5, not 85) and bounded to a plausible ratio (0 < pct ≤
+                # 100). A candidate preceded (since the previous candidate) by a net-of-tax marker
+                # is flagged net and NEVER served as the gross ratio.
+                gross_cands: list[float] = []
+                net_present = False
+                prev_end = 0
+                for rm in _RATIO_RE.finditer(prefix):
+                    pct = _parse_ratio_pct(rm.group("pct"))
+                    seg = _strip_accents(prefix[prev_end : rm.start()])
+                    prev_end = rm.end()
+                    if any(mk in seg for mk in _NET_MARKERS):
+                        net_present = True
+                        continue
                     if pct is not None and 0 < pct <= 100:
-                        cands.append(pct)
-                had_ratio_token = _RATIO_RE.search(line[: cash_m.start()]) is not None
+                        gross_cands.append(pct)
+                had_ratio_token = _RATIO_RE.search(prefix) is not None
                 chosen: Optional[float] = None
                 if par is not None and cash_per_share is not None:
-                    # par cross-check: pick the candidate whose cash ≈ ratio/100 × par — recovers
-                    # the gross ratio even when a closer "sau thuế" net rate precedes the cash.
+                    # par cross-check: confirm a gross candidate against the shown cash. A UNIQUE
+                    # confirmed value is served; >1 distinct confirmed value is ambiguous (degrade).
                     tol = max(1.0, 0.005 * cash_per_share)
-                    confirmed = [
-                        c for c in cands if abs(c / 100.0 * par - cash_per_share) <= tol
-                    ]
-                    if confirmed:
-                        chosen = confirmed[-1]  # closest-before among par-confirmed
-                elif len(cands) == 1:
-                    # no par to disambiguate, but a single unambiguous candidate is safe to pair.
-                    chosen = cands[0]
-                # par present but nothing confirms, OR no par with >1 candidate (ambiguous): leave
-                # ratio None rather than fabricate/mis-pair — disclosed via the degraded token.
+                    confirmed = sorted(
+                        {c for c in gross_cands if abs(c / 100.0 * par - cash_per_share) <= tol}
+                    )
+                    if len(confirmed) == 1:
+                        chosen = confirmed[0]
+                    elif len(confirmed) > 1:
+                        ratio_uncertain = True
+                elif len(gross_cands) == 1 and not net_present:
+                    # no par to cross-check: serve a single unambiguous gross candidate ONLY when no
+                    # net-of-tax marker is on the line (else the shown cash may be net → degrade).
+                    chosen = gross_cands[0]
+                # par present but nothing confirms, OR no par with an ambiguous / net-qualified line:
+                # leave ratio None rather than fabricate/mis-pair — disclosed via the degraded token.
                 ratio_pct = chosen
                 if had_ratio_token and chosen is None:
                     ratio_uncertain = True
@@ -307,15 +350,18 @@ class VsdcCashDividendSource(CorpActionSource):
                 pay_date = _parse_dmy(pay_m.group("date"))
 
         warnings: list[str] = [EX_DATE_UNAVAILABLE]
-        # Degradation: a recognized cash dividend is surfaced (never dropped) with the affected
-        # fields left None and the never-silent token attached when ≥1 PRIMARY field is
-        # unparseable (the record date, or both ratio AND cash), when the cash↔ratio pairing is
-        # ambiguous (a ratio token was present but none could be trusted), or when the page
-        # lists multiple cash tranches (only the first is surfaced in v1).
+        # Degradation (never-silent): surface the event with affected fields None + the token when a
+        # PRIMARY field is unparseable (record date, or both ratio AND cash), the cash↔ratio pairing
+        # is ambiguous/net-qualified, a ratio is stated on the page but NOT on the cash line
+        # (cross-line, unpaired), or the page lists multiple cash tranches (only the first surfaced).
+        cross_line_unpaired = (
+            cash_per_share is not None and ratio_pct is None and any_ratio_token
+        )
         if (
             record_date is None
             or (cash_per_share is None and ratio_pct is None)
             or ratio_uncertain
+            or cross_line_unpaired
             or cash_anchor_count > 1
         ):
             warnings.append(VSDC_PARSE_DEGRADED)
@@ -469,8 +515,10 @@ class VsdcCashDividendSource(CorpActionSource):
                 # a page that fails to FETCH (SourceError) or to PARSE (InvalidData: empty/
                 # whitespace body or a cash-div page with no resolvable ticker) must not sink the
                 # whole crawl — counted so the caller discloses the gap (never silently
-                # incomplete). InvalidData is not a SourceError, so the prior fetch-only guard
-                # let one bad sibling page crash the entire dividends() call.
+                # incomplete). The parse call previously sat OUTSIDE this try, so its InvalidData
+                # propagated past the guard and one bad sibling page crashed the entire
+                # dividends() call. (InvalidData IS a SourceError subclass; SourceError alone would
+                # catch it — the tuple is explicit for the reader and robust to hierarchy changes.)
                 failed += 1
                 continue
             if ev is not None and ev.code == code:

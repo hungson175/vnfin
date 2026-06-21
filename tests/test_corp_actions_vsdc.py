@@ -645,6 +645,185 @@ def test_parse_multitranche_with_sau_thue_no_misparse_and_discloses():
     assert "vsdc_parse_degraded" in ev.warnings  # the dropped 2nd tranche is disclosed
 
 
+# --------------------------------------------------------------------------- #
+# Reviewer BLOCK round-2 (2026-06-21): net-of-tax + dot-decimal ratio + alt-phrased
+# tranche + cross-line union. Each fail-first on the current code (#163 B2 fix-2).
+# --------------------------------------------------------------------------- #
+def _justify_page(body_lines: str, *, par: bool = False) -> str:
+    """Build a synthetic VSDC cash-dividend page whose justify block is ``body_lines``
+    (already containing the <br />-separated lines). ``par=True`` adds a Mệnh giá row."""
+    par_row = (
+        '<div class="row"><div class="col-md-4 item-info">Mệnh giá:</div>'
+        '<div class="col-md-8 item-info item-info-main">10.000 đồng</div></div>'
+        if par
+        else ""
+    )
+    return (
+        '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        f"{par_row}"
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        f'<p><div style="text-align: justify;">{body_lines}</div></p>'
+    )
+
+
+def test_parse_dot_decimal_ratio_not_x10():
+    """#9.27 (D-REV) — '8.5%/cổ phiếu' is a DECIMAL 8.5, NOT 85 (a % never uses a thousands
+    separator). No par, single clean fractional candidate → served cleanly, NOT degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 8.5%/cổ phiếu (01 cổ phiếu được nhận 850 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 850.0
+    assert ev.ratio_pct == 8.5  # decimal-aware
+    assert ev.ratio_pct != 85.0  # NOT the _parse_vn_number ".=thousands" misread
+    assert "vsdc_parse_degraded" not in ev.warnings  # clean single fractional
+
+
+def test_parse_comma_decimal_ratio():
+    """#9.28 (D-REV comma) — '8,5%/cổ phiếu' is also a DECIMAL 8.5 (comma is the decimal point
+    in a ratio)."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 8,5%/cổ phiếu (01 cổ phiếu được nhận 850 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 850.0
+    assert ev.ratio_pct == 8.5
+
+
+def test_parse_net_only_ratio_degrades_no_par():
+    """#9.29 (D1) — a net-of-tax-ONLY line 'sau thuế: 10%/cổ phiếu (…1.200 đồng)' with NO par
+    has no gross candidate to serve: the ratio must be None + degraded, NEVER the net 10%."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện sau thuế: 10%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct is None  # net-only, no gross -> never the 10% net rate
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_gross_plus_net_no_par_degrades():
+    """#9.30 (D2 no-par) — '12%/cổ phiếu; thực nhận sau thuế 11,4%/cổ phiếu (…1.140 đồng)' with
+    NO par: the shown cash is the net amount, so the gross 12% cannot be confirmed and the net
+    11.4% must NEVER be served — ratio None + degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 12%/cổ phiếu; thực nhận sau thuế 11,4%/cổ phiếu '
+        '(01 cổ phiếu được nhận 1.140 đồng)<br />- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1140.0
+    assert ev.ratio_pct is None  # net cash -> gross unconfirmable; net 11.4 never served
+    assert ev.ratio_pct != 11.4
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_gross_plus_net_with_par_net_cash_degrades():
+    """#9.31 (D2 par) — same gross+net line WITH Mệnh giá 10.000, but the cash (1.140) is the
+    NET amount: the par cross-check must NOT confirm the gross 12% (12% × 10.000 = 1.200 ≠
+    1.140) nor the excluded net 11.4% — ratio None + degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 12%/cổ phiếu; thực nhận sau thuế 11,4%/cổ phiếu '
+        '(01 cổ phiếu được nhận 1.140 đồng)<br />- Ngày thanh toán: 10/04/2024<br />',
+        par=True,
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1140.0
+    assert ev.ratio_pct is None  # par does NOT confirm the net 11.4 (nor gross vs net cash)
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_alt_phrased_tranche_discloses_dropped():
+    """#9.32 (D3) — a 2nd tranche phrased '…số tiền 1.200 đồng/cổ phiếu' (not the 'được nhận'
+    phrasing) must STILL be counted as a tranche: the first tranche (800) is surfaced and the
+    dropped 2nd is disclosed via degraded — never silently lost."""
+    html = _justify_page(
+        '- Đợt 1: 8%/cổ phiếu (01 cổ phiếu được nhận 800 đồng)<br />'
+        '- Đợt 2: số tiền 1.200 đồng/cổ phiếu<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 800.0  # first tranche surfaced
+    assert "vsdc_parse_degraded" in ev.warnings  # alt-phrased 2nd tranche disclosed
+
+
+def test_parse_cross_line_ratio_unpaired_degrades():
+    """#9.33 (NOTE cross-line) — the ratio '10%/cổ phiếu' lives on a DIFFERENT <br /> line than
+    the cash anchor 'được nhận 1.000 đồng': v1 does not pair across lines, so the ratio is left
+    None — but the page DOES state a ratio, so the result must be degraded, never a silent
+    undegraded ratio None."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu<br />'
+        '- Số tiền: (01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # not paired across lines
+    assert "vsdc_parse_degraded" in ev.warnings  # but a ratio IS stated -> degrade (never silent)
+
+
+def test_parse_par_confirmed_twins_degrade():
+    """#9.34 (L1) — par 10.000 + '10%/cổ phiếu; sau điều chỉnh 10,04%/cổ phiếu (…1.000 đồng)':
+    BOTH 10% and 10.04% par-confirm against 1.000 within tolerance (1000 and 1004), so the
+    pairing is ambiguous — ratio None + degraded, NEVER a silent order-dependent 10.04."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu; sau điều chỉnh 10,04%/cổ phiếu '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />- Ngày thanh toán: 10/04/2024<br />',
+        par=True,
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # ambiguous par-confirmed twins, not a silent 10.04
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_clean_single_gross_ratio_still_serves_no_over_degrade():
+    """#9.35 (reviewer NEGATIVE guard) — the round-2 net-of-tax / cross-line / twin logic must
+    NOT over-degrade the common clean case: a single gross '%/cổ phiếu' ratio on the cash line,
+    no par, no net marker, one tranche → the ratio IS served and the result is NOT degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct == 10.0  # served, not degraded
+    assert "vsdc_parse_degraded" not in ev.warnings
+
+
+def test_parse_before_tax_marker_does_not_trigger_net_exclusion():
+    """#9.36 (net-marker specificity) — 'trước thuế' (BEFORE tax = the gross rate) must NOT match
+    the net-of-tax markers ('sau thuế' / 'thực nhận'): a gross '12%/cổ phiếu (trước thuế)' line is
+    still served as 12.0, proving the exclusion keys on the net phrase, not on the bare word
+    'thuế'."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện (trước thuế): 12%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct == 12.0  # gross served; "trước thuế" is not a net marker
+    assert "vsdc_parse_degraded" not in ev.warnings
+
+
 def test_dividends_no_seed_found_discloses_not_silent_empty():
     """#9.25 (NOTE-1) — when no-seed auto-discovery exhausts its recent-ID window WITHOUT
     finding a seed page for the ticker, the empty history must be DISTINGUISHABLE from a genuine
