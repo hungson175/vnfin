@@ -313,7 +313,8 @@ class FmarketFundSource(HttpDataSource):
         warnings: tuple[str, ...] = ()
         if deduped:
             warnings = (
-                f"deduped {deduped} duplicate navDate row(s) with identical NAV",
+                # #180: mechanical token prefix (fact-first), cause in the tail.
+                f"deduped_duplicate_nav_rows: {deduped} duplicate navDate row(s) with identical NAV",
             )
         # Issue #172-RESIDUAL: success-path cadence-relative end-gap warning. Appended
         # AFTER the dedup warning (dedup stays first). `today` is injected (never

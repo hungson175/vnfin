@@ -537,3 +537,74 @@ def test_metrics_layer_documented_everywhere():
     assert "https://github.com/hungson175/vnfin/issues/157" in changelog
     # the entry must state the v1 scope the docs describe
     assert "26" in changelog and "deferred to v2" in changelog.lower()
+
+
+# Issue #180 — the SKILL.md "Warning tokens" table is the caller's contract for matching on
+# result.warnings prefixes. It must stay in lockstep with code in BOTH directions, because a
+# forward-only check (only confirming documented tokens are emitted) is exactly what let three
+# un-tokenized PROSE warnings ship undocumented. The guard enumerates the COMPLETE caller-facing
+# set; gate is the sweep, not a magic count (folds #167's pending tokens in when that lands).
+_WARNING_TOKENS_180 = (
+    "partial_start_coverage",
+    "partial_end_coverage",
+    "trailing_zero_volume_tail",
+    "quarantined_invalid_bars",
+    "resampled_from_d1",
+    "resample_partial_period",
+    "deduped_duplicate_daily_index_bars",
+    "stitched_multi_source",
+    "stitched_segment",
+    "weights_not_available",
+    "fallback_instrument_served",
+    "world_reference_excludes_domestic_premium",
+    "world_reference_annual_basis",
+    "world_reference_partial_year_coverage",
+    "world_reference_trailing_year_incomplete",
+    "world_reference_gold_source_fallback",
+    "world_reference_gold_leg_",
+    "world_reference_fx_leg_",
+    "partial_coverage",
+    "mixed_source",
+    "traded_value_estimated_from_close_x_volume",
+    "zero_liquidity",
+    "series_end_gap",
+    "imf_weo",
+    "failover",
+    "nav_end_gap",
+    "deduped_duplicate_nav_rows",
+    "skipped_mismatched_report_rows",
+    "skipped_period_rows",
+)
+
+
+def _skill_warning_tokens_section() -> str:
+    """The text of the SKILL.md '## Warning tokens' section (up to the next H2)."""
+    skill = _read("skills/vnfin/SKILL.md")
+    start = skill.index("## Warning tokens")
+    end = skill.index("\n## ", start + 1)
+    return skill[start:end]
+
+
+def _vnfin_source_blob() -> str:
+    return "\n".join(
+        p.read_text(encoding="utf-8") for p in sorted((REPO / "vnfin").rglob("*.py"))
+    )
+
+
+def test_skill_warning_tokens_section_in_lockstep_with_code():
+    """Bidirectional doc<->code guard for result.warnings tokens (#180).
+
+    (a) code->doc: every token the library can emit is documented in the SKILL table.
+    (b) doc->code: every documented token is still emitted as a STRING LITERAL in vnfin/,
+        so deleting either the row or the emission goes red (no silent rot in either lane).
+    """
+    section = _skill_warning_tokens_section()
+    src = _vnfin_source_blob()
+
+    for token in _WARNING_TOKENS_180:
+        # (a) documented
+        assert token in section, f"warning token {token!r} emitted by code but missing from the SKILL table"
+        # (b) still emitted as a literal (quote-anchored so a mere comment mention won't satisfy it)
+        assert (
+            f'"{token}' in src or f"'{token}" in src
+        ), f"warning token {token!r} documented but no longer emitted as a literal in vnfin/"

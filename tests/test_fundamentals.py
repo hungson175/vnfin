@@ -483,7 +483,8 @@ def test_vndirect_rejects_wrong_report_type_rows():
     )
     assert len(reports) == 1
     assert reports[0].fiscal_date == date(2025, 12, 31)
-    assert any("skipped" in w for w in reports[0].warnings)
+    # #180: warning carries a namespaced token prefix (not bare prose).
+    assert any(w.startswith("skipped_mismatched_report_rows") for w in reports[0].warnings)
 
 
 def test_vndirect_rejects_wrong_model_type_rows():

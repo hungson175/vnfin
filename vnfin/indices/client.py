@@ -207,7 +207,9 @@ class IndexClient:
                     f"index_history_stitched: segment {year} symbol {seg.symbol!r} "
                     f"!= requested {symbol!r}"
                 )
-            warnings.append(f"segment {year}: {seg.source} ({len(seg.bars)} bars)")
+            # #180: stable mechanical token prefix; the year moves into the tail so the
+            # caller can match `stitched_segment` (the bare `segment {year}:` prefix varied).
+            warnings.append(f"stitched_segment: {year} {seg.source} ({len(seg.bars)} bars)")
             for bar in seg.bars:
                 d = bar.time.date()
                 if d in seen:

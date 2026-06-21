@@ -112,6 +112,45 @@ warning naming the dropped dates + reasons (so one bad day no longer blocks a 10
 *systematically* broken source (too many bad rows) still fails the source → failover. Structural
 faults (misaligned/missing arrays, malformed envelope) still hard-raise `InvalidData`.
 
+## Warning tokens
+
+Every typed result carries a `warnings` tuple (`result.warnings`) — possibly empty, each entry a
+string `token` or `token: human-readable detail`. **Match on the token prefix** (the part before
+any `:`); the tail is descriptive and may change. Warnings are namespaced, **never silent, never
+fabricated** — they disclose a quality/coverage/provenance signal without failing the call. The
+complete caller-facing set (each with the issue that introduced it; `—` = pre-existing):
+
+| Token (prefix) | Result / accessor | Meaning | Issue |
+|---|---|---|---|
+| `partial_start_coverage` | `prices.history` | First bar is more than the tolerance after the requested start (clipped / newly-listed / source lag). | — |
+| `partial_end_coverage` | `prices.history` | Last bar is more than the tolerance before the requested end (VN trading-calendar aware); series may be stale. | — |
+| `trailing_zero_volume_tail` | `prices.history` / `index_history` | Trailing run of ≥10 zero-volume flat (O=H=L=C) bars — likely suspended/delisted or forward-filled phantom data (bars kept, not dropped). | #176 |
+| `quarantined_invalid_bars` | `prices.history` / `index_history` | Isolated corrupt bars dropped (OHLC-invariant, non-positive/non-finite, bad volume, duplicate timestamp); the rest of the window is served. | #186 |
+| `resampled_from_d1` | `prices.history` / `index_history` | Series aggregated client-side from D1 to a coarser period (W1/MN1/Q1/Y1), not native to the interval. | #183 |
+| `resample_partial_period` | `prices.history` / `index_history` | An edge resampled period is incomplete relative to the window (bars kept, marked provisional). | #183 |
+| `deduped_duplicate_daily_index_bars` | `index_history` | Identical same-date duplicate index bar kept once; a *conflicting* same-date pair drops that date entirely. | #162 |
+| `stitched_multi_source` | `index_history_stitched` | History stitched across per-calendar-year segments (each stitched year also emits a `stitched_segment` provenance line). | #147 |
+| `stitched_segment` | `index_history_stitched` | Per-segment provenance of a stitched series — which source served a given calendar year and how many bars (`stitched_segment: <year> <source> (<n> bars)`). | #147 |
+| `weights_not_available` | `index_constituents` | Membership only — no per-stock index weights (`weight=None`); never fabricated. | — |
+| `fallback_instrument_served` | `indices.world` | Requested SPY (USD/share) unavailable; served Stooq `^SPX` (index points, ~10× different magnitude) — rebase before comparing. | #177 |
+| `world_reference_excludes_domestic_premium` | `gold.world_reference_history_vnd` | **Always present** — world-gold-implied VND, excludes the +10–21% VN domestic (SJC/BTMC) premium; NOT the domestic price. | #178 |
+| `world_reference_annual_basis` | `gold.world_reference_history_vnd` | **Always present** — one point per calendar year (annual-avg gold × annual USD/VND × 37.5/31.1035), stamped Jan-1; not a daily series. | #178 |
+| `world_reference_partial_year_coverage` | `gold.world_reference_history_vnd` | Some requested years dropped for lack of a paired gold+FX observation (honest intersection). | #178 |
+| `world_reference_trailing_year_incomplete` | `gold.world_reference_history_vnd` | Latest emitted year is the current in-progress year — its mean is year-to-date, not a full-year value. | #178 |
+| `world_reference_gold_source_fallback` | `gold.world_reference_history_vnd` | Primary World Bank CMO annual source failed → daily-averaging (CurrencyApi→Stooq) fallback used. | #185 |
+| `world_reference_gold_leg_*` / `world_reference_fx_leg_*` | `gold.world_reference_history_vnd` | **Family:** an upstream gold-/FX-leg warning forwarded, namespaced by leg (e.g. `world_reference_gold_leg_partial_coverage`). | #178 |
+| `partial_coverage` | `gold.world()` / `crypto` | Series covers below the warn threshold of expected trading days or the requested range (accepted-but-gappy). | #169 |
+| `mixed_source` | `fundamentals.metrics` | Metric inputs span more than one source. | #157 |
+| `skipped_mismatched_report_rows` | `fundamentals.get_financials` | Provider statement rows whose `reportType`/`modelType` did not match the requested period/template were dropped (contract violation, never a silent drop). | #44 |
+| `skipped_period_rows` | `fundamentals.get_financials` | Provider period rows that could not be mapped to the requested cadence were dropped (CafeF; never a silent drop). | #45 |
+| `traded_value_estimated_from_close_x_volume` | `liquidity` | Daily traded value estimated as close × volume (not provider-published turnover). | #146 |
+| `zero_liquidity` | `liquidity` | Average daily traded value is zero over the requested window. | #146 |
+| `series_end_gap` | `macro.get_indicator` | Latest monthly observation lags the series' own cadence (possible staleness/discontinuation). | #179 |
+| `imf_weo` | `macro.get_indicator` | Years ≥ the projection year are WEO forecasts (excluded from `latest()`). | — |
+| `failover` | `macro.get_indicator` | Result required failover across sources (carries the per-source note). | — |
+| `nav_end_gap` | `funds.nav_history` | Latest fund NAV is older than the fund's own trailing cadence allows (stale / paused / dormant feed). | #172 |
+| `deduped_duplicate_nav_rows` | `funds.nav_history` | Identical-value duplicate `navDate` rows collapsed to one (kept once + warned); a *conflicting* same-date NAV still raises. | #158 |
+
 ## Full reference
 
 For every domain — all factory verbs, signatures, result fields, gotchas, and verified examples —

@@ -203,6 +203,20 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Four caller-facing `result.warnings` strings are now namespaced tokens** (#180) — `NavHistory`,
+  `FinancialReport` (VNDirect + CafeF), and stitched-index results were appending free-form **prose**
+  warnings (`"deduped N duplicate navDate row(s)…"`, `"skipped N row(s) with mismatched
+  reportType/modelType"`, `"skipped N period row(s)"`, `"segment <year>: <source> …"`) that callers
+  could not match on a stable prefix and that were **absent from the SKILL "Warning tokens" table**.
+  Each now carries a mechanical, fact-first token prefix consistent with the rest of the contract:
+  **`deduped_duplicate_nav_rows`**, **`skipped_mismatched_report_rows`**, **`skipped_period_rows`**,
+  and **`stitched_segment`** (the per-segment provenance line — the year moved into the tail so the
+  prefix is stable). The complete caller-facing warning set is now documented in the SKILL table and
+  pinned by a **bidirectional doc↔code lockstep guard** (`tests/test_docs_contract.py`): every emitted
+  token must be documented *and* every documented token must still be emitted as a literal, so neither
+  lane can silently rot. **No public-API surface change** (the API snapshot is unchanged) — only the
+  `warnings` string content; a caller that matched the old prose substring must switch to the token
+  prefix. ([#180](https://github.com/hungson175/vnfin/issues/180))
 - **One bad upstream bar no longer blocks an entire price/index window** (#186) — the shared UDF parse
   (`UDFSource._build_bars`, behind both `prices.history` and `index_history`) used to `raise InvalidData`
   on the **first** per-bar data-quality failure, aborting the whole response. Because the same bad day

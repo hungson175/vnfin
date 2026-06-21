@@ -506,7 +506,11 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         """Surface skipped (contract-violating) rows on every returned report."""
         if not skipped:
             return reports
-        note = f"skipped {skipped} row(s) with mismatched reportType/modelType{note_suffix}"
+        # #180: mechanical token prefix (fact-first), cause in the tail.
+        note = (
+            f"skipped_mismatched_report_rows: {skipped} row(s) with "
+            f"mismatched reportType/modelType{note_suffix}"
+        )
         return [dataclasses.replace(r, warnings=tuple(r.warnings) + (note,)) for r in reports]
 
     @staticmethod

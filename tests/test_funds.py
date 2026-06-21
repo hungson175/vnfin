@@ -1866,7 +1866,8 @@ def test_nav_history_in_window_identical_duplicate_deduped_with_warning():
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     hist = src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
     assert [p.date for p in hist.points] == [date(2024, 4, 4), date(2024, 4, 5)]
-    assert any("dedup" in w.lower() and "navdate" in w.lower() for w in hist.warnings)
+    # #180: warning carries a namespaced token prefix (not bare prose).
+    assert any(w.startswith("deduped_duplicate_nav_rows:") for w in hist.warnings)
 
 
 def test_nav_history_no_duplicates_has_no_dedupe_warning():

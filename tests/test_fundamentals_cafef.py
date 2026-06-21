@@ -749,7 +749,8 @@ def test_annual_request_skips_quarterly_tagged_rows():
     )
     assert len(reports) == 1
     assert reports[0].fiscal_date == date(2025, 12, 31)
-    assert any("skipped" in w for w in reports[0].warnings)
+    # #180: warning carries a namespaced token prefix (not bare prose).
+    assert any(w.startswith("skipped_period_rows") for w in reports[0].warnings)
 
 
 def test_period_unknown_rejected_for_statements():

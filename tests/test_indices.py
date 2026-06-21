@@ -852,8 +852,9 @@ def test_index_history_stitched_segment_failover():
     assert h.value_unit == "points" and h.adjustment_policy is AdjustmentPolicy.RAW
     dates = [bar.time.date() for bar in h.bars]
     assert dates == sorted(dates) and len(dates) == len(set(dates))  # strictly ascending, deduped
-    assert any("segment 2018: idx_b" in w for w in h.warnings)       # 2018 served by B
-    assert any("segment 2016: idx_a" in w for w in h.warnings)       # others by A
+    # #180: per-segment provenance is a namespaced token now (stitched_segment: <year> <source> ...).
+    assert any(w.startswith("stitched_segment:") and "2018 idx_b" in w for w in h.warnings)  # 2018 served by B
+    assert any(w.startswith("stitched_segment:") and "2016 idx_a" in w for w in h.warnings)  # others by A
 
 
 def test_index_history_stitched_rejects_non_daily():

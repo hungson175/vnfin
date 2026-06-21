@@ -526,7 +526,8 @@ class CafeFFundamentalSource(HttpDataSource, FundamentalSource):
         never a *silent* drop."""
         if not skipped:
             return reports
-        note = f"skipped {skipped} period row(s)"
+        # #180: mechanical token prefix (fact-first), cause in the tail.
+        note = f"skipped_period_rows: {skipped} period row(s)"
         return [dataclasses.replace(r, warnings=tuple(r.warnings) + (note,)) for r in reports]
 
     # ------------------------------------------------------------------ #
