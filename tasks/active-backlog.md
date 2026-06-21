@@ -80,9 +80,15 @@ _Last synced: 2026-06-21 11:2x +07_
 >     window-miss returns EMPTY history indistinguishable from never-paid → NEW 6th token
 >     `corp_action_seed_not_found` (or enforce seed_id); no-seed path currently UNTESTED. Fast-follows
 >     (non-blocking, track later): seed-scan fetch failures uncounted; doubly-undated event dropped; no-seed
->     double-spend; `DividendHistory` no `__post_init__` token enforcement. **NEXT:** 3 fail-first tests RED →
->     fix → #180/#188 lockstep for the new token → full suite+gates on merged tree → commit → re-review (B2
->     heaviest). Then #182 (reviewer source verdict+close) / #155 (design gate).
+>     double-spend; `DividendHistory` no `__post_init__` token enforcement. **FIX PHASE DONE — AWAITING
+>     RE-REVIEW** (`edc9898`): all 3 blockers fixed TDD-first (8 fail-first regressions #9.20a/#9.20–#9.26
+>     incl. a COMBINED multi-tranche+sau-thué case for B2), 6th token `corp_action_seed_not_found` +
+>     #180/#188 lockstep (baseline 42→43), parse moved INSIDE the try in `_crawl`+`_find_seed`, par
+>     cross-check recovers gross ratio + reject>100 + degrade-on-ambiguity. Full suite **3541 green** on
+>     merged tree, snapshot additive (no regen), doc-contract green. Routed to Codex x2 (handoff
+>     `/tmp/vnfin-163-rereview-handoff-20260621.md`). **B1 mechanism correction surfaced to reviewer:
+>     InvalidData IS a SourceError subtype — the real bug was parse OUTSIDE the try, conclusion/fix
+>     unchanged.** Then #182 (reviewer source verdict+close) / #155 (design gate).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
