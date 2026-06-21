@@ -99,3 +99,65 @@ green, NOT a magic count** ([[multi-hop-crawl-silent-loss-surfaces-checklist]]: 
    endpoint.)
 6. **Accessor shape:** OK to extend `holdings()`/`asset_allocation()` for `sector_weights` +
    `management_fee_pct` (reuse), rather than add a new `fund_detail`/`allocation` accessor?
+
+---
+
+## BUILD CONTRACT — reviewer APPROVED 2026-06-21 + live-probe results (THIS is the spec to build)
+
+Reviewer rulings (all 6 Qs): (1) live probe AUTHORIZED, narrow, non-gating; (2) `include_metadata`
+default **TRUE**; (3) `fund_partial_holdings` = **coverage% bound** (warn when top-holdings sum < a
+documented bound), NOT blanket top-N; (4) 2 tokens CONFIRMED 44→46, **gate on the doc↔code SWEEP not the
+count**, emit as **literal stems at a `warnings=` sink** so #188 forward-discovers; (5) source
+`/res/products/{id}` APPROVED (same `api.fmarket.vn` domain/posture as wired list/NAV/holdings); (6)
+**REUSE** accessors — extend `holdings()`/`asset_allocation()`, do NOT add a clashing
+`fund_detail`/`allocation` name.
+
+**Live-probe outcome (reviewer-authorized, opt-in, ran 2026-06-21 on id=38 equity + id=21 bond; values
+NOT committed, fixtures stay synthetic):** of the 6 probe-gated fields, **2 confirmed with exact paths →
+LAND; 4 deferred:**
+- ✅ `inception_date` ← `data.firstIssueAt` (int **epoch-ms**, parse exactly like `nav_as_of` from
+  `extra.lastNAVDate`, `fmarket.py:511`) → `Optional[date]`.
+- ✅ `description` ← `data.description` (str) → `Optional[str]`.
+- ❌ `benchmark`, `risk-category` — **absent** from the detail doc → dropped (do not add).
+- ⚠️ subscription/redemption fees — present only as a tiered `productFeeList[]` schedule
+  (`fee`+`feeUnitType`+holding-tier program), NOT a flat scalar → **DEFERRED** (mapping flat = fabrication;
+  needs its own typed model in a follow-up). `managementFee` IS also on the detail doc (corroborates list).
+- ⚠️ factsheet URL — only ambiguous `productDocuments[].url` + `websiteURL` (which document is the
+  factsheet is unknowable) → **DEFERRED** (never fabricate). 
+
+### What to build (additive, TDD-first, synthetic fixtures only)
+1. **`Fund`** (`models.py:20`): append AFTER `nav_as_of` (line 39), each defaulted →
+   `management_fee_pct: Optional[float] = None`, `inception_date: Optional[date] = None`,
+   `description: Optional[str] = None`. (Appended+defaulted ⇒ snapshot additive, not breaking.)
+   `management_fee_pct` from the LIST row `managementFee` (equity-row-only → Optional, None when absent,
+   never fabricated); `inception_date`/`description` from the DETAIL doc (the same `/res/products/{id}`
+   `holdings()`/`asset_allocation()` already fetch) — populate on the detail-sourced path, leave None on
+   the list-only path. Choose the cleanest additive seam (reuse existing accessors; no new public name).
+2. **`SectorWeight`** (`models.py`, frozen `@dataclass`, mirror `AssetClassWeight` `models.py:151`):
+   `industry: str`, `weight_pct: float`. Parse `data.productIndustriesHoldingList`
+   (`[{"industry","assetPercent"}]`) off the EXISTING holdings detail doc → `tuple[SectorWeight, ...]`,
+   surfaced on the `holdings()`/`asset_allocation()` result. **Fail-closed like `_parse_asset_class_row`
+   (`fmarket.py:634`)**: non-blank `industry` str, `_as_float` weight, malformed row → drop/closed (never
+   crash, never fabricate). Add `SectorWeight` to `vnfin/funds/__init__.__all__`.
+3. **`include_metadata` default TRUE** on `list_funds` (populates `management_fee_pct` from the row; no
+   extra request).
+4. **`vnfin.diagnostics.explain_fund_coverage()`** (no-arg, offline) — mirror
+   `explain_corp_actions_coverage()`/`explain_fixed_income_coverage()` (`diagnostics.py:577`/`:517`):
+   return `RequestDiagnostic` enumerating available-vs-source-missing metadata (note benchmark/risk/fee-
+   schedule/factsheet as source-missing). Add to `diagnostics.__all__` (`diagnostics.py:41`) + a
+   `_FUND_COVERAGE_CAPS` tuple + the diagnostics-enumerating docs (`docs/api.md`,
+   `docs/architecture/data-domains.md`, `docs/how-to/source-diagnostics.md`).
+5. **2 warning tokens** `fund_missing_fees` (when `managementFee` absent on a fund) + `fund_partial_holdings`
+   (top-holdings coverage% below a **documented bound** — pick + document the bound, mirror the
+   bounded-false-positive staleness principle). Emit verbatim as **literal stems at a `warnings=` sink**
+   (#188 forward-discovery); add to `_WARNING_TOKENS_180` (`tests/test_docs_contract.py:551`, 44→46) + the
+   SKILL.md table (`skills/vnfin/SKILL.md:116`; copy the `fund_nav_stale` row at `:161`).
+6. **Docs + CHANGELOG + SKILL** updated in the SAME change (public-API change rule). **Snapshot:** do NOT
+   regen `dump_api_surface.py`; confirm `test_public_api_surface.py` is additive-green vs the frozen
+   baseline.
+
+### Gates before reviewer handoff (merged tree)
+Full suite green; #180 reverse + #188 forward bijection SWEEP green (not a count); snapshot frozen
+(additive only); no real rows committed (synthetic fixtures); live-probe test (if any) opt-in/CI-skipped.
+Then route **Codex x1** (reviewer's call; additive low-risk). On APPROVE + green → push + close #155 =
+**backlog FULLY CLEARED**.
