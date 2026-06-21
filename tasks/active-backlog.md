@@ -28,16 +28,22 @@ _Last synced: 2026-06-21 11:2x +07_
 >   2 non-blocking nits NOT actioned (would change approved SHAs): (a) #191 commit-msg says 34 not 36
 >   cosmetic, file untouched so snapshot truly frozen; (b) #192 N1 shape-(c) helper-return convention.
 >   Watermark left to reviewer.
-> - **WAVE 2 — ACTIVE QUEUE (design-first/source-vet; one design gate to reviewer at a time):** scoping
->   Workflow `wf_46081884-f22` (5 parallel agents, VNStock-blacklist enforced) producing gate-ready
->   design notes. **#175** PIT index membership — Tier-1 (`as_of`+current-snapshot warning, NO new
->   source) is build-now-small + ships FIRST; Tier-2 (historical basket) source-gated on HOSE reviews.
->   **#152** fixed-income/yield-curve — new `rates`/`bonds` domain, source-vet ADB/HNX/SBV.
->   **#163** dividends/corp-actions — new domain, source-vet VSDC/HNX (else diagnostics-only fallback).
->   **#155** fund metadata — **UNBLOCKED now #190 landed** (funds/ collision gone); additive Fmarket
->   metadata/allocation + diagnostics. **#182** gold domestic history — explicit source RE-PROBE tracker;
->   reviewer = no clean source → likely document re-probe + CLOSE (world-reference line stands). Send the
->   reviewer ONE design gate at a time (reviewer's stated W2 order: #152/#155/#163/#175).
+> - **WAVE 2 — ACTIVE (scoping DONE; digest `tasks/wave2-scoping-summary.md`; one gate at a time).**
+>   Scoping Workflow `wf_46081884-f22` (5 agents, VNStock-blacklist enforced) → durable digest committed.
+>   **ROLE BOUNDARY:** source ToS-verdict is the REVIEWER's; my agents only surface candidate lists.
+>   - **#175** Tier-1 — **DESIGN APPROVED (reviewer 11:21) → BUILDING.** Token `current_snapshot_only`
+>     PINNED; as_of stays None (no fabrication), snapshot frozen, #180 36→37 + #188 forward, Codex×1 on
+>     merged tree. Note `tasks/175-tier1-as-of-disclosure-design.md`. Tier-2 (historical PIT) = reviewer
+>     source-gate later (no clean feed); Tier-3 (diagnostic + suggested_action fix) = small follow-up.
+>   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (route
+>     close comment + 4 reopen criteria to reviewer; world-reference line + reserved diagnostic stand).
+>   - **#152** fixed-income — no clean yield-CURVE source; narrow honest `vnfin.rates` v1 over WB+DBnomics
+>     + `explain_fixed_income_coverage`; defer `vnfin.bonds`. DESIGN GATE pending.
+>   - **#163** dividends/corp-actions — SOURCE DISCREPANCY: reviewer's HNX+VSDC found unusable (VSDC
+>     news-only, HNX TLS-broken); VNDirect finfo `/v4/events` usable (~2021 floor). Route to reviewer/Boss.
+>   - **#155** fund metadata — **UNBLOCKED (#190 landed)**; additive Fmarket metadata/allocation +
+>     diagnostics; needs ONE reviewer-authorized live probe for 4 unconfirmed detail fields.
+>   - Reviewer's stated W2 gate order after #175: #152 / #155 / #163.
 >
 > **#188 forward-discovery guard — ✅ DONE + PUSHED + CLOSED** (`ae7829d..60459ef`; Codex×1 APPROVE +
 > 1 doc-comment must-fix folded). AST forward-discovers emitted `.warnings` tokens, asserts
