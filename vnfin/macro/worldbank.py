@@ -60,6 +60,15 @@ _WB_MAP: dict[MacroIndicator, tuple[str, str]] = {
     # Issue #20: World Bank serves the broad cross-country CPI index level
     # (2010=100) through FP.CPI.TOTL, so include it as a canonical CPI source.
     MacroIndicator.CPI: ("FP.CPI.TOTL", "index"),
+    # Issue #152: World Bank WDI annual fixed-income rates (% p.a.). World Bank is
+    # the only no-key source mapping these — IMF DataMapper / DBnomics do not, so
+    # each reduces to a single-source WB chain (like GDP/CPI). DEPOSIT_RATE is an
+    # annual AGGREGATE (no clean per-tenor retail source); REAL_INTEREST may be
+    # negative (GDP-deflator-adjusted). Caveats are documented in
+    # ``vnfin.diagnostics.explain_fixed_income_coverage``.
+    MacroIndicator.LENDING_RATE: ("FR.INR.LEND", "%"),
+    MacroIndicator.DEPOSIT_RATE: ("FR.INR.DPST", "%"),
+    MacroIndicator.REAL_INTEREST_RATE: ("FR.INR.RINR", "%"),
 }
 
 

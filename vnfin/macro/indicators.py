@@ -50,6 +50,13 @@ class MacroIndicator(str, Enum):
     UNEMPLOYMENT = "unemployment"  # unemployment rate, % of labor force
     CPI_YOY = "cpi_yoy"            # #179: CPI year-over-year %, monthly (DBnomics/IMF-IFS)
     POLICY_RATE = "policy_rate"    # #179: monetary policy rate, % p.a., monthly (SBV proxy via IMF-IFS)
+    # #152: World Bank annual fixed-income rate indicators (WDI FR.INR.*, % p.a.,
+    # annual). LENDING/DEPOSIT are aggregate retail-banking rates; REAL_INTEREST is
+    # the GDP-deflator-adjusted lending rate (may be negative). World Bank is the
+    # only no-key source that maps these.
+    LENDING_RATE = "lending_rate"            # WDI FR.INR.LEND, % p.a., annual
+    DEPOSIT_RATE = "deposit_rate"            # WDI FR.INR.DPST, % p.a., annual aggregate
+    REAL_INTEREST_RATE = "real_interest_rate"  # WDI FR.INR.RINR, % p.a., annual
 
 
 class Frequency(str, Enum):
@@ -105,6 +112,12 @@ CANONICAL_UNIT: dict[MacroIndicator, str] = {
     # "% per annum" (its own unit so it never shares a chain with percent YoY).
     MacroIndicator.CPI_YOY: "%",
     MacroIndicator.POLICY_RATE: "% per annum",
+    # #152: World Bank annual rates are emitted as plain percent ("%"), so they
+    # share the percent unit with GDP_GROWTH/INFLATION/UNEMPLOYMENT (each indicator
+    # still has its own chain — units alone never collapse two indicators).
+    MacroIndicator.LENDING_RATE: "%",
+    MacroIndicator.DEPOSIT_RATE: "%",
+    MacroIndicator.REAL_INTEREST_RATE: "%",
 }
 
 
@@ -119,6 +132,10 @@ CANONICAL_CURRENCY: dict[MacroIndicator, Optional[str]] = {
     MacroIndicator.UNEMPLOYMENT: None,
     MacroIndicator.CPI_YOY: None,       # #179: percent YoY, no currency
     MacroIndicator.POLICY_RATE: None,   # #179: rate, no currency
+    # #152: percent rates, no currency.
+    MacroIndicator.LENDING_RATE: None,
+    MacroIndicator.DEPOSIT_RATE: None,
+    MacroIndicator.REAL_INTEREST_RATE: None,
 }
 
 
@@ -134,6 +151,10 @@ CANONICAL_INDICATOR_CODE: dict[MacroIndicator, str] = {
     MacroIndicator.UNEMPLOYMENT: "unemployment",
     MacroIndicator.CPI_YOY: "cpi_yoy",
     MacroIndicator.POLICY_RATE: "policy_rate",
+    # #152: stable canonical codes for the WB annual rates.
+    MacroIndicator.LENDING_RATE: "lending_rate",
+    MacroIndicator.DEPOSIT_RATE: "deposit_rate",
+    MacroIndicator.REAL_INTEREST_RATE: "real_interest_rate",
 }
 
 CANONICAL_INDICATOR_NAME: dict[MacroIndicator, str] = {
@@ -148,6 +169,10 @@ CANONICAL_INDICATOR_NAME: dict[MacroIndicator, str] = {
     # can change without destabilizing identity or the cross-collision guard, which
     # checks BOTH canonical code and canonical name).
     MacroIndicator.POLICY_RATE: "Policy Rate",
+    # #152: short, stable canonical display names for the WB annual rates.
+    MacroIndicator.LENDING_RATE: "Lending Rate",
+    MacroIndicator.DEPOSIT_RATE: "Deposit Rate",
+    MacroIndicator.REAL_INTEREST_RATE: "Real Interest Rate",
 }
 
 

@@ -744,6 +744,68 @@ def test_malformed_metadata_container_raises_invalid(field, bad_container):
 
 
 
+# --- Issue #152: World Bank annual fixed-income rate indicators -------------------
+# WB is the ONLY source mapping lending/deposit/real interest rates (FR.INR.*).
+
+import pytest as _pytest
+
+
+@_pytest.mark.parametrize(
+    "indicator,wdi_code",
+    [
+        (MacroIndicator.LENDING_RATE, "FR.INR.LEND"),
+        (MacroIndicator.DEPOSIT_RATE, "FR.INR.DPST"),
+        (MacroIndicator.REAL_INTEREST_RATE, "FR.INR.RINR"),
+    ],
+)
+def test_rate_indicator_supports_unit_and_identity(indicator, wdi_code):
+    s = _src(wb_success())
+    assert s.supports(indicator) is True
+    assert s.unit_for(indicator) == "%"
+    code, name = s.indicator_identity(COUNTRY, indicator)
+    assert code == wdi_code  # WDI code, upper-cased
+    assert name is None      # name is provider-derived (code-only validation)
+
+
+@_pytest.mark.parametrize(
+    "indicator,wdi_code",
+    [
+        (MacroIndicator.LENDING_RATE, "FR.INR.LEND"),
+        (MacroIndicator.DEPOSIT_RATE, "FR.INR.DPST"),
+        (MacroIndicator.REAL_INTEREST_RATE, "FR.INR.RINR"),
+    ],
+)
+def test_canonical_rate_indicator_maps_to_wdi_percent_no_currency(indicator, wdi_code):
+    # The canonical entry maps the logical rate to its FR.INR.* WDI code, stamps
+    # the "%" unit and no currency (percent series, never USD), annual frequency.
+    text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, 6.5, name="Fake rate (%)", code=wdi_code, unit="")],
+    ])
+    res = WorldBankMacroSource(http_get=lambda u, p, h: text).get_canonical_indicator(
+        COUNTRY, indicator
+    )
+    assert res.indicator_code == wdi_code
+    assert res.unit == "%"
+    assert res.value_unit == "%"
+    assert res.currency is None
+    assert res.frequency.value == "annual"
+    assert res.points[0][1] == pytest.approx(6.5)
+
+
+def test_real_interest_rate_negative_value_allowed():
+    # A real interest rate can be negative (inflation > nominal); not a >0 level.
+    text = json.dumps([
+        _meta(1),
+        [_obs("ZZ", COUNTRY, 2023, -2.0, name="Fake real rate (%)",
+              code="FR.INR.RINR", unit="")],
+    ])
+    res = WorldBankMacroSource(http_get=lambda u, p, h: text).get_canonical_indicator(
+        COUNTRY, MacroIndicator.REAL_INTEREST_RATE
+    )
+    assert res.points[0][1] == pytest.approx(-2.0)
+
+
 # ---------------------------------------------------------------------------
 # IndicatorSeries model conveniences
 # ---------------------------------------------------------------------------

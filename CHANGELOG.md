@@ -17,6 +17,21 @@ All notable changes to `vnfin` are documented here. The format follows
   keyless path. ([#184](https://github.com/hungson175/vnfin/issues/184))
 
 ### Added
+- **Annual fixed-income rate indicators + `explain_fixed_income_coverage()`** (#152) — three new
+  `MacroIndicator` members reachable through the existing macro domain
+  (`vnfin.macro.get_indicator(iso3, ...)` + failover): `LENDING_RATE` (World Bank WDI `FR.INR.LEND`),
+  `DEPOSIT_RATE` (`FR.INR.DPST`), and `REAL_INTEREST_RATE` (`FR.INR.RINR`) — all **annual**, `% p.a.`,
+  served by the same no-key CC-BY 4.0 World Bank source as GDP/CPI. World Bank is the only source that
+  maps them, so each resolves to a single-source annual chain (IMF DataMapper / DBnomics return
+  `supports()==False` and are skipped without a network call). Also adds a new **offline** diagnostic
+  `vnfin.diagnostics.explain_fixed_income_coverage()` that (a) states the government-bond **yield
+  CURVE** is UNAVAILABLE (no clean redistributable no-key source — DEFERRED, no `vnfin.bonds`
+  namespace), (b) enumerates what IS available — `policy_rate` (DBnomics/IMF-IFS `FPOLM_PA` monthly
+  monetary-policy **proxy**, stale ~Dec 2023) and the three World Bank annual rates, (c) discloses that
+  `deposit_rate` is an annual **aggregate** with no clean per-tenor retail source, and (d) distinguishes
+  policy vs interbank vs deposit vs government-bond yields so callers do not conflate them. Additive
+  only: new enum members + WB `_WB_MAP` entries + one diagnostic; no signature/result-type change,
+  existing `policy_rate`/GDP/CPI paths unchanged. ([#152](https://github.com/hungson175/vnfin/issues/152))
 - **`current_snapshot_only` — current-vs-point-in-time disclosure on `index_constituents`** (#175,
   Tier-1) — `vnfin.indices.index_constituents(...)` now appends an **always-present, never-silent**
   `current_snapshot_only` token to `IndexConstituents.warnings` on every successful basket, disclosing

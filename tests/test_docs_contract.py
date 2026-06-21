@@ -118,6 +118,10 @@ def test_documented_enums_and_units():
         "UNEMPLOYMENT",
         "CPI_YOY",
         "POLICY_RATE",
+        # #152: World Bank annual fixed-income rate indicators.
+        "LENDING_RATE",
+        "DEPOSIT_RATE",
+        "REAL_INTEREST_RATE",
     }
     assert macro.canonical_unit(macro.MacroIndicator.GDP) == "current US$"
 

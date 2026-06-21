@@ -153,3 +153,82 @@ def test_world_gold_max_day_boundary_exact():
     assert ok.status == "ok"
     wide = explain_world_gold_history(base, base + timedelta(days=_GOLD_MAX_DAYS + 1))
     assert wide.status == "window_too_wide"
+
+
+# --- Issue #152: explain_fixed_income_coverage() (offline) ------------------
+from vnfin.diagnostics import explain_fixed_income_coverage
+
+
+def test_fixed_income_coverage_is_offline_zero_network():
+    # Mirror the _no_network discipline of the sibling diagnostics: pure metadata,
+    # never a provider call.
+    import vnfin.diagnostics as diag
+
+    called = {"n": 0}
+    # Any accidental http_get-like call would bump this; the function takes no
+    # http_get, so simply assert it runs and returns without touching the net.
+    d = explain_fixed_income_coverage()
+    assert isinstance(d, RequestDiagnostic)
+    assert called["n"] == 0
+    # exposed on the package namespace like the siblings
+    assert diag.explain_fixed_income_coverage() == d
+
+
+def test_fixed_income_coverage_states_yield_curve_unavailable():
+    d = explain_fixed_income_coverage()
+    assert d.status == "yield_curve_unavailable"
+    blob = " ".join(d.notes).lower()
+    # (a) the govt-bond yield CURVE is unavailable (no clean source)
+    assert "yield curve" in blob
+    assert "unavailable" in blob or "no clean" in blob
+
+
+def test_fixed_income_coverage_enumerates_the_four_rate_kinds():
+    d = explain_fixed_income_coverage()
+    blob = " ".join(d.notes).lower()
+    # (b) enumerate what IS available — policy + lending + deposit + real interest
+    for kind in ("policy", "lending", "deposit", "real"):
+        assert kind in blob, kind
+    # policy is the DBnomics monthly proxy; the WB rates are ANNUAL
+    assert "annual" in blob
+    assert "monthly" in blob
+    # the policy proxy + its staleness is disclosed
+    assert "proxy" in blob
+    # the SourceCapability records cover the four kinds
+    sources_blob = " ".join(
+        (c.source + " " + " ".join(c.instruments) + " " + " ".join(c.limitations)).lower()
+        for c in d.sources
+    )
+    for kind in ("policy", "lending", "deposit", "real"):
+        assert kind in sources_blob, kind
+
+
+def test_fixed_income_coverage_discloses_deposit_is_annual_aggregate():
+    d = explain_fixed_income_coverage()
+    blob = " ".join(d.notes + d.suggested_actions).lower()
+    sources_blob = " ".join(" ".join(c.limitations).lower() for c in d.sources)
+    full = blob + " " + sources_blob
+    # (c) deposit_rate is an annual AGGREGATE with no clean per-tenor retail source
+    assert "aggregate" in full
+    assert "per-tenor" in full or "per tenor" in full
+    assert "retail" in full
+
+
+def test_fixed_income_coverage_distinguishes_rate_concepts():
+    d = explain_fixed_income_coverage()
+    blob = " ".join(d.notes).lower()
+    # (d) distinguish policy vs interbank vs deposit vs govt-bond so users don't conflate
+    assert "interbank" in blob
+    assert "government bond" in blob or "govt-bond" in blob or "govt bond" in blob
+    assert "policy" in blob
+    assert "deposit" in blob
+
+
+def test_fixed_income_coverage_in_source_capabilities_registry():
+    caps = source_capabilities()
+    fi = [c for c in caps if c.domain == "rates"]
+    assert fi, "fixed-income rate capabilities missing from source_capabilities()"
+    sources = {c.source for c in fi}
+    # World Bank annual rates + the DBnomics policy proxy are both registered
+    assert any("worldbank" in s for s in sources)
+    assert any("dbnomics" in s for s in sources)

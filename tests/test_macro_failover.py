@@ -251,6 +251,91 @@ def test_no_source_supports_indicator_raises():
         get_indicator("ZZZ", MacroIndicator.UNEMPLOYMENT, sources=[a, b])
 
 
+# ---- Issue #152: World Bank-only annual fixed-income rates ----------------
+# lending/deposit/real interest are mapped ONLY by World Bank, so IMF/DBnomics
+# must return supports()==False and the chain must reduce to WB (like GDP/CPI).
+
+_RATE_INDICATORS = (
+    MacroIndicator.LENDING_RATE,
+    MacroIndicator.DEPOSIT_RATE,
+    MacroIndicator.REAL_INTEREST_RATE,
+)
+_RATE_WDI = {
+    MacroIndicator.LENDING_RATE: "FR.INR.LEND",
+    MacroIndicator.DEPOSIT_RATE: "FR.INR.DPST",
+    MacroIndicator.REAL_INTEREST_RATE: "FR.INR.RINR",
+}
+
+
+@pytest.mark.parametrize("indicator", _RATE_INDICATORS)
+def test_only_world_bank_supports_the_rate_indicators(indicator):
+    # The non-WB real sources must NOT claim these indicators (capability skip,
+    # no network) so the failover chain reduces cleanly to World Bank.
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: "[]")
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: "{}")
+    dbn = DBnomicsSource(http_get=lambda u, p, h: "{}")
+    assert wb.supports(indicator) is True
+    assert imf.supports(indicator) is False
+    assert dbn.supports(indicator) is False
+
+
+@pytest.mark.parametrize("indicator", _RATE_INDICATORS)
+def test_default_rate_chain_reduces_to_world_bank(indicator):
+    # The real default chain (WB only maps FR.INR.*; IMF/DBnomics do not) must
+    # serve the rate from World Bank without UnitMismatchError or AllSourcesFailed.
+    code = _RATE_WDI[indicator]
+    wb_text = json.dumps([
+        {"page": 1, "pages": 1, "per_page": 50, "total": 1},
+        [{"indicator": {"id": code, "value": "Fake rate (%)"},
+          "country": {"id": "ZZ", "value": "Fakeland"}, "countryiso3code": "ZZZ",
+          "date": "2022", "value": 6.0, "unit": ""}],
+    ])
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: wb_text)
+    imf = IMFDataMapperSource(http_get=lambda u, p, h: json.dumps({"values": {}}))
+    dbn = DBnomicsSource(http_get=lambda u, p, h: json.dumps({"series": {"docs": []}}))
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", indicator)
+    assert res.source == "worldbank"
+    assert res.unit == "%"
+    assert res.value_unit == "%"
+    assert res.currency is None
+    assert res.indicator_code == code
+    assert res.points[0][1] == pytest.approx(6.0)
+
+
+@pytest.mark.parametrize("indicator", _RATE_INDICATORS)
+def test_rate_indicator_reject_reason_and_failover_single_source(indicator):
+    # WB-only indicator: a unit-undeclared fake that emits a non-canonical unit is
+    # rejected (never relabelled) and the chain fails over to the real WB source.
+    code = _RATE_WDI[indicator]
+    # 'bad' declares the canonical "%" unit (so it survives the pre-filter) but
+    # RETURNS a drifted unit -> reject_reason refuses to relabel -> failover.
+    bad = FakeMacroSource(
+        "bad",
+        {indicator: "%"},
+        behavior={indicator: "ok"},
+    )
+
+    class _DriftSrc(FakeMacroSource):
+        def get_indicator(self, country_iso3, ind):
+            base = super().get_indicator(country_iso3, ind)
+            from dataclasses import replace
+            return replace(base, unit="bps", value_unit="bps")
+
+    drift = _DriftSrc("drift", {indicator: "%"})
+    wb_text = json.dumps([
+        {"page": 1, "pages": 1, "per_page": 50, "total": 1},
+        [{"indicator": {"id": code, "value": "Fake rate (%)"},
+          "country": {"id": "ZZ", "value": "Fakeland"}, "countryiso3code": "ZZZ",
+          "date": "2022", "value": 4.0, "unit": ""}],
+    ])
+    wb = WorldBankMacroSource(http_get=lambda u, p, h: wb_text)
+    res = default_macro_client(sources=[drift, wb]).get_indicator("ZZZ", indicator)
+    assert res.source == "worldbank"
+    assert res.unit == "%"
+    # the drifted-unit attempt was recorded as a rejected failover attempt
+    assert any("failover" in w for w in res.warnings)
+
+
 # ---- BYOK skip-without-network (C4) ---------------------------------------
 
 def test_keyless_fred_skipped_without_network_in_chain(monkeypatch):

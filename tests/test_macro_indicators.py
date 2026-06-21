@@ -34,7 +34,53 @@ def test_enum_members_present():
         "UNEMPLOYMENT",
         "CPI_YOY",
         "POLICY_RATE",
+        # #152: World Bank annual fixed-income rate indicators.
+        "LENDING_RATE",
+        "DEPOSIT_RATE",
+        "REAL_INTEREST_RATE",
     }
+
+
+# --- #152: World Bank annual fixed-income rates -----------------------------
+
+def test_lending_rate_canonical_maps():
+    # #152: a NEW dedicated WB-annual indicator (% p.a., not a rate level).
+    assert MacroIndicator.LENDING_RATE.value == "lending_rate"
+    assert canonical_unit(MacroIndicator.LENDING_RATE) == "%"
+    assert canonical_currency(MacroIndicator.LENDING_RATE) is None
+    assert canonical_indicator_code(MacroIndicator.LENDING_RATE) == "lending_rate"
+    assert canonical_indicator_name(MacroIndicator.LENDING_RATE) == "Lending Rate"
+
+
+def test_deposit_rate_canonical_maps():
+    assert MacroIndicator.DEPOSIT_RATE.value == "deposit_rate"
+    assert canonical_unit(MacroIndicator.DEPOSIT_RATE) == "%"
+    assert canonical_currency(MacroIndicator.DEPOSIT_RATE) is None
+    assert canonical_indicator_code(MacroIndicator.DEPOSIT_RATE) == "deposit_rate"
+    assert canonical_indicator_name(MacroIndicator.DEPOSIT_RATE) == "Deposit Rate"
+
+
+def test_real_interest_rate_canonical_maps():
+    assert MacroIndicator.REAL_INTEREST_RATE.value == "real_interest_rate"
+    assert canonical_unit(MacroIndicator.REAL_INTEREST_RATE) == "%"
+    assert canonical_currency(MacroIndicator.REAL_INTEREST_RATE) is None
+    assert canonical_indicator_code(MacroIndicator.REAL_INTEREST_RATE) == "real_interest_rate"
+    assert canonical_indicator_name(MacroIndicator.REAL_INTEREST_RATE) == "Real Interest Rate"
+
+
+def test_new_rate_indicators_not_level_or_bounded():
+    # Rates are percent series, not >0 levels; a real interest rate may be negative.
+    for ind in (
+        MacroIndicator.LENDING_RATE,
+        MacroIndicator.DEPOSIT_RATE,
+        MacroIndicator.REAL_INTEREST_RATE,
+    ):
+        assert is_level_indicator(ind) is False
+        validate_indicator_values(ind, [(date(2023, 1, 1), 5.0)], "x")  # accepted unbounded
+    # a negative real interest rate (inflation > nominal) is legitimate
+    validate_indicator_values(
+        MacroIndicator.REAL_INTEREST_RATE, [(date(2023, 1, 1), -1.5)], "x"
+    )
 
 
 # --- #179: monthly CPI YoY + SBV policy rate (DBnomics-only) ----------------

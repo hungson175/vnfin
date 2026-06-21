@@ -70,6 +70,48 @@ Honest-disclosure caveats — read these before relying on the values:
   (the values are kept, never dropped). Always check `series.warnings` and `series.points[-1][0]`
   (the latest observation date) for monthly series.
 
+### Annual interest rates (lending / deposit / real)
+
+`LENDING_RATE`, `DEPOSIT_RATE` and `REAL_INTEREST_RATE` are **annual** (`% p.a.`) interest-rate
+indicators served by the no-key World Bank source (WDI `FR.INR.LEND` / `FR.INR.DPST` / `FR.INR.RINR`).
+World Bank is the only no-key source mapping them, so each resolves to a single-source annual chain
+(IMF DataMapper / DBnomics do not map them and are skipped without a network call) — exactly like the
+World Bank `GDP`/`CPI` chains.
+
+```python
+lend = vnfin.macro.get_indicator("VNM", MacroIndicator.LENDING_RATE)
+dep = vnfin.macro.get_indicator("VNM", MacroIndicator.DEPOSIT_RATE)
+real = vnfin.macro.get_indicator("VNM", MacroIndicator.REAL_INTEREST_RATE)
+
+print(lend.unit, lend.latest())   # '%' , annual lending rate
+print(dep.unit, dep.latest())     # '%' , annual deposit rate (aggregate)
+print(real.unit, real.latest())   # '%' , may be negative (deflator-adjusted)
+```
+
+Read these caveats first:
+
+- **`DEPOSIT_RATE` is an annual aggregate.** It is a single aggregate bank deposit rate, **not** a
+  per-tenor (1M/3M/6M/12M) retail deposit rate — there is no clean no-key per-tenor source in v1.
+- **`REAL_INTEREST_RATE` can be negative** — it is the GDP-deflator-adjusted lending rate, so when
+  inflation exceeds the nominal rate the value is below zero (legitimate, not an error).
+- **These are distinct rate concepts.** A lending/deposit rate is **not** the policy rate, **not** the
+  interbank/money-market rate, and **not** a government-bond yield — do not substitute one for another.
+
+#### What about a government-bond yield curve?
+
+A Vietnam government-bond **yield curve** (by tenor + history) is **not available** in v1 — there is no
+clean, redistributable, no-key source, so it is deferred (no `vnfin.bonds` namespace). The offline
+diagnostic `vnfin.diagnostics.explain_fixed_income_coverage()` explains the full coverage picture
+without any network call: what is available (policy proxy + the three annual World Bank rates), the
+caveats, and how the rate concepts differ.
+
+```python
+d = vnfin.diagnostics.explain_fixed_income_coverage()
+print(d.status)        # 'yield_curve_unavailable'
+for note in d.notes:
+    print(note)
+```
+
 ## Optional FRED key
 
 FRED is opt-in and excluded from the no-key default chain. See [Use FRED BYOK](../how-to/byok-fred.md).

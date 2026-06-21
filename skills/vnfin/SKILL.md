@@ -71,7 +71,8 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 | World gold | `vnfin.gold.world().get_history(start, end)` | `GoldHistory` · USD/oz |
 | Crypto OHLCV | `vnfin.crypto.client().get_klines(sym, vnfin.Interval.D1, start, end)` | `CryptoHistory` · USD |
 | FX rate | `vnfin.fx.get_rate("USD")` | `FXRate` · VND per 1 USD |
-| Macro | `vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP)` | `IndicatorSeries` |
+| Macro | `vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP)` — indicators: `GDP`, `GDP_GROWTH`, `CPI`, `INFLATION`, `UNEMPLOYMENT`, `CPI_YOY`, `POLICY_RATE` (monthly SBV proxy), `LENDING_RATE` / `DEPOSIT_RATE` / `REAL_INTEREST_RATE` (annual, World Bank `FR.INR.*`) | `IndicatorSeries` |
+| Fixed-income coverage | `vnfin.diagnostics.explain_fixed_income_coverage()` (offline) — govt-bond yield curve is unavailable (deferred); discloses the policy proxy + the three annual WB rates and that `DEPOSIT_RATE` is an annual aggregate | `RequestDiagnostic` |
 
 ## Canonical examples
 

@@ -12,7 +12,7 @@ GET https://api.worldbank.org/v2/country/{ISO3}/indicator/{CODE}?format=json&per
 ```
 
 - `{ISO3}` — country code, e.g. `USA`, `CHN`, `JPN`, `DEU`, `VNM` (multi-country via `;` separator, not used by this adapter which is single-country).
-- `{CODE}` — World Development Indicator code, e.g. `FP.CPI.TOTL.ZG` (inflation %), `NY.GDP.MKTP.CD` (GDP current US$), `SL.UEM.TOTL.ZS` (unemployment %), `PA.NUS.FCRF` (VND/USD rate).
+- `{CODE}` — World Development Indicator code, e.g. `FP.CPI.TOTL.ZG` (inflation %), `NY.GDP.MKTP.CD` (GDP current US$), `SL.UEM.TOTL.ZS` (unemployment %), `PA.NUS.FCRF` (VND/USD rate), `FR.INR.LEND` (lending rate %), `FR.INR.DPST` (deposit rate %), `FR.INR.RINR` (real interest rate %).
 - `date` param omitted when no year range requested.
 
 ## Auth / limits / terms
@@ -57,3 +57,20 @@ canonical unit for the indicator survive (`vnfin/macro/indicators.py:eligible_so
 This is why GDP resolves to World Bank (`current US$`), CPI-index to DBnomics, and the
 percent indicators to all three — without ever tripping `UnitMismatchError`. See
 `docs/design/macro-no-key-byok.md` for the full semantic contract.
+
+## Annual fixed-income rate indicators (#152)
+
+World Bank is the **only** no-key source mapping the annual interest-rate indicators, so each
+resolves to a single-source annual chain (IMF DataMapper / DBnomics return `supports()==False` and
+are skipped without a network call):
+
+| `MacroIndicator` | WDI code | Unit | Notes |
+|---|---|---|---|
+| `LENDING_RATE` | `FR.INR.LEND` | `%` | aggregate lending rate, % p.a. |
+| `DEPOSIT_RATE` | `FR.INR.DPST` | `%` | **annual aggregate** deposit rate — NOT per-tenor retail |
+| `REAL_INTEREST_RATE` | `FR.INR.RINR` | `%` | GDP-deflator-adjusted; **may be negative** |
+
+These are distinct rate concepts from `policy_rate` (the monthly DBnomics/IMF-IFS `FPOLM_PA` proxy),
+the interbank/money-market rate, and a government-bond yield. A government-bond **yield curve** (by
+tenor) has no clean no-key source and is deferred (no `vnfin.bonds` namespace). The offline diagnostic
+`vnfin.diagnostics.explain_fixed_income_coverage()` documents the full coverage picture + caveats.

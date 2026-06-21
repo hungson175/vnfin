@@ -45,6 +45,7 @@ __all__ = [
     "explain_world_gold_history",
     "explain_index_constituents",
     "explain_fx_coverage",
+    "explain_fixed_income_coverage",
 ]
 
 # World Bank VNM PA.NUS.FCRF: the official API currently returns its first non-null
@@ -187,9 +188,103 @@ _FX_HISTORY_CAPS: tuple[SourceCapability, ...] = (
 )
 
 
+# --- Issue #152: fixed-income rates coverage (govt-bond yield curve deferred) - #
+# The headline ask (a VN government-bond yield CURVE by tenor + history) has NO
+# clean, redistributable no-key source, so it is DEFERRED — no ``vnfin.bonds``
+# namespace is registered. What IS available are interest-RATE indicators reachable
+# through the existing macro domain:
+#   * policy_rate  — DBnomics/IMF-IFS FPOLM_PA, MONTHLY, an SBV monetary-policy
+#     PROXY (not the announced refinancing rate), stale ~Dec 2023.
+#   * lending_rate / deposit_rate / real_interest_rate — World Bank WDI
+#     FR.INR.LEND / FR.INR.DPST / FR.INR.RINR, ANNUAL, % p.a.
+# These are DISTINCT concepts (policy vs interbank vs deposit vs govt-bond yield);
+# this diagnostic exists so a caller never conflates them.
+_FIXED_INCOME_CAPS: tuple[SourceCapability, ...] = (
+    SourceCapability(
+        domain="rates",
+        endpoint="govt_bond_yield_curve",
+        source="(none)",
+        instruments=("government bond yield curve (by tenor)",),
+        granularity=None,
+        coverage_start=None,
+        coverage_end=None,
+        is_default=False,
+        is_opt_in=False,
+        is_single_source=False,
+        limitations=(
+            "the government-bond yield CURVE (by tenor + history) is UNAVAILABLE — "
+            "no clean, redistributable, no-key source; the candidate portals prohibit "
+            "reproduction/redistribution or expose no structured feed",
+            "DEFERRED: no vnfin.bonds namespace is registered until a clean source backs it",
+            "a government-bond yield is NOT the policy rate, the interbank rate, or a "
+            "bank deposit rate — do not substitute one for another",
+        ),
+        suggested_action=(
+            "for an interest-rate level use policy_rate (monthly proxy) or the World Bank "
+            "annual lending/deposit/real-interest rates; a per-tenor sovereign yield curve "
+            "is not served in v1"
+        ),
+    ),
+    SourceCapability(
+        domain="rates",
+        endpoint="policy_rate",
+        source="dbnomics_imf_ifs",
+        instruments=("policy_rate",),
+        granularity="monthly",
+        coverage_start=None,
+        coverage_end=None,
+        is_default=True,
+        is_opt_in=False,
+        is_single_source=True,
+        limitations=(
+            "policy_rate is a PROXY (DBnomics/IMF-IFS FPOLM_PA, % per annum) for the SBV "
+            "monetary-policy stance — NOT the officially announced refinancing/discount rate",
+            "monthly, but the feed is stale (last observation ~Dec 2023) — check "
+            "series.points[-1] and the series_end_gap warning",
+            "the policy rate is distinct from the interbank (money-market) rate and from a "
+            "bank deposit rate; for the announced rate consult the SBV (sbv.gov.vn)",
+        ),
+        suggested_action="vnfin.macro.get_indicator(iso3, 'policy_rate'); read indicator_name + warnings",
+    ),
+    SourceCapability(
+        domain="rates",
+        endpoint="bank_rates",
+        source="worldbank_wdi",
+        instruments=("lending_rate", "deposit_rate", "real_interest_rate"),
+        granularity="annual",
+        coverage_start=None,
+        coverage_end=None,
+        is_default=True,
+        is_opt_in=False,
+        is_single_source=True,
+        limitations=(
+            "World Bank WDI annual rates (% p.a.): lending_rate = FR.INR.LEND, "
+            "deposit_rate = FR.INR.DPST, real_interest_rate = FR.INR.RINR — annual only, "
+            "no monthly/daily no-key source",
+            "deposit_rate is an annual AGGREGATE bank deposit rate — there is NO clean "
+            "no-key per-tenor (1M/3M/6M/12M) RETAIL deposit-rate source in v1",
+            "lending_rate and deposit_rate are aggregate retail-banking rates, NOT the "
+            "interbank/money-market rate and NOT a government-bond yield",
+            "real_interest_rate is the GDP-deflator-adjusted lending rate and may be negative",
+            "World Bank is the only no-key source; IMF DataMapper / DBnomics do not map "
+            "these, so each reduces to a single-source annual chain",
+        ),
+        suggested_action=(
+            "vnfin.macro.get_indicator(iso3, 'lending_rate' | 'deposit_rate' | "
+            "'real_interest_rate'); these are ANNUAL aggregates"
+        ),
+    ),
+)
+
+
 def source_capabilities() -> tuple[SourceCapability, ...]:
     """Return immutable coverage metadata for the source-limited legs (offline)."""
-    return _WORLD_GOLD_CAPS + _INDEX_CONSTITUENTS_CAPS + _FX_HISTORY_CAPS
+    return (
+        _WORLD_GOLD_CAPS
+        + _INDEX_CONSTITUENTS_CAPS
+        + _FX_HISTORY_CAPS
+        + _FIXED_INCOME_CAPS
+    )
 
 
 def explain_world_gold_history(start, end) -> RequestDiagnostic:
@@ -377,4 +472,64 @@ def explain_fx_coverage(
         sources=_FX_HISTORY_CAPS,
         notes=tuple(notes),
         suggested_actions=(),
+    )
+
+
+def explain_fixed_income_coverage() -> RequestDiagnostic:
+    """Explain fixed-income / interest-rate coverage (issue #152; no network).
+
+    The headline ask of #152 — a Vietnam **government-bond yield CURVE** (by tenor +
+    history) — has no clean, redistributable, no-key source, so it is **DEFERRED**:
+    no ``vnfin.bonds`` namespace is registered. This offline diagnostic states that
+    explicitly and enumerates the interest-RATE indicators that ARE available through
+    the existing macro domain, with their source/frequency/caveats:
+
+    * ``policy_rate`` — DBnomics/IMF-IFS ``FPOLM_PA``, **monthly**, an SBV
+      monetary-policy **PROXY** (not the announced refinancing rate), stale ~Dec 2023.
+    * ``lending_rate`` / ``deposit_rate`` / ``real_interest_rate`` — World Bank WDI
+      ``FR.INR.LEND`` / ``FR.INR.DPST`` / ``FR.INR.RINR``, **annual**, % p.a.
+
+    It explicitly DISCLOSES that ``deposit_rate`` is an annual **aggregate** (there is
+    no clean no-key per-tenor retail deposit-rate source) and DISTINGUISHES the
+    policy rate vs the interbank/money-market rate vs a bank deposit rate vs a
+    government-bond yield, so a caller never conflates them. Offline — no provider call.
+    """
+    notes = (
+        # (a) the govt-bond yield CURVE is unavailable (no clean source)
+        "the Vietnam government-bond yield CURVE (by tenor + history) is UNAVAILABLE: "
+        "no clean, redistributable, no-key source exists, so it is DEFERRED (no "
+        "vnfin.bonds namespace is registered).",
+        # (b) what IS available — enumerate the 4 rate kinds + frequency + caveats
+        "policy_rate IS available — vnfin.macro.get_indicator(iso3, 'policy_rate'): a "
+        "MONTHLY series from DBnomics/IMF-IFS FPOLM_PA, but it is a PROXY for the SBV "
+        "monetary-policy stance (not the announced refinancing/discount rate) and is "
+        "stale (~Dec 2023). Read indicator_name + warnings.",
+        "lending_rate, deposit_rate and real_interest_rate ARE available — "
+        "vnfin.macro.get_indicator(iso3, ...): ANNUAL World Bank WDI series "
+        "(FR.INR.LEND / FR.INR.DPST / FR.INR.RINR), % per annum.",
+        # (c) deposit_rate is an annual AGGREGATE, no clean per-tenor retail source
+        "deposit_rate is an annual AGGREGATE bank deposit rate — there is NO clean, "
+        "no-key per-tenor (1M/3M/6M/12M) RETAIL deposit-rate source in v1.",
+        # (d) distinguish policy vs interbank vs deposit vs govt-bond
+        "DISTINCT concepts — do not conflate: the POLICY rate (central-bank stance) is "
+        "not the INTERBANK / money-market rate, which is not a bank DEPOSIT rate, which "
+        "is not a GOVERNMENT BOND yield. v1 serves the policy proxy + the three annual "
+        "World Bank bank rates; the interbank curve and the govt-bond yield curve are "
+        "not served.",
+    )
+    suggested_actions = (
+        "for an interest-rate level: vnfin.macro.get_indicator(iso3, 'policy_rate') "
+        "(monthly proxy) or 'lending_rate'/'deposit_rate'/'real_interest_rate' (WB annual)",
+        "for the officially announced SBV policy rate, consult the State Bank of Vietnam "
+        "(https://sbv.gov.vn) directly — it is not redistributed here",
+        "a per-tenor government-bond yield curve is not available in v1 (no clean source)",
+    )
+    return RequestDiagnostic(
+        domain="rates",
+        endpoint="fixed_income_coverage",
+        request={},
+        status="yield_curve_unavailable",
+        sources=_FIXED_INCOME_CAPS,
+        notes=notes,
+        suggested_actions=suggested_actions,
     )
