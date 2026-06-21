@@ -163,7 +163,11 @@ _Last synced: 2026-06-21 11:2x +07_
 >     boilerplate 'thực hiện…được nhận' safe); 'khấu trừ' matched as the adjacent bigram only (kills
 >     Defect-2). Bare 'đã trừ' w/o tax/net noun stays served (v2 corpus edge, documented). Merged-tree GREEN:
 >     full suite **3584 passed**, tuple **44** unique, snapshot frozen. **2ND fresh-skeptic adversarial verify
->     IN FLIGHT on `56cde90`; route Codex x2 on CLEAN → push + close.**
+>     on `56cde90` = CLEAN** (~50 inputs; all 15 real VN after-tax phrasings withheld; zero over-degrade FPs).
+>     ONE LOW-realism residual `thực được nhận` (inserted `được` breaks the bigram; fixing re-breaks the
+>     universal `thực hiện…được nhận` boilerplate → over-degrade every clean page) — NOT patched, DISCLOSED
+>     to reviewer + tracked for v2 corpus. **ROUTED Codex x2 (round-7 handoff `/tmp/vnfin-163-round7-handoff-20260621.md`,
+>     delta `7b35066..56cde90`); awaiting verdict → push whole corp_actions + close on APPROVE.**
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
