@@ -159,6 +159,9 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `cross_board_duplicate_symbol` | `equities.universe` | On an `exchange=None` merge, a symbol seen on more than one board is kept-first (board order HOSE, HNX, UPCOM) and the dropped copy is disclosed (never silent). | #167 |
 | `board_unavailable` | `equities.universe` | On an `exchange=None` merge, one board's fetch failed (`SourceUnavailable`/`EmptyData`/`InvalidData`); it is **skipped, not fatal** — the other boards still merge, and the skip is disclosed (`board_unavailable: {board} — fetch skipped ({ExcType}): {reason}`). If **all** boards fail the merge re-raises. A single-board `universe("HNX")` still raises (merge-only skip). | #189 |
 | `fund_nav_stale` | `funds.list_funds` | List-level: ≥1 listed fund's own `nav_as_of` is older than 7 calendar days (stale NAV feed); enumerates the stale codes@date, capped at 5 + `+M more`. Funds with unknown `nav_as_of` are never flagged. | #190 |
+| `ex_date_unavailable` | `corp_actions.dividends` | **Always present** per event — v1 serves the VSDC depository spine, which publishes no ex-date (the VNDirect finfo enrichment leg is held for v2), so `ex_date` is always `None` and is never fabricated or derived. | #163 |
+| `corp_action_source_partial` | `corp_actions.dividends` | **Always present** per result (`DividendHistory`) — the result is from the VSDC depository spine ALONE; the ex-date enrichment leg is not active in v1 (in v2 it fires when the finfo leg is down). | #163 |
+| `vsdc_parse_degraded` | `corp_actions.dividends` | Per event: a page IS a cash dividend (title/reason) with a record date but the ratio/cash parenthetical was unparseable, so `cash_per_share`/`ratio_pct` are `None` — the event is surfaced, never silently dropped. | #163 |
 
 ## Full reference
 

@@ -14,6 +14,7 @@ There is **one obvious entry per domain**, reachable as an attribute of ``vnfin`
     vnfin.gold          # gold spot/history              -> .vn() / .world() / .source()
     vnfin.crypto        # crypto OHLCV (USD)             -> .client()/.source()
     vnfin.macro         # macro indicators               -> .client()/.source()
+    vnfin.corp_actions  # cash dividends (VND)           -> .dividends()
 
 Each domain keeps its own typed models and units (see ``docs/api.md`` and
 ``docs/units.md``); they are **not** funnelled through one client that returns
@@ -21,6 +22,7 @@ incompatible models. Every domain factory exposes the standard verbs ``client(..
 and/or ``source(...)``; all existing submodule imports keep working unchanged.
 """
 from . import (
+    corp_actions,
     crypto,
     diagnostics,
     equities,
@@ -65,6 +67,7 @@ __all__ = [
     "crypto",
     "macro",
     "fx",
+    "corp_actions",
     "exceptions",
     "diagnostics",
     "news",

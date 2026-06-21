@@ -46,6 +46,7 @@ __all__ = [
     "explain_index_constituents",
     "explain_fx_coverage",
     "explain_fixed_income_coverage",
+    "explain_corp_actions_coverage",
 ]
 
 # World Bank VNM PA.NUS.FCRF: the official API currently returns its first non-null
@@ -277,6 +278,43 @@ _FIXED_INCOME_CAPS: tuple[SourceCapability, ...] = (
 )
 
 
+# --- Issue #163: corp-actions (VSDC cash-dividend spine) coverage ----------- #
+# v1 serves CASH dividends scraped from the VSDC depository announcement pages
+# (record/pay/ratio/cash, history ~2011). The depository publishes NO ex-date, so
+# ex-date is UNAVAILABLE in v1 (the VNDirect finfo enrichment leg is HELD for v2,
+# with a pre-2022 floor noted there). STOCK/RIGHTS/BONUS are deferred to v2.
+_CORP_ACTIONS_CAPS: tuple[SourceCapability, ...] = (
+    SourceCapability(
+        domain="corp_actions",
+        endpoint="cash_dividends",
+        source="vsdc",
+        instruments=("cash dividends (VND/share)",),
+        granularity="event",
+        coverage_start=date(2011, 1, 1),  # VSDC announcement history reaches ~2011
+        coverage_end=None,  # rolling / unknown end
+        is_default=True,
+        is_opt_in=False,
+        is_single_source=True,
+        limitations=(
+            "v1 serves CASH dividends only (record date + pay date + ratio/cash per "
+            "share) scraped from the VSDC depository pages; STOCK/RIGHTS/BONUS are v2",
+            "ex-date is UNAVAILABLE in v1 — the depository publishes no ex-date and the "
+            "VNDirect finfo enrichment leg is HELD (a pre-2022 finfo floor is noted for "
+            "v2); every event's ex_date is None (ex_date_unavailable), never fabricated",
+            "HTML scrape source (https://vsd.vn/vi/ad/{id}) — materially more fragile "
+            "than the library's JSON sources; a recognized cash dividend whose amount "
+            "cannot be parsed is surfaced (vsdc_parse_degraded), never silently dropped",
+            "discovery is a same-org sidebar crawl from a seed plus a bounded recent-ID "
+            "window scan; it is bounded (max_fetch) and not a guaranteed-complete history",
+        ),
+        suggested_action=(
+            "vnfin.corp_actions.dividends(symbol, start=..., end=..., seed_id=...); read "
+            "result.warnings — ex-date is not available in v1"
+        ),
+    ),
+)
+
+
 def source_capabilities() -> tuple[SourceCapability, ...]:
     """Return immutable coverage metadata for the source-limited legs (offline)."""
     return (
@@ -284,6 +322,7 @@ def source_capabilities() -> tuple[SourceCapability, ...]:
         + _INDEX_CONSTITUENTS_CAPS
         + _FX_HISTORY_CAPS
         + _FIXED_INCOME_CAPS
+        + _CORP_ACTIONS_CAPS
     )
 
 
@@ -530,6 +569,57 @@ def explain_fixed_income_coverage() -> RequestDiagnostic:
         request={},
         status="yield_curve_unavailable",
         sources=_FIXED_INCOME_CAPS,
+        notes=notes,
+        suggested_actions=suggested_actions,
+    )
+
+
+def explain_corp_actions_coverage() -> RequestDiagnostic:
+    """Explain corporate-actions (cash-dividend) coverage (issue #163; no network).
+
+    v1 serves **CASH dividends** scraped from the VSDC depository announcement pages
+    (record date + pay date + ratio/cash per share, history reaching ~2011). It states
+    explicitly that:
+
+    * **ex-date is UNAVAILABLE** in v1 — the depository publishes no ex-date and the
+      VNDirect finfo enrichment leg is HELD (a pre-2022 finfo floor is noted for v2); so
+      every event's ``ex_date`` is ``None`` (``ex_date_unavailable``), never fabricated;
+    * **STOCK / RIGHTS / BONUS** dividends are deferred to v2;
+    * the source is an **HTML scrape** of ``https://vsd.vn/vi/ad/{id}`` — materially more
+      fragile than the library's JSON sources; a recognized cash dividend whose amount
+      cannot be parsed is surfaced (``vsdc_parse_degraded`` on the result), never silently
+      dropped — and discovery is a bounded same-org sidebar crawl + recent-ID-window scan.
+
+    Coverage facts live in ``notes`` / ``suggested_actions``; the ``status`` is
+    ``ex_date_unavailable``. Result-level warning tokens (``corp_action_source_partial``,
+    ``vsdc_parse_degraded``) live on the actual results, never here. Offline — no call.
+    """
+    notes = (
+        "v1 serves CASH dividends only — vnfin.corp_actions.dividends(symbol, ...): the "
+        "record date, pay date and ratio/cash per share scraped from the VSDC depository "
+        "announcement pages (history reaches ~2011). Cash is VND per share.",
+        "ex-date is UNAVAILABLE in v1 — the VSDC depository publishes no ex-date and the "
+        "VNDirect finfo enrichment leg is HELD (a pre-2022 finfo floor is noted for v2), "
+        "so every event's ex_date is None and is never fabricated or derived.",
+        "STOCK, RIGHTS and BONUS dividends are deferred to v2 — v1 is the cash spine only.",
+        "the source is an HTML scrape of https://vsd.vn/vi/ad/{id} (materially more "
+        "fragile than the library's JSON sources): a recognized cash dividend whose "
+        "amount cannot be parsed is surfaced on the result, never silently dropped.",
+        "discovery is a bounded same-org sidebar crawl from a seed plus a recent-ID "
+        "window scan (max_fetch-bounded) — it is not a guaranteed-complete history.",
+    )
+    suggested_actions = (
+        "vnfin.corp_actions.dividends(symbol, start=..., end=..., seed_id=...); read "
+        "result.warnings and per-event fields (ex-date is not available in v1)",
+        "for ex-date enrichment, STOCK/RIGHTS/BONUS, or a guaranteed-complete history, "
+        "wait for v2 — these are out of scope in v1",
+    )
+    return RequestDiagnostic(
+        domain="corp_actions",
+        endpoint="cash_dividends",
+        request={},
+        status="ex_date_unavailable",
+        sources=_CORP_ACTIONS_CAPS,
         notes=notes,
         suggested_actions=suggested_actions,
     )
