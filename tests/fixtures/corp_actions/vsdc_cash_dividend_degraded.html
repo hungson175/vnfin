@@ -1,0 +1,62 @@
+<!--
+SYNTHETIC fixture (#163) — a page that IS a cash dividend by title + "Lý do mục đích"
+("Chi trả cổ tức ... bằng tiền") and HAS a record date, but whose ratio free-text is
+unparseable: no "X%/cổ phiếu" and no "(01 cổ phiếu được nhận N đồng)" cash parenthetical
+(simulates a layout drift / "đang cập nhật" placeholder). The parser MUST:
+  * recognise the cash-dividend intent (do NOT silently drop it),
+  * NOT fabricate ratio_pct / cash_per_share (leave them None),
+  * emit the never-silent `vsdc_parse_degraded` warning token.
+ALL VALUES FABRICATED. Expected -> ticker=TST, record_date=2024-09-10, cash_per_share=None,
+ratio_pct=None, warnings contains "vsdc_parse_degraded".
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam Tin tức</title></head>
+<body>
+<header class="site-header"><nav class="top-nav"><ul><li><a href="/vi">Trang chủ</a></li></ul></nav></header>
+<main class="main-category">
+    <div class="block-category">
+        <style>.item-info.item-info-main { font-weight: bold; }</style>
+<div class="container-small">
+    <h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>
+    <div class="row">
+        <div class="col-lg-8">
+                <div class="time-newstcph">
+Cập nhật ngày 01/09/2024 - 08:15:00                </div>
+                <div class="content-category">
+                    <div class="row">
+    <div class="col-md-12">
+        <p>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam (VSDC) thông báo về ngày đăng ký cuối cùng để thực hiện quyền cho Tổ chức đăng ký chứng khoán (TCĐKCK) như sau:</p>
+        <div class="row">
+            <div class="col-md-4 item-info">Tên tổ chức đăng ký chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">Công ty cổ phần Thử Nghiệm Một</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">TST</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Nơi giao dịch:</div>
+            <div class="col-md-8 item-info item-info-main">HOSE</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>
+            <div class="col-md-8 item-info item-info-main">10/09/2024</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Lý do mục đích:</div>
+            <div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div>
+        </div>
+        <p><div style="text-align: justify;">- Tỷ lệ thực hiện: (đang cập nhật)<br />
+- Nội dung chi tiết sẽ được Tổ chức phát hành thông báo sau.<br /></div></p>
+    </div>
+</div>
+                </div>
+        </div>
+    </div>
+</div>
+    </div>
+</main>
+<footer class="site-foot"><div class="row item-foot"><div class="col-lg-3">Liên hệ</div></div></footer>
+</body>
+</html>

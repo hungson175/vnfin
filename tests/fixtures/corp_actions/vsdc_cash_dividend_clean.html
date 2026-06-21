@@ -1,0 +1,80 @@
+<!--
+SYNTHETIC fixture for the VSDC corp-actions scrape adapter (issue #163).
+Mirrors the EXACT element/class layout observed live at https://vsd.vn/vi/ad/{id}
+(probed 2026-06-21). ALL VALUES ARE FABRICATED — no real broker/issuer rows.
+Case: a clean CASH dividend. Pay date labelled "Ngày thanh toán:". Record date in a
+structured item-info row; ratio% + cash-per-share in the free-text justify block.
+Expected parse -> ticker=TST, exchange=HOSE, record_date=2024-03-15,
+pay_date=2024-04-10, ratio_pct=12.0, cash_per_share=1200.0, div_year=2024.
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam Tin tức</title></head>
+<body>
+<header class="site-header"><nav class="top-nav"><ul><li><a href="/vi">Trang chủ</a></li></ul></nav></header>
+<main class="main-category">
+    <div class="block-category">
+        <style>.item-info.item-info-main { font-weight: bold; }</style>
+<div class="container-small">
+    <h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>
+    <div class="row">
+        <div class="col-lg-8">
+                <div class="time-newstcph">
+Cập nhật ngày 02/03/2024 - 09:36:57                </div>
+                <div class="content-category">
+                    <div class="row">
+    <div class="col-md-12">
+        <p>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam (VSDC) thông báo về ngày đăng ký cuối cùng để thực hiện quyền cho Tổ chức đăng ký chứng khoán (TCĐKCK) như sau:</p>
+        <div class="row">
+            <div class="col-md-4 item-info">Tên tổ chức đăng ký chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">Công ty cổ phần Thử Nghiệm Một</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Tên chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">Cổ phiếu Công ty cổ phần Thử Nghiệm Một</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">TST</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã ISIN:</div>
+            <div class="col-md-8 item-info item-info-main">VN000000TST1</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mệnh giá:</div>
+            <div class="col-md-8 item-info item-info-main">10.000 đồng</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Nơi giao dịch:</div>
+            <div class="col-md-8 item-info item-info-main">HOSE</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Loại chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">Cổ phiếu</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>
+            <div class="col-md-8 item-info item-info-main">15/03/2024</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Lý do mục đích:</div>
+            <div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div>
+        </div>
+        <p><div style="text-align: justify;">-     Tỷ lệ thực hiện: 12%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />
+-     Ngày thanh toán: 10/04/2024<br />
+-     Địa điểm thực hiện: <br />
++ Đối với chứng khoán lưu ký: Người sở hữu làm thủ tục nhận cổ tức tại các Thành viên lưu ký (TVLK) nơi mở tài khoản lưu ký.<br />
++ Đối với chứng khoán chưa lưu ký: Người sở hữu làm thủ tục nhận cổ tức tại trụ sở tổ chức phát hành.<br />
+Quy trình, thủ tục phối hợp để thực hiện quyền cho người sở hữu chứng khoán nêu trên giữa VSDC, TCĐKCK và TVLK theo quy định chi tiết tại Quy chế về thực hiện quyền cho người sở hữu chứng khoán của VSDC./. </div></p>
+    </div>
+</div>
+                </div>
+        </div>
+    </div>
+</div>
+    </div>
+</main>
+<footer class="site-foot"><div class="row item-foot"><div class="col-lg-3">Liên hệ</div></div></footer>
+</body>
+</html>

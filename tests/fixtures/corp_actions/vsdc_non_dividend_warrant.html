@@ -1,0 +1,66 @@
+<!--
+SYNTHETIC fixture (#163) — a NON-dividend VSDC page (covered-warrant registration).
+ADVERSARIAL: it contains the words "Bằng tiền" (the warrant SETTLEMENT method), which
+must NOT be mistaken for a cash dividend. There is no record date / pay date / cash
+"được nhận N đồng" parenthetical. The parser MUST yield NO dividend event for this page
+(and MUST NOT emit vsdc_parse_degraded — it is correctly "not a cash dividend", not a
+parse failure). ALL VALUES FABRICATED.
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam Tin tức</title></head>
+<body>
+<header class="site-header"><nav class="top-nav"><ul><li><a href="/vi">Trang chủ</a></li></ul></nav></header>
+<main class="main-category">
+    <div class="block-category">
+        <style>.item-info.item-info-main { font-weight: bold; }</style>
+<div class="container-small">
+    <h3 class="title-category">CTST2601: Đăng ký, lưu ký chứng quyền</h3>
+    <div class="row">
+        <div class="col-lg-8">
+                <div class="time-newstcph">
+Cập nhật ngày 12/06/2026 - 11:00:00                </div>
+                <div class="content-category">
+                    <div class="row">
+    <div class="col-md-12">
+        <p>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam (VSDC) thông báo về việc cấp Giấy chứng nhận đăng ký chứng quyền như sau:</p>
+        <div class="row">
+            <div class="col-md-4 item-info">Tên TCĐKCK:</div>
+            <div class="col-md-8 item-info item-info-main">Công ty Cổ phần Chứng khoán Thử Nghiệm</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã chứng quyền:</div>
+            <div class="col-md-8 item-info item-info-main">CTST2601</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã chứng khoán cơ sở:</div>
+            <div class="col-md-8 item-info item-info-main">TST</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Phương thức thực hiện chứng quyền:</div>
+            <div class="col-md-8 item-info item-info-main">Bằng tiền</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Ngày đáo hạn:</div>
+            <div class="col-md-8 item-info item-info-main">28/09/2026</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Tỷ lệ chuyển đổi:</div>
+            <div class="col-md-8 item-info item-info-main">4:1</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Giá thực hiện:</div>
+            <div class="col-md-8 item-info item-info-main">15.999 đồng</div>
+        </div>
+        <p><b>Bắt đầu từ ngày 15/06/2026, VSDC nhận lưu ký số Chứng quyền đăng ký trên.</b></p>
+    </div>
+</div>
+                </div>
+        </div>
+    </div>
+</div>
+    </div>
+</main>
+<footer class="site-foot"><div class="row item-foot"><div class="col-lg-3">Liên hệ</div></div></footer>
+</body>
+</html>

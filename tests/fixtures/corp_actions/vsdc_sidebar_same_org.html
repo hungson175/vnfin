@@ -1,0 +1,73 @@
+<!--
+SYNTHETIC fixture (#163) — a VSDC cash-dividend page that ALSO carries the
+"Tin cùng tổ chức" (same-organisation) sidebar, mirroring the live DOM
+(<div class="sub-cate">Tin cùng tổ chức</div> followed by <li><a href="/vi/ad/{id}">…</a></li>).
+Used to test discover_same_org_ids(): it must extract the sidebar /vi/ad/{id} IDs
+(100001, 100002, 100003) — the deep-history crawl seed — while IGNORING the unrelated
+category/nav links (/alo/…, /vi/, /gt-…). The page body itself is a clean cash dividend
+for TST so it can double as a discovery seed.
+ALL VALUES + IDS FABRICATED.
+Expected: discover_same_org_ids -> (100001, 100002, 100003); body parse ->
+ticker=TST, record_date=2023-05-10, pay_date=2023-06-05, ratio_pct=8.0, cash_per_share=800.0.
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam Tin tức</title></head>
+<body>
+<header class="site-header"><nav class="top-nav"><ul>
+  <li><a href="/vi/">Trang chủ</a></li>
+  <li><a href="/gt-hoat-dong-su-kien">Hoạt động sự kiện</a></li>
+  <li><a href="/alo/-3Ki-Sw-JuYlUfOF8nWujw">Tin hoạt động VSDC</a></li>
+</ul></nav></header>
+<main class="main-category">
+    <div class="block-category">
+        <style>.item-info.item-info-main { font-weight: bold; }</style>
+<div class="container-small">
+    <h3 class="title-category">TST: Chi trả cổ tức năm 2023 bằng tiền</h3>
+    <div class="row">
+        <div class="col-lg-8">
+                <div class="time-newstcph">
+Cập nhật ngày 28/04/2023 - 16:42:10                </div>
+                <div class="content-category">
+                    <div class="row">
+    <div class="col-md-12">
+        <p>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam (VSDC) thông báo về ngày đăng ký cuối cùng để thực hiện quyền cho Tổ chức đăng ký chứng khoán (TCĐKCK) như sau:</p>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">TST</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Nơi giao dịch:</div>
+            <div class="col-md-8 item-info item-info-main">HOSE</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>
+            <div class="col-md-8 item-info item-info-main">10/05/2023</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Lý do mục đích:</div>
+            <div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2023 bằng tiền</div>
+        </div>
+        <p><div style="text-align: justify;">- Tỷ lệ thực hiện: 8%/cổ phiếu (01 cổ phiếu được nhận 800 đồng)<br />
+- Ngày thanh toán: 05/06/2023<br /></div></p>
+    </div>
+</div>
+                </div>
+        </div>
+        <div class="col-lg-4">
+            <aside class="news-sidebar">
+                <div class="sub-cate">Tin cùng tổ chức</div>
+                <ul class="list-same-org">
+                    <li><a href="/vi/ad/100001">TST: Trả cổ tức năm 2022 bằng tiền</a></li>
+                    <li><a href="/vi/ad/100002">TST: Lấy ý kiến cổ đông bằng văn bản</a></li>
+                    <li><a href="/vi/ad/100003">TST: Chi trả cổ tức năm 2021 bằng tiền</a></li>
+                </ul>
+            </aside>
+        </div>
+    </div>
+</div>
+    </div>
+</main>
+<footer class="site-foot"><div class="row item-foot"><div class="col-lg-3"><a href="/vi/lien-he">Liên hệ</a></div></div></footer>
+</body>
+</html>

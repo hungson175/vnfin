@@ -1,0 +1,77 @@
+<!--
+SYNTHETIC fixture (#163) — BUNDLED multi-event VSDC page: a written-opinion poll
+(voting) AND a cash dividend on the same announcement (observed live, e.g. an "STD"
+combined notice). There are TWO "Tỷ lệ thực hiện:" lines:
+  1. voting   -> "01 cổ phiếu – 01 quyền biểu quyết"   (NO cash parenthetical)
+  2. dividend -> "5% /cổ phiếu (01 cổ phiếu được nhận 500 đồng)"  (cash parenthetical)
+The parser MUST select the CASH line (the one with "được nhận N đồng"), ignore the
+voting ratio, and never mis-read the voting ratio as a dividend.
+ALL VALUES FABRICATED. Expected -> ticker=BAR, exchange=HNX, record_date=2025-06-25,
+pay_date=2025-07-07, ratio_pct=5.0, cash_per_share=500.0, div_year=2025.
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam Tin tức</title></head>
+<body>
+<header class="site-header"><nav class="top-nav"><ul><li><a href="/vi">Trang chủ</a></li></ul></nav></header>
+<main class="main-category">
+    <div class="block-category">
+        <style>.item-info.item-info-main { font-weight: bold; }</style>
+<div class="container-small">
+    <h3 class="title-category">BAR: Lấy ý kiến cổ đông bằng văn bản và Chi cổ tức năm 2025 bằng tiền</h3>
+    <div class="row">
+        <div class="col-lg-8">
+                <div class="time-newstcph">
+Cập nhật ngày 10/06/2025 - 14:01:22                </div>
+                <div class="content-category">
+                    <div class="row">
+    <div class="col-md-12">
+        <p>Tổng công ty Lưu ký và Bù trừ chứng khoán Việt Nam (VSDC) thông báo về ngày đăng ký cuối cùng để thực hiện quyền cho Tổ chức đăng ký chứng khoán (TCĐKCK) như sau:</p>
+        <div class="row">
+            <div class="col-md-4 item-info">Tên tổ chức đăng ký chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">Công ty cổ phần Thử Nghiệm Hai</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">BAR</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Mã ISIN:</div>
+            <div class="col-md-8 item-info item-info-main">VN000000BAR9</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Nơi giao dịch:</div>
+            <div class="col-md-8 item-info item-info-main">HNX</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Loại chứng khoán:</div>
+            <div class="col-md-8 item-info item-info-main">Cổ phiếu</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>
+            <div class="col-md-8 item-info item-info-main">25/06/2025</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 item-info">Lý do mục đích:</div>
+            <div class="col-md-8 item-info item-info-main">Lấy ý kiến cổ đông bằng văn bản và Chi cổ tức năm 2025 bằng tiền</div>
+        </div>
+        <p><div style="text-align: justify;"><strong>1. Lấy ý kiến cổ đông bằng văn bản:</strong><br />
+-    Tỷ lệ thực hiện: 01 cổ phiếu – 01 quyền biểu quyết<br />
+-    Thời gian thực hiện: Dự kiến trong Quý III năm 2025<br />
+<strong>2. Chi cổ tức năm 2025 bằng tiền:</strong><br />
+-    Tỷ lệ thực hiện: 5% /cổ phiếu (01 cổ phiếu được nhận 500 đồng)<br />
+-    Ngày thanh toán: 07/07/2025<br />
+-    Địa điểm thực hiện:<br />
++ Đối với chứng khoán lưu ký: Người sở hữu làm thủ tục nhận cổ tức tại các Thành viên lưu ký nơi mở tài khoản lưu ký.<br />
+Quy trình, thủ tục phối hợp để thực hiện quyền giữa VSDC, TCĐKCK và Thành viên lưu ký theo Quy chế của VSDC./. </div></p>
+    </div>
+</div>
+                </div>
+        </div>
+    </div>
+</div>
+    </div>
+</main>
+<footer class="site-foot"><div class="row item-foot"><div class="col-lg-3">Liên hệ</div></div></footer>
+</body>
+</html>
