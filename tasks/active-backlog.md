@@ -287,25 +287,23 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **DOCS BATCH (reviewer-routed 07:23) — SPLIT after reviewer BLOCK on #180.** The 771d1ea bundle was
   un-committed (`reset --mixed origin/master`) and recomposed: #166/#171 land now (CLEAN/APPROVED),
   #180 stays OPEN pending a tokenization fix + reviewer re-review.
-  - ✅ **#166/#171 — DONE (committed `8463592`, push+close pending in this turn).** Reviewer APPROVED
-    both CLEAN (verified vs source, anchors render). #166 index-VOLUME-semantics section
-    (indices-constituents.md) + units/SKILL caveats + doc↔code guard; #171 end-to-end gold coverage map
-    (gold-world-reference.md hub) + cross-links from gold-adapters/cmo-gold-annual + guard.
-  - 🔧 **#180 — BLOCKED (reviewer-verified verdict, 07:54) → tokenization fix IN PROGRESS.** The original
-    24-row table was NOT exhaustive: the first sweep hunted token LITERALS and missed un-namespaced PROSE
-    warnings folded into caller-facing `.warnings`. **Reverse-adversarial completeness sweep** (wf
-    wyxz5cq7e: 3-angle code→doc sweep + critic) confirmed the reviewer's 3 **plus a 4th**:
-    1. `vnfin/funds/fmarket.py` `deduped N duplicate navDate row(s)…` → **`deduped_duplicate_nav_rows`**
-    2. `vnfin/fundamentals/vndirect.py` `skipped N row(s) mismatched reportType/modelType` →
-       **`skipped_mismatched_report_rows`**
-    3. `vnfin/fundamentals/cafef.py` `skipped N period row(s)` → **`skipped_period_rows`**
-    4. `vnfin/indices/client.py:210` `segment {year}: …` (year interpolated before the `:` = UNSTABLE
-       prefix) → **`stitched_segment`** (companion to existing `stitched_multi_source`; bonus find beyond
-       the reviewer's 3 — flag for ratification).
-    Fix = namespace all 4 (fact-first, cause-in-tail) + fail-first regression each (TDD) + re-add the
-    SKILL.md "Warning tokens" table & `_WARNING_TOKENS_180` guard at the COMPLETE set (25→29; gate on the
-    sweep, not a magic number — #167 later adds 3 more → 32). Commit B stays LOCAL; hand to reviewer when
-    green + guard fails-red on a removed token. Do NOT push/close #180 until re-review.
+  - ✅ **#166/#171 — DONE + PUSHED + CLOSED** (`8463592` impl + `acfc3ad` backlog; pushed
+    `cefe777..acfc3ad`; both issues closed w/ resolution comments). Reviewer APPROVED both CLEAN.
+    #166 index-VOLUME-semantics section + units/SKILL caveats + doc↔code guard; #171 end-to-end gold
+    coverage map (gold-world-reference.md hub) + cross-links + guard.
+  - ✅ **#180 — FIX DONE, commit B LOCAL (`dd3ee1c`), AWAITING REVIEWER RE-REVIEW (do NOT push/close).**
+    The original 24-row table was NOT exhaustive: the first sweep hunted token LITERALS and missed
+    un-namespaced PROSE warnings on caller-facing `.warnings`. Reverse-adversarial completeness sweep (wf
+    wyxz5cq7e) confirmed the reviewer's 3 **plus a 4th** (`stitched_segment`, unstable `segment {year}:`
+    prefix — bonus find, flagged for ratification). All 4 namespaced fact-first/cause-in-tail:
+    `deduped_duplicate_nav_rows` (fmarket), `skipped_mismatched_report_rows` (vndirect),
+    `skipped_period_rows` (cafef), `stitched_segment` (indices/client — year moved AFTER the `:`).
+    Each has a fail-first regression (TDD: RED on prose → GREEN after namespacing). SKILL "Warning tokens"
+    section re-added at the COMPLETE caller set (29 tokens) + **bidirectional** `_WARNING_TOKENS_180`
+    doc↔code guard (code→doc: every emitted token documented; doc→code: every documented token still a
+    literal). **Proven fails-red BOTH ways** (drop a doc row → flags it; drop a code emission → flags it).
+    Full suite green (EXIT=0), API snapshot FROZEN, CHANGELOG updated. Gate on the sweep, not a magic count
+    (#167 later folds 3 → 32). Handoff sent to reviewer; do NOT push/close until APPROVE.
 
 ## Next (code queue — after docs batch)
 
