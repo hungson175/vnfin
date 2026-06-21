@@ -7,6 +7,24 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **`vnfin.equities.universe(...)` — the investable VN equity universe per board** (#167) — a new
+  additive `vnfin.equities` domain that enumerates the investable equities per board (HOSE/HNX/UPCOM)
+  from the public SSI iBoard stock-group endpoint, with source-backed per-symbol reference metadata
+  (`symbol`, `exchange`, `company_name_en/vi`, `isin`, `listing_status`, `par_value`, `currency`) and
+  honest coverage diagnostics. It is a **data primitive only** — NOT a screener/ranker/advisor.
+  Single-source (`vnfin.equities.client` is an alias of `vnfin.equities.source`, mirroring `funds`);
+  the board token is non-obvious (plain HOSE/HNX/UPCOM return empty, so the source maps
+  `HOSE→VNINDEX`, `HNX→HnxIndex`, `UPCOM→HNXUpcomIndex`) and only `stockType=='s'` rows are kept
+  (warrants/ETFs/funds dropped). `universe(exchange=None)` merges all three boards with **cross-board
+  keep-first** dedup (board order HOSE, HNX, UPCOM → `board="ALL"`); an unknown board raises
+  `InvalidData` before any network. Frozen `EquitySecurity`/`EquityUniverse` result types
+  (`len()`/iteration/`.symbols`/`.to_dataframe()`); every optional field is `None` when the provider
+  omits it (never fabricated). Never-silent `warnings`: the three always-present honest-gap tokens
+  `partial_universe_coverage` (index-basket derived, ~96% of the full SSC roster),
+  `listing_date_not_available` (provider `firstTradingDate` is `'0'`), `sector_not_available`, plus
+  `cross_board_duplicate_symbol` on a merge. `profile(symbol)` is deferred (filter `universe(...)`).
+  See [`docs/sources/equities-universe.md`](docs/sources/equities-universe.md).
+  ([#167](https://github.com/hungson175/vnfin/issues/167))
 - **Optional interval/resample on `prices.history` + `index_history`** (#183) — both daily-native
   accessors now accept the existing `interval` arg as an `Interval` member **or** a pandas-style
   alias string (`'D'/'W'/'M'/'Q'/'Y'`, case-insensitive). Default `Interval.D1` is unchanged

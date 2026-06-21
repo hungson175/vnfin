@@ -35,6 +35,7 @@ DOMAIN_MODULES = [
     "vnfin",
     "vnfin.exceptions",
     "vnfin.prices",
+    "vnfin.equities",
     "vnfin.fundamentals",
     "vnfin.funds",
     "vnfin.indices",

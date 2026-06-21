@@ -7,6 +7,7 @@ There is **one obvious entry per domain**, reachable as an attribute of ``vnfin`
     import vnfin
 
     vnfin.prices        # equity OHLCV (VND)            -> .client() / .history()
+    vnfin.equities      # VN equity universe (per board) -> .source()/.client() / universe()
     vnfin.fundamentals  # financial statements (VND)    -> .client()/.source() / get_financials()
     vnfin.funds         # mutual fund NAV (VND/unit)     -> .client()/.source()
     vnfin.indices       # index value (points) + members -> .client() / index_history()
@@ -22,6 +23,7 @@ and/or ``source(...)``; all existing submodule imports keep working unchanged.
 from . import (
     crypto,
     diagnostics,
+    equities,
     exceptions,
     fundamentals,
     funds,
@@ -55,6 +57,7 @@ __all__ = [
     "default_client",
     # facade: domain namespaces (one obvious entry per domain)
     "prices",
+    "equities",
     "fundamentals",
     "funds",
     "indices",

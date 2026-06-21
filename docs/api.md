@@ -9,6 +9,7 @@ after `import vnfin` you reach each domain as an attribute:
 import vnfin
 
 vnfin.prices        # equity OHLCV price history (VND)
+vnfin.equities      # VN equity universe per board (HOSE/HNX/UPCOM)
 vnfin.fundamentals  # financial statements (raw VND)
 vnfin.funds         # mutual-fund NAV (VND / fund unit)
 vnfin.indices       # index value (points) + constituents
@@ -63,6 +64,13 @@ from datetime import date
 c    = vnfin.prices.client()                 # FailoverPriceClient
 hist = vnfin.prices.history("FAKECORP", start=date(2024, 1, 1), end=date(2024, 6, 30))   # one-shot PriceHistory
 hist = vnfin.default_client().get_history("FAKECORP", start=date(2024, 1, 1), end=date(2024, 6, 30))  # long-standing equivalent
+
+# equities — the investable VN equity universe per board (SSI iBoard). Single-source
+# (client() == source()); a data primitive only (NOT a screener/ranker/advisor).
+src   = vnfin.equities.source()              # SsiIboardUniverseSource (client() == source())
+uni   = vnfin.equities.universe("HOSE")      # EquityUniverse for one board
+allu  = vnfin.equities.universe()            # merges HOSE + HNX + UPCOM (cross-board keep-first)
+fpt   = next(s for s in vnfin.equities.universe("HOSE") if s.symbol == "FPT")  # one-symbol pattern
 
 # fundamentals — financial statements (raw VND). Failover VNDirect -> CafeF.
 c       = vnfin.fundamentals.client()        # FailoverFundamentalClient (VNDirect -> CafeF)
@@ -228,6 +236,32 @@ never fabricated data:
 `SourceCapability` and `RequestDiagnostic` are frozen dataclasses. This is preflight
 metadata, not a live health monitor (use `scripts/healthcheck.py` for live checks). See
 [how-to/source-diagnostics.md](how-to/source-diagnostics.md).
+
+## `vnfin.equities` — the VN equity universe (per board)
+
+`vnfin.equities` is an additive domain namespace (issue #167) that enumerates the
+investable VN equity universe per board from the public SSI iBoard stock-group endpoint.
+It is a **data primitive only** — NOT a screener/ranker/advisor. Single-source
+(`client()` is an alias of `source()`, mirroring `funds`):
+
+- `vnfin.equities.universe(exchange=None, *, http_get=None, timeout=25.0) -> EquityUniverse`
+  — one-shot enumeration. `exchange="HOSE"` (or `"HNX"`/`"UPCOM"`) returns one board;
+  `exchange=None` merges all three boards with cross-board keep-first dedup (board order
+  HOSE, HNX, UPCOM). An unknown board raises `InvalidData` **before** any network call.
+- `vnfin.equities.source(...)` / `vnfin.equities.client(...)` — construct a
+  `SsiIboardUniverseSource` (`.universe(exchange=...)`).
+- `EquitySecurity` / `EquityUniverse` are frozen dataclasses. `EquityUniverse` supports
+  `len()`, iteration, `.symbols`, and `.to_dataframe()`. Each `EquitySecurity` carries
+  `symbol`, `exchange`, `company_name_en`, `company_name_vi`, `isin`, `listing_status`,
+  `par_value`, `currency` — every optional field is `None` when the provider omits it
+  (never fabricated).
+
+`profile(symbol)` is **deferred**: to get one symbol, call `universe(exchange=...)` and
+filter (`next(s for s in universe("HOSE") if s.symbol == "FPT")`). The result's
+`warnings` ALWAYS disclose the known gaps — `partial_universe_coverage` (index-basket
+derived, ~96% of the full SSC roster), `listing_date_not_available` (provider
+`firstTradingDate` is `'0'`), `sector_not_available` — plus `cross_board_duplicate_symbol`
+on a merge. See [sources/equities-universe.md](sources/equities-universe.md).
 
 ## `vnfin.news` — daily financial-news headlines (BYOK)
 

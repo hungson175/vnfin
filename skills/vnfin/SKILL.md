@@ -150,6 +150,10 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `failover` | `macro.get_indicator` | Result required failover across sources (carries the per-source note). | — |
 | `nav_end_gap` | `funds.nav_history` | Latest fund NAV is older than the fund's own trailing cadence allows (stale / paused / dormant feed). | #172 |
 | `deduped_duplicate_nav_rows` | `funds.nav_history` | Identical-value duplicate `navDate` rows collapsed to one (kept once + warned); a *conflicting* same-date NAV still raises. | #158 |
+| `partial_universe_coverage` | `equities.universe` | **Always present** per board — the universe is index-basket-derived (~96% of the full SSC roster), not the complete listing. | #167 |
+| `listing_date_not_available` | `equities.universe` | **Always present** per board — the provider's `firstTradingDate` is `'0'` (unusable), so no listing date is exposed. | #167 |
+| `sector_not_available` | `equities.universe` | **Always present** per board — sector/industry is absent from this payload (not fabricated). | #167 |
+| `cross_board_duplicate_symbol` | `equities.universe` | On an `exchange=None` merge, a symbol seen on more than one board is kept-first (board order HOSE, HNX, UPCOM) and the dropped copy is disclosed (never silent). | #167 |
 
 ## Full reference
 

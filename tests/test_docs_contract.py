@@ -574,6 +574,11 @@ _WARNING_TOKENS_180 = (
     "deduped_duplicate_nav_rows",
     "skipped_mismatched_report_rows",
     "skipped_period_rows",
+    # #167 — equity-universe honest-gap + cross-board dedup tokens.
+    "partial_universe_coverage",
+    "listing_date_not_available",
+    "sector_not_available",
+    "cross_board_duplicate_symbol",
 )
 
 

@@ -26,6 +26,21 @@ h = vnfin.prices.history("FPT", start=date(2024,1,1), end=date(2024,6,30))
 print(h.source, h.currency, h.bars[-1].close)
 ```
 
+## equities — the VN equity universe per board (single-source; #167)
+
+- **Entry:** `vnfin.equities.universe(exchange=None, *, http_get=None, timeout=25.0)` → `EquityUniverse`; `vnfin.equities.source()` / `vnfin.equities.client()` → `SsiIboardUniverseSource` (`client` is an alias of `source` — single-source domain, mirrors `funds`), with `.universe(exchange=...)`.
+- **Source:** public SSI iBoard stock-group endpoint (`GET iboard-query.ssi.com.vn/stock/group/{TOKEN}`). **Board token is non-obvious** — plain HOSE/HNX/UPCOM return empty; the source maps `HOSE→VNINDEX`, `HNX→HnxIndex`, `UPCOM→HNXUpcomIndex`. Equities only (`stockType=='s'`; warrants/ETFs/funds dropped). Error label is `ssi_iboard_universe`.
+- **Result:** `EquityUniverse(board, source, securities: tuple[EquitySecurity], fetched_at_utc, as_of=None, warnings)` — supports `len()`, iteration, `.symbols`, `.to_dataframe()`. `EquitySecurity(symbol, exchange, company_name_en, company_name_vi, isin, listing_status, par_value, currency)` — every optional field is `None` when the provider omits it (never fabricated). `par_value` is VND when present (`0`/non-positive → None).
+- **Gotchas:** a **data primitive only** (NOT a screener/ranker/advisor). `exchange=None` merges HOSE+HNX+UPCOM with **cross-board keep-first** dedup (board order HOSE, HNX, UPCOM) → `board="ALL"` + a `cross_board_duplicate_symbol` warning per collision (never silent, never a raise). Unknown board → `InvalidData` **before** any network. A duplicate symbol *within one board* IS a contract violation → `InvalidData`. **Always-present honest-gap warnings** (one per contributing board): `partial_universe_coverage` (index-basket derived, ~96% of the full SSC roster), `listing_date_not_available` (provider `firstTradingDate` is `'0'`), `sector_not_available`. **`profile(symbol)` is deferred** — to get one symbol, call `universe(exchange=...)` and filter.
+
+```python
+import vnfin
+hose = vnfin.equities.universe("HOSE")
+print(len(hose), hose.board, hose.source)
+fpt = next(s for s in hose if s.symbol == "FPT")  # one-symbol pattern (no profile())
+allu = vnfin.equities.universe()                   # merge all three boards (board="ALL")
+```
+
 ## fundamentals — financial statements (raw VND)
 
 - **Entry:** `vnfin.fundamentals.get_financials(symbol, statement, period, *, is_bank=None, limit=8, source=None, sources=None, max_attempts=3, http_get=None, timeout=25.0)` → `tuple[FinancialReport]` (newest first); `client()` → `FailoverFundamentalClient`; `source()` → `VNDirectFundamentalSource`. `StatementType`: `income/balance/cashflow/ratios` (strings accepted). `Period`: `QUARTER/ANNUAL` (case-insensitive). `AUTO` is the `is_bank` sentinel (`== None`).
