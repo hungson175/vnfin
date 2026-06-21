@@ -253,6 +253,15 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Fixed
+- **Index-constituents diagnostic no longer advises treating membership as point-in-time** (#175,
+  Tier-3) — `vnfin.diagnostics.explain_index_constituents(...)` and the static
+  `source_capabilities()` entry previously suggested *"treat membership as point-in-time"*, the exact
+  misuse the live `current_snapshot_only` warning guards against (it injects survivorship/look-ahead
+  bias into backtests) — the offline diagnostic contradicted the live result. Both now advise treating
+  the basket as the **CURRENT** snapshot, **NOT** point-in-time, and flag the bias; a note records that
+  point-in-time/historical membership is unavailable from this source. The do-not-expect-weights
+  guidance and `single_source` status are unchanged; string-value-only fix, no surface change.
+  ([#175](https://github.com/hungson175/vnfin/issues/175))
 - **An `exchange=None` equity-universe merge no longer aborts when ONE board is down** (#189) —
   `vnfin.equities.universe()` iterates HOSE→HNX→UPCOM and merges them. Previously a single board's
   `_fetch_board` raising (`SourceUnavailable`/`EmptyData`/`InvalidData`) propagated and aborted the

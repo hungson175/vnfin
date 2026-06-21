@@ -87,6 +87,35 @@ def test_index_constituents_malformed_selector_fails_closed(bad):
         explain_index_constituents(bad)
 
 
+# Issue #175 Tier-3 — the offline diagnostic must NOT advise treating membership as
+# point-in-time (the exact misuse the live ``current_snapshot_only`` warning guards
+# against); it must say the basket is the CURRENT snapshot and flag survivorship bias.
+def test_index_constituents_diagnostic_warns_current_snapshot_not_point_in_time():
+    d = explain_index_constituents("VN30")
+    actions = [a.lower() for a in d.suggested_actions]
+    assert not any("as point-in-time" in a for a in actions)
+    assert any("current snapshot" in a for a in actions)
+    assert any("not point-in-time" in a for a in actions)
+    assert any("survivorship" in a for a in actions)
+    # do-not-expect-weights guidance + status preserved
+    assert d.status == "single_source"
+    assert any("weight" in a for a in actions)
+
+
+def test_index_constituents_capability_warns_current_snapshot_not_point_in_time():
+    cap = next(
+        c
+        for c in source_capabilities()
+        if c.domain == "indices" and c.endpoint == "constituents"
+    )
+    sa = cap.suggested_action.lower()
+    assert "as point-in-time" not in sa
+    assert "current" in sa and "not point-in-time" in sa
+    assert "survivorship" in sa
+    # do-not-expect-weights guidance preserved
+    assert "weight" in sa
+
+
 # --- public namespace --------------------------------------------------------
 def test_diagnostics_exposed_on_package():
     assert vnfin.diagnostics.source_capabilities() == source_capabilities()

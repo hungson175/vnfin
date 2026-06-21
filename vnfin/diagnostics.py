@@ -152,7 +152,13 @@ _INDEX_CONSTITUENTS_CAPS: tuple[SourceCapability, ...] = (
             "membership only (no weights)",
             "single-source: no clean no-auth fallback currently configured",
         ),
-        suggested_action="treat membership as point-in-time; do not expect weights",
+        # Issue #175 Tier-3: the basket is the CURRENT membership snapshot, NOT
+        # point-in-time — advising the opposite is the exact misuse that injects
+        # survivorship/look-ahead bias (contradicts the live current_snapshot_only warning).
+        suggested_action=(
+            "treat the basket as the CURRENT membership snapshot, NOT point-in-time — "
+            "backtests inherit survivorship/look-ahead bias; do not expect weights"
+        ),
     ),
 )
 
@@ -261,9 +267,14 @@ def explain_index_constituents(index) -> RequestDiagnostic:
         notes=(
             f"index {canonical!r} membership is served by a single default source "
             "(ssi_iboard_query); membership only, no weights, no clean no-auth fallback",
+            "this is the CURRENT membership snapshot; point-in-time/historical membership "
+            "is not available from this source",
         ),
+        # Issue #175 Tier-3: correct the misleading point-in-time advice — the basket is
+        # the CURRENT snapshot, so treating it as point-in-time biases backtests.
         suggested_actions=(
-            "treat the membership basket as point-in-time",
+            "treat the membership basket as the CURRENT snapshot, NOT point-in-time — "
+            "backtests using it inherit survivorship and look-ahead bias",
             "do not expect constituent weights from this endpoint",
         ),
     )
