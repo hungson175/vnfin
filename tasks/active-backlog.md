@@ -286,22 +286,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
-  APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 ✅ DONE+PUSHED+CLOSED**
-  (Codex×1 APPROVE zero-blockers, `1cc8a44`); **#187 Codex×2 IN FLIGHT** (hold ff-merge for the
-  consolidated verdict). Both delegated to fresh general-purpose agents in separate worktrees
-  (`vnfin-oss-wt-187` / `vnfin-oss-wt-181`), TDD vs committed specs, synthetic fixtures. #188 held
-  until #187 lands (shared `test_docs_contract.py`); **#189 new non-blocking follow-up** (board_unavailable
-  skip-and-warn for the equities merge — also touches `test_docs_contract.py`, so also after #187).
+  APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 + #187 both ✅
+  DONE+PUSHED+CLOSED** (#181 Codex×1 APPROVE `1cc8a44`; #187 Codex×2 APPROVE_WITH_NOTES `ac7ca65`).
+  Both delegated to fresh general-purpose agents in separate worktrees, TDD vs committed specs, synthetic
+  fixtures; **#191** (test-hardening) filed from #187's 2 non-blocking notes. **NOW UNBLOCKED:** #184
+  (gated docs-only, independent), #188 + #189 (both need design gates; both touch `test_docs_contract.py`
+  → must be sequenced). Reviewer asked to sequence #188/#189 vs #184.
 
-  **IN FLIGHT (delegated builds):**
-  - **#187 (bug) — midnight-open placeholder recovery (index D1).** Design APPROVED (gate
-    `/tmp/vnfin-187-gate.md`). Worktree `vnfin-oss-wt-187`, spec `tasks/187-midnight-recovery-spec.md`.
-    Signature = H/L/C/V identical + open differs + one row at LOCAL 00:00 VN-tz → keep non-midnight,
-    drop midnight, recover (not charged to threshold); new token `recovered_midnight_open_placeholder`
-    (#180 guard 33→34); genuine-conflict/no-midnight → UNCHANGED #186 poison. **Codex×2 IN FLIGHT at
-    `61e6dd7`** (branch `issue-187-midnight-recovery` rebased onto master; merged tree master+#181+#187
-    = 3444 passed, snapshot frozen, #180 guard 33→34 bidirectional). **Hold ff-merge for the consolidated
-    verdict**; master stays at `1cc8a44`. Handoff (9 invariants→test names): `/tmp/vnfin-187-codex-handoff-202606211000.md`.
+  **LANDED THIS BATCH (#181 + #187 — both closed):**
+  - **#187 (bug) — midnight-open placeholder recovery (index D1) — ✅ DONE + PUSHED + CLOSED.** Codex×2
+    **APPROVE_WITH_NOTES** (review-202606211004; both reviewers, mutation-tested invariants, zero blockers).
+    Re-rebased onto master (had moved) → `ac7ca65`, tree byte-identical to reviewed `61e6dd7`; pushed
+    `1cc8a44..ac7ca65`, #187 closed. Final master 3444 passed, snapshot frozen, #180 guard 34. Signature =
+    H/L/C/V identical + open differs + one row at LOCAL 00:00 VN-tz → keep non-midnight, drop midnight,
+    recover (considered-=1 only, NOT charged to failover); genuine-conflict/no-midnight → UNCHANGED #186
+    poison. **2 non-blocking test-hardening notes filed as #191.**
   - **#181 (enh) — additive `Fund.nav_as_of` — ✅ DONE + PUSHED + CLOSED.** Codex×1 **APPROVE** zero
     blockers (review-202606210958-181-nav-as-of-approve; pinned SHA `1cc8a44`, all 7 check-points PASS).
     Pushed master `e9d0c42..1cc8a44` (spec `d064244` + impl `1cc8a44`); #181 closed with resolution
