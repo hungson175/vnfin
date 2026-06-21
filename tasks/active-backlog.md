@@ -34,9 +34,12 @@ _Last synced: 2026-06-21 11:2x +07_
 >   - **#175** Tier-1 — **✅ APPROVED (Codex×1) + PUSHED `3d33859` (in `f865f5a..06a4684`) + progress
 >     comment posted; issue kept OPEN** (Tier-1 = disclosure only, core PIT ask not yet met). Token
 >     `current_snapshot_only`; suite 3470 pass; #180 36→37 + #188 bijection green; snapshot byte-unchanged.
->     **NEXT: Tier-3** (small, no-source: offline coverage diagnostic + fix misleading suggested_action)
->     → design gate → build → push, THEN close #175 as source-gap-documented for **Tier-2** (reviewer
->     source-gate: no clean redistributable historical-membership feed; HOSE = human PDFs) w/ reopen criteria.
+>     **Tier-3** (fix misleading point-in-time diagnostic guidance) — **DESIGN APPROVED + BUILT + GREEN
+>     → awaiting Codex×1** (commit `16d0042`, NOT pushed; suite 3472 pass; snapshot byte-unchanged;
+>     string-value-only fix at diagnostics.py:155 + :266). On APPROVE → push → **close #175** as
+>     source-gap-documented for **Tier-2** (reviewer source-gate: no clean historical-membership feed;
+>     HOSE = human PDFs) w/ reopen criteria (#182 pattern). Close comment drafted `tasks/182-close-comment.md`
+>     is the template; #175-specific close to be written at close time.
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (route
 >     close comment + 4 reopen criteria to reviewer; world-reference line + reserved diagnostic stand).
 >   - **#152** fixed-income — no clean yield-CURVE source; narrow honest `vnfin.rates` v1 over WB+DBnomics
