@@ -88,7 +88,19 @@ _Last synced: 2026-06-21 11:2x +07_
 >     merged tree, snapshot additive (no regen), doc-contract green. Routed to Codex x2 (handoff
 >     `/tmp/vnfin-163-rereview-handoff-20260621.md`). **B1 mechanism correction surfaced to reviewer:
 >     InvalidData IS a SourceError subtype — the real bug was parse OUTSIDE the try, conclusion/fix
->     unchanged.** Then #182 (reviewer source verdict+close) / #155 (design gate).
+>     unchanged.** **ROUND-2 BLOCK 2026-06-21** (`reviews/review-202606211334-...-BLOCK2.md`): B1+NOTE-1
+>     VERIFIED FIXED, original B2 symptoms fixed, BUT a NEW same-class silent-wrong-data defect (D-REV:
+>     dot-decimal ratio — `_parse_vn_number("8.5")==85.0`, `_RATIO_RE` accepts dot-decimal but parser
+>     treats `.` as thousands → "8.5%" served as 85 on no-par real pages; par is ABSENT on real VSDC
+>     pages so no-par IS the real path). My PARALLEL adversarial verifier found COMPLEMENTARY same-class
+>     defects: D1 net-only-no-par serves NET, D2 net-cash, D3 alt-phrased tranche silent-drop, L1
+>     twin-confirm (findings `/tmp/vnfin-163-b2-verifier-findings-20260621.md`). **UNION fix-2 spec
+>     committed `0369b13` (`tasks/163-b2-fix2-spec.md`); impl DELEGATED to fresh agent TDD-first** (8
+>     fail-first #9.27–#9.34): dot-decimal ratio parser + net-of-tax candidate exclusion + alt-tranche
+>     count (`_CASH_MENTION_RE`) + cross-line degrade + par≥1000 guard + unique-confirm. ALL via existing
+>     `vsdc_parse_degraded` (NO new token, tuple stays 43, NO snapshot regen). NEXT: integrate + gates on
+>     merged tree + re-run all repros → re-submit (dot-decimal + par-confirm heaviest re-pass). Then #182
+>     (reviewer source verdict+close) / #155 (design gate).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
