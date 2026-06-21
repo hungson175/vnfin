@@ -12,7 +12,28 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-21 10:01 +07_
+_Last synced: 2026-06-21 11:05 +07_
+
+> **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
+> worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
+> (stop the serial one-issue crawl). Plan: `/tmp/vnfin-batch-plan-202606211040.md`.
+> - **WAVE 1 — build-ready (parallel worktrees; batch design-gate SENT to reviewer 11:0x):**
+>   #189 `board_unavailable` (equities; `/tmp/vnfin-189-design-202606211035.md`),
+>   #190 `fund_nav_stale` (funds; `/tmp/vnfin-190-design-202606211045.md`),
+>   #191 test-harden #187 matrix (`/tmp/vnfin-191-spec.md`),
+>   #192 def-use trace (`/tmp/vnfin-192-spec.md`).
+>   Collision = shared warning-token registry (test_docs_contract.py tuple, SKILL, domains, CHANGELOG)
+>   — I resolve additively at integration; only #189-vs-#190 tuple lines truly conflict.
+> - **WAVE 2 — design-first/source-vet (after W1):** #152 (fixed-income/yield curve), #155 (fund
+>   metadata — defer to avoid #190 funds collision), #163 (dividends/corp-actions), #175 (PIT index
+>   membership), #182 (gold history source-hunt).
+> - **AWAITING:** reviewer batch design-gate → Workflow fan-out → integrate → integration tests →
+>   reviewer parallel code-review → push + close.
+>
+> **#188 forward-discovery guard — ✅ DONE + PUSHED + CLOSED** (`ae7829d..60459ef`; Codex×1 APPROVE +
+> 1 doc-comment must-fix folded). AST forward-discovers emitted `.warnings` tokens, asserts
+> `code-emits ⊆ documented`. Test-only; tuple stays 34; snapshot frozen. Known limitation (warns/
+> note/dup_notes accumulators) → #192. Worktrees pruned; only master remains.
 
 > **#177 S&P 500 world-index — ✅ DONE (PUSHED + CLOSED).** Pushed master `011cffa..28bc529`
 > (impl `011cffa` + critical fix `8ff1e78` + docs `2e7c694` + design/backlog + reviewer-suggested
