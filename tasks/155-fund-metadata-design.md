@@ -47,10 +47,11 @@ surface test is additive-green vs the frozen baseline.
 ## Warning tokens (#180/#188 lockstep — IN THIS CHANGE)
 2 new tokens (`fund_missing_fees`, `fund_partial_holdings`): add to the SKILL.md Warning-tokens table +
 `_WARNING_TOKENS_180` + emit as literals so #188's AST forward-discovery sees them
-([[new-warning-token-must-update-180-reference]]). **Baseline moved: `_WARNING_TOKENS_180` = 43 once
-#163 lands (37 + #163's 6 corp-action tokens — the reviewer-BLOCK fix added a 6th,
-`corp_action_seed_not_found`)**, so these 2 take it 43→45. The exact start count depends on #163
-merging first — **gate on the doc↔code bijection sweep being green, NOT a magic count**
+([[new-warning-token-must-update-180-reference]]). **Baseline moved: `_WARNING_TOKENS_180` = 44 once
+#163 DE-SCOPE lands** (the round-7 de-scope deletes the net-vs-gross classifier and adds ONE token
+`vsdc_ratio_tax_deferred`, taking the tuple 43→44 — supersedes the earlier 6-corp-action-token plan),
+so these 2 take it 44→46. The exact start count depends on #163 merging first — **gate on the doc↔code
+bijection sweep being green, NOT a magic count**
 ([[multi-hop-crawl-silent-loss-surfaces-checklist]] reinforces: gate on the sweep).
 
 ## TDD (fail-first; synthetic fixtures only)
@@ -68,7 +69,7 @@ merging first — **gate on the doc↔code bijection sweep being green, NOT a ma
    extra request) — OK?
 3. **`fund_partial_holdings` threshold** — bounded coverage% (warn if top-holdings sum < X%) vs blanket
    top-N? Recommend a coverage% bound (mirrors the staleness-warning bounded-false-positive principle).
-4. **2 new tokens** (`fund_missing_fees`, `fund_partial_holdings`) confirmed for #180/#188 (42→44
-   post-#163; gate on the sweep not the count)?
+4. **2 new tokens** (`fund_missing_fees`, `fund_partial_holdings`) confirmed for #180/#188 (44→46
+   post-#163 de-scope; gate on the sweep not the count)?
 5. **Source verdict:** Fmarket `/res/products/{id}` detail endpoint (same domain as already-wired
    list/NAV) — approved for runtime fetch?
