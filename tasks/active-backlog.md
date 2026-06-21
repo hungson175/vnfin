@@ -139,11 +139,18 @@ _Last synced: 2026-06-21 11:2x +07_
 >     POSITIVE detection); window ≤2→≤4 so `chưa khấu trừ thuế`/`trước khi khấu trừ thuế` stay gross; bare
 >     `không khấu trừ` now degrades (safe). Tests #9.53–#9.55 (3 fail-first on 6e2c71a). Merged-tree: 3570
 >     passed, tuple 43, snapshot frozen; all must-stay-green + BLOCK4 inversions intact; 0 misclassified.
->     Handoff `/tmp/vnfin-163-round6-handoff-20260621.md`. NOTE fast-follow (post-#163, all SAFE/over-degrade or
->     low-realism, none silent-wrong): English/spelled-out markers; contrived VAT-clause over-veto; **sau+thue
->     strong rule uses SET membership so 'trước thuế … sau khi trừ phí' false-positive-degrades (reviewer
->     round-6 edge) — tighten to sau-BEFORE-thue positionally**; malformed `8.5.0%`→5.0; `/cp` not in `_RATIO_RE`.
->     HOLDING push/close until reviewer APPROVE + my parallel adversarial hunter on 7b35066 returns clean. Then #182 / #155.
+>     Handoff `/tmp/vnfin-163-round6-handoff-20260621.md`. **ROUND-6 BLOCK6 + reviewer DE-SCOPE call; my
+>     parallel hunter independently found a 7TH silent-wrong path (net-first `8,5% sau thuế; 10%` + par → net
+>     served as gross). DECISION 2026-06-21 14:53 — DE-SCOPE CONFIRMED (reviewer's call, Boss delegated):** the
+>     free-text net-vs-gross classifier is open-ended NLP on scraped HTML (7 distinct silent-wrong bugs / 6
+>     rounds) → STOP CLASSIFYING. v1 round-7 = DELETE `_segment_is_net` + all net/gross logic, replace with ONE
+>     LINE-level gate: any thuế/thue/tncn token in the ratio context → `ratio_pct=None` + NEW token
+>     `vsdc_ratio_tax_deferred` (semantic ≠ vsdc_parse_degraded; #180/#188 lockstep 43→44); ratio served ONLY
+>     from a tax-free context. KEEP BFS/record/pay/cash_per_share/structured/NOTE-1/snapshot; clean
+>     multi-candidate (par/twins/>100%/malformed) logic stays → still `vsdc_parse_degraded` (runs only on
+>     tax-free text). Existing tax→served-gross tests INVERT to degraded (intended contract change). v2 =
+>     classifier behind a committed corpus (the 7 phrasings + hunter safe-surface list = fixture seed).
+>     `7b35066` push DROPPED (superseded). **NOW: round-7 de-scope, TDD-first → Codex x2 re-pass → push + close.**
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
