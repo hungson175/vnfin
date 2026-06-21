@@ -12,6 +12,8 @@
 | Fundamentals | `vnfin.fundamentals` | raw VND | Yes | VNDirect -> CafeF | ANNUAL / QUARTER |
 | Funds | `vnfin.funds` | VND/unit | No (single source) | Fmarket | NAV history + fund list |
 | Indices | `vnfin.indices` | points | Yes (value); No (constituents) | VPS/SSI/VNDirect (value); SSI iBoard (constituents) | D1 |
+| Equities | `vnfin.equities` | — (reference metadata) | No (single source) | SSI iBoard (`/stock/group/{board}`) | current universe snapshot per board (#167) |
+| Corp-actions | `vnfin.corp_actions` | VND/share (cash) | No (single source) | VSDC scrape (`vsd.vn/vi/ad/{id}`) | per-issuer cash-dividend history (#163) |
 | Gold (VN) | `vnfin.gold.vn` | VND/luong | No (pick one) | BTMC or PNJ | spot only |
 | Gold (world) | `vnfin.gold.world` | USD/oz | Yes (history) | CurrencyApi (default); Stooq (opt-in) | daily EOD |
 | Crypto | `vnfin.crypto` | USD | Yes | Binance -> Coinbase | D1 + intraday |
@@ -35,6 +37,8 @@ flowchart TD
     NET --> CR["crypto · USD"]
     NET --> FX["fx · VND per 1 unit"]
     NET --> MA["macro · indicator-specific"]
+    NET --> EQ["equities · VN universe per board (single source)"]
+    NET --> CA["corp_actions · cash dividends VND/share (single source)"]
     BYOK --> NW["news · Alpha Vantage headline metadata"]
     BYOK --> MK["macro.FRED · opt-in macro key"]
     OFF --> DG["diagnostics · source-coverage preflight"]
@@ -260,6 +264,59 @@ real-time feeds.
 
 **API key redaction:** BYOK key is never surfaced in error messages; `transport.py`
 `redact_secrets` covers all query-param and `Authorization` leak paths.
+
+## Equities domain (#167)
+
+**Module:** `vnfin/equities/`
+
+**Source:** SSI iBoard `GET /stock/group/{board}` (keyless, single source — `client()` aliases
+`source()`). Board-token aliasing: `HOSE -> VNINDEX`, `HNX -> HnxIndex`, `UPCOM -> HNXUpcomIndex`.
+Equities only (`stockType == 's'`; warrants/ETFs/funds dropped). Same accepted runtime-fetch posture
+as `ssi_iboard_query` (index constituents).
+
+**Result containers:** `EquitySecurity` (frozen; `symbol`, `exchange`, `company_name_en/vi`, `isin`,
+`listing_status`, `par_value`, `currency` — all optional except `symbol`, never fabricated),
+`EquityUniverse` (`securities`, `board`, `source`, `as_of=None`, `warnings`, `to_dataframe()`).
+
+**Accessors:** `equities.universe(exchange=None)` (merges HOSE+HNX+UPCOM with cross-board keep-first
+when `None`, else one board), `equities.source()`.
+
+**Always-on / honest-gap tokens:** `partial_universe_coverage` (index-basket-derived, ~96% of the full
+SSC roster), `listing_date_not_available`, `sector_not_available`; `cross_board_duplicate_symbol` on a
+merge collision (keep-first); `board_unavailable` when a board fetch is skipped in the all-boards merge
+(#189 — partial failure skips+warns, total failure re-raises). Point-in-time / historical membership is
+**not** available (current snapshot only).
+
+## Corp-actions domain (#163)
+
+**Module:** `vnfin/corp_actions/`
+
+**Source:** VSDC depository HTML scrape — `GET https://vsd.vn/vi/ad/{id}` (keyless, single source;
+sequential int id). Discovery is a bounded multi-hop BFS over the "Tin cùng tổ chức" same-org sidebar
+graph (visited-dedup + cycle guard + `max_fetch` bound). **v1 scope: CASH dividends only** (stock /
+rights / bonus / total-return deferred to v2). NO ex-date (VSDC is the depository; the finfo ex-date
+enrichment leg is held — `ex_date` is always `None` in v1).
+
+**Result containers:** `CashDividendEvent` (frozen; `code`, `kind="CASH"`, `cash_per_share` VND/share,
+`ratio_pct`, `record_date`, `pay_date`, `ex_date=None`, `warnings`), `DividendHistory`.
+
+**Accessors:** `corp_actions.dividends(symbol, *, start=None, end=None, seed_id=None, max_fetch=300)`,
+`corp_actions.VsdcCashDividendSource()`. Offline `diagnostics.explain_corp_actions_coverage()`.
+
+**Net-of-tax de-scope (the v1 safety contract):** the net-vs-gross classifier was DELETED after it
+proved an open-ended source of silent-wrong ratios. `ratio_pct` is served ONLY from a tax-free ratio
+line; **any** tax/withholding signal (`thuế`/`TNCN`/`khấu trừ`/net-received markers) on the ratio line
+withholds the ratio (`ratio_pct=None`) and discloses via the **distinct** `vsdc_ratio_tax_deferred`
+token — never a guessed net-or-gross number. The net/gross classifier is deferred to v2 behind a
+committed adversarial-phrasing corpus. `cash_per_share` (the actual VND amount) and the dates are parsed
+directly and are unaffected by the withhold.
+
+**Never-silent tokens:** `ex_date_unavailable` (per event, v1 has no ex-date), `corp_action_source_partial`
+(per result, always v1 — spine only), `vsdc_parse_degraded` (a primary field unparseable / ambiguous —
+event surfaced, never dropped), `vsdc_ratio_tax_deferred` (ratio on a tax-qualified line — withheld),
+`coverage_truncated_at_max_fetch` (crawl hit the cap), `corp_action_fetch_incomplete` (≥1 page failed to
+fetch/parse), `corp_action_seed_not_found` (no-seed discovery exhausted its window without finding the
+issuer). **ToS:** VSDC pages carry a generic copyright; runtime-fetch only, no raw-page redistribution.
 
 ## Diagnostics domain (offline)
 

@@ -15,6 +15,16 @@ All notable changes to `vnfin` are documented here. The format follows
   from datacenter IPs (residential-only, dead from servers since ~2020-12). Set the BYOK AV key to use
   world-index server-side. No code or chain change; Stooq stays in the chain as the residential-only
   keyless path. ([#184](https://github.com/hungson175/vnfin/issues/184))
+- **Warning-token guard hardened to forward-discovery** (#188) — `tests/_warning_token_scan.py`
+  AST-scans every `result.warnings` emission site in `vnfin/` and asserts the discovered token set is a
+  subset of the documented `_WARNING_TOKENS_180`, so a newly-emitted-but-undocumented token now fails
+  the doc↔code lockstep guard red (closing the forward-direction blind spot in the #180 reverse guard).
+  Test-infrastructure only; no public-API change. ([#188](https://github.com/hungson175/vnfin/issues/188))
+- **Maintainer architecture docs synced to the v0.2 domain surface** — `docs/architecture/system-overview.md`
+  and `docs/architecture/data-domains.md` now document the `vnfin.equities` (#167) and `vnfin.corp_actions`
+  (#163) domains (facade count 12→14, domain table + sections), and `docs/api.md` adds
+  `explain_fixed_income_coverage()` (#152), the `LENDING_RATE`/`DEPOSIT_RATE`/`REAL_INTEREST_RATE`
+  indicators (#152), and the `board_unavailable` (#189) / `current_snapshot_only` (#175) tokens. Docs only.
 
 ### Added
 - **Richer Fmarket fund metadata + allocation coverage diagnostics** (#155) — the `vnfin.funds`

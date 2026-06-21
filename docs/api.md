@@ -96,6 +96,10 @@ hist = vnfin.indices.index_history("FAKEINDEX", date(2024, 1, 1), date(2024, 6, 
 # one PriceHistory with source="stitched_index_history" and per-segment provenance
 # warnings. Default index_history stays strict (unchanged).
 hist = vnfin.indices.index_history_stitched("VNINDEX", date(2016, 1, 1), date(2026, 6, 1))  # D1 only
+mem  = vnfin.indices.index_constituents("VN30")  # IndexConstituents (membership only, no weights)
+# mem.as_of is None (provider exposes no data date, never fabricated); mem.warnings ALWAYS
+# carry weights_not_available + current_snapshot_only (#175 — this is the CURRENT basket, NOT
+# point-in-time; backtests using it inherit survivorship/look-ahead bias).
 
 # gold — VN domestic (VND/lượng) and world XAU (USD/oz). Provider is explicit.
 vn    = vnfin.gold.vn("btmc")                # BTMCGoldSource (default), or "pnj"
@@ -117,6 +121,11 @@ h   = vnfin.fx.history(start=date(2010, 1, 1), end=date(2024, 12, 31))  # FXHist
 # macro — cross-country indicators. No-key failover World Bank -> IMF -> DBnomics.
 c   = vnfin.macro.client()                   # MacroClient (World Bank -> IMF DataMapper -> DBnomics, no-key)
 src = vnfin.macro.source()                   # WorldBankMacroSource (primary only)
+gdp = vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP)  # IndicatorSeries
+# MacroIndicator members: GDP, GDP_GROWTH, INFLATION, CPI_YOY, UNEMPLOYMENT, POLICY_RATE
+# (SBV refinancing proxy, monthly), and the #152 World Bank annual fixed-income rates:
+# LENDING_RATE / DEPOSIT_RATE / REAL_INTEREST_RATE (WDI FR.INR.LEND/DPST/RINR, % p.a.).
+# Govt-bond yield CURVE is unavailable (no clean source) -> see explain_fixed_income_coverage().
 
 # corp_actions — CASH dividends (VND/share) scraped from the VSDC depository. v1 CASH
 # only; ex-date is ALWAYS None (depository publishes none, finfo leg held for v2).
@@ -241,6 +250,13 @@ never fabricated data:
   frequency=None) -> RequestDiagnostic` (issue #159) — classify a historical-FX request as
   `unsupported_pair` / `unsupported_frequency` / `coverage_gap` / `ok` vs the only v1 source
   (World Bank `PA.NUS.FCRF`, annual USD/VND, `window_too_wide` is not applicable here).
+- `vnfin.diagnostics.explain_fixed_income_coverage() -> RequestDiagnostic` (issue #152) —
+  state the VN fixed-income rate coverage: the government-bond **yield curve** is
+  **unavailable** (no clean redistributable source), while the available rate kinds are
+  enumerated with caveats — `policy_rate` (SBV refinancing proxy, monthly, IMF-IFS),
+  `lending_rate` / `deposit_rate` / `real_interest_rate` (World Bank annual, `FR.INR.*`) —
+  and policy vs interbank vs deposit vs govt-bond are distinguished so callers do not conflate
+  them.
 - `vnfin.diagnostics.explain_corp_actions_coverage() -> RequestDiagnostic` (issue #163) —
   state the corporate-actions coverage: v1 serves CASH dividends only (VSDC depository
   scrape), `ex_date` is **UNAVAILABLE** (depository publishes none; finfo enrichment leg
@@ -282,7 +298,10 @@ filter (`next(s for s in universe("HOSE") if s.symbol == "FPT")`). The result's
 `warnings` ALWAYS disclose the known gaps — `partial_universe_coverage` (index-basket
 derived, ~96% of the full SSC roster), `listing_date_not_available` (provider
 `firstTradingDate` is `'0'`), `sector_not_available` — plus `cross_board_duplicate_symbol`
-on a merge. See [sources/equities-universe.md](sources/equities-universe.md).
+on a merge, and `board_unavailable` (issue #189) when a board fetch is skipped during the
+all-boards `universe()` merge (partial failure skips-and-warns and serves the healthy boards;
+total failure of all three re-raises the last source error). See
+[sources/equities-universe.md](sources/equities-universe.md).
 
 ## `vnfin.corp_actions` — cash dividends (VND/share, VSDC scrape)
 

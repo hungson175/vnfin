@@ -73,6 +73,8 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 | FX rate | `vnfin.fx.get_rate("USD")` | `FXRate` · VND per 1 USD |
 | Macro | `vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP)` — indicators: `GDP`, `GDP_GROWTH`, `CPI`, `INFLATION`, `UNEMPLOYMENT`, `CPI_YOY`, `POLICY_RATE` (monthly SBV proxy), `LENDING_RATE` / `DEPOSIT_RATE` / `REAL_INTEREST_RATE` (annual, World Bank `FR.INR.*`) | `IndicatorSeries` |
 | Fixed-income coverage | `vnfin.diagnostics.explain_fixed_income_coverage()` (offline) — govt-bond yield curve is unavailable (deferred); discloses the policy proxy + the three annual WB rates and that `DEPOSIT_RATE` is an annual aggregate | `RequestDiagnostic` |
+| Equity universe | `vnfin.equities.universe("HOSE")` (or `"HNX"`/`"UPCOM"`; `None` merges all three) | `EquityUniverse` of `EquitySecurity` — current snapshot per board; `partial_universe_coverage` ~96% |
+| Cash dividends | `vnfin.corp_actions.dividends(sym, seed_id=)` | `DividendHistory` of `CashDividendEvent` · VND/share — v1 CASH only, `ex_date=None`, `ratio_pct` withheld on tax-qualified lines (`vsdc_ratio_tax_deferred`) |
 
 ## Canonical examples
 

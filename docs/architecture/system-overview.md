@@ -19,7 +19,7 @@ at `tests/snapshots/public_api_v0_2_0.json`.
 ```mermaid
 flowchart TD
     F["PUBLIC FACADE — vnfin.__init__<br/>domain namespaces + top-level re-exports<br/>verbs: client() · source() · one-shot helpers"]
-    D["DOMAIN clients/sources<br/>prices · fundamentals · funds · indices · gold<br/>crypto · fx · macro · news · diagnostics · liquidity"]
+    D["DOMAIN clients/sources<br/>prices · fundamentals · funds · indices · gold · crypto<br/>fx · macro · news · equities · corp_actions · diagnostics · liquidity"]
     E["FAILOVER ENGINE (vnfin/failover.py)<br/>capability · operation · reject · provenance · finalize"]
     A["SOURCE ADAPTERS (per provider)<br/>clean-room, license-aware HTTP parsing"]
     C["_contracts (private) + validation<br/>fields/keys/rows + results/timeseries · public input validation"]
@@ -37,9 +37,10 @@ The same layering as an ASCII reference:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  PUBLIC FACADE                                                              │
-│  vnfin.__init__  — 12 domain namespaces + top-level re-exports              │
+│  vnfin.__init__  — 14 domain namespaces + top-level re-exports              │
 │  vnfin.prices / .fundamentals / .funds / .indices / .gold / .crypto        │
-│  vnfin.fx / .macro / .news / .diagnostics / .liquidity / .exceptions       │
+│  vnfin.fx / .macro / .news / .equities / .corp_actions                      │
+│  vnfin.diagnostics / .liquidity / .exceptions                              │
 │  Standard verbs: domain.client() · domain.source() · one-shot helpers       │
 └─────────────────────────────────────────────────────────────────────────────┘
                |                             |
@@ -78,6 +79,8 @@ The same layering as an ASCII reference:
 │  fx/: OpenErApiFXSource, VietcombankFXSource                                │
 │  crypto/: BinanceCryptoSource, CoinbaseCryptoSource                         │
 │  news/: AlphaVantageNewsSource (BYOK)                                       │
+│  equities/: SsiIboardUniverseSource (SSI iBoard universe, #167)            │
+│  corp_actions/: VsdcCashDividendSource (VSDC cash dividends, #163)         │
 └──────────────┬───────────────────────────────────────────────────────────────┘
                |
 ┌──────────────┴───────────────────────────────────────────────────────────────┐
@@ -102,13 +105,14 @@ The same layering as an ASCII reference:
 
 ## Public facade shape
 
-`import vnfin` exposes 12 domain namespaces and a small set of top-level names:
+`import vnfin` exposes 14 domain namespaces and a small set of top-level names:
 
 ```python
 # Domain namespaces (one obvious entry per domain)
-vnfin.prices        vnfin.fundamentals   vnfin.funds     vnfin.indices
-vnfin.gold          vnfin.crypto         vnfin.macro     vnfin.fx
-vnfin.news          vnfin.diagnostics    vnfin.liquidity vnfin.exceptions
+vnfin.prices        vnfin.fundamentals   vnfin.funds        vnfin.indices
+vnfin.gold          vnfin.crypto         vnfin.macro        vnfin.fx
+vnfin.news          vnfin.equities       vnfin.corp_actions
+vnfin.diagnostics   vnfin.liquidity      vnfin.exceptions
 
 # Top-level re-exports (long-standing stable surface)
 vnfin.FailoverPriceClient   vnfin.FailoverClient
