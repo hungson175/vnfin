@@ -17,6 +17,25 @@ All notable changes to `vnfin` are documented here. The format follows
   keyless path. ([#184](https://github.com/hungson175/vnfin/issues/184))
 
 ### Added
+- **Richer Fmarket fund metadata + allocation coverage diagnostics** (#155) — the `vnfin.funds`
+  domain now serves a confirmed metadata core, never fabricated. `Fund` gains three appended,
+  defaulted optional fields: `management_fee_pct` (annual management fee %, populated from the
+  **list** row — equity rows only, `None` when the provider omits it), `inception_date`, and
+  `description`. `AssetAllocation` (returned by `asset_allocation(id)`) gains `sector_weights`
+  (a tuple of the new frozen `SectorWeight(industry, weight_pct)` model, parsed fail-closed —
+  malformed rows are dropped), plus `inception_date` and `description` off the detail document.
+  `list_funds(...)` takes a new appended `include_metadata=True` keyword (set `False` for a
+  fee-agnostic list with no `fund_missing_fees` warning). Two new never-silent warning tokens:
+  `fund_missing_fees` (list-level: ≥1 fund has no disclosed management fee — an absent fee is
+  never mistaken for zero) and `fund_partial_holdings` (detail-doc: disclosed top holdings sum to
+  under 50% of NAV — a bounded false-positive preferred over hiding an opaque book). Adds the
+  **offline** diagnostic `vnfin.diagnostics.explain_fund_coverage()` (status
+  `metadata_core_available`) + a `funds` `SourceCapability`, stating the available core vs the
+  source-missing/deferred fields (`benchmark`, `risk-category`, a flat subscription/redemption fee —
+  the provider exposes only a tiered `productFeeList[]` schedule — and a factsheet URL). Additive
+  only: all new `Fund`/`AssetAllocation` fields are appended and defaulted, the new `list_funds`
+  parameter is an appended keyword, and `SectorWeight` + the diagnostic are new exports.
+  ([#155](https://github.com/hungson175/vnfin/issues/155))
 - **`vnfin.corp_actions.dividends(...)` — the VSDC cash-dividend spine** (#163) — a new additive
   `vnfin.corp_actions` domain serving **v1 CASH dividends** scraped from the VSDC (Vietnam Securities
   Depository & Clearing) public announcement pages (`https://vsd.vn/vi/ad/{id}`), returning a

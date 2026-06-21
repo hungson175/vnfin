@@ -590,6 +590,9 @@ _WARNING_TOKENS_180 = (
     "board_unavailable",
     # #190 — list-level NAV-staleness warning on FundList.
     "fund_nav_stale",
+    # #155 — fund-metadata coverage tokens (list-level fees + detail-doc holdings coverage).
+    "fund_missing_fees",
+    "fund_partial_holdings",
     # #163 — VSDC cash-dividend corp-actions spine (per-event + per-result tokens).
     "ex_date_unavailable",
     "corp_action_source_partial",
