@@ -27,6 +27,15 @@ class Fund:
 
     ``nav_as_of`` is the provider's own NAV date (the date ``nav`` is as-of), or
     ``None`` when the provider omits it — never fabricated.
+
+    ``management_fee_pct`` is the disclosed annual management fee as a percent (e.g.
+    ``1.5`` for 1.5% p.a.), read from the LIST row when the provider discloses it —
+    ``None`` when absent (the provider lists it on equity rows only) or malformed,
+    never fabricated. ``inception_date`` (the fund's first-issue date) and
+    ``description`` (the provider's free-text blurb) are DETAIL-doc fields: they are
+    populated only on the detail-sourced path (see :meth:`asset_allocation`'s
+    :class:`AssetAllocation`) and stay ``None`` on a list-sourced ``Fund``. All three
+    are additive optional fields (defaulted, appended after ``nav_as_of``).
     """
 
     code: str
@@ -37,6 +46,9 @@ class Fund:
     asset_type: str
     currency: str = "VND"
     nav_as_of: Optional[date] = None
+    management_fee_pct: Optional[float] = None
+    inception_date: Optional[date] = None
+    description: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +171,17 @@ class AssetClassWeight:
 
 
 @dataclass(frozen=True)
+class SectorWeight:
+    """One industry/sector slice of a fund's portfolio: ``weight_pct`` (0-100) of NAV
+    in the industry ``industry`` (the provider's free-text industry label, kept
+    verbatim — no normalization, as the provider does not publish a canonical sector
+    taxonomy)."""
+
+    industry: str
+    weight_pct: float
+
+
+@dataclass(frozen=True)
 class AssetAllocation:
     """A fund's asset-class allocation (the equity/bond/cash split) plus provenance.
 
@@ -166,6 +189,14 @@ class AssetAllocation:
     portfolio breakdown by asset class. ``as_of_utc`` is the freshest provider
     ``updateAt`` across the allocation rows (``None`` when the provider omits it —
     never fabricated).
+
+    The detail document also carries (additively, #155): ``sector_weights`` — the
+    fund's per-industry breakdown as a tuple of :class:`SectorWeight` (empty when the
+    provider omits it; malformed rows are dropped fail-closed, never fabricated);
+    ``inception_date`` — the fund's first-issue date (``None`` when absent/malformed);
+    and ``description`` — the provider's free-text fund blurb (``None`` when
+    absent/blank/non-string). ``warnings`` may carry the detail-doc coverage token
+    ``fund_partial_holdings`` (disclosed top-holdings sum below the documented bound).
     """
 
     product_id: int
@@ -176,6 +207,9 @@ class AssetAllocation:
     as_of_utc: Optional[datetime] = None
     fetched_at_utc: Optional[datetime] = None
     warnings: tuple[str, ...] = ()
+    sector_weights: tuple[SectorWeight, ...] = ()
+    inception_date: Optional[date] = None
+    description: Optional[str] = None
 
     def __len__(self) -> int:
         return len(self.classes)

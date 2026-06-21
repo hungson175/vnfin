@@ -51,6 +51,7 @@ from .models import (
     FundList,
     NavHistory,
     NavPoint,
+    SectorWeight,
 )
 
 _BASE_URL = "https://api.fmarket.vn"
@@ -74,6 +75,21 @@ _NAV_END_GAP_CADENCE_WINDOW = 8         # most-recent diffs feeding the cadence 
 _FUND_NAV_STALE_DAYS = 7                 # gap == 7 NOT stale; gap == 8 stale
 _FUND_NAV_STALE = "fund_nav_stale"       # mechanical token prefix (fact-first)
 _FUND_NAV_STALE_CAP = 5                  # max enumerated stale codes before "+M more"
+
+# Issue #155: list-level "no disclosed management fee" warning on FundList. A fund
+# whose `management_fee_pct` is None (the provider lists managementFee on equity rows
+# only) is enumerated so a caller never mistakes an absent fee for a zero fee.
+_FUND_MISSING_FEES = "fund_missing_fees"  # mechanical token prefix (fact-first)
+_FUND_MISSING_FEES_CAP = 5                # max enumerated codes before "+M more"
+
+# Issue #155: detail-doc "disclosed top-holdings cover less than the bound" warning on
+# AssetAllocation. The disclosed top holdings (equity + bond) summing below this percent
+# of NAV means substantial portfolio exposure is undisclosed (top-N disclosure, not the
+# full book). A BOUNDED false-positive (a genuinely concentrated fund may still trip it)
+# is preferred over a false-negative that hides an opaque book (mirrors the #172
+# staleness principle). Documented in skills/vnfin/SKILL.md.
+_FUND_PARTIAL_HOLDINGS = "fund_partial_holdings"  # mechanical token prefix (fact-first)
+_FUND_PARTIAL_HOLDINGS_BOUND = 50.0               # warn when disclosed sum < this percent
 
 
 def _parse_json(text, who):
@@ -142,6 +158,36 @@ def _optional_str(value, *, ctx: str) -> str:
     return value.strip()
 
 
+def _optional_fee_pct(value):
+    """Coerce a provider ``managementFee`` to a non-negative percent float, or ``None``.
+
+    #155: the fee is an OPTIONAL display field — the provider lists ``managementFee``
+    on equity rows only. Absent / null / non-numeric / NaN / bool / negative all yield
+    ``None`` (never a fabricated or garbage value, never an exception that would blow up
+    the whole fund list). An integral or fractional finite non-negative number is kept.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if not isinstance(value, (int, float)):
+        return None
+    fee = float(value)
+    if not math.isfinite(fee) or fee < 0:
+        return None
+    return fee
+
+
+def _optional_detail_str(value):
+    """Return a stripped non-empty provider string (e.g. ``description``), else ``None``.
+
+    #155: a present-but-blank / whitespace-only / non-string value yields ``None``
+    (never fabricated, never an exception) — a free-text blurb is best-effort metadata.
+    """
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
 def _pick_manager(owner: dict, *, fund_code: str) -> str:
     for key in ("name", "shortName"):
         val = owner.get(key)
@@ -168,11 +214,20 @@ class FmarketFundSource(HttpDataSource):
 
     # --- public API -------------------------------------------------------
 
-    def list_funds(self, asset_type=None, search="", page_size: int = 100) -> FundList:
+    def list_funds(
+        self, asset_type=None, search="", page_size: int = 100, include_metadata: bool = True
+    ) -> FundList:
         """List VN open-ended mutual funds.
 
         ``asset_type`` optionally filters by provider asset-class code (e.g.
         ``"STOCK"``); ``search`` does a free-text name/code search.
+
+        ``include_metadata`` (default ``True``, #155) populates each ``Fund``'s
+        ``management_fee_pct`` from the LIST row (FREE — no extra request, the fee is
+        already on the filter response) and surfaces the ``fund_missing_fees`` warning
+        for funds with no disclosed fee. Pass ``include_metadata=False`` to skip both
+        (``management_fee_pct`` stays ``None`` and the warning is not emitted) for a
+        leaner, fee-agnostic listing. Either way exactly one request is issued.
         """
         if not isinstance(page_size, int) or isinstance(page_size, bool):
             raise InvalidData("fmarket: page_size must be an integer")
@@ -206,7 +261,7 @@ class FmarketFundSource(HttpDataSource):
         seen_ids: set[int] = set()
         funds: list[Fund] = []
         for r in rows:
-            fund = self._parse_fund(r)
+            fund = self._parse_fund(r, include_metadata=include_metadata)
             # Issue #68: dedupe on the case-insensitive code so "TESTCO" and " testco "
             # collide (fund.code is already stripped in _parse_fund).
             code_key = fund.code.casefold()
@@ -219,7 +274,12 @@ class FmarketFundSource(HttpDataSource):
             funds.append(fund)
         # Issue #190: surface list-level NAV staleness. `today` is injected via _today()
         # (deterministic in tests); the warning never invents a date and is leak-safe.
+        # Issue #155: when metadata is included, also surface funds with NO disclosed
+        # management fee (None) so an absent fee is never mistaken for a zero fee. Stale
+        # warning stays first; the fees warning is skipped when include_metadata=False.
         warnings = _fund_nav_stale_warning(funds, _today())
+        if include_metadata:
+            warnings = warnings + _fund_missing_fees_warning(funds)
         return FundList(
             funds=tuple(funds),
             source=self.name,
@@ -447,6 +507,13 @@ class FmarketFundSource(HttpDataSource):
             if row_as_of is not None and (as_of is None or row_as_of > as_of):
                 as_of = row_as_of
         code = data.get("code") if isinstance(data.get("code"), str) else None
+        # #155: surface the detail-doc metadata off the SAME document (no extra request):
+        # per-industry breakdown, first-issue date, free-text blurb, and a disclosed
+        # top-holdings coverage warning. All best-effort/fail-closed — never fabricated.
+        sector_weights = self._parse_sector_weights(data)
+        inception_date = _parse_inception_date(data.get("firstIssueAt"))
+        description = _optional_detail_str(data.get("description"))
+        warnings = _fund_partial_holdings_warning(data)
         return AssetAllocation(
             product_id=fid,
             classes=tuple(classes),
@@ -455,12 +522,33 @@ class FmarketFundSource(HttpDataSource):
             code=code,
             as_of_utc=as_of,
             fetched_at_utc=datetime.now(timezone.utc),
+            warnings=warnings,
+            sector_weights=sector_weights,
+            inception_date=inception_date,
+            description=description,
         )
+
+    @staticmethod
+    def _parse_sector_weights(data: dict) -> tuple[SectorWeight, ...]:
+        """Parse ``productIndustriesHoldingList`` off the detail doc into a tuple of
+        :class:`SectorWeight` (#155). Absent / non-array -> empty. Each row is parsed
+        fail-closed; a row that raises :class:`InvalidData` is DROPPED (never crashes the
+        whole call, never fabricated) — the good rows still surface."""
+        rows = data.get("productIndustriesHoldingList")
+        if not isinstance(rows, list):
+            return ()
+        out: list[SectorWeight] = []
+        for row in rows:
+            try:
+                out.append(FmarketFundSource._parse_sector_weight(row))
+            except InvalidData:
+                continue  # drop the malformed row, keep the rest
+        return tuple(out)
 
     # --- row parsers ------------------------------------------------------
 
     @staticmethod
-    def _parse_fund(row) -> Fund:
+    def _parse_fund(row, *, include_metadata: bool = True) -> Fund:
         if not isinstance(row, dict):
             raise InvalidData("fmarket: fund row is not an object")
         # Issue #33: fund code is a public fund identifier. Key-presence is the
@@ -520,6 +608,13 @@ class FmarketFundSource(HttpDataSource):
             dt = _parse_update_at(extra.get("lastNAVDate"))
             if dt is not None:
                 nav_as_of = dt.astimezone(VN_TZ).date()
+        # #155: the disclosed annual management fee (percent) is on the LIST row
+        # (equity rows only). Optional — absent/malformed -> None, never fabricated,
+        # never fatal. inception_date/description are DETAIL-doc fields (None here).
+        # Skipped entirely (left None) when include_metadata=False.
+        management_fee_pct = (
+            _optional_fee_pct(row.get("managementFee")) if include_metadata else None
+        )
         return Fund(
             code=str(code),
             name=name,
@@ -529,6 +624,7 @@ class FmarketFundSource(HttpDataSource):
             asset_type=asset_type,
             currency="VND",
             nav_as_of=nav_as_of,
+            management_fee_pct=management_fee_pct,
         )
 
     @staticmethod
@@ -661,6 +757,29 @@ class FmarketFundSource(HttpDataSource):
                 f"fmarket: asset-allocation {asset_class} weight out of range: {weight}"
             )
         return AssetClassWeight(asset_class=asset_class, weight_pct=weight)
+
+    @staticmethod
+    def _parse_sector_weight(row) -> SectorWeight:
+        """Parse one ``productIndustriesHoldingList`` row into a :class:`SectorWeight`.
+
+        #155: ``industry`` is a non-blank provider string (kept verbatim — no canonical
+        sector taxonomy exists); ``assetPercent`` is an ``_as_float`` range-checked 0-100.
+        Fail-CLOSED like :meth:`_parse_asset_class`: a non-object row / blank / non-string
+        industry / non-numeric / out-of-range weight raises :class:`InvalidData`. The
+        CALLER drops a raising row (never fabricates, never crashes the whole call).
+        """
+        if not isinstance(row, dict):
+            raise InvalidData("fmarket: sector-weight row is not an object")
+        industry = row.get("industry")
+        if not isinstance(industry, str) or not industry.strip():
+            raise InvalidData("fmarket: sector-weight industry is not a non-blank string")
+        industry = industry.strip()
+        weight = _as_float(row.get("assetPercent"), f"sector-weight {industry} weight")
+        if not (0.0 <= weight <= 100.0):
+            raise InvalidData(
+                f"fmarket: sector-weight {industry} weight out of range: {weight}"
+            )
+        return SectorWeight(industry=industry, weight_pct=weight)
 
     # --- transport --------------------------------------------------------
 
@@ -821,6 +940,84 @@ def _fund_nav_stale_warning(funds, today, *, threshold_days=_FUND_NAV_STALE_DAYS
         f"{today.isoformat()}: {enumerated}"
     )
     return (f"{_FUND_NAV_STALE}: {detail}",)
+
+
+def _fund_missing_fees_warning(funds) -> tuple[str, ...]:
+    """List-level "no disclosed management fee" warning for a SUCCESSFUL ``list_funds``.
+
+    Enumerates each ``Fund`` whose ``management_fee_pct`` is ``None`` (the provider
+    discloses ``managementFee`` on equity rows only) so a caller never reads an absent
+    fee as a zero fee. Returns a one-element tuple naming the affected fund codes
+    (capped at ``_FUND_MISSING_FEES_CAP`` + ``+M more``) when ≥1 fund lacks a fee, else
+    ``()``. Leak-safe: built only from fund codes — no exception trail, no secrets.
+    """
+    missing = [f for f in funds if f.management_fee_pct is None]
+    if not missing:
+        return ()
+    shown = missing[:_FUND_MISSING_FEES_CAP]
+    enumerated = ", ".join(f.code for f in shown)
+    more = len(missing) - len(shown)
+    if more > 0:
+        enumerated = f"{enumerated}, +{more} more"
+    detail = f"{len(missing)} fund(s) with no disclosed management fee: {enumerated}"
+    return (f"{_FUND_MISSING_FEES}: {detail}",)
+
+
+def _parse_inception_date(raw):
+    """Parse the detail-doc ``firstIssueAt`` (epoch-**ms** at VN-local midnight) into the
+    fund's first-issue VN calendar date, or ``None`` (#155).
+
+    Mirrors the ``nav_as_of`` path (``extra.lastNAVDate``): reuse the epoch-ms converter,
+    then take the VN calendar date. Absent / null / non-positive / garbage / fractional /
+    bool -> ``None`` (never fabricated, never fatal)."""
+    dt = _parse_update_at(raw)
+    if dt is None:
+        return None
+    return dt.astimezone(VN_TZ).date()
+
+
+def _disclosed_holdings_pct(data: dict) -> float:
+    """Sum the disclosed top-holdings weights (equity + bond) as a percent of NAV (#155).
+
+    Best-effort coverage gauge for the ``fund_partial_holdings`` warning: it sums the
+    ``netAssetPercent`` of every row in ``productTopHoldingList`` + ``productTopHoldingBondList``
+    that parses as a finite non-negative number. A malformed row contributes 0 (it is not
+    a hard error here — the asset-allocation call already validated the meaningful payload).
+    """
+    total = 0.0
+    for key in ("productTopHoldingList", "productTopHoldingBondList"):
+        rows = data.get(key)
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            val = row.get("netAssetPercent")
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
+                continue
+            w = float(val)
+            if math.isfinite(w) and w >= 0:
+                total += w
+    return total
+
+
+def _fund_partial_holdings_warning(data: dict) -> tuple[str, ...]:
+    """Detail-doc coverage warning for a SUCCESSFUL ``asset_allocation`` return (#155).
+
+    Returns a one-element tuple when the disclosed top-holdings (equity + bond) sum to
+    less than ``_FUND_PARTIAL_HOLDINGS_BOUND`` percent of NAV — i.e. substantial portfolio
+    exposure is undisclosed (top-N disclosure, not the full book) — else ``()``. A BOUNDED
+    false-positive (a genuinely concentrated fund) is preferred over a false-negative that
+    hides an opaque book. Leak-safe: built only from the bound + the computed percent."""
+    disclosed = _disclosed_holdings_pct(data)
+    if disclosed >= _FUND_PARTIAL_HOLDINGS_BOUND:
+        return ()
+    detail = (
+        f"disclosed top holdings cover only {disclosed:.1f}% of NAV "
+        f"(< {_FUND_PARTIAL_HOLDINGS_BOUND:.0f}% bound) — substantial portfolio "
+        f"exposure is undisclosed (top-N disclosure, not the full book)"
+    )
+    return (f"{_FUND_PARTIAL_HOLDINGS}: {detail}",)
 
 
 def _validate_product_id(product_id) -> int:

@@ -2,7 +2,7 @@
 
 Public API:
     - Typed models: ``Fund``, ``FundList``, ``NavPoint``, ``NavHistory``, ``FundHolding``,
-      ``AssetAllocation``, ``AssetClassWeight``.
+      ``AssetAllocation``, ``AssetClassWeight``, ``SectorWeight``.
     - Adapter: ``FmarketFundSource`` (Fmarket public, no-auth API).
 
 Example::
@@ -26,6 +26,7 @@ from .models import (
     FundList,
     NavHistory,
     NavPoint,
+    SectorWeight,
 )
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "FundHolding",
     "AssetAllocation",
     "AssetClassWeight",
+    "SectorWeight",
     "FmarketFundSource",
     "client",
     "source",

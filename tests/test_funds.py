@@ -24,6 +24,7 @@ from vnfin.funds import (
     FmarketFundSource,
     NavHistory,
     NavPoint,
+    SectorWeight,
 )
 
 # ---------------------------------------------------------------------------
@@ -35,6 +36,9 @@ FAKE_ID_A = 9001  # obviously-fake product ids (not real Fmarket ids)
 FAKE_ID_B = 9002
 FAKE_NAV_A = 11111.11  # fabricated NAV/unit values
 FAKE_NAV_B = 22222.22
+# #155: a FABRICATED epoch-MS inception stamp at VN-local midnight.
+# 2026-03-14 17:00:00 UTC == VN 2026-03-15 00:00 +07 -> VN calendar 2026-03-15.
+_FIRSTISSUEAT_VN_MIDNIGHT = 1773507600000
 
 
 def _fund_list_payload(rows=None, status=200, code=200):
@@ -118,6 +122,11 @@ def _holdings_payload(top=None, asset=None, industries=None, status=200, code=20
                 "code": fund_code,
                 "shortName": fund_code,
                 "nav": nav,
+                # #155: detail-doc metadata. firstIssueAt is an epoch-MS inception
+                # stamp (FABRICATED); description is a synthetic blurb.
+                "firstIssueAt": _FIRSTISSUEAT_VN_MIDNIGHT,
+                "description": "FAKE synthetic fund description blurb",
+                "managementFee": 1.5,
                 "productTopHoldingList": top,
                 "productAssetHoldingList": asset,
                 "productIndustriesHoldingList": industries,
@@ -2524,3 +2533,265 @@ def test_list_funds_appends_fund_nav_stale_warning(monkeypatch):
     matches = [w for w in fl.warnings if w.startswith("fund_nav_stale:")]
     assert len(matches) == 1
     assert "TESTCO@2026-03-15" in matches[0]
+
+
+# ---------------------------------------------------------------------------
+# #155: richer fund metadata (management_fee_pct, inception_date, description),
+# SectorWeight, fund_missing_fees / fund_partial_holdings warning tokens.
+# ---------------------------------------------------------------------------
+
+
+# --- management_fee_pct on the LIST row (free; equity-row-only -> Optional) ----
+
+def test_list_funds_management_fee_pct_from_list_row():
+    # The default equity row carries managementFee=1.0; the bond row omits it.
+    funds = _src(_fund_list_payload()).list_funds()
+    equity = funds.funds[0]
+    bond = funds.funds[1]
+    assert equity.management_fee_pct == pytest.approx(1.0)
+    assert bond.management_fee_pct is None  # absent -> None, never fabricated
+
+
+@pytest.mark.parametrize("bad", ["garbage", True, [], {}, None], ids=["str", "bool", "list", "dict", "null"])
+def test_list_funds_management_fee_pct_malformed_is_none(bad):
+    # A present-but-malformed managementFee must NOT crash the whole list and must
+    # NOT fabricate a value -> left None (fail-soft for an optional display field).
+    row = _fund_row_with_extra()
+    row["managementFee"] = bad
+    fund = _src(_fund_list_payload(rows=[row])).list_funds()[0]
+    assert fund.management_fee_pct is None
+
+
+def test_list_funds_management_fee_pct_negative_is_none():
+    # A negative fee is impossible -> dropped to None (never a fabricated/garbage value).
+    row = _fund_row_with_extra()
+    row["managementFee"] = -1.0
+    fund = _src(_fund_list_payload(rows=[row])).list_funds()[0]
+    assert fund.management_fee_pct is None
+
+
+def test_fund_back_compat_new_fields_default_none():
+    # Frozen-dataclass additive: an existing-style Fund(...) built without the new
+    # fields keeps working and defaults to None for all three.
+    f = Fund(code="TESTCO", name="X", id=FAKE_ID_A, nav=FAKE_NAV_A, manager="M", asset_type="STOCK")
+    assert f.management_fee_pct is None
+    assert f.inception_date is None
+    assert f.description is None
+
+
+def test_list_funds_inception_and_description_none_on_list_path():
+    # inception_date / description are DETAIL-doc fields, absent on the list row ->
+    # they stay None on the list-sourced Fund (never fabricated from the list).
+    funds = _src(_fund_list_payload()).list_funds()
+    assert funds.funds[0].inception_date is None
+    assert funds.funds[0].description is None
+
+
+# --- fund_missing_fees warning token (list-level) ------------------------------
+
+def test_list_funds_fund_missing_fees_warns_when_fee_absent(monkeypatch):
+    # The default bond row omits managementFee -> list carries fund_missing_fees
+    # enumerating the fund(s) with no disclosed fee.
+    _patch_today(monkeypatch, date(2024, 1, 1))  # keep nav-stale silent / deterministic
+    fl = _src(_fund_list_payload()).list_funds()
+    matches = [w for w in fl.warnings if w.startswith("fund_missing_fees")]
+    assert len(matches) == 1
+    assert "ZZZBOND" in matches[0]
+    assert "TESTCO" not in matches[0]  # the equity row HAS a fee -> not listed
+
+
+def test_list_funds_no_missing_fees_when_all_present(monkeypatch):
+    _patch_today(monkeypatch, date(2024, 1, 1))
+    rows = [_fund_row_with_extra()]
+    rows[0]["managementFee"] = 1.0
+    fl = _src(_fund_list_payload(rows=rows)).list_funds()
+    assert not any(w.startswith("fund_missing_fees") for w in fl.warnings)
+
+
+# --- include_metadata toggle (default TRUE; free, no extra request) ------------
+
+def test_list_funds_include_metadata_default_true_populates_fee():
+    # Default: management_fee_pct is populated from the row (no extra request).
+    funds = _src(_fund_list_payload()).list_funds()
+    assert funds.funds[0].management_fee_pct == pytest.approx(1.0)
+
+
+def test_list_funds_include_metadata_false_skips_fee_and_warning(monkeypatch):
+    # Opt-out: management_fee_pct is left None and no fund_missing_fees warning fires.
+    _patch_today(monkeypatch, date(2024, 1, 1))
+    funds = _src(_fund_list_payload()).list_funds(include_metadata=False)
+    assert all(f.management_fee_pct is None for f in funds.funds)
+    assert not any(w.startswith("fund_missing_fees") for w in funds.warnings)
+
+
+def test_list_funds_include_metadata_no_extra_request():
+    # The metadata is free off the existing filter call — exactly one request either way.
+    get = _capture_get(_fund_list_payload())
+    FmarketFundSource(http_get=get).list_funds(include_metadata=True)
+    assert len(get.calls) == 1
+    get2 = _capture_get(_fund_list_payload())
+    FmarketFundSource(http_get=get2).list_funds(include_metadata=False)
+    assert len(get2.calls) == 1
+
+
+# --- inception_date / description on the DETAIL doc (via asset_allocation) -----
+
+def test_asset_allocation_surfaces_inception_and_description():
+    alloc = _src(_holdings_payload()).asset_allocation(FAKE_ID_A)
+    assert alloc.inception_date == date(2026, 3, 15)  # firstIssueAt epoch-ms -> VN date
+    assert alloc.description == "FAKE synthetic fund description blurb"
+
+
+def test_asset_allocation_inception_absent_is_none():
+    base = json.loads(_holdings_payload())
+    base["data"].pop("firstIssueAt", None)
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert alloc.inception_date is None
+
+
+@pytest.mark.parametrize("bad", [None, 0, -1, "garbage", "1773507600000", True, 1.5], ids=["null", "zero", "neg", "str", "str_num", "bool", "frac"])
+def test_asset_allocation_inception_garbage_is_none(bad):
+    base = json.loads(_holdings_payload())
+    base["data"]["firstIssueAt"] = bad
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert alloc.inception_date is None
+
+
+def test_asset_allocation_description_absent_is_none():
+    base = json.loads(_holdings_payload())
+    base["data"].pop("description", None)
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert alloc.description is None
+
+
+@pytest.mark.parametrize("bad", [123, [], {}, True], ids=["int", "list", "dict", "bool"])
+def test_asset_allocation_description_non_string_is_none(bad):
+    base = json.loads(_holdings_payload())
+    base["data"]["description"] = bad
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert alloc.description is None
+
+
+def test_asset_allocation_description_blank_is_none():
+    base = json.loads(_holdings_payload())
+    base["data"]["description"] = "   "
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert alloc.description is None
+
+
+# --- SectorWeight model + parse productIndustriesHoldingList -------------------
+
+def test_sector_weight_model_frozen():
+    sw = SectorWeight(industry="Tech", weight_pct=50.0)
+    assert sw.industry == "Tech"
+    assert sw.weight_pct == pytest.approx(50.0)
+    with pytest.raises(Exception):
+        sw.weight_pct = 1.0  # type: ignore[misc]
+
+
+def test_asset_allocation_surfaces_sector_weights():
+    alloc = _src(_holdings_payload()).asset_allocation(FAKE_ID_A)
+    assert all(isinstance(s, SectorWeight) for s in alloc.sector_weights)
+    by_ind = {s.industry: s.weight_pct for s in alloc.sector_weights}
+    assert by_ind["Fake industry one"] == pytest.approx(50.0)
+    assert by_ind["Fake industry two"] == pytest.approx(25.0)
+
+
+def test_asset_allocation_sector_weights_absent_is_empty():
+    base = json.loads(_holdings_payload())
+    base["data"].pop("productIndustriesHoldingList", None)
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert alloc.sector_weights == ()
+
+
+def test_asset_allocation_sector_weights_empty_list_is_empty():
+    alloc = _src(_holdings_payload(industries=[])).asset_allocation(FAKE_ID_A)
+    assert alloc.sector_weights == ()
+
+
+@pytest.mark.parametrize(
+    "bad_row",
+    [
+        {"industry": "", "assetPercent": 10.0},          # blank industry
+        {"industry": "   ", "assetPercent": 10.0},       # whitespace industry
+        {"industry": 123, "assetPercent": 10.0},         # non-string industry
+        {"assetPercent": 10.0},                          # missing industry
+        {"industry": "X", "assetPercent": "garbage"},    # non-numeric weight
+        {"industry": "X", "assetPercent": 150.0},        # out-of-range weight
+        {"industry": "X", "assetPercent": -1.0},         # negative weight
+        {"industry": "X"},                               # missing weight
+        "not-a-dict",                                    # non-object row
+    ],
+    ids=["blank", "ws", "non_str", "missing_ind", "bad_weight", "oob", "neg", "missing_weight", "non_obj"],
+)
+def test_asset_allocation_sector_weights_fail_closed_drops_malformed(bad_row):
+    # Fail-closed like _parse_asset_class_row: a malformed sector row is DROPPED
+    # (never crashes the whole call, never fabricates) — the good rows still surface.
+    good = {"industry": "Good industry", "assetPercent": 30.0}
+    alloc = _src(_holdings_payload(industries=[bad_row, good])).asset_allocation(FAKE_ID_A)
+    inds = [s.industry for s in alloc.sector_weights]
+    assert "Good industry" in inds
+    assert len(alloc.sector_weights) == 1  # only the good row survives
+
+
+def test_asset_allocation_sector_weights_non_array_is_empty():
+    # A present-but-non-array productIndustriesHoldingList must not crash -> empty.
+    base = json.loads(_holdings_payload())
+    base["data"]["productIndustriesHoldingList"] = "not-an-array"
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert alloc.sector_weights == ()
+
+
+# --- fund_partial_holdings warning token (detail-doc coverage% bound) ----------
+
+def test_asset_allocation_fund_partial_holdings_warns_below_bound():
+    # Disclosed top holdings sum to a low coverage% (< the documented bound) ->
+    # AssetAllocation.warnings carries fund_partial_holdings.
+    top = [
+        {"stockCode": "FAKE1", "netAssetPercent": 5.0, "type": "STOCK"},
+        {"stockCode": "FAKE2", "netAssetPercent": 4.0, "type": "STOCK"},
+    ]  # 9% disclosed -> well below the bound
+    alloc = _src(_holdings_payload(top=top)).asset_allocation(FAKE_ID_A)
+    matches = [w for w in alloc.warnings if w.startswith("fund_partial_holdings")]
+    assert len(matches) == 1
+
+
+def test_asset_allocation_no_partial_holdings_when_above_bound():
+    top = [
+        {"stockCode": "FAKE1", "netAssetPercent": 40.0, "type": "STOCK"},
+        {"stockCode": "FAKE2", "netAssetPercent": 35.0, "type": "STOCK"},
+    ]  # 75% disclosed -> above the bound
+    alloc = _src(_holdings_payload(top=top)).asset_allocation(FAKE_ID_A)
+    assert not any(w.startswith("fund_partial_holdings") for w in alloc.warnings)
+
+
+def test_asset_allocation_partial_holdings_counts_bonds_too():
+    # Coverage sums equity + bond top-holdings (a bond fund discloses only bonds).
+    bond = [
+        {"stockCode": "ZZZBOND1", "netAssetPercent": 30.0, "type": "BOND"},
+        {"stockCode": "ZZZBOND2", "netAssetPercent": 30.0, "type": "BOND"},
+    ]  # 60% disclosed -> above the bound, no warning
+    alloc = _src(
+        _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
+    ).asset_allocation(FAKE_ID_A)
+    assert not any(w.startswith("fund_partial_holdings") for w in alloc.warnings)
+
+
+def test_asset_allocation_partial_holdings_no_disclosed_holdings_warns():
+    # No top-holdings disclosed at all -> 0% coverage -> warns (still served, never
+    # raises: asset allocation is the meaningful payload here).
+    base = json.loads(_holdings_payload())
+    base["data"]["productTopHoldingList"] = []
+    base["data"].pop("productTopHoldingBondList", None)
+    alloc = _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    assert any(w.startswith("fund_partial_holdings") for w in alloc.warnings)
+
+
+def test_asset_allocation_back_compat_new_fields_default():
+    # Additive: an AssetAllocation built without the new fields keeps working.
+    a = AssetAllocation(
+        product_id=1, classes=(), source="fmarket"
+    )
+    assert a.sector_weights == ()
+    assert a.inception_date is None
+    assert a.description is None
