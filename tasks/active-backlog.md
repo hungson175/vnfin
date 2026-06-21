@@ -289,11 +289,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 + #187 both ✅
   DONE+PUSHED+CLOSED** (#181 Codex×1 APPROVE `1cc8a44`; #187 Codex×2 APPROVE_WITH_NOTES `ac7ca65`).
   Both delegated to fresh general-purpose agents in separate worktrees, TDD vs committed specs, synthetic
-  fixtures; **#191** (test-hardening) filed from #187's 2 non-blocking notes. **IN FLIGHT:** #184 docs
-  ✅ committed `1b24f54` (NOT pushed — awaiting Codex×1 docs review); **#188** forward-discovery guard
-  design APPROVED (`/tmp/vnfin-188-gate.md`, coverage refinement = exact-match unless `_`-family prefix)
-  → TDD build delegated to a fresh general-purpose agent in worktree `wt-188` (spec `2a414f4`). **NEXT:**
-  #189 (board_unavailable) rides #188's hardened guard — design gate AFTER #188 lands.
+  fixtures; **#191** (test-hardening) filed from #187's 2 non-blocking notes. **#184 docs ✅ DONE+PUSHED+
+  CLOSED** (Codex×1 APPROVE zero blockers; pushed `ac7ca65..ae7829d`, auto-closed via "Closes #184",
+  resolution comment posted). **IN FLIGHT:** **#188** forward-discovery guard design APPROVED
+  (`/tmp/vnfin-188-gate.md`, coverage refinement = exact-match unless `_`-family prefix) → TDD build
+  delegated to a fresh general-purpose agent in worktree `wt-188` (spec `2a414f4`); awaiting agent green
+  → then integrate on merged tree + route Codex×1. **NEXT:** #189 (board_unavailable) rides #188's
+  hardened guard — design gate AFTER #188 lands.
 
   **LANDED THIS BATCH (#181 + #187 — both closed):**
   - **#187 (bug) — midnight-open placeholder recovery (index D1) — ✅ DONE + PUSHED + CLOSED.** Codex×2
@@ -311,15 +313,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     warning (`fund_nav_stale` + clock seam + bounded threshold) filed as #190** (design-first).
 
   **QUEUED (reviewer source-vet DONE + triaged; batch AFTER #187/#181):**
-  - **#184 — DOCS-ONLY ✅ DONE (committed `1b24f54`, NOT pushed — awaiting Codex×1 docs review).** NO clean keyless
-    server-reachable ToS-safe SPY/^GSPC source exists. Builder actions: (1) DOCS — world-index from a
-    server effectively requires `ALPHAVANTAGE_API_KEY` (BYOK); (2) TOMBSTONE Stooq ^SPX — structurally
-    anti-bot-blocked from datacenter IPs (dead since 2020-12), so its `AllSourcesFailed` is NOT transient;
-    decision (reviewer CONFIRMED 09:54) = document residential-only (KEEP path, NOT remove) so callers stop
-    reading it as a flaky bug; (3) do NOT add Yahoo as default (query1/2 works keyless but ToS prohibits
-    OSS/unofficial-endpoint use) — at most a disabled-by-default opt-in `unofficial_yahoo` adapter w/ ToS
-    disclaimer = separate design decision, DEFER. NOT a new adapter, safe to batch. **Defer to AFTER
-    #187/#181** (edits CHANGELOG/docs — avoid collision with the two in-flight worktrees).
+  - **#184 — DOCS-ONLY ✅ DONE+PUSHED+CLOSED** (`ae7829d` on origin, Codex×1 APPROVE zero blockers,
+    review-202606211021-184-world-index-docs-approve). NO clean keyless server-reachable ToS-safe
+    SPY/^GSPC source exists → documented: (1) world-index from a server effectively requires
+    `ALPHAVANTAGE_API_KEY` (BYOK); (2) Stooq ^SPX relabelled **residential-only** (anti-bot-blocked from
+    datacenter IPs since ~2020-12, KEPT in chain not removed) so a keyless datacenter `AllSourcesFailed`
+    reads as EXPECTED not flaky; (3) Yahoo deliberately NOT added (ToS). Docstrings-only in
+    `world_sources.py`; no chain/code change, no new token, snapshot frozen; `docs/api.md` SKIP confirmed
+    correct (no existing indices.world entry). 5 files: indices-world.md, world_sources.py, SKILL.md,
+    domains.md, CHANGELOG.
   - **#182 — domestic VN gold history source-hunt → accept-pending-source (reviewer triaged).** Still NO
     clean domestic-gold history source; `gold.domestic_history()` stays a source-gap NotImplementedError.
     No build action until a source is found.
