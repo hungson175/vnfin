@@ -12,28 +12,32 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-21 11:07 +07_
+_Last synced: 2026-06-21 11:2x +07_
 
 > **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
 > worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
 > (stop the serial one-issue crawl). Plan: `/tmp/vnfin-batch-plan-202606211040.md`.
-> - **WAVE 1 — gate APPROVED (all 4) → fan-out DONE → INTEGRATED + GREEN → ROUTED for parallel review
->   (2026-06-21 ~11:1x):** #189 `board_unavailable` (equities), #190 `fund_nav_stale` (funds),
->   #191 test-harden #187 matrix, #192 def-use trace. Specs `tasks/189..192-*.md` (gate-locked).
->   Workflow `wf_0493ba36-1dd` fanned out 4 parallel worktree builds (all green per-branch).
->   **Integrated on master (linear cherry-pick onto `0870a37`):** `1d9dd25` #191 → `e3bd6ce` #192 →
->   `bbb10c0` #189 → `21c39b9` #190 (HEAD, UNPUSHED). Registry conflicts (tuple/SKILL) resolved
->   keep-both. **Merged-tree gate ALL GREEN:** full suite 3468 pass/0 fail; #188 guard + #192 trace
->   green; `board_unavailable`+`fund_nav_stale` FORWARD-discovered (discovered=36==tuple=36); snapshot
->   byte-frozen. Handoff: `/tmp/vnfin-wave1-integrated-handoff.md`. **4 deviations flagged** (KEY: #191
->   gap-(B) direction was reversed vs gate wording — gate's "delete back-out→InvalidData" is
->   mathematically impossible; agent did the achievable inverse, verified vs udf.py:423 + matches #187
->   NOTE-B). **AWAITING reviewer parallel code-review (4 sub-agents, #189 most adversarial) → on APPROVE:
->   push master (4 commits) + close #189/#190/#191/#192. Watermark left to reviewer.**
-> - **WAVE 2 — design-first/source-vet (after W1 lands):** #152 (fixed-income/yield curve), #155 (fund
->   metadata — defer to avoid #190 funds collision), #163 (dividends/corp-actions; HNX+VSDC vetted),
->   #175 (PIT index membership), #182 (gold history source-hunt; reviewer = no clean source). Send the
->   reviewer ONE design gate at a time.
+> - **WAVE 1 — ✅ DONE + PUSHED + CLOSED (2026-06-21 ~11:2x):** #189 `board_unavailable` (equities),
+>   #190 `fund_nav_stale` (funds), #191 test-harden #187 matrix, #192 def-use trace. Workflow
+>   `wf_0493ba36-1dd` fanned out 4 parallel worktree builds; integrated linear cherry-pick onto `0870a37`
+>   (`1d9dd25` #191 → `e3bd6ce` #192 → `bbb10c0` #189 → `21c39b9` #190) + backlog `f865f5a`. **Reviewer
+>   BATCH VERDICT = APPROVE all 4** (4 parallel sub-agents, NO disagreement, ZERO blockers;
+>   review-202606211112-wave1-batch-189-190-191-192; #191 gap-(B) reversal independently re-derived +
+>   mutation-RAN by reviewer = CORRECT). **Pushed `60459ef..f865f5a`; all 4 closed w/ resolution
+>   comments.** Merged-tree gate was ALL GREEN (3468 pass, forward-discovery 36==36, snapshot frozen).
+>   2 non-blocking nits NOT actioned (would change approved SHAs): (a) #191 commit-msg says 34 not 36
+>   cosmetic, file untouched so snapshot truly frozen; (b) #192 N1 shape-(c) helper-return convention.
+>   Watermark left to reviewer.
+> - **WAVE 2 — ACTIVE QUEUE (design-first/source-vet; one design gate to reviewer at a time):** scoping
+>   Workflow `wf_46081884-f22` (5 parallel agents, VNStock-blacklist enforced) producing gate-ready
+>   design notes. **#175** PIT index membership — Tier-1 (`as_of`+current-snapshot warning, NO new
+>   source) is build-now-small + ships FIRST; Tier-2 (historical basket) source-gated on HOSE reviews.
+>   **#152** fixed-income/yield-curve — new `rates`/`bonds` domain, source-vet ADB/HNX/SBV.
+>   **#163** dividends/corp-actions — new domain, source-vet VSDC/HNX (else diagnostics-only fallback).
+>   **#155** fund metadata — **UNBLOCKED now #190 landed** (funds/ collision gone); additive Fmarket
+>   metadata/allocation + diagnostics. **#182** gold domestic history — explicit source RE-PROBE tracker;
+>   reviewer = no clean source → likely document re-probe + CLOSE (world-reference line stands). Send the
+>   reviewer ONE design gate at a time (reviewer's stated W2 order: #152/#155/#163/#175).
 >
 > **#188 forward-discovery guard — ✅ DONE + PUSHED + CLOSED** (`ae7829d..60459ef`; Codex×1 APPROVE +
 > 1 doc-comment must-fix folded). AST forward-discovers emitted `.warnings` tokens, asserts
