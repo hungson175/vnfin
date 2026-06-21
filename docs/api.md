@@ -284,15 +284,22 @@ date, the pay date, and the ratio/cash per share — but **no ex-date** — so i
   `CashDividendEvent` carries the `ex_date_unavailable` token. Never fabricated/derived.
 - **CASH dividends only** — STOCK / RIGHTS / BONUS are deferred to v2.
 - the source is an **HTML scrape** (more fragile than the library's JSON sources): a
-  recognized cash dividend whose amounts cannot be parsed keeps `cash_per_share` /
-  `ratio_pct` as `None` and carries `vsdc_parse_degraded` (never silently dropped), and
-  every `DividendHistory` carries `corp_action_source_partial` (the VSDC spine alone).
+  recognized cash dividend with ≥1 unparseable **primary field** (the record date, or both
+  `ratio_pct` and `cash_per_share`) keeps those fields `None` and carries
+  `vsdc_parse_degraded` (surfaced, never dropped — an undated event is then windowed by its
+  `pay_date`); every `DividendHistory` carries `corp_action_source_partial` (the VSDC spine
+  alone); and an incomplete crawl is disclosed per-result via
+  `coverage_truncated_at_max_fetch` (stopped at `max_fetch` with same-org pages still
+  un-fetched) and `corp_action_fetch_incomplete` (≥1 same-org page failed to fetch). Coverage
+  is never silently truncated.
 
 - `vnfin.corp_actions.dividends(symbol, *, start=None, end=None, http_get=None,
   timeout=25.0, seed_id=None, max_fetch=300) -> DividendHistory` — discover (a supplied
-  `seed_id`, else a bounded recent-ID window scan), crawl the seed's same-org sidebar,
-  fetch+parse each page, and return the company's cash-dividend events within
-  `[start, end]` (by record date). `currency="VND"`.
+  `seed_id`, else a bounded recent-ID window scan), run a **bounded multi-hop BFS** over the
+  seed's same-org sidebar graph (visited-set cycle guard, one fetch per page, capped by
+  `max_fetch` — a positive int; a non-positive budget raises `InvalidData`), fetch+parse each
+  page, and return the company's cash-dividend events within `[start, end]` (by record date,
+  falling back to pay date when the record date is unparseable). `currency="VND"`.
 - `vnfin.corp_actions.VsdcCashDividendSource(...)` — the scrape adapter
   (`.dividends(...)`, `.parse_announcement(html)`, `.discover_same_org_ids(html)`).
 - `CashDividendEvent` / `DividendHistory` / `CorpActionSource` are the typed models +

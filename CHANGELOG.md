@@ -22,16 +22,23 @@ All notable changes to `vnfin` are documented here. The format follows
   Depository & Clearing) public announcement pages (`https://vsd.vn/vi/ad/{id}`), returning a
   `DividendHistory` of typed `CashDividendEvent` (`code`, `kind="CASH"`, `cash_per_share` VND/share,
   `ratio_pct`, `record_date`, `pay_date`, `div_year`, `as_of` = the provider's own publish time,
-  `exchange`, `announcement_id`, `warnings`). Discovery is a same-org sidebar crawl from a `seed_id`
-  plus a bounded recent-ID window scan; the pure parser pairs label→value by the `item-info` /
-  `item-info-main` CSS classes (never by `col-md-*` width) and isolates all HTML parsing behind a
-  tight, fixture-pinned contract. **Scope/limits, disclosed via always-present warning tokens:**
-  `ex_date` is **ALWAYS `None`** in v1 — the depository publishes no ex-date and the VNDirect finfo
-  enrichment leg is **held** for v2 (pre-2022 floor noted) — so every event carries
-  `ex_date_unavailable` (never fabricated/derived); every result carries `corp_action_source_partial`
-  (the VSDC depository spine alone); and a recognized cash dividend whose ratio/cash cannot be parsed
-  keeps the amounts `None` and carries `vsdc_parse_degraded` (never silently dropped). STOCK / RIGHTS /
-  BONUS dividends are deferred to v2. Also adds the **offline** diagnostic
+  `exchange`, `announcement_id`, `warnings`). Discovery is a **bounded multi-hop BFS** over the
+  same-org "Tin cùng tổ chức" sidebar graph from a `seed_id` (auto-found via a bounded recent-ID
+  window scan when omitted), with a visited-set cycle guard and a single fetch per page, capped by
+  `max_fetch` (a positive int — a non-positive budget raises `InvalidData`). The pure parser pairs
+  label→value by the `item-info` / `item-info-main` CSS classes (never by `col-md-*` width), binds
+  each cash amount to the `%/cổ phiếu` ratio **closest before** its `được nhận … đồng` parenthetical
+  (never the first % on a bundled line), and isolates all HTML parsing behind a tight, fixture-pinned
+  contract. **Scope/limits, disclosed via never-silent warning tokens:** `ex_date` is **ALWAYS `None`**
+  in v1 — the depository publishes no ex-date and the VNDirect finfo enrichment leg is **held** for v2
+  (pre-2022 floor noted) — so every event carries `ex_date_unavailable` (never fabricated/derived);
+  every result carries `corp_action_source_partial` (the VSDC depository spine alone); a recognized
+  cash dividend with ≥1 unparseable PRIMARY field (the record date, or both ratio and cash) keeps those
+  fields `None` and carries `vsdc_parse_degraded` (surfaced, never dropped — an undated event is then
+  windowed by its `pay_date`); and an incomplete crawl is disclosed per-result via
+  `coverage_truncated_at_max_fetch` (stopped at `max_fetch` with the frontier unexhausted) and
+  `corp_action_fetch_incomplete` (≥1 same-org page failed to fetch). STOCK / RIGHTS / BONUS dividends
+  are deferred to v2. Also adds the **offline** diagnostic
   `vnfin.diagnostics.explain_corp_actions_coverage()` (status `ex_date_unavailable`) stating the
   cash-only + ex-date-unavailable + v2 scope and a `corp_actions` `SourceCapability`. Additive only:
   new domain + diagnostic, no change to existing surfaces. ([#163](https://github.com/hungson175/vnfin/issues/163))
