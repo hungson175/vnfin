@@ -17,6 +17,15 @@ All notable changes to `vnfin` are documented here. The format follows
   keyless path. ([#184](https://github.com/hungson175/vnfin/issues/184))
 
 ### Added
+- **`current_snapshot_only` — current-vs-point-in-time disclosure on `index_constituents`** (#175,
+  Tier-1) — `vnfin.indices.index_constituents(...)` now appends an **always-present, never-silent**
+  `current_snapshot_only` token to `IndexConstituents.warnings` on every successful basket, disclosing
+  that the membership is the **CURRENT** basket as fetched, NOT a point-in-time/historical snapshot, so
+  backtests using it inherit survivorship and look-ahead bias. The SSI group endpoint exposes no
+  provider data/effective date, so `IndexConstituents.as_of` stays the honest `None` — never fabricated
+  from `now()` or the fetch clock. Additive only: no `index_constituents` signature change and no
+  result-type/surface change (the `as_of` field already existed). Point-in-time/historical membership
+  lookup is out of scope (source-gated). ([#175](https://github.com/hungson175/vnfin/issues/175))
 - **`fund_nav_stale` — list-level NAV-staleness warning on `FundList`** (#190) — `funds.list_funds()`
   now appends a single `fund_nav_stale` token to `FundList.warnings` when ≥1 listed fund's own
   `nav_as_of` is older than 7 calendar days, ending the silent staleness that #172/#173 fixed for

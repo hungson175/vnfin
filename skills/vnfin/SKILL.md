@@ -133,6 +133,7 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `stitched_multi_source` | `index_history_stitched` | History stitched across per-calendar-year segments (each stitched year also emits a `stitched_segment` provenance line). | #147 |
 | `stitched_segment` | `index_history_stitched` | Per-segment provenance of a stitched series — which source served a given calendar year and how many bars (`stitched_segment: <year> <source> (<n> bars)`). | #147 |
 | `weights_not_available` | `index_constituents` | Membership only — no per-stock index weights (`weight=None`); never fabricated. | — |
+| `current_snapshot_only` | `index_constituents` | **Always present** — the basket is the CURRENT membership as fetched, NOT a point-in-time/historical snapshot (`as_of=None`, never fabricated); backtests using it inherit survivorship and look-ahead bias. | #175 |
 | `fallback_instrument_served` | `indices.world` | Requested SPY (USD/share) unavailable; served Stooq `^SPX` (index points, ~10× different magnitude) — rebase before comparing. | #177 |
 | `world_reference_excludes_domestic_premium` | `gold.world_reference_history_vnd` | **Always present** — world-gold-implied VND, excludes the +10–21% VN domestic (SJC/BTMC) premium; NOT the domestic price. | #178 |
 | `world_reference_annual_basis` | `gold.world_reference_history_vnd` | **Always present** — one point per calendar year (annual-avg gold × annual USD/VND × 37.5/31.1035), stamped Jan-1; not a daily series. | #178 |

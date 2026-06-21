@@ -87,6 +87,17 @@ is therefore always `None` and `IndexConstituents.has_weights` is `False`; a
 API (HOSE / VietStock / CafeF / finfo all dead-ended); official weighted baskets
 exist only in HOSE periodic PDF/Excel. Weights are flagged, never fabricated.
 
+### Current snapshot only — NOT point-in-time (#175)
+
+Every successful basket also carries an **always-present** `current_snapshot_only`
+warning: this endpoint returns the **CURRENT** membership as fetched, not a
+point-in-time/historical snapshot. There is no provider data/effective date in the
+payload, so `IndexConstituents.as_of` stays `None` — it is **never** fabricated from
+`now()` or the fetch clock (a stand-in date would falsely imply point-in-time
+membership). Backtests that treat this basket as historical inherit **survivorship**
+and **look-ahead bias**; historical/PIT membership is out of scope (no clean,
+redistributable effective-dated feed — HOSE publishes only date-stamped human PDFs).
+
 ## Compliance / redistribution
 
 No published redistribution grant on any of these endpoints (no robots.txt — 404 on

@@ -556,6 +556,8 @@ _WARNING_TOKENS_180 = (
     "stitched_multi_source",
     "stitched_segment",
     "weights_not_available",
+    # #175 Tier-1 — index_constituents is the CURRENT basket, not point-in-time.
+    "current_snapshot_only",
     "fallback_instrument_served",
     "world_reference_excludes_domestic_premium",
     "world_reference_annual_basis",

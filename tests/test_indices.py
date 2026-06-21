@@ -829,6 +829,41 @@ def test_constituents_no_weights_flag():
     assert res.members[0].weight is None
 
 
+# --- Issue #175 Tier-1: current-snapshot disclosure (never-silent) + honest as_of=None ----
+
+
+def _token_prefixes(warnings) -> set[str]:
+    return {w.split(":", 1)[0].strip() for w in warnings}
+
+
+def test_constituents_emits_current_snapshot_only_warning():
+    # #175 Tier-1: every successful basket must disclose that membership is the CURRENT
+    # snapshot (NOT point-in-time/historical) so backtests cannot silently inherit
+    # survivorship / look-ahead bias. Always present, never silent.
+    s = IndexConstituentsSource(http_get=_get(_constituents_payload()))
+    res = s.get_constituents("VN30")
+    assert "current_snapshot_only" in _token_prefixes(res.warnings)
+    # Regression: the pre-existing weights disclosure is still present alongside it.
+    assert "weights_not_available" in _token_prefixes(res.warnings)
+    # member parsing / dedup / accessors unchanged
+    assert res.symbols == ("TESTCO", "ZZZ", "FAKE1")
+    assert len(res) == 3
+    assert res.has_weights is False
+    assert list(res.to_dataframe()["symbol"]) == ["TESTCO", "ZZZ", "FAKE1"]
+
+
+def test_constituents_as_of_none_when_provider_has_no_date():
+    # #175 Tier-1: the SSI payload exposes no provider data-date, so as_of stays the
+    # honest None — NEVER fabricated from now() / the fetch clock. The disclosure token
+    # is still emitted (the warning is the load-bearing deliverable, not a fake as_of).
+    s = IndexConstituentsSource(http_get=_get(_constituents_payload()))
+    res = s.get_constituents("VN30")
+    assert res.as_of is None
+    # never a stand-in for the fetch timestamp / any clock value
+    assert res.as_of != res.fetched_at_utc
+    assert "current_snapshot_only" in _token_prefixes(res.warnings)
+
+
 def test_constituents_empty_data_raises_empty():
     s = IndexConstituentsSource(http_get=_get(_constituents_payload(members=[])))
     with pytest.raises(EmptyData):

@@ -224,8 +224,18 @@ class IndexConstituentsSource(HttpDataSource):
             members=tuple(members),
             provider_group=group,
             fetched_at_utc=datetime.now(timezone.utc),
+            # Issue #175 Tier-1: this endpoint exposes no provider data/effective date, so
+            # ``as_of`` stays the honest ``None`` — NEVER fabricated from ``now()`` or the
+            # fetch clock (a stand-in date would falsely imply point-in-time membership).
             as_of=None,
-            warnings=("weights_not_available: SSI group endpoint exposes membership only",),
+            warnings=(
+                "weights_not_available: SSI group endpoint exposes membership only",
+                # Issue #175 Tier-1: always-present, never-silent disclosure — the basket is
+                # the CURRENT membership as fetched, NOT a point-in-time/historical snapshot.
+                "current_snapshot_only: membership is the CURRENT basket as fetched; NOT a "
+                "point-in-time/historical snapshot — backtests using it inherit survivorship "
+                "and look-ahead bias",
+            ),
         )
 
     @staticmethod
