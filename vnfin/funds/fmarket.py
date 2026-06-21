@@ -40,6 +40,7 @@ from .._contracts import (
     require_present,
 )
 from ..exceptions import EmptyData, InvalidData, SourceUnavailable, StaleData
+from ..sources.base import VN_TZ
 from ..transport import DEFAULT_UA, HttpDataSource
 from ..validation import validate_iso_date_string
 from .models import (
@@ -496,6 +497,18 @@ class FmarketFundSource(HttpDataSource):
             name = code
         else:
             name = _optional_str(raw_name, ctx=f"fund {code} name") or code
+        # #181: the provider's OWN per-fund NAV date lives at extra.lastNAVDate, an
+        # epoch-ms at VN-local midnight. Reuse the epoch-ms converter, then take the
+        # VN calendar date. Never fabricate: absent extra / absent / null / non-
+        # positive / garbage lastNAVDate -> None (the converter returns None), and a
+        # missing nav date must never blow up the whole list. The two `updateAt`
+        # distractors (top-level + productNavChange) are deliberately NOT used.
+        extra = row.get("extra")
+        nav_as_of = None
+        if isinstance(extra, dict):
+            dt = _parse_update_at(extra.get("lastNAVDate"))
+            if dt is not None:
+                nav_as_of = dt.astimezone(VN_TZ).date()
         return Fund(
             code=str(code),
             name=name,
@@ -504,6 +517,7 @@ class FmarketFundSource(HttpDataSource):
             manager=manager,
             asset_type=asset_type,
             currency="VND",
+            nav_as_of=nav_as_of,
         )
 
     @staticmethod

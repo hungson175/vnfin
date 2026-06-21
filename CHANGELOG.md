@@ -7,6 +7,11 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **`Fund.nav_as_of` — the provider's own per-fund NAV date** (#181) — an additive optional
+  `Optional[date]` field on the frozen `Fund` result, parsed from the Fmarket filter row's
+  `extra.lastNAVDate` (epoch-ms at VN-local midnight) and converted to the VN calendar date so callers
+  can tell how fresh `nav` is. Never fabricated: absent/null/non-positive/garbage `lastNAVDate` →
+  `None` (no raise). ([#181](https://github.com/hungson175/vnfin/issues/181))
 - **`vnfin.equities.universe(...)` — the investable VN equity universe per board** (#167) — a new
   additive `vnfin.equities` domain that enumerates the investable equities per board (HOSE/HNX/UPCOM)
   from the public SSI iBoard stock-group endpoint, with source-backed per-symbol reference metadata

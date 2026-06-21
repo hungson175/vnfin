@@ -24,6 +24,9 @@ class Fund:
     NAV-history and holdings endpoints). ``nav`` is the latest NAV per unit in VND.
     ``asset_type`` is the provider asset-class code (e.g. ``STOCK``/``BOND``/
     ``BALANCED``).
+
+    ``nav_as_of`` is the provider's own NAV date (the date ``nav`` is as-of), or
+    ``None`` when the provider omits it — never fabricated.
     """
 
     code: str
@@ -33,6 +36,7 @@ class Fund:
     manager: str
     asset_type: str
     currency: str = "VND"
+    nav_as_of: Optional[date] = None
 
 
 @dataclass(frozen=True)

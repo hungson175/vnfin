@@ -372,6 +372,99 @@ def test_list_funds_integral_float_status_still_accepted():
     assert len(funds) >= 1
 
 
+# ---------------------------------------------------------------------------
+# #181: Fund.nav_as_of (per-fund NAV freshness date from extra.lastNAVDate)
+# ---------------------------------------------------------------------------
+#
+# extra.lastNAVDate is an epoch-MILLISECOND value at VN-local midnight. We parse
+# it into the provider's own NAV calendar date (VN tz), never fabricate one, and
+# IGNORE the two distractors (top-level updateAt + productNavChange.updateAt).
+#
+# Epoch values below are FABRICATED (computed, not real provider rows):
+#   17:00:00 UTC 2026-03-14 -> VN 2026-03-15 (00:00 +07) -> NEXT VN day
+#   16:59:59 UTC 2026-03-14 -> VN 2026-03-14 (23:59:59 +07) -> previous VN day
+_LASTNAVDATE_VN_MIDNIGHT = 1773507600000  # 2026-03-14 17:00:00 UTC == VN 2026-03-15 00:00 +07
+_LASTNAVDATE_PREV_VN_DAY = 1773507599000  # 2026-03-14 16:59:59 UTC == VN 2026-03-14 23:59:59 +07
+
+
+def _fund_row_with_extra(extra="__omit__"):
+    """One minimal valid fund row; ``extra`` injected verbatim (omit the key when
+    ``"__omit__"``) so a test can exercise present/absent/garbage lastNAVDate."""
+    row = {
+        "id": FAKE_ID_A,
+        "code": "TESTCO",
+        "shortName": "TESTCO",
+        "name": "FAKE EQUITY FUND ALPHA",
+        "nav": FAKE_NAV_A,
+        "dataFundAssetType": {"id": 1, "name": "Fake equity", "code": "STOCK"},
+        "owner": {"id": 1, "name": "FAKE FUND MANAGER ALPHA", "shortName": "FFMA"},
+        # Distractors that must be IGNORED: a top-level updateAt (record edit time)
+        # and a productNavChange.updateAt (nav-stats compute time). Neither is the
+        # NAV date; if either were used the asserted nav_as_of would be wrong.
+        "updateAt": 1700000000000,  # 2023-11-14 UTC -> would give a 2023 VN date
+        "productNavChange": {"updateAt": 1781802000000},  # ~today-ish distractor
+    }
+    if extra != "__omit__":
+        row["extra"] = extra
+    return row
+
+
+def _src_one_fund(extra="__omit__"):
+    return _src(_fund_list_payload(rows=[_fund_row_with_extra(extra)]))
+
+
+def test_list_funds_nav_as_of_happy_path():
+    # extra.lastNAVDate at VN-local midnight -> fund.nav_as_of is that VN calendar
+    # date, and it co-exists with the existing parsed nav.
+    fund = _src_one_fund({"lastNAVDate": _LASTNAVDATE_VN_MIDNIGHT}).list_funds()[0]
+    assert fund.nav_as_of == date(2026, 3, 15)
+    assert fund.nav == pytest.approx(FAKE_NAV_A)  # pairs with the parsed nav
+
+
+def test_list_funds_nav_as_of_vn_tz_boundary_next_day():
+    # 17:00 UTC maps to the NEXT VN calendar day (00:00 +07) -> proves VN tz, not
+    # naive UTC (a naive-UTC parse would yield 2026-03-14).
+    fund = _src_one_fund({"lastNAVDate": _LASTNAVDATE_VN_MIDNIGHT}).list_funds()[0]
+    assert fund.nav_as_of == date(2026, 3, 15)
+
+
+def test_list_funds_nav_as_of_vn_tz_boundary_prev_day():
+    # 16:59:59 UTC (one second before the +07 day rollover) -> previous VN day.
+    fund = _src_one_fund({"lastNAVDate": _LASTNAVDATE_PREV_VN_DAY}).list_funds()[0]
+    assert fund.nav_as_of == date(2026, 3, 14)
+
+
+def test_list_funds_nav_as_of_absent_extra_is_none():
+    # No `extra` key at all -> None, never a raise, never now().
+    fund = _src_one_fund().list_funds()[0]
+    assert fund.nav_as_of is None
+
+
+def test_list_funds_nav_as_of_absent_lastnavdate_is_none():
+    # `extra` present but lastNAVDate key missing -> None.
+    fund = _src_one_fund({"lastNAV": FAKE_NAV_A}).list_funds()[0]
+    assert fund.nav_as_of is None
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [None, 0, -1, -1781802000000, "1781802000000", "garbage", float("nan"), True, False, 1781802000000.5],
+    ids=["null", "zero", "neg", "neg_epoch", "str_num", "str", "nan", "true", "false", "frac_float"],
+)
+def test_list_funds_nav_as_of_garbage_is_none(bad):
+    # null / non-positive / garbage (string, NaN, bool, fractional float) -> None,
+    # no raise (a missing nav date must never blow up the whole fund list).
+    fund = _src_one_fund({"lastNAVDate": bad}).list_funds()[0]
+    assert fund.nav_as_of is None
+
+
+def test_fund_nav_as_of_back_compat_defaults_none():
+    # Frozen-dataclass additive: an existing-style Fund(...) built without
+    # nav_as_of keeps working and defaults to None.
+    f = Fund(code="TESTCO", name="X", id=FAKE_ID_A, nav=FAKE_NAV_A, manager="M", asset_type="STOCK")
+    assert f.nav_as_of is None
+
+
 def _nav_rows(product_id):
     return [{"id": 1, "createdAt": 1700000000000, "nav": 10100.0, "navDate": "2024-01-02", "productId": product_id}]
 
