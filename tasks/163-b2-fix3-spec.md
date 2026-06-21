@@ -134,6 +134,29 @@ Each fail-first on `c0f5f70` EXCEPT the two negative guards (correct on both —
 par-recovers-12, #9.34 twins, #9.35 clean-gross-serves, #9.36 leading-trước-thuế-serves). All were
 hand-traced against the new detection; none should flip.
 
+## Round-5 addendum — CLAUSE-SCOPE the before/negation veto (reviewer BLOCK4, convergent)
+The round-4 edge-A guard introduced an INVERSION: a segment-wide `truoc/chua/khong/mien` token forced
+GROSS even when the before-word belonged to an UNRELATED clause, so a genuine net rate beside a stray
+before-word was served as gross (`10% sau thuế (chưa gồm phí)` → 10 served; par rubber-stamped it too).
+Same silent-wrong class. Found independently by me + reviewer BLOCK4
+(`reviews/review-202606211421-163-vsdc-rereview-BLOCK4.md`).
+
+**Final `_segment_is_net` (replaces the round-4 version):** STRONG net markers (thực nhận/lĩnh/lãnh,
+`sau … thuế`, NET/ròng) win FIRST — a before-word elsewhere can't flip them. The before/negation veto
+fires ONLY when the before-word is ADJACENT (≤2 tokens) to a tax/deduction token
+(`thue/khau/tru/tncn`) — so it scopes to `trước thuế` / `chưa khấu trừ thuế` / `không khấu trừ` /
+`miễn thuế` / `trước khi khấu trừ thuế`, NOT to `chưa gồm phí` / `miễn phí` / `trước ngày`. Ambiguous
+deduction markers stay net (→ excluded from `gross_cands` → degrade) unless adjacency-vetoed. Module
+constants `_BEFORE_TAX_TOKENS`/`_TAXISH_TOKENS`. Validated: 0 misclassified across the full
+trap+net+edge+inversion matrix.
+
+**Tests #9.46–#9.52** (6 fail-first on round-4 + 1 adjacency negative guard):
+#9.46 `sau thuế (chưa gồm phí)` strong→degrade; #9.47 `đã trừ thuế … chưa gồm phí` ambiguous→degrade;
+#9.48 NEGATIVE `trước khi khấu trừ thuế`→served 12 (adjacency window); #9.49 `không gồm phí`→degrade;
+#9.50 `miễn phí giao dịch`→degrade; #9.51 `trước ngày 20/04`→degrade; #9.52 par + `chưa gồm phí`→degrade
+(par no longer rubber-stamps the net). NOTE fast-follow: English/spelled-out markers (after-tax / thuế
+thu nhập cá nhân) bypass — low realism, broaden-or-note.
+
 ## Out of scope (do NOT do)
 No new warning token. No snapshot regen / `dump_api_surface.py`. No push, no issue close, no tm-send,
 no git. NOTE fast-follows tracked separately (backlog), NOT in this commit: (a) malformed `8.5.0%`

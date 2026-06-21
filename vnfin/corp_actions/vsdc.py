@@ -135,35 +135,49 @@ def _parse_vn_number(token: str) -> Optional[float]:
     return val
 
 
+# Net-of-tax detection vocab (accent-stripped, lowercased — see _segment_is_net).
+_BEFORE_TAX_TOKENS = frozenset({"truoc", "chua", "khong", "mien"})  # before / not-yet / not / exempt
+_TAXISH_TOKENS = frozenset({"thue", "khau", "tru", "tncn"})         # tax / withholding / deduct / PIT
+
+
 def _segment_is_net(text: str) -> bool:
     """True when a ratio segment is qualified by a net-of-tax phrase, so its `%` is an AFTER-TAX
     figure that must NEVER be served as the gross dividend ratio. Detected by TOKEN co-occurrence
-    (word-boundary, accent-stripped) — NOT substring — so 'thực hiện' (every page), 'trước thuế'
-    (gross), 'internet', 'trong' do NOT register as net.
+    (word-boundary, accent-stripped) — NOT substring — so 'thực hiện' (every page), 'internet',
+    'trong' do NOT register as net.
 
-    A BEFORE-tax / not-yet-deducted / exempt qualifier means the '%' is still GROSS even when tax
-    words are present — these WIN over every net rule (else 'trước thuế TNCN' or 'chưa khấu trừ thuế'
-    would be wrongly degraded):
-      - trước / chưa / không / miễn  (before / not-yet / not / exempt) -> GROSS
-    Net markers (only when no before/negation token is present):
+    STRONG net markers are unambiguously after-tax and WIN over any before/negation word (so a
+    before-word on an UNRELATED noun, e.g. 'sau thuế (chưa gồm phí)', cannot flip them to gross):
       - thực nhận / thực lĩnh / thực lãnh  (net received)
       - sau … thuế                          (after tax; incl. 'sau khi … thuế')
-      - thuế + trừ / khấu / TNCN            (đã trừ / khấu trừ thuế, thuế TNCN)
-      - khấu + trừ                          (bare withholding, even if 'thuế' is omitted)
       - a standalone NET / ròng token
+
+    AMBIGUOUS deduction markers (đã trừ / khấu trừ thuế, thuế TNCN, bare khấu trừ) are net UNLESS a
+    before/not-yet/not/exempt word DIRECTLY qualifies the tax phrase — i.e. the before-word sits
+    adjacent (within 2 tokens) to a tax/deduction token: 'trước thuế', 'trước thuế TNCN',
+    'chưa khấu trừ thuế', 'không khấu trừ', 'miễn thuế', 'trước khi khấu trừ thuế' -> GROSS. A
+    before-word on a different noun ('đã trừ thuế … chưa gồm phí') is NOT adjacent -> stays net.
     """
-    toks = set(re.findall(r"[a-z0-9]+", _strip_accents(text)))
-    if toks & {"truoc", "chua", "khong", "mien"}:  # before/not-yet/not/exempt => GROSS, wins over tax rules
+    toks = re.findall(r"[a-z0-9]+", _strip_accents(text))  # ordered, for adjacency check
+    tokset = set(toks)
+    # STRONG net markers — win regardless of before/negation words.
+    if "thuc" in tokset and tokset & {"nhan", "linh", "lanh"}:
+        return True
+    if "sau" in tokset and "thue" in tokset:
+        return True
+    if tokset & {"net", "rong"}:
+        return True
+    # AMBIGUOUS markers: a before-word flips to GROSS only when adjacent (≤2 tokens) to a tax token.
+    before_qualifies_tax = any(
+        toks[i] in _BEFORE_TAX_TOKENS
+        and any(toks[j] in _TAXISH_TOKENS for j in range(i + 1, min(i + 3, len(toks))))
+        for i in range(len(toks))
+    )
+    if before_qualifies_tax:
         return False
-    if "thuc" in toks and toks & {"nhan", "linh", "lanh"}:
+    if "thue" in tokset and tokset & {"tru", "khau", "tncn"}:
         return True
-    if "sau" in toks and "thue" in toks:
-        return True
-    if "thue" in toks and toks & {"tru", "khau", "tncn"}:
-        return True
-    if "khau" in toks and "tru" in toks:  # bare 'khấu trừ' (withholding); 'thuế' may be omitted
-        return True
-    if toks & {"net", "rong"}:
+    if "khau" in tokset and "tru" in tokset:  # bare 'khấu trừ' (withholding); 'thuế' may be omitted
         return True
     return False
 

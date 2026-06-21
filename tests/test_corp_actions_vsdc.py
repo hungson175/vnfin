@@ -973,6 +973,127 @@ def test_parse_chua_khau_tru_thue_is_gross_not_over_degraded():
     assert "vsdc_parse_degraded" not in ev.warnings
 
 
+def test_parse_inversion_before_word_on_fees_keeps_strong_net_marker():
+    """#9.46 (fix-3 INVERSION guard, CRITICAL) — a before/negation word on a DIFFERENT noun must NOT
+    flip a GENUINE net rate to gross. '10%/cổ phiếu sau thuế (chưa gồm phí)': 'sau thuế' is an
+    unambiguous net marker; the 'chưa' applies to 'phí' (fees), not the tax. The strong net marker
+    must WIN → ratio None + degraded (the after-tax 10 never served as gross)."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu sau thuế (chưa gồm phí) '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # 'sau thuế' wins over the unrelated 'chưa gồm phí'
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_inversion_before_word_on_fees_keeps_ambiguous_net_marker():
+    """#9.47 (fix-3 INVERSION guard) — same inversion for an AMBIGUOUS deduction marker:
+    '10%/cổ phiếu đã trừ thuế, chưa gồm phí'. 'đã trừ thuế' (already deducted) is net; the 'chưa'
+    qualifies 'phí', NOT the tax phrase (not adjacent to a tax token), so the before-override must
+    NOT fire → ratio None + degraded."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu đã trừ thuế, chưa gồm phí '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None  # 'đã trừ thuế' net; 'chưa' binds to phí, not the tax
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_truoc_khi_khau_tru_thue_with_gap_is_gross():
+    """#9.48 (fix-3 NEGATIVE guard) — a before word qualifying the tax phrase across one word
+    ('trước khi khấu trừ thuế' = before withholding = GROSS) must still be recognized as gross
+    (adjacency window): '12%/cổ phiếu trước khi khấu trừ thuế (…1.200)' no par → ratio 12.0, NOT
+    degraded. Guards that the inversion fix did not over-tighten the legitimate before-override."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 12%/cổ phiếu trước khi khấu trừ thuế '
+        '(01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct == 12.0  # 'trước ... khấu trừ thuế' = before withholding = gross
+    assert "vsdc_parse_degraded" not in ev.warnings
+
+
+def test_parse_inversion_khong_gom_phi_keeps_net():
+    """#9.49 (fix-3 INVERSION) — 'không' on an unrelated fee clause must not flip a net rate:
+    '10%/cổ phiếu sau thuế (không gồm phí)' no par → ratio None + degraded (≠ 10)."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu sau thuế (không gồm phí) '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_inversion_mien_phi_keeps_net():
+    """#9.50 (fix-3 INVERSION) — 'miễn' on a fee clause must not flip a net rate:
+    '10%/cổ phiếu sau thuế, miễn phí giao dịch' no par → ratio None + degraded (≠ 10)."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu sau thuế, miễn phí giao dịch '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_inversion_truoc_ngay_keeps_net():
+    """#9.51 (fix-3 INVERSION) — 'trước' on a date clause ('trước ngày 20/04', not a tax token)
+    must not flip a net rate: '10%/cổ phiếu sau thuế, dự kiến trả trước ngày 20/04' no par →
+    ratio None + degraded (≠ 10). 'trước' is only a veto when adjacent to a tax token."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu sau thuế, dự kiến trả trước ngày 20/04 '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_inversion_par_does_not_rubber_stamp_net_with_stray_before():
+    """#9.52 (fix-3 INVERSION + par regression) — the par cross-check must not confirm a net rate
+    that escaped via a stray before-word. '10%/cổ phiếu sau thuế (chưa gồm phí)' + Mệnh giá 10.000
+    (10%×10000=1000=cash): the net is excluded from gross_cands so par never sees it → ratio None +
+    degraded (≠ 10), even though the arithmetic would have matched."""
+    html = _justify_page(
+        '- Tỷ lệ thực hiện: 10%/cổ phiếu sau thuế (chưa gồm phí) '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br />',
+        par=True,
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1000.0
+    assert ev.ratio_pct is None
+    assert ev.ratio_pct != 10.0
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
 def test_dividends_no_seed_found_discloses_not_silent_empty():
     """#9.25 (NOTE-1) — when no-seed auto-discovery exhausts its recent-ID window WITHOUT
     finding a seed page for the ticker, the empty history must be DISTINGUISHABLE from a genuine
