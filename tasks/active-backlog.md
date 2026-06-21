@@ -103,9 +103,21 @@ _Last synced: 2026-06-21 11:2x +07_
 >     + reviewer-required NEGATIVE guards #9.35 (clean single gross still SERVES, not degraded) / #9.36
 >     ('trước thuế' before-tax ≠ net marker). Both repro sets encoded green on merged tree (reviewer
 >     8.5%-no-par #9.27/#9.28 + my D1/D2/D3/L1 #9.29–#9.34 + cross-line #9.33). Full suite **3551 green**,
->     tuple 43, snapshot clean. **AWAITING ROUND-3 RE-REVIEW** (handoff `/tmp/vnfin-163-round3-handoff-20260621.md`);
->     dot-decimal + net-of-tax + par-confirm get heaviest re-pass. HOLDING push/close until APPROVE + green.
->     Then #182 (reviewer source verdict+close) / #155 (design gate).
+>     tuple 43, snapshot clean. Routed round-3. **ROUND-3 BLOCK 2026-06-21**
+>     (`reviews/review-202606211402-163-vsdc-rereview-BLOCK3.md`) — CONVERGENT with my parallel verifier:
+>     round-3 fixes (dot-decimal/multi-tranche/cross-line/twins) VERIFIED good, BUT a 3rd silent-wrong-ratio
+>     path survives (same class), 3 mechanisms: (1) `_NET_MARKERS` fragile 5-string allowlist misses canonical
+>     tax phrasings (`khấu trừ thuế`/`đã trừ thuế`/`thuế TNCN`/`NET`/`ròng`; listed `sau khi tru thue` ≠
+>     substring of `sau khi khau tru thue`); (2) PLACEMENT — net detection scans only text BEFORE each `%`, a
+>     TRAILING marker (`12%/cp sau thuế (…)`) leaks (my verifier finding, empirically `11,4% sau thuế`→served
+>     11.4); (3) WORST par-confirms-net — escaped net candidate still in `gross_cands` so par rubber-stamps it.
+>     **FIX-3 SPEC `tasks/163-b2-fix3-spec.md`**: token-based `_segment_is_net` (word-boundary co-occurrence —
+>     validated vs traps: `thực hiện`/`trước thuế`/`internet`/`trong` all correctly NOT-net) replacing the
+>     allowlist + leading-gap/last-candidate-tail attribution + net excluded from `gross_cands` (→ from par).
+>     Tests #9.37–#9.42 (incl. par-confirms-net + negative trailing-`trước thuế`). NO new token (tuple 43),
+>     NO snapshot regen. NOTE fast-follows (out of scope): malformed `8.5.0%`→5.0; `/cp` in `_CASH_MENTION_RE`
+>     not `_RATIO_RE`. NEXT: converge reviewer → delegate impl → integrate+gates+all repros → re-submit (round-4).
+>     HOLDING push/close until APPROVE + green. Then #182 (reviewer source verdict+close) / #155 (design gate).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
