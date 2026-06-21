@@ -43,7 +43,19 @@ stays the reviewer's (I do NOT advance `state/last_seen.txt` / rm `state/PENDING
 
 ---
 
+## Reviewer A's one NOTE (English after-tax) — validated fold, ready to apply post-verdict
+Reviewer A (APPROVE_WITH_NOTES) flagged the gate misses English `after-tax`/`after tax`/`net of tax`/
+`withholding tax` — rated NOTE not BLOCKER (VSDC is a Vietnamese govt depository; English ratio
+phrasing doesn't occur). **Pre-validated read-only (no tree change while Codex×2 reads `56cde90`):**
+adding `"tax"` to `_RATIO_NET_NOUNS` catches all 4 English variants AND is **0-over-withhold** on the
+full clean-VN corpus (incl. the `thực được nhận` residual, which correctly still serves — qualifies the
+cash). **Converge with reviewer on the consolidated verdict:** fold-before-push (1-line noun-set add +
+1 fail-first English-after-tax test, surgical like prior M1 folds) vs defer-to-v2 (document alongside
+bare-`đã trừ` / `thực được nhận`). Do NOT touch `vsdc.py` until the verdict lands.
+
 ## Notes for me (post-APPROVE checklist)
+- IF folding the English-tax note: apply `_RATIO_NET_NOUNS += {"tax"}` + 1 fail-first test, re-run full
+  suite + #180/#188 + snapshot on merged tree, THEN push. (Tuple stays 44 — no new token.)
 - Push the whole `corp_actions` feature: `git push origin master` (origin at `f3cd479`; lands the
   feature + de-scope + backlog/memory commits). Verify green merged tree first.
 - Close #163 with the comment above via `bin/gh-maintainer`.
