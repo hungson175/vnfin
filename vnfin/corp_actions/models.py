@@ -25,12 +25,11 @@ from typing import Optional
 
 from ..exceptions import InvalidData
 
-#: Per-event token: v1 never has an ex-date (finfo enrichment leg held).
+#: Per-event token: v1 never has an ex-date (finfo enrichment leg held). The full set of
+#: corp-actions warning tokens (emission literals discovered by the #188 AST scanner) lives
+#: in :mod:`vnfin.corp_actions.vsdc`; this one is duplicated here only so the model can
+#: enforce its always-present invariant without importing the adapter (avoids a cycle).
 EX_DATE_UNAVAILABLE = "ex_date_unavailable"
-#: Per-event token: a recognized cash dividend whose ratio/cash could not be parsed.
-VSDC_PARSE_DEGRADED = "vsdc_parse_degraded"
-#: Per-result token: a v1 result is the VSDC depository spine ALONE (no ex-date leg).
-CORP_ACTION_SOURCE_PARTIAL = "corp_action_source_partial"
 
 
 def _validate_optional_amount(value, label: str) -> None:

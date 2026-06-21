@@ -113,6 +113,11 @@ h   = vnfin.fx.history(start=date(2010, 1, 1), end=date(2024, 12, 31))  # FXHist
 # macro — cross-country indicators. No-key failover World Bank -> IMF -> DBnomics.
 c   = vnfin.macro.client()                   # MacroClient (World Bank -> IMF DataMapper -> DBnomics, no-key)
 src = vnfin.macro.source()                   # WorldBankMacroSource (primary only)
+
+# corp_actions — CASH dividends (VND/share) scraped from the VSDC depository. v1 CASH
+# only; ex-date is ALWAYS None (depository publishes none, finfo leg held for v2).
+hist = vnfin.corp_actions.dividends("FAKECORP", seed_id=197900)  # DividendHistory of CashDividendEvent
+src  = vnfin.corp_actions.VsdcCashDividendSource()               # the VSDC scrape adapter
 ```
 
 ### Why gold takes an explicit provider
@@ -232,6 +237,11 @@ never fabricated data:
   frequency=None) -> RequestDiagnostic` (issue #159) — classify a historical-FX request as
   `unsupported_pair` / `unsupported_frequency` / `coverage_gap` / `ok` vs the only v1 source
   (World Bank `PA.NUS.FCRF`, annual USD/VND, `window_too_wide` is not applicable here).
+- `vnfin.diagnostics.explain_corp_actions_coverage() -> RequestDiagnostic` (issue #163) —
+  state the corporate-actions coverage: v1 serves CASH dividends only (VSDC depository
+  scrape), `ex_date` is **UNAVAILABLE** (depository publishes none; finfo enrichment leg
+  held for v2 with a pre-2022 floor), and STOCK/RIGHTS/BONUS are deferred to v2 (status
+  `ex_date_unavailable`).
 
 `SourceCapability` and `RequestDiagnostic` are frozen dataclasses. This is preflight
 metadata, not a live health monitor (use `scripts/healthcheck.py` for live checks). See
@@ -262,6 +272,36 @@ filter (`next(s for s in universe("HOSE") if s.symbol == "FPT")`). The result's
 derived, ~96% of the full SSC roster), `listing_date_not_available` (provider
 `firstTradingDate` is `'0'`), `sector_not_available` — plus `cross_board_duplicate_symbol`
 on a merge. See [sources/equities-universe.md](sources/equities-universe.md).
+
+## `vnfin.corp_actions` — cash dividends (VND/share, VSDC scrape)
+
+`vnfin.corp_actions` is an additive domain namespace (issue #163) serving **v1 CASH
+dividends** scraped from the VSDC (Vietnam Securities Depository & Clearing) public
+announcement pages (`https://vsd.vn/vi/ad/{id}`). The depository publishes the record
+date, the pay date, and the ratio/cash per share — but **no ex-date** — so in v1:
+
+- **ex-date is ALWAYS `None`** (the VNDirect finfo enrichment leg is held for v2); every
+  `CashDividendEvent` carries the `ex_date_unavailable` token. Never fabricated/derived.
+- **CASH dividends only** — STOCK / RIGHTS / BONUS are deferred to v2.
+- the source is an **HTML scrape** (more fragile than the library's JSON sources): a
+  recognized cash dividend whose amounts cannot be parsed keeps `cash_per_share` /
+  `ratio_pct` as `None` and carries `vsdc_parse_degraded` (never silently dropped), and
+  every `DividendHistory` carries `corp_action_source_partial` (the VSDC spine alone).
+
+- `vnfin.corp_actions.dividends(symbol, *, start=None, end=None, http_get=None,
+  timeout=25.0, seed_id=None, max_fetch=300) -> DividendHistory` — discover (a supplied
+  `seed_id`, else a bounded recent-ID window scan), crawl the seed's same-org sidebar,
+  fetch+parse each page, and return the company's cash-dividend events within
+  `[start, end]` (by record date). `currency="VND"`.
+- `vnfin.corp_actions.VsdcCashDividendSource(...)` — the scrape adapter
+  (`.dividends(...)`, `.parse_announcement(html)`, `.discover_same_org_ids(html)`).
+- `CashDividendEvent` / `DividendHistory` / `CorpActionSource` are the typed models +
+  port. `CashDividendEvent` carries `code`, `kind` (always `"CASH"`), `cash_per_share`,
+  `ratio_pct`, `ex_date` (`None`), `record_date`, `pay_date`, `div_year`, `source`,
+  `as_of` (provider publish time), `exchange`, `announcement_id`, `warnings`.
+
+Use `vnfin.diagnostics.explain_corp_actions_coverage()` for the offline coverage
+statement. See the warning-tokens table in the skill for the always-present tokens.
 
 ## `vnfin.news` — daily financial-news headlines (BYOK)
 

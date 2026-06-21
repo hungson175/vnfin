@@ -17,6 +17,24 @@ All notable changes to `vnfin` are documented here. The format follows
   keyless path. ([#184](https://github.com/hungson175/vnfin/issues/184))
 
 ### Added
+- **`vnfin.corp_actions.dividends(...)` — the VSDC cash-dividend spine** (#163) — a new additive
+  `vnfin.corp_actions` domain serving **v1 CASH dividends** scraped from the VSDC (Vietnam Securities
+  Depository & Clearing) public announcement pages (`https://vsd.vn/vi/ad/{id}`), returning a
+  `DividendHistory` of typed `CashDividendEvent` (`code`, `kind="CASH"`, `cash_per_share` VND/share,
+  `ratio_pct`, `record_date`, `pay_date`, `div_year`, `as_of` = the provider's own publish time,
+  `exchange`, `announcement_id`, `warnings`). Discovery is a same-org sidebar crawl from a `seed_id`
+  plus a bounded recent-ID window scan; the pure parser pairs label→value by the `item-info` /
+  `item-info-main` CSS classes (never by `col-md-*` width) and isolates all HTML parsing behind a
+  tight, fixture-pinned contract. **Scope/limits, disclosed via always-present warning tokens:**
+  `ex_date` is **ALWAYS `None`** in v1 — the depository publishes no ex-date and the VNDirect finfo
+  enrichment leg is **held** for v2 (pre-2022 floor noted) — so every event carries
+  `ex_date_unavailable` (never fabricated/derived); every result carries `corp_action_source_partial`
+  (the VSDC depository spine alone); and a recognized cash dividend whose ratio/cash cannot be parsed
+  keeps the amounts `None` and carries `vsdc_parse_degraded` (never silently dropped). STOCK / RIGHTS /
+  BONUS dividends are deferred to v2. Also adds the **offline** diagnostic
+  `vnfin.diagnostics.explain_corp_actions_coverage()` (status `ex_date_unavailable`) stating the
+  cash-only + ex-date-unavailable + v2 scope and a `corp_actions` `SourceCapability`. Additive only:
+  new domain + diagnostic, no change to existing surfaces. ([#163](https://github.com/hungson175/vnfin/issues/163))
 - **Annual fixed-income rate indicators + `explain_fixed_income_coverage()`** (#152) — three new
   `MacroIndicator` members reachable through the existing macro domain
   (`vnfin.macro.get_indicator(iso3, ...)` + failover): `LENDING_RATE` (World Bank WDI `FR.INR.LEND`),
