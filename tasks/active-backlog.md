@@ -122,7 +122,18 @@ _Last synced: 2026-06-21 11:2x +07_
 >     GROSS) + a bare `khấu`+`trừ` net rule; tests #9.43–#9.45. **ROUND-4 SUBMITTED — commit `ca2cce0`**
 >     (base fix-3 by delegated agent + edges layered TDD-first by me). Merged-tree: 3560 passed, tuple 43,
 >     snapshot clean, #9.35/#9.36/#9.42 no-over-degrade green. Handoff `/tmp/vnfin-163-round4-handoff-20260621.md`.
->     HOLDING push/close until APPROVE + green merged tree. Then #182 (reviewer source verdict+close) / #155 (design gate).
+>     **ROUND-4 BLOCK 2026-06-21** (`reviews/review-202606211421-163-vsdc-rereview-BLOCK4.md`) — CONVERGENT
+>     (I reproduced it before the verdict): the edge-A guard INTRODUCED an INVERSION — a segment-wide
+>     `trước/chưa/không/miễn` token forced GROSS even when the before-word qualified an UNRELATED clause, so a
+>     genuine net rate beside a stray before-word (`10% sau thuế (chưa gồm phí)` / `không gồm phí` / `miễn phí`
+>     / `trước ngày`) was served as gross + par rubber-stamped it. Same silent-wrong class, GREEN-BUILD (matrix
+>     lacked net-marker+stray-before). **ROUND-5 FIX — commit `6e2c71a`**: clause-scope restructure of
+>     `_segment_is_net` — STRONG net markers (thực nhận/sau thuế/NET/ròng) win FIRST; before-veto fires ONLY
+>     when adjacent ≤2 tokens to a tax token (`thuế/khấu/trừ/TNCN`); net excluded from `gross_cands` (par can't
+>     rubber-stamp). Tests #9.46–#9.52 (6 stash-verified fail-first + 1 adjacency neg-guard). Merged-tree:
+>     3567 passed, tuple 43, snapshot clean; #9.43/#9.45 legit-gross + #9.35/#9.36/#9.42 no-over-degrade green.
+>     Handoff `/tmp/vnfin-163-round5-handoff-20260621.md`. NOTE fast-follow: English/spelled-out tax markers
+>     bypass (low realism). HOLDING push/close until APPROVE + green. Then #182 (source verdict+close) / #155 (design gate).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
