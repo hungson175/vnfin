@@ -132,8 +132,15 @@ _Last synced: 2026-06-21 11:2x +07_
 >     when adjacent ≤2 tokens to a tax token (`thuế/khấu/trừ/TNCN`); net excluded from `gross_cands` (par can't
 >     rubber-stamp). Tests #9.46–#9.52 (6 stash-verified fail-first + 1 adjacency neg-guard). Merged-tree:
 >     3567 passed, tuple 43, snapshot clean; #9.43/#9.45 legit-gross + #9.35/#9.36/#9.42 no-over-degrade green.
->     Handoff `/tmp/vnfin-163-round5-handoff-20260621.md`. NOTE fast-follow: English/spelled-out tax markers
->     bypass (low realism). HOLDING push/close until APPROVE + green. Then #182 (source verdict+close) / #155 (design gate).
+>     Handoff `/tmp/vnfin-163-round5-handoff-20260621.md`. **ROUND-5 BLOCK5 (convergent, 5th round)**:
+>     `_TAXISH_TOKENS` included the fee verbs `khấu`/`trừ`, so a fee clause carrying a before-word
+>     (`chưa khấu trừ phí`) vetoed a genuine `khấu trừ thuế` net → 10/12/8 served as gross. **ROUND-6 FIX —
+>     commit `7b35066`**: before-veto target = TAX NOUN only `_TAX_NOUN_TOKENS={thue,tncn}` (verbs kept for
+>     POSITIVE detection); window ≤2→≤4 so `chưa khấu trừ thuế`/`trước khi khấu trừ thuế` stay gross; bare
+>     `không khấu trừ` now degrades (safe). Tests #9.53–#9.55 (3 fail-first on 6e2c71a). Merged-tree: 3570
+>     passed, tuple 43, snapshot frozen; all must-stay-green + BLOCK4 inversions intact; 0 misclassified.
+>     Handoff `/tmp/vnfin-163-round6-handoff-20260621.md`. NOTE fast-follow: English/spelled-out markers +
+>     contrived VAT-clause over-veto (low realism). HOLDING push/close until APPROVE + green. Then #182 / #155.
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
