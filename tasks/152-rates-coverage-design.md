@@ -66,3 +66,21 @@ annual-only disclosure), it rides the #180 reverse + #188 forward lockstep in th
 3. **deposit_rate** is a WB annual AGGREGATE (no clean retail per-tenor source) — acceptable for v1?
 4. **Warning token:** reuse existing staleness/proxy disclosures, or add a new annual-only token (→ #180/#188)?
 5. Keep canonical macro names `lending_rate` / `deposit_rate` / `real_interest_rate`?
+
+## ✅ APPROVED — final build contract (reviewer 2026-06-21 11:47)
+1. **Option B (extend macro), NOT a new domain** — confirmed (no duplicate `policy_rate`).
+2. **Source APPROVED:** WB `FR.INR.LEND` / `FR.INR.DPST` / `FR.INR.RINR` (same already-wired CC-BY 4.0
+   WB source as GDP/CPI, `_WB_MAP` at `worldbank.py:55`, `api.worldbank.org/v2`) — low risk. Yield
+   CURVE stays DEFERRED; do NOT register `vnfin.bonds`.
+3. `deposit_rate` as a WB **annual aggregate** is acceptable — **the diagnostic MUST disclose it is an
+   annual aggregate (no clean per-tenor retail source).**
+4. **NO new warning token** — REUSE existing staleness / policy-proxy disclosures (WB-annual nature is
+   documented in `explain_fixed_income_coverage`, not a per-result token). Lean firmly no.
+5. Canonical names `lending_rate` / `deposit_rate` / `real_interest_rate` — APPROVED.
+
+**Must-hold:** additive (new `MacroIndicator` members + WB `_WB_MAP` entries + ONE diagnostic
+`explain_fixed_income_coverage`); snapshot additive-green, **do NOT regen** `dump_api_surface.py`;
+`explain_fixed_income_coverage` must distinguish **policy vs interbank vs deposit vs govt-bond** so
+users don't conflate them, AND disclose `deposit_rate` is an annual aggregate + the govt-bond yield
+curve is unavailable; TDD fail-first synthetic fixtures + WB live opt-in/CI-skipped; existing
+`policy_rate`/GDP/CPI paths unchanged. Codex x1 on the merged tree.
