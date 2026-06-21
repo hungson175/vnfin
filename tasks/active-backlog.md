@@ -150,7 +150,20 @@ _Last synced: 2026-06-21 11:2x +07_
 >     multi-candidate (par/twins/>100%/malformed) logic stays → still `vsdc_parse_degraded` (runs only on
 >     tax-free text). Existing tax→served-gross tests INVERT to degraded (intended contract change). v2 =
 >     classifier behind a committed corpus (the 7 phrasings + hunter safe-surface list = fixture seed).
->     `7b35066` push DROPPED (superseded). **NOW: round-7 de-scope, TDD-first → Codex x2 re-pass → push + close.**
+>     `7b35066` push DROPPED (superseded). **ROUND-7 DE-SCOPE BUILT (`42fb7a7` spec → `47a688d` impl,
+>     fresh agent TDD-first):** `_segment_is_net`+all net/gross classification DELETED; ONE line-level gate
+>     `_line_has_tax_signal` → any tax/withholding signal on the ratio line ⇒ `ratio_pct=None` + NEW token
+>     `vsdc_ratio_tax_deferred` (semantic ≠ vsdc_parse_degraded). #180/#188 lockstep 43→44. Tax→served-gross
+>     tests INVERTED to deferred; corpus parametrized (`_TAX_DEFERRED_CORPUS` / `_CLEAN_SERVED_CORPUS`).
+>     **My fresh-skeptic adversarial verify caught a REAL bar breach BEFORE reviewer handoff:** the gate
+>     ({thuế,TNCN}|khấu-trừ) MISSED thuế-ELIDED net markers (`thực nhận`/`thực lĩnh`/`thực lãnh`/`ròng`/
+>     `net`) → net % served as gross w/ no token + Defect-2 over-withhold (khấu-hao depreciation false-trip).
+>     **FIXED `56cde90` TDD-first** (+5 fail-first withhold + 1 over-withhold guard): `_RATIO_NET_NOUNS`
+>     adds ròng/net; `_RATIO_NET_BIGRAMS` catches net-received as ADJACENT bigrams (not set co-occurrence —
+>     boilerplate 'thực hiện…được nhận' safe); 'khấu trừ' matched as the adjacent bigram only (kills
+>     Defect-2). Bare 'đã trừ' w/o tax/net noun stays served (v2 corpus edge, documented). Merged-tree GREEN:
+>     full suite **3584 passed**, tuple **44** unique, snapshot frozen. **2ND fresh-skeptic adversarial verify
+>     IN FLIGHT on `56cde90`; route Codex x2 on CLEAN → push + close.**
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
