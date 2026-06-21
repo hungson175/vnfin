@@ -913,6 +913,24 @@ _TAX_DEFERRED_CORPUS = [
     ("NEW multi-candidate leak (tax token on candidate A only)",
      "- Tỷ lệ thực hiện: đã khấu trừ thuế TNCN 10%/cổ phiếu, 12%/cổ phiếu "
      "(01 cổ phiếu được nhận 1.000 đồng)<br />- Ngày thanh toán: 10/04/2024<br />", 1000.0, False),
+    # round-7 adversarial-verify catch: thuế-ELIDED net markers (thực nhận / thực lĩnh / thực lãnh /
+    # ròng / net) are the standard VN terms for the after-tax figure a holder pockets. The first gate
+    # ({thue,tncn}|khấu-trừ) leaked them → served a net % as gross (THE bar). Must withhold too.
+    ("NET-marker thực nhận (thuế elided)",
+     "- Tỷ lệ cổ tức thực nhận: 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />"
+     "- Ngày thanh toán: 10/04/2024<br />", 1000.0, False),
+    ("NET-marker thực lĩnh (thuế elided)",
+     "- Cổ tức thực lĩnh: 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />"
+     "- Ngày thanh toán: 10/04/2024<br />", 1000.0, False),
+    ("NET-marker thực lãnh (thuế elided)",
+     "- Cổ tức thực lãnh: 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />"
+     "- Ngày thanh toán: 10/04/2024<br />", 1000.0, False),
+    ("NET-marker ròng (thuế elided)",
+     "- Tỷ lệ cổ tức ròng: 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />"
+     "- Ngày thanh toán: 10/04/2024<br />", 1000.0, False),
+    ("NET-marker net (thuế elided)",
+     "- Tỷ lệ cổ tức net: 10%/cổ phiếu (01 cổ phiếu được nhận 1.000 đồng)<br />"
+     "- Ngày thanh toán: 10/04/2024<br />", 1000.0, False),
 ]
 
 
@@ -940,6 +958,12 @@ _CLEAN_SERVED_CORPUS = [
     ("bonus + cash, par recovers 12%",
      "- Cổ phiếu thưởng 100%/cổ phiếu; cổ tức tiền mặt 12%/cổ phiếu "
      "(01 cổ phiếu được nhận 1.200 đồng)<br />- Ngày thanh toán: 10/04/2024<br />", 1200.0, True, 12.0),
+    # round-7 adversarial-verify catch (over-withhold guard): 'khấu hao' (depreciation) co-occurring
+    # with a non-adjacent 'trừ' must NOT trip the withholding-pair gate — the 'khấu trừ' signal is the
+    # ADJACENT bigram, not incidental khau+tru co-occurrence. A clean gross ratio still serves.
+    ("depreciation khấu hao + non-adjacent trừ still serves",
+     "- Tỷ lệ thực hiện: 10%/cổ phiếu sau khi trừ chi phí khấu hao "
+     "(01 cổ phiếu được nhận 1.000 đồng)<br />- Ngày thanh toán: 10/04/2024<br />", 1000.0, False, 10.0),
 ]
 
 

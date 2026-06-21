@@ -144,20 +144,39 @@ def _parse_vn_number(token: str) -> Optional[float]:
     return val
 
 
-# Tax / withholding SIGNAL tokens (accent-stripped). Under the #163 v1 de-scope a ratio from a line
-# carrying ANY of these is net-vs-gross ambiguous and is WITHHELD (ratio_pct=None +
-# vsdc_ratio_tax_deferred), NOT classified — net-vs-gross is a v2 scope decision.
-_RATIO_TAX_NOUNS = frozenset({"thue", "tncn"})  # thuế / TNCN
+# Net-of-tax / withholding SIGNAL tokens (accent-stripped). Under the #163 v1 de-scope a ratio from a
+# line carrying ANY of these is net-vs-gross ambiguous and is WITHHELD (ratio_pct=None +
+# vsdc_ratio_tax_deferred), NOT classified — net-vs-gross is a v2 scope decision. The set must cover
+# EVERY net marker (not just the explicit tax noun) or a thuế-elided net figure leaks through as gross.
+#: Standalone net/tax NOUNS — any one present on the line withholds. ròng / net are the bare "net"
+#: words; thuế / TNCN the tax nouns. (All are word-boundary tokens: 'trong'->'trong'≠'rong',
+#: 'internet'->'internet'≠'net', so neither false-trips.)
+_RATIO_NET_NOUNS = frozenset({"thue", "tncn", "rong", "net"})
+#: Net-received compound markers, matched as ADJACENT bigrams (not set co-occurrence) so the boilerplate
+#: 'thực hiện … được nhận' on EVERY clean cash line — which has both 'thuc' and 'nhan' but never
+#: adjacent — does not false-trip. These are the standard VN terms for the after-tax figure a holder
+#: actually receives: thực nhận / thực lĩnh / thực lãnh.
+_RATIO_NET_BIGRAMS = frozenset({("thuc", "nhan"), ("thuc", "linh"), ("thuc", "lanh")})
 
 
 def _line_has_tax_signal(text: str) -> bool:
-    """True when a justify ratio line carries a tax / withholding signal: an explicit tax noun
-    (thuế / TNCN) OR the withholding verb pair khấu+trừ ('thuế' is often elided, e.g. 'đã thực hiện
-    khấu trừ'). Word-boundary + accent-stripped, so 'thực hiện' (on every page), 'internet', 'trong',
-    'trước' (token 'truoc' != 'tru') never register. A line with such a signal has its ratio WITHHELD
-    under the v1 de-scope (#163): the `%` could be net-of-tax and we no longer classify net-vs-gross."""
-    toks = set(re.findall(r"[a-z0-9]+", _strip_accents(text)))
-    return bool(toks & _RATIO_TAX_NOUNS) or ("khau" in toks and "tru" in toks)
+    """True when a justify ratio line carries a net-of-tax / withholding signal, so its `%` could be
+    an after-tax figure that must never be served as the gross ratio. Detected by:
+      - a standalone net/tax noun (thuế / TNCN / ròng / net), OR
+      - an adjacent net-received bigram (thực nhận / thực lĩnh / thực lãnh), OR
+      - the adjacent withholding bigram khấu trừ ('thuế' is often elided, e.g. 'đã thực hiện khấu
+        trừ'); adjacency (not bare khau+tru co-occurrence) so an unrelated 'khấu hao' (depreciation)
+        plus a stray 'trừ' does not false-trip.
+    Word-boundary + accent-stripped throughout: 'thực hiện' (every page), 'được nhận' (every cash
+    line), 'internet', 'trong', 'trước' (token 'truoc' != 'tru') never register. A line with any signal
+    has its ratio WITHHELD under the v1 de-scope (#163) — we no longer classify net-vs-gross (v2). NOTE:
+    a bare 'đã trừ' / 'sau khi trừ' with NO tax/net noun stays served (ambiguous 'deducted what?';
+    matches the pre-de-scope behaviour) — tracked for the v2 classifier corpus."""
+    toks = re.findall(r"[a-z0-9]+", _strip_accents(text))  # ORDERED, for the adjacency checks
+    if set(toks) & _RATIO_NET_NOUNS:
+        return True
+    bigrams = set(zip(toks, toks[1:]))
+    return bool(bigrams & _RATIO_NET_BIGRAMS) or ("khau", "tru") in bigrams
 
 # A per-share cash amount in EITHER VSDC phrasing — "…được nhận 1.200 đồng" OR
 # "…số tiền 1.200 đồng/cổ phiếu". Used only to COUNT tranches (multi-tranche detection); the
