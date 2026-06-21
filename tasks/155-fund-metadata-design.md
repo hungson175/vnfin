@@ -47,10 +47,11 @@ surface test is additive-green vs the frozen baseline.
 ## Warning tokens (#180/#188 lockstep — IN THIS CHANGE)
 2 new tokens (`fund_missing_fees`, `fund_partial_holdings`): add to the SKILL.md Warning-tokens table +
 `_WARNING_TOKENS_180` + emit as literals so #188's AST forward-discovery sees them
-([[new-warning-token-must-update-180-reference]]). **Baseline moved: `_WARNING_TOKENS_180` = 42 once
-#163 lands (37 + #163's 5 corp-action tokens)**, so these 2 take it 42→44. The exact start count
-depends on #163 merging first — **gate on the doc↔code bijection sweep being green, NOT a magic
-count** ([[multi-hop-crawl-silent-loss-surfaces-checklist]] reinforces: gate on the sweep).
+([[new-warning-token-must-update-180-reference]]). **Baseline moved: `_WARNING_TOKENS_180` = 43 once
+#163 lands (37 + #163's 6 corp-action tokens — the reviewer-BLOCK fix added a 6th,
+`corp_action_seed_not_found`)**, so these 2 take it 43→45. The exact start count depends on #163
+merging first — **gate on the doc↔code bijection sweep being green, NOT a magic count**
+([[multi-hop-crawl-silent-loss-surfaces-checklist]] reinforces: gate on the sweep).
 
 ## TDD (fail-first; synthetic fixtures only)
 - Parse: synthetic fixture w/ `productIndustriesHoldingList` + mgmt-fee + `firstIssueAt` → `SectorWeight`

@@ -46,9 +46,14 @@ CORP_ACTION_SOURCE_PARTIAL = "corp_action_source_partial"
 #: Per-result: the bounded crawl stopped at ``max_fetch`` with same-org announcements still
 #: un-fetched, so the returned history is NOT exhaustive (never silently truncated).
 COVERAGE_TRUNCATED_AT_MAX_FETCH = "coverage_truncated_at_max_fetch"
-#: Per-result: ≥1 same-org announcement page failed to fetch during the crawl, so its (and any
-#: onward-linked) events are absent — the history may be incomplete (disclosed, never silent).
+#: Per-result: ≥1 same-org announcement page failed to fetch OR parse during the crawl, so its
+#: (and any onward-linked) events are absent — the history may be incomplete (never silent).
 CORP_ACTION_FETCH_INCOMPLETE = "corp_action_fetch_incomplete"
+#: Per-result: no-seed auto-discovery scanned its recent-ID window WITHOUT finding any
+#: announcement page for the ticker, so the empty history is NOT a confirmed never-paid — the
+#: discovery window may simply be too small / too recent. Pass a ``seed_id`` (or widen the
+#: window) for an authoritative result. Absent whenever a seed was found or supplied.
+CORP_ACTION_SEED_NOT_FOUND = "corp_action_seed_not_found"
 
 #: Documented default recent-ID watermark for the no-seed recent-window scan. Override
 #: via the constructor ``latest_id=`` — this is a rolling hint, not a hard bound.
@@ -246,30 +251,73 @@ class VsdcCashDividendSource(CorpActionSource):
 
         as_of = self._parse_as_of(html)
 
+        # Par value ("Mệnh giá") for the cash↔ratio cross-check (cash ≈ ratio/100 × par). When
+        # present it disambiguates the ratio on a bundled line — e.g. a net-of-tax "sau thuế"
+        # rate sitting between the gross ratio and the cash parenthetical.
+        par: Optional[float] = None
+        par_raw = fields.get("Mệnh giá:")
+        if par_raw:
+            par_num = re.search(r"[\d.]+", par_raw)
+            if par_num:
+                par = _parse_vn_number(par_num.group(0))
+
         # Ratio + cash from the justify block (the cash parenthetical anchors the line).
         cash_per_share: Optional[float] = None
         ratio_pct: Optional[float] = None
+        ratio_uncertain = False
         pay_date: Optional[date] = None
         lines = self._justify_lines(html)
+        # Multi-tranche: a page listing >1 cash parenthetical (e.g. tạm ứng đợt 1 + đợt 2) is a
+        # single CashDividendEvent in v1, which surfaces only the FIRST tranche — the dropped
+        # tranche(s) are DISCLOSED via the degraded token rather than silently lost.
+        cash_anchor_count = sum(len(_CASH_RE.findall(line)) for line in lines)
         for line in lines:
             cash_m = _CASH_RE.search(line)
             if cash_m and cash_per_share is None:
                 cash_per_share = _parse_vn_number(cash_m.group("cash"))
-                # the cash ratio is the `%/cổ phiếu` CLOSEST BEFORE the cash parenthetical,
-                # not the first % on the line — a bundled bonus+cash line lists the bonus %
-                # first, and pairing it with the cash amount would fabricate the ratio.
-                ratio_before = list(_RATIO_RE.finditer(line[: cash_m.start()]))
-                if ratio_before:
-                    ratio_pct = _parse_vn_number(ratio_before[-1].group("pct"))
+                # Candidate ratios are the `%/cổ phiếu` tokens BEFORE the cash parenthetical,
+                # bounded to a plausible per-share cash ratio (0 < pct ≤ 100); a >100 value is a
+                # parse artifact / misread and is never paired with the cash amount.
+                cands: list[float] = []
+                for rm in _RATIO_RE.finditer(line[: cash_m.start()]):
+                    pct = _parse_vn_number(rm.group("pct"))
+                    if pct is not None and 0 < pct <= 100:
+                        cands.append(pct)
+                had_ratio_token = _RATIO_RE.search(line[: cash_m.start()]) is not None
+                chosen: Optional[float] = None
+                if par is not None and cash_per_share is not None:
+                    # par cross-check: pick the candidate whose cash ≈ ratio/100 × par — recovers
+                    # the gross ratio even when a closer "sau thuế" net rate precedes the cash.
+                    tol = max(1.0, 0.005 * cash_per_share)
+                    confirmed = [
+                        c for c in cands if abs(c / 100.0 * par - cash_per_share) <= tol
+                    ]
+                    if confirmed:
+                        chosen = confirmed[-1]  # closest-before among par-confirmed
+                elif len(cands) == 1:
+                    # no par to disambiguate, but a single unambiguous candidate is safe to pair.
+                    chosen = cands[0]
+                # par present but nothing confirms, OR no par with >1 candidate (ambiguous): leave
+                # ratio None rather than fabricate/mis-pair — disclosed via the degraded token.
+                ratio_pct = chosen
+                if had_ratio_token and chosen is None:
+                    ratio_uncertain = True
             pay_m = _PAY_LINE_RE.search(line)
             if pay_m and pay_date is None:
                 pay_date = _parse_dmy(pay_m.group("date"))
 
         warnings: list[str] = [EX_DATE_UNAVAILABLE]
-        # Degradation: a recognized cash dividend with ≥1 unparseable PRIMARY field — the
-        # record date, or both the ratio AND the cash amount — is surfaced (never dropped)
-        # with the affected fields left None and the never-silent token attached.
-        if record_date is None or (cash_per_share is None and ratio_pct is None):
+        # Degradation: a recognized cash dividend is surfaced (never dropped) with the affected
+        # fields left None and the never-silent token attached when ≥1 PRIMARY field is
+        # unparseable (the record date, or both ratio AND cash), when the cash↔ratio pairing is
+        # ambiguous (a ratio token was present but none could be trusted), or when the page
+        # lists multiple cash tranches (only the first is surfaced in v1).
+        if (
+            record_date is None
+            or (cash_per_share is None and ratio_pct is None)
+            or ratio_uncertain
+            or cash_anchor_count > 1
+        ):
             warnings.append(VSDC_PARSE_DEGRADED)
 
         return CashDividendEvent(
@@ -317,9 +365,11 @@ class VsdcCashDividendSource(CorpActionSource):
         ``ex_date_unavailable``; the result always carries ``corp_action_source_partial``
         (v1 = the VSDC spine alone, no ex-date leg), additionally
         ``coverage_truncated_at_max_fetch`` when the crawl stopped at ``max_fetch`` with the
-        frontier not exhausted, and ``corp_action_fetch_incomplete`` when ≥1 page failed to
-        fetch (the gap is disclosed, never silently dropped). ``max_fetch`` must be a positive
-        int (a non-positive budget would silently return an empty history → ``InvalidData``).
+        frontier not exhausted, ``corp_action_fetch_incomplete`` when ≥1 page failed to fetch or
+        parse, and ``corp_action_seed_not_found`` when no-seed auto-discovery found no page for
+        the ticker (the empty result is not a confirmed never-paid). ``max_fetch`` must be a
+        positive int (a non-positive budget would silently return an empty history →
+        ``InvalidData``).
         """
         code = validate_non_empty_string(symbol, "symbol").upper()
         lo, hi = validate_date_range(start, end, allow_none=True, name="dividends")
@@ -329,7 +379,7 @@ class VsdcCashDividendSource(CorpActionSource):
                 f"dividends: max_fetch must be a positive int, got {max_fetch!r}"
             )
 
-        events, truncated, failed_fetches = self._crawl(
+        events, truncated, failed_fetches, seed_found = self._crawl(
             code, seed_id=seed_id, lo=lo, hi=hi, max_fetch=max_fetch
         )
 
@@ -348,10 +398,14 @@ class VsdcCashDividendSource(CorpActionSource):
         warnings: list[str] = [CORP_ACTION_SOURCE_PARTIAL]
         if truncated:
             warnings.append(COVERAGE_TRUNCATED_AT_MAX_FETCH)
+        if not seed_found:
+            # no-seed auto-discovery exhausted its window without a seed page → the empty
+            # history is disclosed as not-authoritative (distinct from a confirmed never-paid).
+            warnings.append(CORP_ACTION_SEED_NOT_FOUND)
         if failed_fetches:
             warnings.append(
                 f"{CORP_ACTION_FETCH_INCOMPLETE}: {failed_fetches} announcement "
-                "page(s) skipped (fetch failed)"
+                "page(s) skipped (fetch or parse failed)"
             )
 
         return DividendHistory(
@@ -372,7 +426,7 @@ class VsdcCashDividendSource(CorpActionSource):
         lo: Optional[date],
         hi: Optional[date],
         max_fetch: int,
-    ) -> tuple[list[CashDividendEvent], bool, int]:
+    ) -> tuple[list[CashDividendEvent], bool, int, bool]:
         """Bounded multi-hop BFS over the same-org sidebar graph from a seed.
 
         Fetches each reachable page exactly once — a ``visited`` set is the cycle guard, so
@@ -380,15 +434,19 @@ class VsdcCashDividendSource(CorpActionSource):
         inline, and keeps cash events for ``code`` whose effective date (``record_date``, or
         ``pay_date`` when the record date is unparseable) falls in ``[lo, hi]``. ``max_fetch``
         bounds the number of pages fetched; if the loop stops with the frontier not exhausted
-        the returned ``truncated`` flag is ``True``. A per-page fetch failure is tolerated (it
-        does not sink the crawl) but counted, so the caller can disclose the resulting coverage
-        gap. Returns ``(events, truncated, failed_fetches)``.
+        the returned ``truncated`` flag is ``True``. A per-page failure to FETCH (``SourceError``)
+        or to PARSE (``InvalidData`` — empty/whitespace body, unresolvable ticker) is tolerated
+        (it does not sink the crawl) but counted, so the caller can disclose the resulting
+        coverage gap. ``seed_found`` is ``False`` only when no-seed auto-discovery found no page
+        for the ticker. Returns ``(events, truncated, failed, seed_found)``.
         """
         events: list[CashDividendEvent] = []
 
         seed = seed_id if seed_id is not None else self._find_seed(code, max_fetch=max_fetch)
         if seed is None:
-            return events, False, 0
+            # no-seed auto-discovery found no announcement page for the ticker in its window:
+            # the empty history is NOT a confirmed never-paid (seed_found=False discloses it).
+            return events, False, 0, False
 
         queue: list[int] = [seed]
         enqueued: set[int] = {seed}  # ids ever scheduled (dedup at enqueue time)
@@ -406,12 +464,15 @@ class VsdcCashDividendSource(CorpActionSource):
             fetches += 1
             try:
                 html = self.fetch_announcement(ann_id)
-            except SourceError:
-                # an individual page failing must not sink the whole crawl — but the gap is
-                # counted so the caller can disclose it (never silently incomplete).
+                ev = self.parse_announcement(html, announcement_id=ann_id)
+            except (SourceError, InvalidData):
+                # a page that fails to FETCH (SourceError) or to PARSE (InvalidData: empty/
+                # whitespace body or a cash-div page with no resolvable ticker) must not sink the
+                # whole crawl — counted so the caller discloses the gap (never silently
+                # incomplete). InvalidData is not a SourceError, so the prior fetch-only guard
+                # let one bad sibling page crash the entire dividends() call.
                 failed += 1
                 continue
-            ev = self.parse_announcement(html, announcement_id=ann_id)
             if ev is not None and ev.code == code:
                 # window on the record date, falling back to the pay date when the record
                 # date is unparseable — so a real, dated-by-payment event is not dropped.
@@ -425,7 +486,7 @@ class VsdcCashDividendSource(CorpActionSource):
 
         # frontier not exhausted (stopped at the cap) → coverage is truncated.
         truncated = head < len(queue)
-        return events, truncated, failed
+        return events, truncated, failed, True
 
     def _find_seed(self, code: str, *, max_fetch: int) -> Optional[int]:
         """No seed given: scan a bounded recent-ID window downward from ``latest_id`` for the
@@ -437,9 +498,10 @@ class VsdcCashDividendSource(CorpActionSource):
                 break
             try:
                 html = self.fetch_announcement(ann_id)
-            except SourceError:
+                ev = self.parse_announcement(html, announcement_id=ann_id)
+            except (SourceError, InvalidData):
+                # a fetch OR parse failure on a scanned page must not crash discovery — skip it.
                 continue
-            ev = self.parse_announcement(html, announcement_id=ann_id)
             if ev is not None and ev.code == code:
                 return ann_id
         return None

@@ -66,8 +66,23 @@ _Last synced: 2026-06-21 11:2x +07_
 >     doc-bijection/snapshot) confirmed CLEAN. **5 tokens now** (gate on the SWEEP not count). **GATES
 >     GREEN on merged tree:** full suite 3533 pass, public-API snapshot additive-green (no regen), #180/#188
 >     doc-contract green. 6 fail-first tests added (cycle/dedup + truncation + 4 verify fixes). Raw real
->     pages gitignored `tests/cassettes_private/`. **NEXT:** commit fixes+spec+backlog → ping reviewer
->     **Codex x2** (new domain + scrape + beyond-spec BFS + 4 self-found fixes = higher risk).
+>     pages gitignored `tests/cassettes_private/`. 4 self-fixes committed `edd8011`; routed to Codex x2.
+>     **REVIEWER VERDICT 2026-06-21: BLOCK** (`reviews/review-202606211309-163-vsdc-spine-codex-x2-BLOCK.md`,
+>     in reviewer worktree) — 4 self-fixes GENUINE + 5-token lockstep clean + seeded-BFS solid, BUT 3 fresh
+>     blockers (FIX PHASE, TDD-first, all in `vsdc.py`): **B1** `parse_announcement` is OUTSIDE the `_crawl`
+>     `except SourceError` (line 414) + `_find_seed` (442); it raises `InvalidData` (not a `SourceError`) on
+>     an empty/whitespace sibling body (219) or unresolvable ticker (237) → ONE bad sibling CRASHES the whole
+>     `dividends()` → catch `(SourceError, InvalidData)` around parse in BOTH, count+disclose via
+>     `corp_action_fetch_incomplete`. **B2 (heaviest re-pass)** cash loop captures only the FIRST parenthetical
+>     → a MULTI-TRANCHE page SILENTLY DROPS the 2nd + an intervening `sau thuế 10%/cp` MIS-PAIRS ratio (10 not
+>     12) = silent WRONG data → degrade-token when >1 cash paren + `Mệnh giá` par cross-check (cash≈ratio/100×par,
+>     recovers gross 12) + reject `ratio_pct>100`. **NOTE-1 (pre-push must-fix)** no-seed `_find_seed`
+>     window-miss returns EMPTY history indistinguishable from never-paid → NEW 6th token
+>     `corp_action_seed_not_found` (or enforce seed_id); no-seed path currently UNTESTED. Fast-follows
+>     (non-blocking, track later): seed-scan fetch failures uncounted; doubly-undated event dropped; no-seed
+>     double-spend; `DividendHistory` no `__post_init__` token enforcement. **NEXT:** 3 fail-first tests RED →
+>     fix → #180/#188 lockstep for the new token → full suite+gates on merged tree → commit → re-review (B2
+>     heaviest). Then #182 (reviewer source verdict+close) / #155 (design gate).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed

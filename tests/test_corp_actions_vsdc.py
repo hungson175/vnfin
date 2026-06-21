@@ -20,7 +20,7 @@ from vnfin.corp_actions import (
     dividends,
 )
 from vnfin.corp_actions.base import VN_TZ
-from vnfin.exceptions import InvalidData, SourceUnavailable
+from vnfin.exceptions import InvalidData, SourceError, SourceUnavailable
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "corp_actions"
 
@@ -459,13 +459,15 @@ def test_dividends_keeps_undated_event_via_pay_date_and_flags_degraded():
 
 
 def test_parse_pairs_cash_ratio_closest_before_parenthetical():
-    """#9.19 — the ratio paired with the cash amount is the `%/cổ phiếu` CLOSEST BEFORE the
-    cash parenthetical, never the first `%` on a bundled un-split line (which would fabricate
-    the bonus ratio onto the cash amount)."""
+    """#9.19 — the ratio paired with the cash amount is NOT the bonus `%` listed first on a
+    bundled un-split line. The `Mệnh giá` par cross-check (cash ≈ ratio/100 × par) recovers the
+    cash ratio 12% (12% × 10.000 = 1.200 = cash), never the 100% bonus (= 10.000 ≠ cash)."""
     html = (
         '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
         '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
         '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Mệnh giá:</div>'
+        '<div class="col-md-8 item-info item-info-main">10.000 đồng</div></div>'
         '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
         '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
         '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
@@ -477,6 +479,186 @@ def test_parse_pairs_cash_ratio_closest_before_parenthetical():
     assert ev is not None
     assert ev.cash_per_share == 1200.0
     assert ev.ratio_pct == 12.0  # NOT 100.0 (the bonus ratio listed first)
+
+
+# --------------------------------------------------------------------------- #
+# Reviewer BLOCK 2026-06-21 (Codex x2): 3 fresh blockers, fix phase. B1 parse-crash
+# in the crawl boundary; B2 multi-tranche silent-drop + sau-thuế ratio mis-pair (the
+# heaviest); NOTE-1 no-seed silent-empty. Each gets a fail-first regression.
+# --------------------------------------------------------------------------- #
+# A cash-dividend page (detected via title) with NO resolvable ticker -> parse_announcement
+# raises InvalidData (not a SourceError). Used to prove a bad SIBLING never sinks the crawl.
+_NO_TICKER_CASH_PAGE = (
+    '<!DOCTYPE html><html lang="vi"><body>'
+    '<h3 class="title-category">Chi trả cổ tức bằng tiền</h3>'  # no ":" -> no title-prefix code
+    '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+    '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+    '</body></html>'
+)
+
+
+def test_no_ticker_cash_page_raises_invalid_data():
+    """#9.20a — guard the test premise: the no-ticker page raises InvalidData. (InvalidData IS
+    a SourceError subtype, so the real B1 bug was NOT the class hierarchy — it was that the
+    `_crawl` `parse_announcement` call sat OUTSIDE the `try`, so the `except` never applied and
+    one bad sibling propagated up and crashed `dividends()`.)"""
+    with pytest.raises(InvalidData):
+        VsdcCashDividendSource().parse_announcement(_NO_TICKER_CASH_PAGE)
+    assert issubclass(InvalidData, SourceError)  # documents the true hierarchy
+
+
+def test_dividends_parse_failure_on_sibling_does_not_crash_crawl():
+    """#9.20 (B1) — a same-org page that PARSES to InvalidData (empty body / no resolvable
+    ticker) must NOT crash dividends(): the crawl tolerates it like a fetch failure, counting +
+    disclosing via `corp_action_fetch_incomplete`. Regression: parse_announcement was called
+    OUTSIDE the `_crawl` `except SourceError`, so one bad sibling sank the whole call."""
+    graph = {
+        20: _mk_page("TST", "10/01/2024", sidebar=(21,)),
+        21: _NO_TICKER_CASH_PAGE,  # valid HTTP body, but parse -> InvalidData
+    }
+    http_get, calls = _counting_http_get(graph)
+    src = VsdcCashDividendSource(http_get=http_get)
+    hist = src.dividends("TST", seed_id=20, max_fetch=300)  # must NOT raise
+    assert any(
+        w == "corp_action_fetch_incomplete" or w.startswith("corp_action_fetch_incomplete:")
+        for w in hist.warnings
+    ), hist.warnings
+    assert any(e.record_date == date(2024, 1, 10) for e in hist.events)  # seed still returned
+    assert 21 in calls  # the bad sibling was actually attempted
+
+
+def test_parse_multitranche_discloses_dropped_tranche():
+    """#9.21 (B2) — a page with >1 cash parenthetical (multi-tranche, e.g. tạm ứng đợt 1 + đợt
+    2) must NOT silently drop the 2nd: v1 surfaces the FIRST tranche but flags
+    `vsdc_parse_degraded` so the dropped tranche is disclosed, never hidden."""
+    html = (
+        '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        '<p><div style="text-align: justify;">'
+        '- Đợt 1: 8%/cổ phiếu (01 cổ phiếu được nhận 800 đồng)<br />'
+        '- Đợt 2: 12%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br /></div></p>'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 800.0  # the first tranche is surfaced...
+    assert "vsdc_parse_degraded" in ev.warnings  # ...but the dropped 2nd is disclosed
+
+
+def test_parse_sau_thue_uses_par_to_recover_gross_ratio():
+    """#9.22 (B2, heaviest) — a net-of-tax 'sau thuế 10%/cổ phiếu' sits BETWEEN the gross ratio
+    and the cash parenthetical, so closest-before alone mis-pairs 10%. The `Mệnh giá` par
+    cross-check (cash ≈ ratio/100 × par) recovers the gross 12% (12% × 10.000 = 1.200 = cash),
+    NOT the 10% net rate — never silent WRONG financial data."""
+    html = (
+        '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Mệnh giá:</div>'
+        '<div class="col-md-8 item-info item-info-main">10.000 đồng</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        '<p><div style="text-align: justify;">- Tỷ lệ thực hiện: 12%/cổ phiếu; sau thuế '
+        '10%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />- Ngày thanh toán: 10/04/2024<br /></div></p>'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct == 12.0  # par recovers gross 12%, NOT the 10% net rate
+
+
+def test_parse_sau_thue_without_par_degrades_not_wrong_ratio():
+    """#9.23 (B2) — same net-of-tax ambiguity but NO `Mệnh giá` to disambiguate: rather than
+    serve the WRONG closest-before 10%, the ratio is left None and `vsdc_parse_degraded` flags
+    the result (never serve a guessed/wrong ratio; the cash amount is still surfaced)."""
+    html = (
+        '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        '<p><div style="text-align: justify;">- Tỷ lệ thực hiện: 12%/cổ phiếu; sau thuế '
+        '10%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />- Ngày thanh toán: 10/04/2024<br /></div></p>'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct is None  # ambiguous w/o par -> NOT the wrong 10%
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_rejects_implausible_over_100_ratio():
+    """#9.24 (B2) — a `%/cổ phiếu` > 100 is implausible for a per-share CASH ratio (a parse
+    artifact or a misread); it is rejected rather than fabricated onto the cash amount, and the
+    event is flagged degraded (the cash amount is still surfaced)."""
+    html = (
+        '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        '<p><div style="text-align: justify;">- Tỷ lệ thực hiện: 200%/cổ phiếu '
+        '(01 cổ phiếu được nhận 1.200 đồng)<br />- Ngày thanh toán: 10/04/2024<br /></div></p>'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct is None  # 200%/share rejected, not fabricated
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_multitranche_with_sau_thue_no_misparse_and_discloses():
+    """#9.26 (B2, the reviewer's exact combined scenario) — a multi-tranche page whose FIRST
+    tranche ALSO carries an intervening net-of-tax 'sau thuế 10%/cổ phiếu': both failure modes
+    are defended at once — the gross 12% is recovered via par (NOT the 10% net rate, no silent
+    WRONG data) AND the dropped 2nd tranche is disclosed via `vsdc_parse_degraded`."""
+    html = (
+        '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Mệnh giá:</div>'
+        '<div class="col-md-8 item-info item-info-main">10.000 đồng</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        '<p><div style="text-align: justify;">'
+        '- Đợt 1: 12%/cổ phiếu; sau thuế 10%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />'
+        '- Đợt 2: 8%/cổ phiếu (01 cổ phiếu được nhận 800 đồng)<br />'
+        '- Ngày thanh toán: 10/04/2024<br /></div></p>'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0  # first tranche surfaced
+    assert ev.ratio_pct == 12.0  # par recovers gross 12%, NEVER the 10% net rate
+    assert "vsdc_parse_degraded" in ev.warnings  # the dropped 2nd tranche is disclosed
+
+
+def test_dividends_no_seed_found_discloses_not_silent_empty():
+    """#9.25 (NOTE-1) — when no-seed auto-discovery exhausts its recent-ID window WITHOUT
+    finding a seed page for the ticker, the empty history must be DISTINGUISHABLE from a genuine
+    never-paid-a-dividend: it carries `corp_action_seed_not_found` (never a silent empty)."""
+    # latest_id=5 -> _find_seed scans ids 5..1; every page is a DIFFERENT ticker -> no seed.
+    other = _mk_page("OTH", "10/01/2024")
+    graph = {i: other for i in range(1, 6)}
+    http_get, calls = _counting_http_get(graph)
+    src = VsdcCashDividendSource(http_get=http_get, latest_id=5)
+    hist = src.dividends("TST", max_fetch=300)  # no seed_id -> auto-discovery
+    assert hist.events == ()
+    assert "corp_action_seed_not_found" in hist.warnings
+    assert "corp_action_source_partial" in hist.warnings
+    assert set(calls) == {1, 2, 3, 4, 5}  # the whole window was actually scanned
 
 
 # --------------------------------------------------------------------------- #
