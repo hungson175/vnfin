@@ -284,6 +284,60 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **DOCS BATCH (reviewer-routed 07:23) — SPLIT after reviewer BLOCK on #180.** The 771d1ea bundle was
+  un-committed (`reset --mixed origin/master`) and recomposed: #166/#171 land now (CLEAN/APPROVED),
+  #180 stays OPEN pending a tokenization fix + reviewer re-review.
+  - ✅ **#166/#171 — DONE (committed `8463592`, push+close pending in this turn).** Reviewer APPROVED
+    both CLEAN (verified vs source, anchors render). #166 index-VOLUME-semantics section
+    (indices-constituents.md) + units/SKILL caveats + doc↔code guard; #171 end-to-end gold coverage map
+    (gold-world-reference.md hub) + cross-links from gold-adapters/cmo-gold-annual + guard.
+  - 🔧 **#180 — BLOCKED (reviewer-verified verdict, 07:54) → tokenization fix IN PROGRESS.** The original
+    24-row table was NOT exhaustive: the first sweep hunted token LITERALS and missed un-namespaced PROSE
+    warnings folded into caller-facing `.warnings`. **Reverse-adversarial completeness sweep** (wf
+    wyxz5cq7e: 3-angle code→doc sweep + critic) confirmed the reviewer's 3 **plus a 4th**:
+    1. `vnfin/funds/fmarket.py` `deduped N duplicate navDate row(s)…` → **`deduped_duplicate_nav_rows`**
+    2. `vnfin/fundamentals/vndirect.py` `skipped N row(s) mismatched reportType/modelType` →
+       **`skipped_mismatched_report_rows`**
+    3. `vnfin/fundamentals/cafef.py` `skipped N period row(s)` → **`skipped_period_rows`**
+    4. `vnfin/indices/client.py:210` `segment {year}: …` (year interpolated before the `:` = UNSTABLE
+       prefix) → **`stitched_segment`** (companion to existing `stitched_multi_source`; bonus find beyond
+       the reviewer's 3 — flag for ratification).
+    Fix = namespace all 4 (fact-first, cause-in-tail) + fail-first regression each (TDD) + re-add the
+    SKILL.md "Warning tokens" table & `_WARNING_TOKENS_180` guard at the COMPLETE set (25→29; gate on the
+    sweep, not a magic number — #167 later adds 3 more → 32). Commit B stays LOCAL; hand to reviewer when
+    green + guard fails-red on a removed token. Do NOT push/close #180 until re-review.
+
+## Next (code queue — after docs batch)
+
+- **#167 — VN equity universe / symbol discovery** — **ACCEPTED, NEXT CODE ITEM** (reviewer 07:35,
+  source confirmed clean-room). Process: SHORT design note → LEAD gate → TDD → Codex×2.
+  - Source report: `~/tools/vnfin-oss-reviewer/reviews/source-202606211100-issue167-vn-equity-universe.md`;
+    spec direction in the #167 GitHub comment.
+  - **Source = SSI iBoard query groups on `iboard-query.ssi.com.vn`** — SAME host + SUCCESS-envelope the
+    existing `ssi_iboard_query` index-constituents source uses → **REUSE that transport/host/posture** (no
+    new clean-room/legal risk; runtime-fetch-only / no-redistribution).
+  - `GET /stock/group/{token}`; tokens NON-OBVIOUS: HOSE=`VNINDEX`, HNX=`HnxIndex`, UPCOM=`HNXUpcomIndex`
+    (plain HOSE/HNX/UPCOM → empty). Filter `stockType=='s'` (equities only; drop warrants/ETFs/funds).
+  - Expose: ticker / exchange / companyNameEn+Vi / ISIN / stockType / adminStatus(listing-status) /
+    parValue / currency.
+  - HONEST gaps as never-silent warnings (mirror `weights_not_available`): `listing_date_not_available`
+    (firstTradingDate=='0'), `sector_not_available`, `coverage_partial` (index basket ~96%, NOT full
+    regulatory roster — never claim a complete roster; cross-check totals vs SSC portal in provenance doc).
+  - New internal `ssi_iboard_universe` source + public accessor (propose home/name in the design note).
+  - Clean-room: SSI iBoard host only, zero VNStock.
+  - ✅ **SHORT design note DRAFTED + READY** at `/tmp/vnfin-167-design-note.md` (prep during docs-batch
+    review; NOT sent yet — send to reviewer the moment the docs batch is approved/pushed). Recommends a
+    new thin `vnfin.equities` domain (`universe(exchange=None)` + `source()`; `client()`=`source()` like
+    funds); `EquityUniverse`/`EquitySecurity` models mirroring IndexConstituents/IndexMember; transport
+    mirrors `IndexConstituentsSource` exactly. Open Qs for the gate: domain home (`equities` vs
+    `symbols`/`reference`), include `profile(symbol)` now vs defer, `exchange=None` merge-all-boards.
+  - ⚠️ **#180 LOCKSTEP:** the 3 honest-gap warnings (`coverage_partial`, `listing_date_not_available`,
+    `sector_not_available`) are NEW tokens → MUST be added to the SKILL.md "Warning tokens" table +
+    `_WARNING_TOKENS_180` guard in the SAME #167 change (24→27). Don't ship #167 without it.
+- **#163 — dividends / corp-actions** — ACCEPTED in scope but **BLOCKED**: source choice (clean-thin
+  HOSE-JSON vs full-but-HTML HNX/VSDC scrape vs paid FiinGroup-BYOK) is a legal/product decision the
+  reviewer escalated to Boss. **Do NOT start until reviewer sends the chosen-source spec.**
+
 - **#157 fundamentals metrics — DESIGN FINAL-APPROVED (review-202606201405); READY FOR IMPL, queued
   AFTER #172** (design `84265fb`). #168+#169 closed. Reviewer re-sequenced: new HIGH bug #172 (fund
   NAV staleness) goes BEFORE the big #157 feature. On start → TDD fork building the full feature per
