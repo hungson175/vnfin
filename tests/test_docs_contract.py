@@ -594,6 +594,7 @@ _WARNING_TOKENS_180 = (
     "ex_date_unavailable",
     "corp_action_source_partial",
     "vsdc_parse_degraded",
+    "vsdc_ratio_tax_deferred",
     "coverage_truncated_at_max_fetch",
     "corp_action_fetch_incomplete",
     "corp_action_seed_not_found",

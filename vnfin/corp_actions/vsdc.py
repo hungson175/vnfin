@@ -12,7 +12,10 @@ function of the HTML string, fixture-pinned), label→value pairing keys on the
 ``item-info`` / ``item-info-main`` CSS classes (never on element position or
 ``col-md-*`` widths, which vary across pages), and a recognized cash-dividend page whose
 amounts cannot be parsed emits the never-silent ``vsdc_parse_degraded`` token rather than
-silently corrupting or dropping the event.
+silently corrupting or dropping the event. Under the #163 v1 de-scope a recognized ratio whose
+line carries a tax / withholding signal (thuế / TNCN / khấu trừ) is net-vs-gross ambiguous and is
+WITHHELD (``ratio_pct=None``) + disclosed via the distinct ``vsdc_ratio_tax_deferred`` token rather
+than classified (net-vs-gross classification is deferred to v2).
 
 Discovery (finding a ticker's announcement IDs) uses two observed signals: a per-page
 "Tin cùng tổ chức" same-org sidebar of ``/vi/ad/{id}`` links, and a bounded recent-ID-window
@@ -42,6 +45,12 @@ from .models import CashDividendEvent, DividendHistory
 # tests/test_docs_contract.py::_WARNING_TOKENS_180 tuple.
 EX_DATE_UNAVAILABLE = "ex_date_unavailable"
 VSDC_PARSE_DEGRADED = "vsdc_parse_degraded"
+#: Per-result: the ratio context PARSED FINE but carries a tax / withholding signal (thuế / TNCN /
+#: khấu trừ), so its `%` is net-vs-gross ambiguous. Under the #163 v1 de-scope we do NOT classify
+#: net-vs-gross (an open-ended, silent-wrong-prone problem); the ratio is INTENTIONALLY withheld
+#: (ratio_pct=None) and disclosed via this token. Distinct from vsdc_parse_degraded, which means a
+#: field could not be PARSED (a data-quality fault). net-vs-gross classification is a v2 scope item.
+VSDC_RATIO_TAX_DEFERRED = "vsdc_ratio_tax_deferred"
 CORP_ACTION_SOURCE_PARTIAL = "corp_action_source_partial"
 #: Per-result: the bounded crawl stopped at ``max_fetch`` with same-org announcements still
 #: un-fetched, so the returned history is NOT exhaustive (never silently truncated).
@@ -135,56 +144,20 @@ def _parse_vn_number(token: str) -> Optional[float]:
     return val
 
 
-# Net-of-tax detection vocab (accent-stripped, lowercased — see _segment_is_net).
-_BEFORE_TAX_TOKENS = frozenset({"truoc", "chua", "khong", "mien"})  # before / not-yet / not / exempt
-_TAX_NOUN_TOKENS = frozenset({"thue", "tncn"})  # the TAX NOUNS — NOT the verbs khấu/trừ (also fee verbs)
+# Tax / withholding SIGNAL tokens (accent-stripped). Under the #163 v1 de-scope a ratio from a line
+# carrying ANY of these is net-vs-gross ambiguous and is WITHHELD (ratio_pct=None +
+# vsdc_ratio_tax_deferred), NOT classified — net-vs-gross is a v2 scope decision.
+_RATIO_TAX_NOUNS = frozenset({"thue", "tncn"})  # thuế / TNCN
 
 
-def _segment_is_net(text: str) -> bool:
-    """True when a ratio segment is qualified by a net-of-tax phrase, so its `%` is an AFTER-TAX
-    figure that must NEVER be served as the gross dividend ratio. Detected by TOKEN co-occurrence
-    (word-boundary, accent-stripped) — NOT substring — so 'thực hiện' (every page), 'internet',
-    'trong' do NOT register as net.
-
-    STRONG net markers are unambiguously after-tax and WIN over any before/negation word (so a
-    before-word on an UNRELATED noun, e.g. 'sau thuế (chưa gồm phí)', cannot flip them to gross):
-      - thực nhận / thực lĩnh / thực lãnh  (net received)
-      - sau … thuế                          (after tax; incl. 'sau khi … thuế')
-      - a standalone NET / ròng token
-
-    AMBIGUOUS deduction markers (đã trừ / khấu trừ thuế, thuế TNCN, bare khấu trừ) are net UNLESS a
-    before/not-yet/not/exempt word GOVERNS THE TAX NOUN — i.e. a 'thuế'/'TNCN' token follows the
-    before-word within 4 tokens: 'trước thuế', 'trước thuế TNCN', 'chưa khấu trừ thuế', 'miễn thuế',
-    'trước khi khấu trừ thuế' -> GROSS. The veto's target is the tax NOUN, NOT the verbs khấu/trừ —
-    those are ALSO the ordinary verbs for deducting FEES (khấu trừ phí / trừ phí), so a before-word on
-    a fee clause ('khấu trừ thuế … chưa khấu trừ phí', 'đã trừ thuế … chưa trừ phí', 'thuế TNCN …
-    không trừ phí') is NOT adjacent to a tax noun -> stays net (degrades, never leaks the net rate).
-    """
-    toks = re.findall(r"[a-z0-9]+", _strip_accents(text))  # ordered, for adjacency check
-    tokset = set(toks)
-    # STRONG net markers — win regardless of before/negation words.
-    if "thuc" in tokset and tokset & {"nhan", "linh", "lanh"}:
-        return True
-    if "sau" in tokset and "thue" in tokset:
-        return True
-    if tokset & {"net", "rong"}:
-        return True
-    # AMBIGUOUS markers: a before-word flips to GROSS only when it GOVERNS A TAX NOUN — a thuế/TNCN
-    # token follows it within 4 tokens. Targeting the tax NOUN (not the verbs khấu/trừ, which also
-    # deduct FEES) keeps 'chưa khấu trừ thuế'/'trước khi khấu trừ thuế' gross while a fee clause
-    # ('chưa khấu trừ phí'/'không trừ phí') no longer vetoes a genuine 'khấu trừ thuế' net rate.
-    before_qualifies_tax = any(
-        toks[i] in _BEFORE_TAX_TOKENS
-        and any(toks[j] in _TAX_NOUN_TOKENS for j in range(i + 1, min(i + 5, len(toks))))
-        for i in range(len(toks))
-    )
-    if before_qualifies_tax:
-        return False
-    if "thue" in tokset and tokset & {"tru", "khau", "tncn"}:
-        return True
-    if "khau" in tokset and "tru" in tokset:  # bare 'khấu trừ' (withholding); 'thuế' may be omitted
-        return True
-    return False
+def _line_has_tax_signal(text: str) -> bool:
+    """True when a justify ratio line carries a tax / withholding signal: an explicit tax noun
+    (thuế / TNCN) OR the withholding verb pair khấu+trừ ('thuế' is often elided, e.g. 'đã thực hiện
+    khấu trừ'). Word-boundary + accent-stripped, so 'thực hiện' (on every page), 'internet', 'trong',
+    'trước' (token 'truoc' != 'tru') never register. A line with such a signal has its ratio WITHHELD
+    under the v1 de-scope (#163): the `%` could be net-of-tax and we no longer classify net-vs-gross."""
+    toks = set(re.findall(r"[a-z0-9]+", _strip_accents(text)))
+    return bool(toks & _RATIO_TAX_NOUNS) or ("khau" in toks and "tru" in toks)
 
 # A per-share cash amount in EITHER VSDC phrasing — "…được nhận 1.200 đồng" OR
 # "…số tiền 1.200 đồng/cổ phiếu". Used only to COUNT tranches (multi-tranche detection); the
@@ -340,6 +313,7 @@ class VsdcCashDividendSource(CorpActionSource):
         cash_per_share: Optional[float] = None
         ratio_pct: Optional[float] = None
         ratio_uncertain = False
+        ratio_tax_deferred = False
         pay_date: Optional[date] = None
         lines = self._justify_lines(html)
         # Multi-tranche: a page listing >1 per-share cash amount (đợt 1 + đợt 2, in EITHER phrasing)
@@ -354,53 +328,38 @@ class VsdcCashDividendSource(CorpActionSource):
             if cash_m and cash_per_share is None:
                 cash_per_share = _parse_vn_number(cash_m.group("cash"))
                 prefix = line[: cash_m.start()]
-                # Candidate ratios are the `%/cổ phiếu` tokens BEFORE the cash parenthetical, parsed
-                # DECIMAL-aware (8.5% -> 8.5, not 85) and bounded to a plausible ratio (0 < pct ≤
-                # 100). A candidate preceded (since the previous candidate) by a net-of-tax marker
-                # is flagged net and NEVER served as the gross ratio.
-                # A net marker binds to the candidate it sits beside: the gap BEFORE a candidate
-                # taints THAT candidate (a leading marker, e.g. "thực nhận sau thuế 10%"); the text
-                # AFTER the LAST candidate (up to the cash anchor) taints the last candidate (a
-                # trailing marker, e.g. "12%/cổ phiếu sau thuế (…)"). A marker BETWEEN two candidates
-                # binds to the following one (leading) — this is what lets a clean gross "12%; …sau
-                # thuế 10%" recover 12 via par. Net-tainted candidates are EXCLUDED from gross_cands,
-                # so they are never served AND never par-confirmed.
+                # DE-SCOPE (#163 v1): if the ratio line carries ANY tax / withholding signal its `%`
+                # is net-vs-gross ambiguous — we do NOT classify it (that was open-ended and
+                # silent-wrong-prone). WITHHOLD the ratio and disclose via vsdc_ratio_tax_deferred.
+                # A ratio is served ONLY from a fully tax-free line. (v2 = classify behind a corpus.)
                 matches = list(_RATIO_RE.finditer(prefix))
-                gross_cands: list[float] = []
-                net_present = False
-                for i, rm in enumerate(matches):
-                    pct = _parse_ratio_pct(rm.group("pct"))
-                    left_start = matches[i - 1].end() if i > 0 else 0
-                    seg = prefix[left_start : rm.start()]
-                    if i == len(matches) - 1:
-                        seg = seg + " " + prefix[rm.end() :]
-                    if _segment_is_net(seg):
-                        net_present = True
-                        continue
-                    if pct is not None and 0 < pct <= 100:
-                        gross_cands.append(pct)
                 had_ratio_token = bool(matches)
-                chosen: Optional[float] = None
-                if par is not None and cash_per_share is not None:
-                    # par cross-check: confirm a gross candidate against the shown cash. A UNIQUE
-                    # confirmed value is served; >1 distinct confirmed value is ambiguous (degrade).
-                    tol = max(1.0, 0.005 * cash_per_share)
-                    confirmed = sorted(
-                        {c for c in gross_cands if abs(c / 100.0 * par - cash_per_share) <= tol}
-                    )
-                    if len(confirmed) == 1:
-                        chosen = confirmed[0]
-                    elif len(confirmed) > 1:
+                if _line_has_tax_signal(line):
+                    ratio_tax_deferred = True
+                else:
+                    # Tax-free line: serve a single unambiguous gross %/cổ phiếu, optionally
+                    # par-cross-checked (cash ≈ ratio/100 × par). Bounded 0 < pct ≤ 100.
+                    gross_cands = [
+                        pct
+                        for rm in matches
+                        if (pct := _parse_ratio_pct(rm.group("pct"))) is not None
+                        and 0 < pct <= 100
+                    ]
+                    chosen: Optional[float] = None
+                    if par is not None and cash_per_share is not None:
+                        tol = max(1.0, 0.005 * cash_per_share)
+                        confirmed = sorted(
+                            {c for c in gross_cands if abs(c / 100.0 * par - cash_per_share) <= tol}
+                        )
+                        if len(confirmed) == 1:
+                            chosen = confirmed[0]
+                        elif len(confirmed) > 1:
+                            ratio_uncertain = True
+                    elif len(gross_cands) == 1:
+                        chosen = gross_cands[0]
+                    ratio_pct = chosen
+                    if had_ratio_token and chosen is None:
                         ratio_uncertain = True
-                elif len(gross_cands) == 1 and not net_present:
-                    # no par to cross-check: serve a single unambiguous gross candidate ONLY when no
-                    # net-of-tax marker is on the line (else the shown cash may be net → degrade).
-                    chosen = gross_cands[0]
-                # par present but nothing confirms, OR no par with an ambiguous / net-qualified line:
-                # leave ratio None rather than fabricate/mis-pair — disclosed via the degraded token.
-                ratio_pct = chosen
-                if had_ratio_token and chosen is None:
-                    ratio_uncertain = True
             pay_m = _PAY_LINE_RE.search(line)
             if pay_m and pay_date is None:
                 pay_date = _parse_dmy(pay_m.group("date"))
@@ -411,8 +370,13 @@ class VsdcCashDividendSource(CorpActionSource):
         # is ambiguous/net-qualified, a ratio is stated on the page but NOT on the cash line
         # (cross-line, unpaired), or the page lists multiple cash tranches (only the first surfaced).
         cross_line_unpaired = (
-            cash_per_share is not None and ratio_pct is None and any_ratio_token
+            cash_per_share is not None
+            and ratio_pct is None
+            and any_ratio_token
+            and not ratio_tax_deferred
         )
+        if ratio_tax_deferred:
+            warnings.append(VSDC_RATIO_TAX_DEFERRED)
         if (
             record_date is None
             or (cash_per_share is None and ratio_pct is None)

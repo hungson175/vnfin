@@ -292,6 +292,16 @@ All notable changes to `vnfin` are documented here. The format follows
   enforces points/RAW/symbol homogeneity and rejects conflicting seam dates. D1 only. The default
   strict `index_history` is unchanged.
 
+### Changed
+- **VSDC no longer classifies net-vs-gross dividend ratios — conservative v1-surface shrink** (#163
+  v1 de-scope) — a ratio line carrying a **tax/withholding signal** (thuế / TNCN / khấu trừ) is
+  net-vs-gross ambiguous; rather than classify it (an open-ended, silent-wrong-prone problem that
+  produced 7 distinct silent-wrong-ratio bugs over 6 rounds), `vnfin.corp_actions.dividends(...)` now
+  WITHHOLDS the ratio (`ratio_pct=None`) and discloses it via the **new `vsdc_ratio_tax_deferred`**
+  per-event token (distinct from `vsdc_parse_degraded`, which remains a parse fault). A ratio is
+  served only from a fully tax-free line; clean lines are unaffected. Net-vs-gross classification is
+  deferred to v2 behind a committed test corpus. ([#163](https://github.com/hungson175/vnfin/issues/163))
+
 ### Fixed
 - **Index-constituents diagnostic no longer advises treating membership as point-in-time** (#175,
   Tier-3) — `vnfin.diagnostics.explain_index_constituents(...)` and the static
