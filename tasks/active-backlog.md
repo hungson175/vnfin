@@ -284,26 +284,29 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **DOCS BATCH (reviewer-routed 07:23) — SPLIT after reviewer BLOCK on #180.** The 771d1ea bundle was
-  un-committed (`reset --mixed origin/master`) and recomposed: #166/#171 land now (CLEAN/APPROVED),
-  #180 stays OPEN pending a tokenization fix + reviewer re-review.
+- **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
+  master, all closed). Active WIP is now **#167 (VN equity universe)** — design-gated GREEN-to-code; see
+  the "Next (code queue)" entry below for the locked spec decisions. #188 tracked as a non-blocking
+  follow-up.
   - ✅ **#166/#171 — DONE + PUSHED + CLOSED** (`8463592` impl + `acfc3ad` backlog; pushed
     `cefe777..acfc3ad`; both issues closed w/ resolution comments). Reviewer APPROVED both CLEAN.
     #166 index-VOLUME-semantics section + units/SKILL caveats + doc↔code guard; #171 end-to-end gold
     coverage map (gold-world-reference.md hub) + cross-links + guard.
-  - ✅ **#180 — FIX DONE, commit B LOCAL (`dd3ee1c`), AWAITING REVIEWER RE-REVIEW (do NOT push/close).**
-    The original 24-row table was NOT exhaustive: the first sweep hunted token LITERALS and missed
-    un-namespaced PROSE warnings on caller-facing `.warnings`. Reverse-adversarial completeness sweep (wf
-    wyxz5cq7e) confirmed the reviewer's 3 **plus a 4th** (`stitched_segment`, unstable `segment {year}:`
-    prefix — bonus find, flagged for ratification). All 4 namespaced fact-first/cause-in-tail:
+  - ✅ **#180 — DONE + PUSHED + CLOSED** (`dd3ee1c` impl + `d35b712` backlog; pushed `acfc3ad..d35b712`;
+    #180 closed w/ resolution comment). Reviewer **APPROVE** (review-202606210822) after an independent
+    reverse completeness re-sweep (AST bijection over all 84 `vnfin/` files): emitted prefixes = 29,
+    documented = 29, both diffs empty. Namespaced all 4 prose/unstable warnings fact-first/cause-in-tail:
     `deduped_duplicate_nav_rows` (fmarket), `skipped_mismatched_report_rows` (vndirect),
-    `skipped_period_rows` (cafef), `stitched_segment` (indices/client — year moved AFTER the `:`).
-    Each has a fail-first regression (TDD: RED on prose → GREEN after namespacing). SKILL "Warning tokens"
-    section re-added at the COMPLETE caller set (29 tokens) + **bidirectional** `_WARNING_TOKENS_180`
-    doc↔code guard (code→doc: every emitted token documented; doc→code: every documented token still a
-    literal). **Proven fails-red BOTH ways** (drop a doc row → flags it; drop a code emission → flags it).
-    Full suite green (EXIT=0), API snapshot FROZEN, CHANGELOG updated. Gate on the sweep, not a magic count
-    (#167 later folds 3 → 32). Handoff sent to reviewer; do NOT push/close until APPROVE.
+    `skipped_period_rows` (cafef), `stitched_segment` (indices/client — year moved AFTER the `:`; the
+    bonus 4th, ratified). Each has a fail-first regression (RED→GREEN). SKILL "Warning tokens" section at
+    the COMPLETE 29-token set + **bidirectional** `_WARNING_TOKENS_180` guard, **proven fails-red BOTH
+    ways**. Suite green, snapshot FROZEN, CHANGELOG updated. Watermark/state left to reviewer.
+    Memory: [[new-warning-token-must-update-180-reference]].
+  - 📋 **#188 — guard forward-discovery hardening (NON-BLOCKING follow-up, filed by reviewer).** My #180
+    guard is a regression-LOCK (loops the hardcoded 29-tuple), not a forward-DISCOVERY gate — a FUTURE new
+    prose `.warnings` would still ship green (same blind spot that caused #180). Durable fix = guard
+    AST-extracts leading tokens from every `.warnings` site and asserts subset-of-documented. Tracked, not
+    urgent; schedule after #167.
 
 ## Next (code queue — after docs batch)
 
@@ -323,15 +326,35 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     regulatory roster — never claim a complete roster; cross-check totals vs SSC portal in provenance doc).
   - New internal `ssi_iboard_universe` source + public accessor (propose home/name in the design note).
   - Clean-room: SSI iBoard host only, zero VNStock.
-  - ✅ **SHORT design note DRAFTED + READY** at `/tmp/vnfin-167-design-note.md` (prep during docs-batch
-    review; NOT sent yet — send to reviewer the moment the docs batch is approved/pushed). Recommends a
-    new thin `vnfin.equities` domain (`universe(exchange=None)` + `source()`; `client()`=`source()` like
-    funds); `EquityUniverse`/`EquitySecurity` models mirroring IndexConstituents/IndexMember; transport
-    mirrors `IndexConstituentsSource` exactly. Open Qs for the gate: domain home (`equities` vs
-    `symbols`/`reference`), include `profile(symbol)` now vs defer, `exchange=None` merge-all-boards.
-  - ⚠️ **#180 LOCKSTEP:** the 3 honest-gap warnings (`coverage_partial`, `listing_date_not_available`,
-    `sector_not_available`) are NEW tokens → MUST be added to the SKILL.md "Warning tokens" table +
-    `_WARNING_TOKENS_180` guard in the SAME #167 change (24→27). Don't ship #167 without it.
+  - ✅ **DESIGN GATE: APPROVE-WITH-CHANGES** (reviewer 08:21, `/tmp/vnfin-167-gate-verdict.md`) — **GREEN
+    TO CODE** once the blockers are folded into the spec. All decisions LOCKED:
+    - (a) **NEW `vnfin.equities` domain** (funds-style `client = source`; register in `vnfin/__init__.py`
+      `from . import equities` + `__all__`).
+    - (b) **DEFER `profile(symbol)`** — out-of-scope convenience filter; ship `universe()`-only, document
+      "call `universe(exchange=)` and filter".
+    - (c) **`exchange=None` merges all 3 boards** (default), with a FIXED dedup (blocker #2 below).
+    - **Tokens (4, ratified): `partial_universe_coverage`** (renamed from `coverage_partial` — collided
+      w/ existing `partial_coverage`; new name slots into the `partial_<qualifier>_coverage` family),
+      `listing_date_not_available`, `sector_not_available`, **`cross_board_duplicate_symbol`** (blocker
+      #2 fix). → **#180 lockstep guard 29→33** in the SAME change (gate on the sweep, not the count).
+    - **Blocker #2 DECISION = route (a) warning+keep-first:** cross-board symbol collision must NOT
+      hard-raise (one live-provider glitch would nuke all 3 boards). Keep-first + never-silent
+      `cross_board_duplicate_symbol` warning; per-board warnings stay attributed (namespace by board).
+    - **Must-fix-in-spec:** do NOT inherit `_optional_member_str`/`_member_company_name` as-is — they
+      hard-code `IndexConstituentsSource.NAME` (`vnfin/indices/sources.py:240,255`) → would mislabel the
+      new source's errors as `ssi_iboard_query`. Lift to a name-parameterized helper / own copy. **Drop**
+      the always-`"s"` `security_type` field (structurally constant = misleading). Add a **CI-skipped
+      opt-in live probe** test (pins payload shape) + `docs/sources/equities-universe.md` provenance
+      (cite the reviewer source report: HOSE/VNINDEX=403, HNX/HnxIndex=300, UPCOM/HNXUpcomIndex=828; ~96%
+      vs SSC; runtime-fetch/no-redistribution).
+    - Code map (for spec): `IndexConstituentsSource` `vnfin/indices/sources.py:145-261`; models
+      `vnfin/indices/models.py`; `HttpDataSource._request_json` `vnfin/transport.py`; funds `client=source`
+      `vnfin/funds/__init__.py:45-56`; `canonical_security_symbol`/`reject_duplicate`/`require_present`
+      from `vnfin._contracts`. **Provenance satisfied** (reviewer corrected the sub-agent's false
+      provenance blocker — the source report lives in the reviewer workspace, not the builder repo).
+  - **NEXT ACTION:** write committed impl spec → delegate TDD build to a FRESH general-purpose agent
+    against the spec ([[fork-echoes-context-use-fresh-agent-for-delegated-impl]]) → integrate + full
+    suite + 29→33 sweep on merged tree → reviewer code review (Codex×2) → push+close.
 - **#163 — dividends / corp-actions** — ACCEPTED in scope but **BLOCKED**: source choice (clean-thin
   HOSE-JSON vs full-but-HTML HNX/VSDC scrape vs paid FiinGroup-BYOK) is a legal/product decision the
   reviewer escalated to Boss. **Do NOT start until reviewer sends the chosen-source spec.**
