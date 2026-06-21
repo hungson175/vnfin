@@ -299,6 +299,105 @@ def test_corp_action_source_is_a_port():
 
 
 # --------------------------------------------------------------------------- #
+# Crawl safety: bounded multi-hop BFS — visited-id dedup + cycle guard, and the
+# never-silent truncation token (reviewer MUST-ADDS 2026-06-21). Synthetic
+# page-graphs are built inline (test-only, fabricated) — never a network call.
+# --------------------------------------------------------------------------- #
+def _mk_page(code: str, record_dmy: str, *, sidebar=()) -> str:
+    """A minimal synthetic VSDC cash-dividend page with a chosen same-org sidebar."""
+    links = "".join(
+        f'<li><a href="/vi/ad/{i}">{code}: Chi trả cổ tức bằng tiền</a></li>'
+        for i in sidebar
+    )
+    return (
+        '<!DOCTYPE html><html lang="vi"><body>'
+        f'<h3 class="title-category">{code}: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        f'<div class="col-md-8 item-info item-info-main">{code}</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        f'<div class="col-md-8 item-info item-info-main">{record_dmy}</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        '<p><div style="text-align: justify;">- Tỷ lệ thực hiện: 10%/cổ phiếu '
+        '(01 cổ phiếu được nhận 1.000 đồng)<br />- Ngày thanh toán: 10/04/2024<br /></div></p>'
+        '<aside class="news-sidebar"><div class="sub-cate">Tin cùng tổ chức</div>'
+        f'<ul class="list-same-org">{links}</ul></aside>'
+        "</body></html>"
+    )
+
+
+def _counting_http_get(graph):
+    """A GET stub over an id->HTML graph that records a per-id fetch count."""
+    calls: dict[int, int] = {}
+
+    def http_get(url, params=None, headers=None):
+        ann_id = int(url.rstrip("/").rsplit("/", 1)[-1])
+        calls[ann_id] = calls.get(ann_id, 0) + 1
+        if ann_id not in graph:
+            raise SourceUnavailable(f"stub: no page for id {ann_id}")
+        return graph[ann_id]
+
+    return http_get, calls
+
+
+def test_dividends_crawl_dedup_and_cycle_guard():
+    """#9.14 — a cyclic, multi-hop same-org graph terminates and fetches each id once.
+
+    Graph (all TST): 500 -> [501]; 501 -> [502, 500]; 502 -> [501]. Node 502 is reachable
+    ONLY via two hops (500->501->502), and 500/501 are re-listed (back-edges = a cycle). A
+    correct bounded BFS must (a) follow multi-hop sidebar links to reach 502, and (b) never
+    re-fetch an already-visited id despite the back-edges (so the crawl terminates).
+    """
+    graph = {
+        500: _mk_page("TST", "10/05/2024", sidebar=(501,)),
+        501: _mk_page("TST", "20/06/2024", sidebar=(502, 500)),
+        502: _mk_page("TST", "30/07/2024", sidebar=(501,)),
+    }
+    http_get, calls = _counting_http_get(graph)
+    src = VsdcCashDividendSource(http_get=http_get)
+    hist = src.dividends("TST", seed_id=500)
+    # multi-hop: the 2-hop-only node 502 was reached.
+    assert set(calls) == {500, 501, 502}
+    # cycle/dedup guard: no id is ever fetched more than once.
+    assert all(n == 1 for n in calls.values()), calls
+    # all three distinct cash events are present.
+    assert {e.record_date for e in hist.events} == {
+        date(2024, 5, 10),
+        date(2024, 6, 20),
+        date(2024, 7, 30),
+    }
+
+
+def test_dividends_crawl_truncation_emits_never_silent_token():
+    """#9.15 — stopping at max_fetch with an unexhausted frontier emits the cap token.
+
+    Seed 700's sidebar links four more ids (701-704). With ``max_fetch=2`` the crawl stops
+    with ids still un-fetched, so the result MUST carry ``coverage_truncated_at_max_fetch``
+    (never return a partial history as if complete). With a ``max_fetch`` that exhausts the
+    frontier the token MUST be absent.
+    """
+    graph = {
+        700: _mk_page("TST", "10/01/2024", sidebar=(701, 702, 703, 704)),
+        701: _mk_page("TST", "10/02/2024"),
+        702: _mk_page("TST", "10/03/2024"),
+        703: _mk_page("TST", "10/04/2024"),
+        704: _mk_page("TST", "10/05/2024"),
+    }
+    http_get, calls = _counting_http_get(graph)
+    src = VsdcCashDividendSource(http_get=http_get)
+    truncated = src.dividends("TST", seed_id=700, max_fetch=2)
+    assert "coverage_truncated_at_max_fetch" in truncated.warnings
+    assert "corp_action_source_partial" in truncated.warnings
+    assert sum(calls.values()) == 2  # the cap bounds the number of fetches
+
+    http_get2, calls2 = _counting_http_get(graph)
+    src2 = VsdcCashDividendSource(http_get=http_get2)
+    full = src2.dividends("TST", seed_id=700, max_fetch=10)
+    assert "coverage_truncated_at_max_fetch" not in full.warnings
+    assert len(full.events) == 5
+
+
+# --------------------------------------------------------------------------- #
 # Diagnostic
 # --------------------------------------------------------------------------- #
 def test_explain_corp_actions_coverage_offline():

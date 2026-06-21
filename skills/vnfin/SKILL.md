@@ -162,6 +162,7 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `ex_date_unavailable` | `corp_actions.dividends` | **Always present** per event — v1 serves the VSDC depository spine, which publishes no ex-date (the VNDirect finfo enrichment leg is held for v2), so `ex_date` is always `None` and is never fabricated or derived. | #163 |
 | `corp_action_source_partial` | `corp_actions.dividends` | **Always present** per result (`DividendHistory`) — the result is from the VSDC depository spine ALONE; the ex-date enrichment leg is not active in v1 (in v2 it fires when the finfo leg is down). | #163 |
 | `vsdc_parse_degraded` | `corp_actions.dividends` | Per event: a page IS a cash dividend (title/reason) with a record date but the ratio/cash parenthetical was unparseable, so `cash_per_share`/`ratio_pct` are `None` — the event is surfaced, never silently dropped. | #163 |
+| `coverage_truncated_at_max_fetch` | `corp_actions.dividends` | Per result (`DividendHistory`): the bounded same-org crawl stopped at `max_fetch` with announcements still un-fetched, so the returned history is **NOT exhaustive** — raise `max_fetch` (or pass a `seed_id`) for fuller coverage. Absent when the crawl exhausts the frontier. | #163 |
 
 ## Full reference
 

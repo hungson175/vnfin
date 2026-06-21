@@ -15,8 +15,13 @@ amounts cannot be parsed emits the never-silent ``vsdc_parse_degraded`` token ra
 silently corrupting or dropping the event.
 
 Discovery (finding a ticker's announcement IDs) uses two observed signals: a per-page
-"Tin cùng tổ chức" same-org sidebar of ``/vi/ad/{id}`` links (deep history), and a
-bounded recent-ID-window scan downward from a documented watermark when no seed is given.
+"Tin cùng tổ chức" same-org sidebar of ``/vi/ad/{id}`` links, and a bounded recent-ID-window
+scan downward from a documented watermark when no seed is given. From the seed the crawl is a
+**bounded multi-hop BFS** over that same-org sidebar graph: each reachable page is fetched
+exactly once (a visited-id set is the cycle guard — a sidebar that re-lists the seed or links
+in a loop still terminates), and ``max_fetch`` caps the number of pages fetched. If the crawl
+stops with the frontier not exhausted it surfaces the never-silent
+``coverage_truncated_at_max_fetch`` token rather than returning a partial history as complete.
 All endpoints/shapes were learned from the provider's own pages (clean-room; no vnstock).
 """
 from __future__ import annotations
@@ -38,6 +43,9 @@ from .models import CashDividendEvent, DividendHistory
 EX_DATE_UNAVAILABLE = "ex_date_unavailable"
 VSDC_PARSE_DEGRADED = "vsdc_parse_degraded"
 CORP_ACTION_SOURCE_PARTIAL = "corp_action_source_partial"
+#: Per-result: the bounded crawl stopped at ``max_fetch`` with same-org announcements still
+#: un-fetched, so the returned history is NOT exhaustive (never silently truncated).
+COVERAGE_TRUNCATED_AT_MAX_FETCH = "coverage_truncated_at_max_fetch"
 
 #: Documented default recent-ID watermark for the no-seed recent-window scan. Override
 #: via the constructor ``latest_id=`` — this is a rolling hint, not a hard bound.
@@ -295,30 +303,21 @@ class VsdcCashDividendSource(CorpActionSource):
         """Discover, fetch and parse a company's cash-dividend history (VND/share).
 
         Discovery: a caller-supplied ``seed_id`` (preferred), else a bounded recent-ID
-        window scan downward from ``latest_id`` to find a seed; then the seed page's
-        same-org sidebar is crawled to enumerate the company's announcement IDs. Each
-        page is fetched + parsed; cash events for ``symbol`` within ``[start, end]`` are
-        kept. Every event carries ``ex_date_unavailable``; the result always carries
-        ``corp_action_source_partial`` (v1 = the VSDC spine alone, no ex-date leg).
+        window scan downward from ``latest_id`` to find a seed; then a bounded multi-hop
+        BFS over the seed's same-org sidebar graph enumerates the company's announcement
+        IDs. Each page is fetched at most once (visited-id cycle guard) and parsed; cash
+        events for ``symbol`` within ``[start, end]`` are kept. Every event carries
+        ``ex_date_unavailable``; the result always carries ``corp_action_source_partial``
+        (v1 = the VSDC spine alone, no ex-date leg), and additionally
+        ``coverage_truncated_at_max_fetch`` when the crawl stopped at ``max_fetch`` with the
+        frontier not exhausted (the history is then NOT exhaustive — never silently so).
         """
         code = validate_non_empty_string(symbol, "symbol").upper()
         lo, hi = validate_date_range(start, end, allow_none=True, name="dividends")
 
-        ids = self._discover_ids(code, seed_id=seed_id, max_fetch=max_fetch)
-
-        events: list[CashDividendEvent] = []
-        for ann_id in ids:
-            try:
-                html = self.fetch_announcement(ann_id)
-            except SourceError:
-                # an individual page failing must not sink the whole crawl.
-                continue
-            ev = self.parse_announcement(html, announcement_id=ann_id)
-            if ev is None or ev.code != code:
-                continue
-            if not self._in_window(ev.record_date, lo, hi):
-                continue
-            events.append(ev)
+        events, truncated = self._crawl(
+            code, seed_id=seed_id, lo=lo, hi=hi, max_fetch=max_fetch
+        )
 
         # deterministic order: record_date (None last), then announcement_id.
         events.sort(
@@ -332,6 +331,10 @@ class VsdcCashDividendSource(CorpActionSource):
         list_as_of = max(as_of_values) if as_of_values else None
         fetched_at = datetime.now(tz=VN_TZ)
 
+        warnings: list[str] = [CORP_ACTION_SOURCE_PARTIAL]
+        if truncated:
+            warnings.append(COVERAGE_TRUNCATED_AT_MAX_FETCH)
+
         return DividendHistory(
             code=code,
             source=self.name,
@@ -339,22 +342,68 @@ class VsdcCashDividendSource(CorpActionSource):
             events=tuple(events),
             fetched_at_utc=fetched_at,
             as_of=list_as_of,
-            warnings=(CORP_ACTION_SOURCE_PARTIAL,),
+            warnings=tuple(warnings),
         )
 
-    def _discover_ids(
-        self, code: str, *, seed_id: Optional[int], max_fetch: int
-    ) -> tuple[int, ...]:
-        """Resolve the set of announcement IDs to fetch for ``code``.
+    def _crawl(
+        self,
+        code: str,
+        *,
+        seed_id: Optional[int],
+        lo: Optional[date],
+        hi: Optional[date],
+        max_fetch: int,
+    ) -> tuple[list[CashDividendEvent], bool]:
+        """Bounded multi-hop BFS over the same-org sidebar graph from a seed.
 
-        With a ``seed_id``: include the seed + crawl its same-org sidebar. Without a seed:
-        scan a bounded recent-ID window downward from ``latest_id`` to find the first page
-        whose ticker is ``code``, then crawl that seed's sidebar.
+        Fetches each reachable page exactly once — a ``visited`` set is the cycle guard, so
+        a sidebar that re-lists the seed or links in a loop still terminates — parses it
+        inline, and keeps cash events for ``code`` within ``[lo, hi]``. ``max_fetch`` bounds
+        the number of pages fetched; if the loop stops with the frontier not exhausted the
+        returned ``truncated`` flag is ``True`` so the caller emits the never-silent
+        ``coverage_truncated_at_max_fetch`` token. Returns ``(events, truncated)``.
         """
-        if seed_id is not None:
-            return self._crawl_from_seed(seed_id, max_fetch=max_fetch)
+        events: list[CashDividendEvent] = []
+        if max_fetch <= 0:
+            return events, False
 
-        # no seed → bounded downward recent-window scan to find one.
+        seed = seed_id if seed_id is not None else self._find_seed(code, max_fetch=max_fetch)
+        if seed is None:
+            return events, False
+
+        queue: list[int] = [seed]
+        enqueued: set[int] = {seed}  # ids ever scheduled (dedup at enqueue time)
+        visited: set[int] = set()  # ids already fetched (cycle guard: never re-fetch)
+        head = 0
+        fetches = 0
+
+        while head < len(queue) and fetches < max_fetch:
+            ann_id = queue[head]
+            head += 1
+            if ann_id in visited:
+                continue
+            visited.add(ann_id)
+            fetches += 1
+            try:
+                html = self.fetch_announcement(ann_id)
+            except SourceError:
+                # an individual page failing must not sink the whole crawl.
+                continue
+            ev = self.parse_announcement(html, announcement_id=ann_id)
+            if ev is not None and ev.code == code and self._in_window(ev.record_date, lo, hi):
+                events.append(ev)
+            for sid in self.discover_same_org_ids(html):
+                if sid not in enqueued:
+                    enqueued.add(sid)
+                    queue.append(sid)
+
+        # frontier not exhausted (stopped at the cap) → coverage is truncated.
+        truncated = head < len(queue)
+        return events, truncated
+
+    def _find_seed(self, code: str, *, max_fetch: int) -> Optional[int]:
+        """No seed given: scan a bounded recent-ID window downward from ``latest_id`` for the
+        first page whose ticker is ``code``; return its id (the BFS re-fetches from there)."""
         window = min(max_fetch, DEFAULT_MAX_FETCH)
         for offset in range(window):
             ann_id = self.latest_id - offset
@@ -366,23 +415,8 @@ class VsdcCashDividendSource(CorpActionSource):
                 continue
             ev = self.parse_announcement(html, announcement_id=ann_id)
             if ev is not None and ev.code == code:
-                return self._crawl_from_seed(ann_id, max_fetch=max_fetch, seed_html=html)
-        return ()
-
-    def _crawl_from_seed(
-        self, seed_id: int, *, max_fetch: int, seed_html: Optional[str] = None
-    ) -> tuple[int, ...]:
-        """Seed + its same-org sidebar IDs, capped at ``max_fetch`` (seed first, deduped)."""
-        if seed_html is None:
-            try:
-                seed_html = self.fetch_announcement(seed_id)
-            except SourceError:
-                seed_html = None
-        ordered: dict[int, None] = {seed_id: None}
-        if seed_html is not None:
-            for sid in self.discover_same_org_ids(seed_html):
-                ordered.setdefault(sid, None)
-        return tuple(ordered.keys())[:max_fetch]
+                return ann_id
+        return None
 
     @staticmethod
     def _in_window(d: Optional[date], lo: Optional[date], hi: Optional[date]) -> bool:
