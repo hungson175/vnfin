@@ -156,6 +156,7 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `sector_not_available` | `equities.universe` | **Always present** per board — sector/industry is absent from this payload (not fabricated). | #167 |
 | `cross_board_duplicate_symbol` | `equities.universe` | On an `exchange=None` merge, a symbol seen on more than one board is kept-first (board order HOSE, HNX, UPCOM) and the dropped copy is disclosed (never silent). | #167 |
 | `board_unavailable` | `equities.universe` | On an `exchange=None` merge, one board's fetch failed (`SourceUnavailable`/`EmptyData`/`InvalidData`); it is **skipped, not fatal** — the other boards still merge, and the skip is disclosed (`board_unavailable: {board} — fetch skipped ({ExcType}): {reason}`). If **all** boards fail the merge re-raises. A single-board `universe("HNX")` still raises (merge-only skip). | #189 |
+| `fund_nav_stale` | `funds.list_funds` | List-level: ≥1 listed fund's own `nav_as_of` is older than 7 calendar days (stale NAV feed); enumerates the stale codes@date, capped at 5 + `+M more`. Funds with unknown `nav_as_of` are never flagged. | #190 |
 
 ## Full reference
 

@@ -10,7 +10,7 @@ the real provider.
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -2408,3 +2408,119 @@ def test_nav_today_returns_date_typed_value():
     from vnfin.funds.fmarket import _today
     t = _today()
     assert isinstance(t, date) and not isinstance(t, datetime)
+
+
+# ---------------------------------------------------------------------------
+# #190 — list-level `fund_nav_stale` warning on FundList
+# (the helper is PURE: tests inject `today` directly — no wall-clock dependency)
+# ---------------------------------------------------------------------------
+
+
+def _mk_fund(code, nav_as_of):
+    """A minimal synthetic Fund carrying only the fields the staleness helper reads
+    (``code`` + ``nav_as_of``); other fields are obviously-fake placeholders."""
+    return Fund(
+        code=code,
+        name="FAKE FUND " + code,
+        id=FAKE_ID_A,
+        nav=FAKE_NAV_A,
+        manager="FFM",
+        asset_type="STOCK",
+        nav_as_of=nav_as_of,
+    )
+
+
+def test_fund_nav_stale_warns_when_a_fund_exceeds_threshold():
+    from vnfin.funds.fmarket import _fund_nav_stale_warning
+
+    today = date(2026, 6, 20)
+    funds = (
+        _mk_fund("STALECO", today - timedelta(days=8)),  # stale (gap 8 > 7)
+        _mk_fund("FRESHCO", today - timedelta(days=1)),  # fresh
+    )
+    warns = _fund_nav_stale_warning(funds, today)
+    assert len(warns) == 1
+    w = warns[0]
+    assert w.startswith("fund_nav_stale:")
+    # detail names the stale code @ its nav_as_of date; the fresh one is absent
+    assert "STALECO@2026-06-12" in w
+    assert "FRESHCO" not in w
+
+
+def test_fund_nav_stale_silent_when_all_fresh():
+    from vnfin.funds.fmarket import _fund_nav_stale_warning
+
+    today = date(2026, 6, 20)
+    funds = (
+        _mk_fund("A", today - timedelta(days=0)),
+        _mk_fund("B", today - timedelta(days=7)),  # exactly at threshold -> fresh
+        _mk_fund("C", today - timedelta(days=3)),
+    )
+    assert _fund_nav_stale_warning(funds, today) == ()
+
+
+def test_fund_nav_stale_boundary():
+    from vnfin.funds.fmarket import _fund_nav_stale_warning
+
+    today = date(2026, 6, 20)
+    # gap == 7 -> NOT stale
+    assert _fund_nav_stale_warning((_mk_fund("EDGE", today - timedelta(days=7)),), today) == ()
+    # gap == 8 -> stale
+    warns = _fund_nav_stale_warning((_mk_fund("EDGE", today - timedelta(days=8)),), today)
+    assert len(warns) == 1 and warns[0].startswith("fund_nav_stale:")
+
+
+def test_fund_nav_stale_ignores_none_nav_as_of():
+    from vnfin.funds.fmarket import _fund_nav_stale_warning
+
+    today = date(2026, 6, 20)
+    funds = (
+        _mk_fund("UNKNOWN", None),  # nav_as_of unknown -> NEVER flagged
+        _mk_fund("FRESHCO", today - timedelta(days=2)),
+    )
+    assert _fund_nav_stale_warning(funds, today) == ()
+
+
+def test_fund_nav_stale_detail_caps_enumeration():
+    from vnfin.funds.fmarket import _fund_nav_stale_warning
+
+    today = date(2026, 6, 20)
+    # 7 stale funds -> detail caps at 5 codes + "+2 more"
+    funds = tuple(
+        _mk_fund(f"STALE{i}", today - timedelta(days=10 + i)) for i in range(7)
+    )
+    warns = _fund_nav_stale_warning(funds, today)
+    assert len(warns) == 1
+    w = warns[0]
+    # exactly five enumerated codes
+    assert w.count("STALE") == 5
+    assert "+2 more" in w
+    # the count of stale funds is reported honestly even though enumeration is capped
+    assert "7 fund(s)" in w
+
+
+def test_fund_nav_stale_helper_never_calls_wall_clock():
+    # Two different injected `today` values must yield different verdicts on the SAME
+    # funds -> proves the verdict is driven by the injected reference, not a baked clock.
+    from vnfin.funds.fmarket import _fund_nav_stale_warning
+
+    nav_date = date(2026, 6, 10)
+    funds = (_mk_fund("X", nav_date),)
+    # today close to nav_date -> fresh
+    assert _fund_nav_stale_warning(funds, date(2026, 6, 15)) == ()
+    # today far from nav_date -> stale
+    later = _fund_nav_stale_warning(funds, date(2026, 7, 1))
+    assert len(later) == 1 and later[0].startswith("fund_nav_stale:")
+
+
+def test_list_funds_appends_fund_nav_stale_warning(monkeypatch):
+    # End-to-end wiring: list_funds() supplies `today` via _today() internally and
+    # appends the list-level token to FundList.warnings (NO public param change).
+    _patch_today(monkeypatch, date(2026, 6, 20))
+    rows = [
+        _fund_row_with_extra({"lastNAVDate": _LASTNAVDATE_VN_MIDNIGHT}),  # 2026-03-15 -> stale
+    ]
+    fl = _src(_fund_list_payload(rows=rows)).list_funds()
+    matches = [w for w in fl.warnings if w.startswith("fund_nav_stale:")]
+    assert len(matches) == 1
+    assert "TESTCO@2026-03-15" in matches[0]

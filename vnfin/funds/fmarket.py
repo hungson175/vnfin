@@ -68,6 +68,13 @@ _NAV_END_GAP_MIN_DAYS = 7                # daily-fund floor (a holiday weekend n
 _NAV_END_GAP_SINGLE_POINT_DAYS = 14     # single-point fallback (cadence unknown)
 _NAV_END_GAP_CADENCE_WINDOW = 8         # most-recent diffs feeding the cadence median (all if fewer)
 
+# Issue #190: list-level NAV-staleness warning on FundList. A fund whose own
+# `nav_as_of` is older than this many CALENDAR days (vs the injected `today`) is stale.
+# Calendar days (no holiday-calendar dep); list-level (one token, enumeration capped).
+_FUND_NAV_STALE_DAYS = 7                 # gap == 7 NOT stale; gap == 8 stale
+_FUND_NAV_STALE = "fund_nav_stale"       # mechanical token prefix (fact-first)
+_FUND_NAV_STALE_CAP = 5                  # max enumerated stale codes before "+M more"
+
 
 def _parse_json(text, who):
     import json
@@ -210,11 +217,15 @@ class FmarketFundSource(HttpDataSource):
             seen_codes.add(code_key)
             seen_ids.add(fund.id)
             funds.append(fund)
+        # Issue #190: surface list-level NAV staleness. `today` is injected via _today()
+        # (deterministic in tests); the warning never invents a date and is leak-safe.
+        warnings = _fund_nav_stale_warning(funds, _today())
         return FundList(
             funds=tuple(funds),
             source=self.name,
             currency="VND",
             fetched_at_utc=datetime.now(timezone.utc),
+            warnings=warnings,
         )
 
     def nav_history(self, product_id: int, from_date=None, to_date=None) -> NavHistory:
@@ -777,6 +788,39 @@ def _nav_end_gap_warning(points, to_date, today) -> tuple[str, ...]:
             f"fund dormant",
         )
     return ()
+
+
+def _fund_nav_stale_warning(funds, today, *, threshold_days=_FUND_NAV_STALE_DAYS) -> tuple[str, ...]:
+    """List-level NAV-staleness warning for a SUCCESSFUL ``list_funds`` return.
+
+    For each ``Fund`` with a known ``nav_as_of`` (``None`` is NEVER flagged — unknown
+    is not stale, and a date is never invented), compute the CALENDAR-day gap to the
+    injected ``today``; the fund is stale iff ``gap > threshold_days`` (so ``gap ==
+    threshold_days`` is fresh, ``gap == threshold_days + 1`` stale).
+
+    ``today`` is a REQUIRED injected ``date`` — this function MUST NOT call
+    ``datetime.now()`` / ``date.today()`` so it is fully deterministic. Returns a
+    one-element tuple naming the stale fund codes (@ their ``nav_as_of``, capped at
+    ``_FUND_NAV_STALE_CAP`` codes + ``+M more``) when ≥1 fund is stale, else ``()``.
+    Leak-safe: built only from fund codes + dates — no exception trail, no secrets.
+    """
+    stale = [
+        f
+        for f in funds
+        if f.nav_as_of is not None and (today - f.nav_as_of).days > threshold_days
+    ]
+    if not stale:
+        return ()
+    shown = stale[:_FUND_NAV_STALE_CAP]
+    enumerated = ", ".join(f"{f.code}@{f.nav_as_of.isoformat()}" for f in shown)
+    more = len(stale) - len(shown)
+    if more > 0:
+        enumerated = f"{enumerated}, +{more} more"
+    detail = (
+        f"{len(stale)} fund(s) NAV older than {threshold_days}d as of "
+        f"{today.isoformat()}: {enumerated}"
+    )
+    return (f"{_FUND_NAV_STALE}: {detail}",)
 
 
 def _validate_product_id(product_id) -> int:

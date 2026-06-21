@@ -17,6 +17,14 @@ All notable changes to `vnfin` are documented here. The format follows
   keyless path. ([#184](https://github.com/hungson175/vnfin/issues/184))
 
 ### Added
+- **`fund_nav_stale` — list-level NAV-staleness warning on `FundList`** (#190) — `funds.list_funds()`
+  now appends a single `fund_nav_stale` token to `FundList.warnings` when ≥1 listed fund's own
+  `nav_as_of` is older than 7 calendar days, ending the silent staleness that #172/#173 fixed for
+  series results. The detail enumerates the stale fund codes@date (capped at 5 + `+M more` so a
+  wholesale outage stays bounded); it is leak-safe (codes + dates only, no exception trail). Funds
+  with an unknown `nav_as_of` (`None`) are never flagged — unknown is not stale and a date is never
+  invented. Additive only: no `list_funds` signature change and no result-type change.
+  ([#190](https://github.com/hungson175/vnfin/issues/190))
 - **`Fund.nav_as_of` — the provider's own per-fund NAV date** (#181) — an additive optional
   `Optional[date]` field on the frozen `Fund` result, parsed from the Fmarket filter row's
   `extra.lastNAVDate` (epoch-ms at VN-local midnight) and converted to the VN calendar date so callers

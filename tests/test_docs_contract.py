@@ -582,6 +582,8 @@ _WARNING_TOKENS_180 = (
     "cross_board_duplicate_symbol",
     # #189 — a board skipped during the all-boards merge (partial availability).
     "board_unavailable",
+    # #190 — list-level NAV-staleness warning on FundList.
+    "fund_nav_stale",
 )
 
 
