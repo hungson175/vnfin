@@ -31,17 +31,20 @@ _Last synced: 2026-06-21 11:2x +07_
 > - **WAVE 2 — ACTIVE (scoping DONE; digest `tasks/wave2-scoping-summary.md`; one gate at a time).**
 >   Scoping Workflow `wf_46081884-f22` (5 agents, VNStock-blacklist enforced) → durable digest committed.
 >   **ROLE BOUNDARY:** source ToS-verdict is the REVIEWER's; my agents only surface candidate lists.
->   - **#175** Tier-1 — **BUILT + GREEN → awaiting Codex×1 review** (commit `3d33859`, NOT pushed).
->     Full suite 3470 pass/0 fail; #180 reverse + #188 forward bijection 36→37; snapshot byte-unchanged;
->     `as_of` stays None (never fabricated, verified in diff). Token `current_snapshot_only`. Push+close
->     on APPROVE. Note `tasks/175-tier1-as-of-disclosure-design.md`. Tier-2 (historical PIT) = reviewer
->     source-gate later (no clean feed); Tier-3 (diagnostic + suggested_action fix) = small follow-up.
+>   - **#175** Tier-1 — **✅ APPROVED (Codex×1) + PUSHED `3d33859` (in `f865f5a..06a4684`) + progress
+>     comment posted; issue kept OPEN** (Tier-1 = disclosure only, core PIT ask not yet met). Token
+>     `current_snapshot_only`; suite 3470 pass; #180 36→37 + #188 bijection green; snapshot byte-unchanged.
+>     **NEXT: Tier-3** (small, no-source: offline coverage diagnostic + fix misleading suggested_action)
+>     → design gate → build → push, THEN close #175 as source-gap-documented for **Tier-2** (reviewer
+>     source-gate: no clean redistributable historical-membership feed; HOSE = human PDFs) w/ reopen criteria.
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (route
 >     close comment + 4 reopen criteria to reviewer; world-reference line + reserved diagnostic stand).
 >   - **#152** fixed-income — no clean yield-CURVE source; narrow honest `vnfin.rates` v1 over WB+DBnomics
 >     + `explain_fixed_income_coverage`; defer `vnfin.bonds`. DESIGN GATE pending.
->   - **#163** dividends/corp-actions — SOURCE DISCREPANCY: reviewer's HNX+VSDC found unusable (VSDC
->     news-only, HNX TLS-broken); VNDirect finfo `/v4/events` usable (~2021 floor). Route to reviewer/Boss.
+>   - **#163** dividends/corp-actions (reviewer's "big one", Boss-decided BUILD) — **SOURCE RE-VET
+>     ROUTED to reviewer:** fresh clean-room probe found HNX+VSDC UNUSABLE (VSDC news-only HTML; HNX
+>     TLS-broken/no per-symbol endpoint); only VNDirect finfo `/v4/events` usable (~2021 floor, MEDIUM
+>     redist = same as existing vndirect.py). BLOCKED on reviewer/Boss source verdict before scoping.
 >   - **#155** fund metadata — **UNBLOCKED (#190 landed)**; additive Fmarket metadata/allocation +
 >     diagnostics; needs ONE reviewer-authorized live probe for 4 unconfirmed detail fields.
 >   - Reviewer's stated W2 gate order after #175: #152 / #155 / #163.
