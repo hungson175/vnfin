@@ -303,19 +303,30 @@ def test_corp_action_source_is_a_port():
 # never-silent truncation token (reviewer MUST-ADDS 2026-06-21). Synthetic
 # page-graphs are built inline (test-only, fabricated) — never a network call.
 # --------------------------------------------------------------------------- #
-def _mk_page(code: str, record_dmy: str, *, sidebar=()) -> str:
-    """A minimal synthetic VSDC cash-dividend page with a chosen same-org sidebar."""
+def _mk_page(code: str, record_dmy, *, sidebar=()) -> str:
+    """A minimal synthetic VSDC cash-dividend page with a chosen same-org sidebar.
+
+    ``record_dmy=None`` omits the 'Ngày đăng ký cuối cùng:' row (an undated page whose
+    amounts + pay date still parse) — used to test the never-silent undated-event path.
+    """
     links = "".join(
         f'<li><a href="/vi/ad/{i}">{code}: Chi trả cổ tức bằng tiền</a></li>'
         for i in sidebar
+    )
+    record_row = (
+        ""
+        if record_dmy is None
+        else (
+            '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+            f'<div class="col-md-8 item-info item-info-main">{record_dmy}</div></div>'
+        )
     )
     return (
         '<!DOCTYPE html><html lang="vi"><body>'
         f'<h3 class="title-category">{code}: Chi trả cổ tức năm 2024 bằng tiền</h3>'
         '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
         f'<div class="col-md-8 item-info item-info-main">{code}</div></div>'
-        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
-        f'<div class="col-md-8 item-info item-info-main">{record_dmy}</div></div>'
+        f"{record_row}"
         '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
         '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
         '<p><div style="text-align: justify;">- Tỷ lệ thực hiện: 10%/cổ phiếu '
@@ -395,6 +406,77 @@ def test_dividends_crawl_truncation_emits_never_silent_token():
     full = src2.dividends("TST", seed_id=700, max_fetch=10)
     assert "coverage_truncated_at_max_fetch" not in full.warnings
     assert len(full.events) == 5
+
+
+# --------------------------------------------------------------------------- #
+# Reviewer-verify hardening (adversarial self-verify, 2026-06-21): never-silent
+# fetch-failure disclosure, max_fetch validation, undated-event window fallback,
+# and bundled-line ratio fabrication guard.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("bad", [0, -1, -100])
+def test_dividends_rejects_nonpositive_max_fetch(bad):
+    """#9.16 — a non-positive max_fetch is a caller error: raise, never silently return an
+    empty (zero-fetch) history as if the issuer simply paid no dividends."""
+    http_get, _ = _counting_http_get({1: _mk_page("TST", "15/03/2024")})
+    src = VsdcCashDividendSource(http_get=http_get)
+    with pytest.raises(InvalidData):
+        src.dividends("TST", seed_id=1, max_fetch=bad)
+
+
+def test_dividends_discloses_fetch_failure_never_silent():
+    """#9.17 — a same-org page that fails to fetch leaves coverage incomplete; the result
+    MUST disclose `corp_action_fetch_incomplete` (the crawl tolerates the failure but never
+    hides the resulting gap), mirroring the equities `board_unavailable` invariant."""
+    # seed 10 links hub 11, which is absent from the graph -> SourceUnavailable (hub down).
+    graph = {10: _mk_page("TST", "10/01/2024", sidebar=(11,))}
+    http_get, calls = _counting_http_get(graph)
+    src = VsdcCashDividendSource(http_get=http_get)
+    hist = src.dividends("TST", seed_id=10, max_fetch=300)
+    assert any(
+        w == "corp_action_fetch_incomplete" or w.startswith("corp_action_fetch_incomplete:")
+        for w in hist.warnings
+    ), hist.warnings
+    assert "corp_action_source_partial" in hist.warnings
+    # the seed event still came back — a per-page failure is tolerated, not fatal.
+    assert any(e.record_date == date(2024, 1, 10) for e in hist.events)
+    assert 11 in calls  # the failing hub was actually attempted
+
+
+def test_dividends_keeps_undated_event_via_pay_date_and_flags_degraded():
+    """#9.18 — a cash event whose record date is unparseable is NOT silently dropped under a
+    window: it is windowed by its pay_date and carries `vsdc_parse_degraded` (never silent)."""
+    http_get, _ = _counting_http_get({800: _mk_page("TST", None)})  # no record row; pay 10/04/2024
+    src = VsdcCashDividendSource(http_get=http_get)
+    hist = src.dividends(
+        "TST", seed_id=800, start=date(2024, 1, 1), end=date(2024, 12, 31)
+    )
+    assert len(hist.events) == 1
+    ev = hist.events[0]
+    assert ev.record_date is None
+    assert ev.pay_date == date(2024, 4, 10)
+    assert ev.cash_per_share == 1000.0  # amounts parsed fine — a real, surfaced event
+    assert "vsdc_parse_degraded" in ev.warnings
+
+
+def test_parse_pairs_cash_ratio_closest_before_parenthetical():
+    """#9.19 — the ratio paired with the cash amount is the `%/cổ phiếu` CLOSEST BEFORE the
+    cash parenthetical, never the first `%` on a bundled un-split line (which would fabricate
+    the bonus ratio onto the cash amount)."""
+    html = (
+        '<h3 class="title-category">TST: Chi trả cổ tức năm 2024 bằng tiền</h3>'
+        '<div class="row"><div class="col-md-4 item-info">Mã chứng khoán:</div>'
+        '<div class="col-md-8 item-info item-info-main">TST</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Ngày đăng ký cuối cùng:</div>'
+        '<div class="col-md-8 item-info item-info-main">15/03/2024</div></div>'
+        '<div class="row"><div class="col-md-4 item-info">Lý do mục đích:</div>'
+        '<div class="col-md-8 item-info item-info-main">Chi trả cổ tức năm 2024 bằng tiền</div></div>'
+        '<p><div style="text-align: justify;">- Cổ phiếu thưởng 100%/cổ phiếu; cổ tức tiền mặt '
+        '12%/cổ phiếu (01 cổ phiếu được nhận 1.200 đồng)<br />- Ngày thanh toán: 10/04/2024<br /></div></p>'
+    )
+    ev = VsdcCashDividendSource().parse_announcement(html)
+    assert ev is not None
+    assert ev.cash_per_share == 1200.0
+    assert ev.ratio_pct == 12.0  # NOT 100.0 (the bonus ratio listed first)
 
 
 # --------------------------------------------------------------------------- #

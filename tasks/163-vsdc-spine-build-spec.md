@@ -15,8 +15,10 @@ Read this spec + the template files it cites. **Do not search/read/cite VNStock*
 1. **TDD:** write the failing test FIRST, then the minimum code to pass. No code without a test.
 2. **No network in unit tests.** Inject `http_get` (see transport pattern §5). All HTTP is stubbed
    to return committed fixture HTML.
-3. **Synthetic fixtures only.** The 5 fixtures in `tests/fixtures/corp_actions/*.html` already exist
-   (real DOM structure, fabricated values). Use them. Do NOT add real issuer rows anywhere.
+3. **Synthetic fixtures only.** The 6 fixtures in `tests/fixtures/corp_actions/*.html` already exist
+   (real DOM structure, fabricated values; incl. `vsdc_sidebar_same_org.html`). Use them. The crawl
+   cycle/truncation tests (§9.13–14) use a STUBBED `http_get` page-graph, not new static fixtures.
+   Do NOT add real issuer rows anywhere.
 4. **Warning tokens must be EXACT STATIC STRING LITERALS** (no f-string interpolation of the token
    stem) so the #188 AST scanner discovers them. e.g. `warnings.append("ex_date_unavailable")` — a
    trailing `: detail` is fine (`f"ex_date_unavailable: {why}"` is OK because the stem is literal at
@@ -45,6 +47,15 @@ Read this spec + the template files it cites. **Do not search/read/cite VNStock*
      and filter by ticker to find a seed when none is supplied.
   Combined strategy: get a seed for `symbol` (caller-supplied `seed_id`, or recent-window scan), then
   crawl the seed's same-org sidebar to enumerate the company's announcement IDs, fetch+parse each.
+- **Crawl safety (reviewer MUST-ADDS 2026-06-21 12:30 — completeness guards, do NOT skip):**
+  1. **Visited-ID dedup + cycle guard:** the sidebar can re-list the seed or form link cycles. Track a
+     `visited: set[int]`; never re-fetch a visited id; bound the crawl (frontier + a depth/breadth cap)
+     so a cyclic page graph TERMINATES. A re-listed/looping id is skipped, not re-walked.
+  2. **Never-silent cap disclosure:** if the crawl stops at `max_fetch` (or the depth bound) while
+     unvisited frontier IDs remain (history NOT exhausted), the result MUST carry the never-silent token
+     `coverage_truncated_at_max_fetch` (4th token, §6). NEVER return a truncated dividend history as if
+     complete — a silently-capped history is a survivorship/completeness bug (a 5y backtest on it is
+     wrong; same class as the #175 never-silent guards).
 - **Risk:** scrape is materially more fragile than the lib's JSON sources. Isolate ALL HTML parsing
   behind the tight contract in §3, pin it with the fixtures, and emit the never-silent
   `vsdc_parse_degraded` token on any cash-dividend page whose amount cannot be extracted — a layout
@@ -66,9 +77,9 @@ Read this spec + the template files it cites. **Do not search/read/cite VNStock*
   + a one-line facade comment in the module docstring table.
 - `vnfin/diagnostics.py` — add `explain_corp_actions_coverage()` + a `_CORP_ACTIONS_CAPS` capability
   tuple; include it in `source_capabilities()`; add the name to `__all__`.
-- `skills/vnfin/SKILL.md` — add 3 rows to the `## Warning tokens` table (the public table the #180
+- `skills/vnfin/SKILL.md` — add 4 rows to the `## Warning tokens` table (the public table the #180
   guard reads).
-- `tests/test_docs_contract.py` — add the 3 tokens to the `_WARNING_TOKENS_180` tuple (~line 551).
+- `tests/test_docs_contract.py` — add the 4 tokens to the `_WARNING_TOKENS_180` tuple (~line 551).
 - `CHANGELOG` / `docs/api.md` — add the new public domain (public-API change ⇒ docs in same change).
   Find the changelog file (grep `mixed_source` / `deferred to v2` to locate it) and add a `#163` entry.
 
@@ -198,6 +209,10 @@ Events should be ordered (e.g. by record_date, then announcement_id) determinist
     `corp_action_source_partial` (v1 = VSDC-spine-only, ex-date leg not active). Wrap malformed HTML the
     parser cannot make sense of as `InvalidData` only when it is structurally broken — a *recognized but
     unparseable cash dividend* is the `vsdc_parse_degraded` path (an event), NOT an exception.
+  - **Crawl invariants (§1 must-adds):** maintain `visited: set[int]`, never re-fetch a visited id, bound
+    the frontier+depth so a cyclic sidebar graph terminates; when the crawl is capped by `max_fetch`/depth
+    with unvisited frontier IDs still pending, append `coverage_truncated_at_max_fetch` to
+    `history.warnings` (never return a truncated history as complete).
   - `start`/`end` filtering uses `validate_date_range` from `vnfin/validation.py` if a sibling uses it.
 
 Transport: rely on `HttpDataSource._request_text` (forces IPv4, browser UA, 25s, wraps errors). Do not
@@ -205,14 +220,15 @@ re-implement transport.
 
 ---
 
-## 6. Warning tokens — #180/#188 lockstep (land all 3 together)
+## 6. Warning tokens — #180/#188 lockstep (land all 4 together)
 
-The 3 tokens (all EXACT static literals):
+The 4 tokens (all EXACT static literals):
 | Token | Level | When |
 |---|---|---|
 | `ex_date_unavailable` | per-event | Every event in v1 (`ex_date is None`; finfo leg held). Never fabricate/derive an ex-date. |
 | `corp_action_source_partial` | per-result (DividendHistory) | Always present in v1 — result is from the VSDC depository spine ALONE; ex-date enrichment leg is not active. (In v2 this fires when the finfo leg is down.) |
 | `vsdc_parse_degraded` | per-event | A page IS a cash dividend (title/reason) with a record date but the ratio/cash parenthetical is unparseable → amount fields None, never silently dropped. |
+| `coverage_truncated_at_max_fetch` | per-result (DividendHistory) | Discovery stopped at `max_fetch`/depth bound while unvisited frontier IDs remained → history is NOT exhaustive; never return a truncated history as complete (reviewer must-add 12:30). |
 
 For EACH token, in the SAME change:
 1. **Emit it as a literal** in `vnfin/corp_actions/` (so #188 AST discovery sees it).
@@ -223,7 +239,8 @@ For EACH token, in the SAME change:
 
 Then run the doc-contract suite. **Gate on the SWEEP being green** (the bidirectional doc↔code +
 #188 forward-discovery bijection: `code-emits ⊆ tuple ⊆ {SKILL table ∧ code-literal}`), **NOT on any
-magic count.** Do not touch unrelated existing tokens.
+magic count.** (For reference only, the reviewer states the current baseline is 37 documented tokens;
+#163 takes it 37→41 — but assert the sweep, never the number.) Do not touch unrelated existing tokens.
 
 ---
 
@@ -284,15 +301,22 @@ Discovery + adapter (inject `http_get` mapping id→fixture HTML):
     `"corp_action_source_partial"` in `history.warnings`, every event has `ex_date_unavailable`.
 11. date-range filter: `start`/`end` correctly include/exclude events by record_date.
 12. transport failure (stub raises) → surfaces as `SourceUnavailable` (assert the adapter wraps it).
+13. **cycle/dedup (reviewer must-add):** stub `http_get` returns a same-org sidebar page-graph that
+    re-lists the seed and forms a link cycle (e.g. A's sidebar → B, B's sidebar → A) → `dividends(...)`
+    TERMINATES, fetches each id AT MOST ONCE (assert the stub's per-id call count ≤ 1), no infinite loop.
+14. **never-silent truncation (reviewer must-add):** frontier larger than `max_fetch` (e.g.
+    `max_fetch=2` over 5 discoverable ids) → `"coverage_truncated_at_max_fetch"` IS in
+    `history.warnings`; re-run with `max_fetch` large enough to exhaust the frontier → that token is
+    ABSENT (the asymmetry proves it is NOT always-on like `corp_action_source_partial`).
 
 Diagnostic:
-13. `explain_corp_actions_coverage()` returns a `RequestDiagnostic` (offline), discloses cash-only +
+15. `explain_corp_actions_coverage()` returns a `RequestDiagnostic` (offline), discloses cash-only +
     ex-date-unavailable + v2 scope; `source_capabilities()` includes the corp-actions cap(s).
 
 Lockstep (these existing suites must pass on the merged tree):
-14. `tests/test_docs_contract.py` (#180 bidirectional + #188 forward-discovery) green with the 3 new
+16. `tests/test_docs_contract.py` (#180 bidirectional + #188 forward-discovery) green with the 4 new
     tokens added to the tuple + SKILL table + emitted as literals.
-15. `tests/test_public_api_surface.py::test_live_surface_introduces_no_breaking_changes` green (the new
+17. `tests/test_public_api_surface.py::test_live_surface_introduces_no_breaking_changes` green (the new
     domain is additive — printed, not failed; do not regen the baseline).
 
 Run the FULL suite (`.venv/bin/python -m pytest -q`) and report pass/fail counts + any diffs.

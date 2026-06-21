@@ -39,16 +39,35 @@ _Last synced: 2026-06-21 11:2x +07_
 >     (`6282a5d..f3cd479`); issue closed. Extended `vnfin.macro` w/ lending/deposit/real (WB FR.INR.*) +
 >     `explain_fixed_income_coverage`; yield CURVE deferred (no `vnfin.bonds`, reopen criteria in close
 >     comment). Additive, snapshot frozen, NO new token (#180 stays 37), suite 3498. Watermark=reviewer's.
->   - **#163** dividends/corp-actions (Boss-decided BUILD) — **✅ DESIGN GATE CLEARED (reviewer Q1-6 + VSDC
->     access spec, 12:07).** **NOW = building VSDC CASH spine.** New `corp_actions` domain (Q2 approve);
->     VSDC = HTML SCRAPE `GET https://vsd.vn/vi/ad/{id}` (seq id ~197000, keyless, body fields: ticker/
->     ISIN/exch, record date Ngày ĐKCC, pay date Ngày thanh toán, cash %+VND/sh; NO ex-date) → ID-window
->     scrape+filter (NOT ASP.NET postback); CASH-first v1 (Q4); join (code,div_year,kind,ratio/cash)+ex≈rec-1bd
->     tiebreak (Q3); total-return DEFER v2 (Q5). Tokens (Q6, #180/#188 in-change): `ex_date_unavailable`
->     (MUST, on every row until finfo) + `corp_action_source_partial` (MUST) + `vsdc_parse_degraded` (rec).
->     RISK: scrape fragile → tight parse-contract + synthetic-fixture pin + never-silent degrade. finfo leg
->     HELD (Boss-nod+cassette). On green → **Codex x2** (new domain + scrape = higher risk). Steps: probe
->     vsd.vn DOM (my net) → commit spec+synth fixture → delegate fresh-agent TDD build → integrate green.
+>   - **#163** dividends/corp-actions (Boss-decided BUILD) — **✅ BUILT + GREEN; AWAITING REVIEWER CODEX
+>     x2.** New `corp_actions` domain; VSDC HTML SCRAPE `GET https://vsd.vn/vi/ad/{id}` (seq id ~197000,
+>     keyless: ticker/exch, record Ngày ĐKCC, pay Ngày thanh toán|Thời gian thực hiện, cash %+VND/sh; NO
+>     ex-date); CASH-first v1; total-return DEFER v2. Spine built by fresh agent (`ec2b0d7` feat +
+>     `197d9fd` docs vs spec `b37044a`). **Reviewer 2 MUST-ADDS folded in TDD-first (`1af8196`):** (1)
+>     **single-hop → bounded multi-hop BFS** over the same-org "Tin cùng tổ chức" sidebar graph — visited-id
+>     dedup + cycle guard (each page fetched ≤1×, terminates on loops), single fetch per page (no more
+>     double-fetch). **⚠️ BEYOND literal ask — flag to reviewer:** the agent built single-hop (seed + its
+>     direct sidebar), which silently under-covers deep history for any issuer w/ >1 sidebar of
+>     announcements; BFS fixes that silent under-coverage. (2) 4th never-silent token
+>     `coverage_truncated_at_max_fetch` (per-result) when the crawl stops at `max_fetch` with frontier
+>     unexhausted. **4 tokens** (#180/#188 lockstep, gate on the SWEEP not count): `ex_date_unavailable`
+>     (per-event) + `corp_action_source_partial` (per-result) + `vsdc_parse_degraded` (per-event) +
+>     `coverage_truncated_at_max_fetch` (per-result). finfo ex-date leg HELD (Boss-nod+cassette).
+>     **Adversarial self-verify Workflow `wf_0df9f8f1-718` found 4 REAL defects → all FIXED TDD-first
+>     (next commit):** (a) **silent fetch-failure gap** — a same-org page raising `SourceError` dropped
+>     its whole branch with no token (sibling equities discloses via `board_unavailable`) → NEW **5th
+>     token `corp_action_fetch_incomplete`** (per-result, `: {n} page(s) skipped`); (b) **`max_fetch<=0`
+>     silent empty** — early-return hard-coded `truncated=False` + param unvalidated → now `raise
+>     InvalidData`; (c) **undated event silently dropped under a window** — record_date=None real cash
+>     event vanished under any start/end → now windowed by `pay_date` fallback + flagged
+>     `vsdc_parse_degraded` (degraded condition broadened to ≥1 missing PRIMARY field incl. record date);
+>     (d) **ratio fabrication on a bundled un-split line** — first `%` (bonus) paired w/ cash amount → now
+>     take the `%` CLOSEST BEFORE the cash parenthetical. Verify's other 2 lenses (cycle/termination +
+>     doc-bijection/snapshot) confirmed CLEAN. **5 tokens now** (gate on the SWEEP not count). **GATES
+>     GREEN on merged tree:** full suite 3533 pass, public-API snapshot additive-green (no regen), #180/#188
+>     doc-contract green. 6 fail-first tests added (cycle/dedup + truncation + 4 verify fixes). Raw real
+>     pages gitignored `tests/cassettes_private/`. **NEXT:** commit fixes+spec+backlog → ping reviewer
+>     **Codex x2** (new domain + scrape + beyond-spec BFS + 4 self-found fixes = higher risk).
 >   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
 >     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
 >   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed

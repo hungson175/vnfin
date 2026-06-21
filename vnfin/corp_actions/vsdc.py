@@ -46,6 +46,9 @@ CORP_ACTION_SOURCE_PARTIAL = "corp_action_source_partial"
 #: Per-result: the bounded crawl stopped at ``max_fetch`` with same-org announcements still
 #: un-fetched, so the returned history is NOT exhaustive (never silently truncated).
 COVERAGE_TRUNCATED_AT_MAX_FETCH = "coverage_truncated_at_max_fetch"
+#: Per-result: ≥1 same-org announcement page failed to fetch during the crawl, so its (and any
+#: onward-linked) events are absent — the history may be incomplete (disclosed, never silent).
+CORP_ACTION_FETCH_INCOMPLETE = "corp_action_fetch_incomplete"
 
 #: Documented default recent-ID watermark for the no-seed recent-window scan. Override
 #: via the constructor ``latest_id=`` — this is a rolling hint, not a hard bound.
@@ -252,17 +255,21 @@ class VsdcCashDividendSource(CorpActionSource):
             cash_m = _CASH_RE.search(line)
             if cash_m and cash_per_share is None:
                 cash_per_share = _parse_vn_number(cash_m.group("cash"))
-                ratio_m = _RATIO_RE.search(line)
-                if ratio_m:
-                    ratio_pct = _parse_vn_number(ratio_m.group("pct"))
+                # the cash ratio is the `%/cổ phiếu` CLOSEST BEFORE the cash parenthetical,
+                # not the first % on the line — a bundled bonus+cash line lists the bonus %
+                # first, and pairing it with the cash amount would fabricate the ratio.
+                ratio_before = list(_RATIO_RE.finditer(line[: cash_m.start()]))
+                if ratio_before:
+                    ratio_pct = _parse_vn_number(ratio_before[-1].group("pct"))
             pay_m = _PAY_LINE_RE.search(line)
             if pay_m and pay_date is None:
                 pay_date = _parse_dmy(pay_m.group("date"))
 
         warnings: list[str] = [EX_DATE_UNAVAILABLE]
-        # Degradation: a recognized cash dividend with a record date but no parseable
-        # ratio/cash → never-silent token, amounts stay None.
-        if cash_per_share is None and ratio_pct is None:
+        # Degradation: a recognized cash dividend with ≥1 unparseable PRIMARY field — the
+        # record date, or both the ratio AND the cash amount — is surfaced (never dropped)
+        # with the affected fields left None and the never-silent token attached.
+        if record_date is None or (cash_per_share is None and ratio_pct is None):
             warnings.append(VSDC_PARSE_DEGRADED)
 
         return CashDividendEvent(
@@ -308,14 +315,21 @@ class VsdcCashDividendSource(CorpActionSource):
         IDs. Each page is fetched at most once (visited-id cycle guard) and parsed; cash
         events for ``symbol`` within ``[start, end]`` are kept. Every event carries
         ``ex_date_unavailable``; the result always carries ``corp_action_source_partial``
-        (v1 = the VSDC spine alone, no ex-date leg), and additionally
+        (v1 = the VSDC spine alone, no ex-date leg), additionally
         ``coverage_truncated_at_max_fetch`` when the crawl stopped at ``max_fetch`` with the
-        frontier not exhausted (the history is then NOT exhaustive — never silently so).
+        frontier not exhausted, and ``corp_action_fetch_incomplete`` when ≥1 page failed to
+        fetch (the gap is disclosed, never silently dropped). ``max_fetch`` must be a positive
+        int (a non-positive budget would silently return an empty history → ``InvalidData``).
         """
         code = validate_non_empty_string(symbol, "symbol").upper()
         lo, hi = validate_date_range(start, end, allow_none=True, name="dividends")
+        if isinstance(max_fetch, bool) or not isinstance(max_fetch, int) or max_fetch < 1:
+            # a non-positive budget would silently return an empty history as if complete.
+            raise InvalidData(
+                f"dividends: max_fetch must be a positive int, got {max_fetch!r}"
+            )
 
-        events, truncated = self._crawl(
+        events, truncated, failed_fetches = self._crawl(
             code, seed_id=seed_id, lo=lo, hi=hi, max_fetch=max_fetch
         )
 
@@ -334,6 +348,11 @@ class VsdcCashDividendSource(CorpActionSource):
         warnings: list[str] = [CORP_ACTION_SOURCE_PARTIAL]
         if truncated:
             warnings.append(COVERAGE_TRUNCATED_AT_MAX_FETCH)
+        if failed_fetches:
+            warnings.append(
+                f"{CORP_ACTION_FETCH_INCOMPLETE}: {failed_fetches} announcement "
+                "page(s) skipped (fetch failed)"
+            )
 
         return DividendHistory(
             code=code,
@@ -353,29 +372,30 @@ class VsdcCashDividendSource(CorpActionSource):
         lo: Optional[date],
         hi: Optional[date],
         max_fetch: int,
-    ) -> tuple[list[CashDividendEvent], bool]:
+    ) -> tuple[list[CashDividendEvent], bool, int]:
         """Bounded multi-hop BFS over the same-org sidebar graph from a seed.
 
         Fetches each reachable page exactly once — a ``visited`` set is the cycle guard, so
         a sidebar that re-lists the seed or links in a loop still terminates — parses it
-        inline, and keeps cash events for ``code`` within ``[lo, hi]``. ``max_fetch`` bounds
-        the number of pages fetched; if the loop stops with the frontier not exhausted the
-        returned ``truncated`` flag is ``True`` so the caller emits the never-silent
-        ``coverage_truncated_at_max_fetch`` token. Returns ``(events, truncated)``.
+        inline, and keeps cash events for ``code`` whose effective date (``record_date``, or
+        ``pay_date`` when the record date is unparseable) falls in ``[lo, hi]``. ``max_fetch``
+        bounds the number of pages fetched; if the loop stops with the frontier not exhausted
+        the returned ``truncated`` flag is ``True``. A per-page fetch failure is tolerated (it
+        does not sink the crawl) but counted, so the caller can disclose the resulting coverage
+        gap. Returns ``(events, truncated, failed_fetches)``.
         """
         events: list[CashDividendEvent] = []
-        if max_fetch <= 0:
-            return events, False
 
         seed = seed_id if seed_id is not None else self._find_seed(code, max_fetch=max_fetch)
         if seed is None:
-            return events, False
+            return events, False, 0
 
         queue: list[int] = [seed]
         enqueued: set[int] = {seed}  # ids ever scheduled (dedup at enqueue time)
         visited: set[int] = set()  # ids already fetched (cycle guard: never re-fetch)
         head = 0
         fetches = 0
+        failed = 0
 
         while head < len(queue) and fetches < max_fetch:
             ann_id = queue[head]
@@ -387,11 +407,17 @@ class VsdcCashDividendSource(CorpActionSource):
             try:
                 html = self.fetch_announcement(ann_id)
             except SourceError:
-                # an individual page failing must not sink the whole crawl.
+                # an individual page failing must not sink the whole crawl — but the gap is
+                # counted so the caller can disclose it (never silently incomplete).
+                failed += 1
                 continue
             ev = self.parse_announcement(html, announcement_id=ann_id)
-            if ev is not None and ev.code == code and self._in_window(ev.record_date, lo, hi):
-                events.append(ev)
+            if ev is not None and ev.code == code:
+                # window on the record date, falling back to the pay date when the record
+                # date is unparseable — so a real, dated-by-payment event is not dropped.
+                window_date = ev.record_date or ev.pay_date
+                if self._in_window(window_date, lo, hi):
+                    events.append(ev)
             for sid in self.discover_same_org_ids(html):
                 if sid not in enqueued:
                     enqueued.add(sid)
@@ -399,7 +425,7 @@ class VsdcCashDividendSource(CorpActionSource):
 
         # frontier not exhausted (stopped at the cap) → coverage is truncated.
         truncated = head < len(queue)
-        return events, truncated
+        return events, truncated, failed
 
     def _find_seed(self, code: str, *, max_fetch: int) -> Optional[int]:
         """No seed given: scan a bounded recent-ID window downward from ``latest_id`` for the

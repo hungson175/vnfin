@@ -595,6 +595,7 @@ _WARNING_TOKENS_180 = (
     "corp_action_source_partial",
     "vsdc_parse_degraded",
     "coverage_truncated_at_max_fetch",
+    "corp_action_fetch_incomplete",
 )
 
 
