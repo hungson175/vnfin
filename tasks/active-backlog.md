@@ -178,16 +178,17 @@ _Last synced: 2026-06-21 11:2x +07_
 >     2026-06-21, #178 pattern; draft approved as-is, posted; no code change; world-reference gold line
 >     stands; 4 reopen gates = the source-watch; giavangonline probe SKIPPED — fails reopen-crit #3 anyway).
 >     Watermark=reviewer's.
->   - **#155** fund metadata — **design APPROVED → BUILT → merged-tree GREEN → Codex x1 IN REVIEW**
->     (2026-06-21). Spec `tasks/155-fund-metadata-design.md` (BUILD CONTRACT, `04d5e05`). Built by a fresh
->     general-purpose agent TDD-first: `04d5e05..71c050b` (3 commits, 12 files, +724/−6). All 6 items —
->     Fund +3 optional (mgmt_fee/inception/description), `SectorWeight` (fail-closed off existing detail
->     doc, NO new request), `include_metadata=True`, `explain_fund_coverage()`, 2 tokens (44→46), docs
->     lockstep. Live probe confirmed inception(`firstIssueAt` epoch-ms)+description LAND; 4 deferred.
->     Merged-tree: pytest rc=0 (3637), bijection green, snapshot frozen (no regen). Builder adversarial
->     spot-check clean. ROUTED Codex x1 (handoff `/tmp/vnfin-155-codereview-handoff.md`). On APPROVE+green:
->     push `04d5e05..71c050b` + close → **BACKLOG FULLY CLEARED.** **LAST remaining open issue.**
->   - Reviewer's W2 gate order: #152 ✅ / #163 ✅ / #182 ✅ / #155 (final, BUILT — Codex x1 code-review).
+>   - **#155** fund metadata — **✅ DONE + PUSHED + CLOSED** (2026-06-21). Codex x1 APPROVE (zero
+>     blockers; report `reviews/review-202606211619-155-fund-metadata-approve.md`). Pushed
+>     `bbed285..9ca0a96` (code `04d5e05..71c050b`); #155 CLOSED (issuecomment-4761515918). All 6 items:
+>     Fund +3 optional (mgmt_fee/inception/description), `SectorWeight` (fail-closed, NO new request),
+>     `include_metadata=True`, `explain_fund_coverage()`, 2 tokens (44→46 bijection green), docs lockstep.
+>     32 fail-first TDD; suite 3637 green; snapshot frozen. Watermark=reviewer's.
+>   - Reviewer's W2 gate order: #152 ✅ / #163 ✅ / #182 ✅ / #155 ✅ — **ALL CLOSED.**
+>
+> ### 🎉 BACKLOG FULLY CLEARED (2026-06-21) — 0 open issues on `hungson175/vnfin`.
+> All GitHub issues resolved (#152/#163/#182/#155 + prior). Standing goal "resolve all issues on
+> github" satisfied. Next work = poller-surfaced new issues (reviewer-routed) only.
 >
 > **#188 forward-discovery guard — ✅ DONE + PUSHED + CLOSED** (`ae7829d..60459ef`; Codex×1 APPROVE +
 > 1 doc-comment must-fix folded). AST forward-discovers emitted `.warnings` tokens, asserts
