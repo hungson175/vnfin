@@ -289,9 +289,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 + #187 both ✅
   DONE+PUSHED+CLOSED** (#181 Codex×1 APPROVE `1cc8a44`; #187 Codex×2 APPROVE_WITH_NOTES `ac7ca65`).
   Both delegated to fresh general-purpose agents in separate worktrees, TDD vs committed specs, synthetic
-  fixtures; **#191** (test-hardening) filed from #187's 2 non-blocking notes. **NOW UNBLOCKED:** #184
-  (gated docs-only, independent), #188 + #189 (both need design gates; both touch `test_docs_contract.py`
-  → must be sequenced). Reviewer asked to sequence #188/#189 vs #184.
+  fixtures; **#191** (test-hardening) filed from #187's 2 non-blocking notes. **IN FLIGHT:** #184 docs
+  ✅ committed `1b24f54` (NOT pushed — awaiting Codex×1 docs review); **#188** forward-discovery guard
+  design APPROVED (`/tmp/vnfin-188-gate.md`, coverage refinement = exact-match unless `_`-family prefix)
+  → TDD build delegated to a fresh general-purpose agent in worktree `wt-188` (spec `2a414f4`). **NEXT:**
+  #189 (board_unavailable) rides #188's hardened guard — design gate AFTER #188 lands.
 
   **LANDED THIS BATCH (#181 + #187 — both closed):**
   - **#187 (bug) — midnight-open placeholder recovery (index D1) — ✅ DONE + PUSHED + CLOSED.** Codex×2
@@ -309,7 +311,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     warning (`fund_nav_stale` + clock seam + bounded threshold) filed as #190** (design-first).
 
   **QUEUED (reviewer source-vet DONE + triaged; batch AFTER #187/#181):**
-  - **#184 — world-index source-hunt → DOCS-ONLY + tombstone (handed 09:51).** NO clean keyless
+  - **#184 — DOCS-ONLY ✅ DONE (committed `1b24f54`, NOT pushed — awaiting Codex×1 docs review).** NO clean keyless
     server-reachable ToS-safe SPY/^GSPC source exists. Builder actions: (1) DOCS — world-index from a
     server effectively requires `ALPHAVANTAGE_API_KEY` (BYOK); (2) TOMBSTONE Stooq ^SPX — structurally
     anti-bot-blocked from datacenter IPs (dead since 2020-12), so its `AllSourcesFailed` is NOT transient;
