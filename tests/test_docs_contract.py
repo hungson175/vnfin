@@ -614,3 +614,257 @@ def test_skill_warning_tokens_section_in_lockstep_with_code():
         assert (
             f'"{token}' in src or f"'{token}" in src
         ), f"warning token {token!r} documented but no longer emitted as a literal in vnfin/"
+
+
+# Issue #188 — FORWARD-DISCOVERY hardening of the #180 guard.
+#
+# ``test_skill_warning_tokens_section_in_lockstep_with_code`` iterates only over the
+# hardcoded ``_WARNING_TOKENS_180`` tuple, so a token a dev EMITS in ``vnfin/`` but never
+# adds to the tuple is INVISIBLE to it (that exact failure shipped 4 undocumented warnings
+# historically). #188 makes the guard DISCOVER the emitted token set from the code AST and
+# assert it is a subset of the documented tuple — so a new emission with no doc row goes red
+# automatically. Net invariant: code-emits ⊆ tuple ⊆ {SKILL table ∧ code-literal}.
+from _warning_token_scan import (  # noqa: E402  (sibling test helper; tests/ on sys.path)
+    _NON_TOKEN_WARNING_LITERALS,
+    _covered,
+    _discover_emitted_warning_tokens,
+    _extract_warning_tokens_from_source,
+)
+
+
+# --- per-shape extractor unit tests (synthetic snippets; fail-first then implement) ----- #
+
+def test_extract_shape_a_literal_in_warnings_kwarg_and_assign():
+    """Shape A — a str literal in a ``warnings=`` kwarg or a ``warnings = (...)`` assign."""
+    snippet = '''
+def f(hist):
+    return replace(hist, warnings=("deduped_duplicate_daily_index_bars",))
+
+def g():
+    warnings = ("weights_not_available: SSI group endpoint exposes membership only",)
+    return warnings
+
+def h(extra):
+    warnings = ("stitched_multi_source",) + tuple(extra)
+    return Thing(warnings=warnings)
+'''
+    assert _extract_warning_tokens_from_source(snippet) == {
+        "deduped_duplicate_daily_index_bars",
+        "weights_not_available",
+        "stitched_multi_source",
+    }
+
+
+def test_extract_shape_b_append_and_extend_to_warnings_list():
+    """Shape B — ``.append(literal | f"…")`` / ``.extend(...)`` to a ``warnings`` list.
+
+    A pure ``.extend(other.warnings)`` pass-through yields no literal.
+    """
+    snippet = '''
+def f(other):
+    warnings = []
+    warnings.append("zero_liquidity: average daily value is 0 over the window")
+    warnings.extend(other.warnings)
+    return warnings
+'''
+    assert _extract_warning_tokens_from_source(snippet) == {"zero_liquidity"}
+
+
+def test_extract_shape_c_module_constant_resolved_to_literal():
+    """Shape C — a module/class CONSTANT resolved through the name→literal map."""
+    snippet = '''
+RESAMPLED_FROM_D1 = "resampled_from_d1"
+_TRAILING_ZERO_VOLUME_TAIL = "trailing_zero_volume_tail"
+
+def f(daily):
+    return replace(daily, warnings=(RESAMPLED_FROM_D1,))
+
+def g(hist):
+    warnings = (_TRAILING_ZERO_VOLUME_TAIL,)
+    return warnings
+'''
+    assert _extract_warning_tokens_from_source(snippet) == {
+        "resampled_from_d1",
+        "trailing_zero_volume_tail",
+    }
+
+
+def test_extract_shape_d_warnings_helper_return():
+    """Shape D — a ``_*warnings()`` helper whose RETURN carries the literal."""
+    snippet = '''
+_FALLBACK_WARNING = "fallback_instrument_served"
+
+def _board_warnings(board):
+    return (
+        f"partial_universe_coverage: {board} — index-basket-derived",
+        f"listing_date_not_available: {board} — provider firstTradingDate is '0'",
+        f"sector_not_available: {board} — sector/industry absent",
+    )
+
+def _substitution_warnings(hist):
+    if served_spx:
+        return (_FALLBACK_WARNING,)
+    return ()
+'''
+    assert _extract_warning_tokens_from_source(snippet) == {
+        "partial_universe_coverage",
+        "listing_date_not_available",
+        "sector_not_available",
+        "fallback_instrument_served",
+    }
+
+
+def test_extract_shape_e_leading_text_fstring():
+    """Shape E (sub-shape 1) — f-string LEADING with static text: ``f"world_reference_gold_leg_{w}"``.
+
+    The ``*_leg_`` family token KEEPS its trailing underscore (it is a declared family
+    prefix). A ``"failover: {note}"`` form normalizes on the leading ``:`` segment.
+    """
+    snippet = '''
+def f(gold_hist, fx_hist, note, year, seg):
+    warnings = []
+    for w in gold_hist.warnings:
+        warnings.append(f"world_reference_gold_leg_{w}")
+    for w in fx_hist.warnings:
+        warnings.append(f"world_reference_fx_leg_{w}")
+    warnings.append(f"failover: {note}")
+    warnings.append(f"stitched_segment: {year} {seg.source} ({len(seg.bars)} bars)")
+    return warnings
+'''
+    assert _extract_warning_tokens_from_source(snippet) == {
+        "world_reference_gold_leg_",
+        "world_reference_fx_leg_",
+        "failover",
+        "stitched_segment",
+    }
+
+
+def test_extract_shape_e_leading_resolved_constant_fstring():
+    """Shape E (sub-shape 2, the SUBTLE one) — f-string LEADING with a resolved CONSTANT
+    then ``:`` then dynamic text: ``f"{QUARANTINED_INVALID_BARS}: dropped {n} — {detail}"``.
+
+    The extractor must resolve the leading ``FormattedValue`` Name → its str literal while
+    building the static prefix, then ``split(":", 1)[0].strip()``. This is the highest-value
+    case — it proves the extractor does not silently miss the quarantine/recovery family.
+    """
+    snippet = '''
+QUARANTINED_INVALID_BARS = "quarantined_invalid_bars"
+RECOVERED_MIDNIGHT_OPEN_PLACEHOLDER = "recovered_midnight_open_placeholder"
+_PARTIAL_COVERAGE_TOKEN = "world_reference_partial_year_coverage"
+_TRAILING_YEAR_TOKEN = "world_reference_trailing_year_incomplete"
+
+def _quarantine_warnings(self):
+    return (
+        f"{QUARANTINED_INVALID_BARS}: dropped {len(q)} bar(s) — {detail}",
+    )
+
+def _recovery_warnings(self):
+    return (
+        f"{RECOVERED_MIDNIGHT_OPEN_PLACEHOLDER}: recovered {len(r)} bar(s) — {detail}",
+    )
+
+def synth(warnings):
+    warnings.append(
+        f"{_PARTIAL_COVERAGE_TOKEN}: years not synthesized for lack of a paired obs"
+    )
+    warnings.append(
+        f"{_TRAILING_YEAR_TOKEN}: the emitted year {y} is the current calendar year"
+    )
+    return warnings
+'''
+    assert _extract_warning_tokens_from_source(snippet) == {
+        "quarantined_invalid_bars",
+        "recovered_midnight_open_placeholder",
+        "world_reference_partial_year_coverage",
+        "world_reference_trailing_year_incomplete",
+    }
+
+
+def test_extract_excludes_non_warnings_positions():
+    """A ``SourceAttempt(..., reason)`` literal and a ``_warnings_reason`` def (name ends in
+    ``reason``, not ``warnings``) are NOT ``.warnings`` positions → extractor returns ∅."""
+    snippet = '''
+def _warnings_reason(warnings):
+    if not isinstance(warnings, tuple):
+        return f"malformed warnings {warnings!r}: expected a tuple of strings"
+    return None
+
+def record(attempts, src):
+    attempts.append(SourceAttempt(src.name, False, "source raised: boom"))
+    return attempts
+'''
+    assert _extract_warning_tokens_from_source(snippet) == set()
+
+
+# --- coverage-rule REVIEWER REFINEMENT (exact vs declared-family-prefix) ---------------- #
+
+def test_covered_exact_token_does_not_prefix_absorb_but_family_prefix_does():
+    """Pins the reviewer's refinement: a plain documented token requires an EXACT match
+    (so ``partial_coverage`` does NOT cover ``partial_coverage_xyz`` — that must be flagged),
+    while a ``_``-suffixed FAMILY prefix (``world_reference_gold_leg_``) DOES prefix-cover."""
+    # plain token -> exact match only
+    assert _covered("partial_coverage", _WARNING_TOKENS_180) is True
+    assert _covered("partial_coverage_xyz", _WARNING_TOKENS_180) is False
+    # declared family prefix (ends in "_") -> prefix-covers a concrete instance
+    assert _covered("world_reference_gold_leg_2024", _WARNING_TOKENS_180) is True
+    assert _covered("world_reference_fx_leg_partial_coverage", _WARNING_TOKENS_180) is True
+    # the family prefix itself is covered (e == t)
+    assert _covered("world_reference_gold_leg_", _WARNING_TOKENS_180) is True
+
+
+# --- whole-repo forward-discovery guard (must be GREEN on the real tree) ---------------- #
+
+def test_emitted_warning_tokens_are_all_documented():
+    """#188 forward gap: DISCOVER the token set straight from ``vnfin/`` AST and assert every
+    discovered token is ``_covered`` by ``_WARNING_TOKENS_180``. A new emission with no doc
+    row goes red automatically. GREEN on the current tree (the tuple is complete after #187).
+    """
+    discovered = _discover_emitted_warning_tokens(REPO)
+    undocumented = {
+        tok: locs
+        for tok, locs in discovered.items()
+        if tok not in _NON_TOKEN_WARNING_LITERALS and not _covered(tok, _WARNING_TOKENS_180)
+    }
+    assert not undocumented, "emitted warning token(s) not in _WARNING_TOKENS_180: " + ", ".join(
+        f"{tok} @ {locs}" for tok, locs in sorted(undocumented.items())
+    )
+
+
+def test_forward_discovery_finds_the_known_emission_corpus():
+    """Sanity: the discovered set actually contains the tricky/representative tokens (so the
+    guard is not green merely because the extractor found nothing)."""
+    discovered = set(_discover_emitted_warning_tokens(REPO))
+    for tok in (
+        # the four leading-resolved-constant f-string tokens (the subtle Shape-E sub-shape)
+        "quarantined_invalid_bars",
+        "recovered_midnight_open_placeholder",
+        "world_reference_partial_year_coverage",
+        "world_reference_trailing_year_incomplete",
+        # the leg families (trailing underscore kept)
+        "world_reference_gold_leg_",
+        "world_reference_fx_leg_",
+        # a representative from each other shape
+        "deduped_duplicate_daily_index_bars",  # A
+        "zero_liquidity",                        # B
+        "trailing_zero_volume_tail",             # C
+        "fallback_instrument_served",            # D
+        "stitched_segment",                      # E leading-text
+    ):
+        assert tok in discovered, f"forward discovery missed {tok!r}"
+
+
+def test_forward_discovery_guard_catches_a_planted_gap():
+    """Meta-test: prove the guard CATCHES an undocumented emission. Build a COPY of the tuple
+    with one real emitted PLAIN token removed and assert discovery flags it (the real tuple is
+    never mutated)."""
+    reduced = tuple(t for t in _WARNING_TOKENS_180 if t != "zero_liquidity")
+    assert "zero_liquidity" not in reduced
+    discovered = _discover_emitted_warning_tokens(REPO)
+    flagged = {
+        tok
+        for tok in discovered
+        if tok not in _NON_TOKEN_WARNING_LITERALS and not _covered(tok, reduced)
+    }
+    assert "zero_liquidity" in flagged, (
+        "the forward-discovery guard failed to flag a removed (undocumented) emitted token"
+    )
