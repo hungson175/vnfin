@@ -81,47 +81,22 @@ _Last synced: 2026-06-21 00:40 +07_
 > (2) quarantine constants module-level not per-adapter. Dev-box note: `~/.local` vnfin is a STALE pre-#186
 > build that shadows naive `python -c` probes — `pip install -e .` before #185 dev to avoid false probes.
 >
-> **NOW: #185 annual world-gold source — CODE COMPLETE + SELF-VERIFIED, awaiting Codex×2.**
-> Build integrated on merged tree (commits `456d8d4` D3 binary transport, `0324ab6` source+parser,
-> `4c13289` synthesis D5, `479d908` docs/CHANGELOG). **Adversarial-verify (5-lens wf + per-finding
-> refute) found+fixed 2 defects, TDD-first:** (1) CRITICAL `57ecb86` — binary transport routed on a
-> bound-method `is` check (always False at runtime) so `binary=` was never forwarded to the default
-> fetcher → CMO silently failed server-side; fixed via a construction-time `_http_get_is_default` flag.
-> (2) `c4d269b` — xlsx worksheet resolver didn't normalize the rels Target, so a `../` Target could
-> divert the read to a differently-named member; fixed via `posixpath.normpath` (defense-in-depth +
-> spec-correct). Two other findings REFUTED as false positives (`fetched_at_utc=now()` is library-wide
-> convention; no other real issues across error-discipline/synthesis/clean-room lenses). Full suite
-> **3377 green**, snapshot FROZEN, no-secrets green, tree clean (8 commits `a23ac15..c4d269b`, NOT
-> pushed). Handoff `/tmp/vnfin-185-codex-review-handoff-20260621.md`. Next: Codex×2 → on APPROVE +
-> green push master + close #185 (reviewer owns watermark) → ping vf-advisor.
-> _(Original acquisition/design summary below.)_
->
-> **#185 acquisition DONE + committed `a23ac15`:** primary-source agent resolved the real current vintage and
-> committed the real xlsx regression fixture (`tests/fixtures/cmo/CMO-Historical-Data-Annual.xlsx`, 3.18 MB,
-> SHA256 `9fbcb348…af51`). **2 material code-time findings folded into the design note (D2/D4/§2/§6):**
-> (1) full 32-char vintage hash `74e8be41ceb20fa0da750cda2f6b9e4e` (truncated `74e8be41` 404s); (2) the gold
-> header is **SPLIT across two cells** — `Gold` name row + `($/troy oz)` units row, same column, NO single
-> combined string → parser matches BOTH rows. Sheet `Annual Prices (Nominal)`→`sheet2.xml`; 1960=35.27,
-> 2024=2387.70, 2025=3441.51, 66 pts no gaps; no prior-vintage fallback reproducible → single-element
-> `_CMO_ANNUAL_URLS`. **Build delegated to fresh general-purpose agent** against the corrected design note
-> (3 files: NEW `vnfin/gold/worldbank_cmo.py` + parser; EDIT `transport.py` `_request_bytes`/`binary=`; EDIT
-> `world_reference.py` gold-leg swap, synthesis byte-identical) + docs/CHANGELOG. Next: integrate on merged
-> tree → full suite + gates → adversarial-verify wf → Codex×2 → push+close → ping vf-advisor.
-> _(Original design summary below.)_
->
-> **#185 annual world-gold source — DESIGN APPROVED (reviewer LEAD gate 04:53).**
-> Design note committed `e6a1b4a` (`docs/design/issue-185-annual-world-gold-source.md`); reviewer APPROVE
-> 04:53 ratified D1–D6 + 2 gate notes folded in: **N1** defensive gold-magnitude guard (~20..10000 USD/oz,
-> backstop vs stdlib-OOXML column-misparse) + real-CMO-vintage parse test; **N2** CMO→daily fallback
-> `except SourceError` (not bare Exception) so recoverable failures fail over but a programmer bug fails
-> loud. Recommends: D2 xlsx-parse via **stdlib zipfile+xml.etree** (no new dep — core accessor must work
-> server-side out-of-box; alt = optional `vnfin[gold-history]`→openpyxl); D3 add binary `_request_bytes` to
-> transport; D4 pinned+fallback URL list; D5 **pure synthesis stays BYTE-IDENTICAL** (CMO annual bars pass
-> through existing year-averaging), only the gold-leg fetch swaps to CMO-primary + daily-fallback, CMO
-> bypasses `FailoverGoldClient` daily coverage gate (annual series would be wrongly rejected); D6 snapshot
-> frozen (new source internal). Source = **WB CMO Pink Sheet annual xlsx** (keyless, CC-BY 4.0, 1960–2025
-> no gaps; match gold col BY HEADER `Gold ($/troy oz)`). On LEAD APPROVE → TDD → Codex×2 → push+close →
-> ping vf-advisor. Reviewer spec `~/tools/vnfin-oss-reviewer/reviews/spec-202606210205-issue185-...`.
+> **#185 annual world-gold source — ✅ DONE (PUSHED + CLOSED).** Pushed master `a23ac15..d250afe`;
+> #185 commented + CLOSED (completed). **Codex×2 APPROVE, ZERO blockers** (review-202606210706); A
+> verified my binary CRITICAL fix genuinely covers the prod path (spy-after-construction reverts → RED
+> with exact symptom); B live-proved a non-SourceError parse bug PROPAGATES past `except` (N2 holds).
+> Shipped INTERNAL `WorldBankCmoGoldSource` (annual XAU/USD from WB CMO Pink Sheet, stdlib xlsx parse) as
+> the `world_reference_history_vnd` gold leg PRIMARY + daily `FailoverGoldClient` fallback with a
+> never-silent `world_reference_gold_source_fallback` warning; synthesis byte-identical; `gold.world()`
+> daily untouched; public-API snapshot FROZEN (source internal). **Pre-handoff adversarial-verify
+> (5-lens wf + per-finding refute) self-caught+fixed 2 defects all green tests had hidden:** CRITICAL
+> binary-transport routing on a bound-method `is` (always False → `binary=` never forwarded → CMO
+> silently failed server-side; `57ecb86`, construction-time flag) + xlsx worksheet path normalization
+> (`c4d269b`, `posixpath.normpath`); 2 findings refuted (`fetched_at_utc=now()` is lib-wide convention).
+> Suite **3377 green**, no-secrets green. Optional v1.x NITs (deferred, NOT issues): (1) raise on >1
+> full Gold split-header match; (2) N1 band headroom. Watermark/state left to reviewer; reviewer pinging
+> vf-advisor to flip its gold chart mock→real (makes EVERY advisor view real; SPY pending their AV key).
+> Memory: [[default-vs-injected-flag-not-bound-method-identity]].
 >
 > **State snapshot (18:33):** #173-unlisted **DONE+PUSHED** (`d522637`, #173 CLOSED).
 > #157 RATIOS leg **DONE+PUSHED** (`9edad80`). #157 **BANK-MISLABEL leg DONE+PUSHED** (`d522637..0a28339`:
