@@ -35,17 +35,22 @@ _Last synced: 2026-06-21 11:2x +07_
 >     disclosure (`3d33859`) + Tier-3 diagnostic correction (`16d0042`) PUSHED (`60459ef..6282a5d`);
 >     issue CLOSED as source-gap-documented for **Tier-2** (historical PIT membership: no clean
 >     redistributable feed, HOSE = human PDFs) with 4 reopen criteria. Watermark = reviewer's.
->   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (route
->     close comment + 4 reopen criteria to reviewer; world-reference line + reserved diagnostic stand).
->   - **#152** fixed-income — no clean yield-CURVE source; narrow honest `vnfin.rates` v1 over WB+DBnomics
->     + `explain_fixed_income_coverage`; defer `vnfin.bonds`. DESIGN GATE pending.
->   - **#163** dividends/corp-actions (reviewer's "big one", Boss-decided BUILD) — **SOURCE RE-VET
->     ROUTED to reviewer:** fresh clean-room probe found HNX+VSDC UNUSABLE (VSDC news-only HTML; HNX
->     TLS-broken/no per-symbol endpoint); only VNDirect finfo `/v4/events` usable (~2021 floor, MEDIUM
->     redist = same as existing vndirect.py). BLOCKED on reviewer/Boss source verdict before scoping.
->   - **#155** fund metadata — **UNBLOCKED (#190 landed)**; additive Fmarket metadata/allocation +
->     diagnostics; needs ONE reviewer-authorized live probe for 4 unconfirmed detail fields.
->   - Reviewer's stated W2 gate order after #175: #152 / #155 / #163.
+>   - **#152** fixed-income — **✅ DESIGN APPROVED (Option B) + BUILT + GREEN → awaiting Codex×1**
+>     (commit `dc39cef`, NOT pushed). Extended `vnfin.macro` w/ lending/deposit/real (WB FR.INR.*) +
+>     `explain_fixed_income_coverage`; yield CURVE deferred (no `vnfin.bonds`). Additive, snapshot
+>     frozen, NO new token, suite 3498. Built by fresh general-purpose agent vs `tasks/152-…design.md`.
+>   - **#163** dividends/corp-actions (Boss-decided BUILD) — **SOURCE VERDICT IN + finfo PROBE VERIFIED.**
+>     Architecture VALIDATED: **VSDC spine** (record/pay/ratio, ~2011, keyless) + **finfo ex-date leg**
+>     (`api-finfo.vndirect.com.vn` /v4/events `effectiveDate`=ex-date, ~2022 floor — ALREADY the lib's
+>     fundamentals host, low-bar Boss nod). HNX DROPPED (TLS). Cassette reconciliation APPROVED (synth
+>     committed fixture + gitignored raw). Design note `tasks/163-corp-actions-design.md`; evidence
+>     `tasks/163-finfo-exdate-probe-evidence.md`. **NEXT: send design gate + need VSDC field map from
+>     reviewer; build VSDC spine now; finfo leg gates on Boss-nod + cassette.**
+>   - **#182** gold domestic history — re-probe found NO qualifying source → **document + CLOSE** (close
+>     comment drafted `tasks/182-close-comment.md`; route to reviewer). HOLDING (post-#152/#163).
+>   - **#155** fund metadata — **design note READY** `tasks/155-fund-metadata-design.md` (confirmed
+>     Fmarket fields + reviewer-authorized probe spec for 4 unconfirmed). HOLDING (gate after #163).
+>   - Reviewer's stated W2 gate order after #175: #152 (done) / #163 (active) / #155.
 >
 > **#188 forward-discovery guard — ✅ DONE + PUSHED + CLOSED** (`ae7829d..60459ef`; Codex×1 APPROVE +
 > 1 doc-comment must-fix folded). AST forward-discovers emitted `.warnings` tokens, asserts
