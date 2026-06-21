@@ -12,23 +12,28 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-21 11:05 +07_
+_Last synced: 2026-06-21 11:07 +07_
 
 > **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
 > worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
 > (stop the serial one-issue crawl). Plan: `/tmp/vnfin-batch-plan-202606211040.md`.
-> - **WAVE 1 — build-ready (parallel worktrees; batch design-gate SENT to reviewer 11:0x):**
->   #189 `board_unavailable` (equities; `/tmp/vnfin-189-design-202606211035.md`),
->   #190 `fund_nav_stale` (funds; `/tmp/vnfin-190-design-202606211045.md`),
->   #191 test-harden #187 matrix (`/tmp/vnfin-191-spec.md`),
->   #192 def-use trace (`/tmp/vnfin-192-spec.md`).
->   Collision = shared warning-token registry (test_docs_contract.py tuple, SKILL, domains, CHANGELOG)
->   — I resolve additively at integration; only #189-vs-#190 tuple lines truly conflict.
-> - **WAVE 2 — design-first/source-vet (after W1):** #152 (fixed-income/yield curve), #155 (fund
->   metadata — defer to avoid #190 funds collision), #163 (dividends/corp-actions), #175 (PIT index
->   membership), #182 (gold history source-hunt).
-> - **AWAITING:** reviewer batch design-gate → Workflow fan-out → integrate → integration tests →
->   reviewer parallel code-review → push + close.
+> - **WAVE 1 — gate APPROVED (all 4) → fan-out DONE → INTEGRATED + GREEN → ROUTED for parallel review
+>   (2026-06-21 ~11:1x):** #189 `board_unavailable` (equities), #190 `fund_nav_stale` (funds),
+>   #191 test-harden #187 matrix, #192 def-use trace. Specs `tasks/189..192-*.md` (gate-locked).
+>   Workflow `wf_0493ba36-1dd` fanned out 4 parallel worktree builds (all green per-branch).
+>   **Integrated on master (linear cherry-pick onto `0870a37`):** `1d9dd25` #191 → `e3bd6ce` #192 →
+>   `bbb10c0` #189 → `21c39b9` #190 (HEAD, UNPUSHED). Registry conflicts (tuple/SKILL) resolved
+>   keep-both. **Merged-tree gate ALL GREEN:** full suite 3468 pass/0 fail; #188 guard + #192 trace
+>   green; `board_unavailable`+`fund_nav_stale` FORWARD-discovered (discovered=36==tuple=36); snapshot
+>   byte-frozen. Handoff: `/tmp/vnfin-wave1-integrated-handoff.md`. **4 deviations flagged** (KEY: #191
+>   gap-(B) direction was reversed vs gate wording — gate's "delete back-out→InvalidData" is
+>   mathematically impossible; agent did the achievable inverse, verified vs udf.py:423 + matches #187
+>   NOTE-B). **AWAITING reviewer parallel code-review (4 sub-agents, #189 most adversarial) → on APPROVE:
+>   push master (4 commits) + close #189/#190/#191/#192. Watermark left to reviewer.**
+> - **WAVE 2 — design-first/source-vet (after W1 lands):** #152 (fixed-income/yield curve), #155 (fund
+>   metadata — defer to avoid #190 funds collision), #163 (dividends/corp-actions; HNX+VSDC vetted),
+>   #175 (PIT index membership), #182 (gold history source-hunt; reviewer = no clean source). Send the
+>   reviewer ONE design gate at a time.
 >
 > **#188 forward-discovery guard — ✅ DONE + PUSHED + CLOSED** (`ae7829d..60459ef`; Codex×1 APPROVE +
 > 1 doc-comment must-fix folded). AST forward-discovers emitted `.warnings` tokens, asserts
