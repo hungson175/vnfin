@@ -31,13 +31,17 @@ _Last synced: 2026-06-24 +07_
 > (mutable `_requested_symbol`) + public + 6h cache incentivizes reuse. **Fix spec:** `tasks/193-fix-spec-round2.md`
 > — gate Stooq SPY-only + stateless closures (thread symbol through `engine.run`) + non-SPY-working-Stooq /
 > empty-window / stateless tests, ONE commit, SPY unchanged.
-> **STATUS:** round-2 fix BUILT + committed `3ad1a3a` (B1 Stooq SPY-only via `supports()`==SPY + defense-in-depth
-> `InvalidData` refuse; B2 empty-window names symbol; B3 stateless — symbol threaded through `engine.run`, no
-> `_requested_symbol`). Merged-tree GREEN (pytest exit 0, snapshot frozen, token 47, 0 `_requested_symbol`); +9
-> fail-first regression tests. **Adversarial self-verify CLEAN** (3 independent skeptics wrong-market/concurrency/
-> never-empty — all `hole_found:false`, 5000-call thread stress, per-ticker cache isolation, SPY ^SPX fallover
-> intact). **→ routed to vnfin-oss-reviewer for Codex×2 re-review against the BLOCK verdict.** Push+close only on
-> APPROVE.
+> **STATUS: ✅ DONE + PUSHED + CLOSED (2026-06-24).** Round-2 fix `3ad1a3a` (B1 Stooq SPY-only via
+> `supports()`==SPY + defense-in-depth `InvalidData` refuse + spec-not-payload labeling; B2 empty-window names
+> symbol; B3 stateless — symbol threaded through `engine.run`, 0 `_requested_symbol`). **Codex×2 round-2 verdict
+> = APPROVE** (`reviews/review-202606241510-issue193-round2-APPROVE.md`): all 3 blockers genuinely fixed +
+> verified, no collateral break to the other 6 FailoverClient domains, housekeeping green (snapshot frozen,
+> token 47, additive-only, zero VNStock). My 3-skeptic adversarial verify was CLEAN before handoff. **PUSHED
+> `e0e37aa..e25151b`** (whole #193 series), **#193 CLOSED** (issuecomment-4787257540) with a public coverage +
+> never-silent + keyless-MissingKey + thread-safe resolution comment. Watermark = reviewer's (NOT advanced).
+> **NON-BLOCKING FAST-FOLLOW (reviewer-requested, in progress):** add a committed threaded/barrier-synced B3
+> concurrency stress test (existing shared-client bleed test is sequential-only) — delegated, mutation-verified,
+> then a quick reviewer pass before its own push. NOT gating the #193 close.
 
 > **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
 > worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
