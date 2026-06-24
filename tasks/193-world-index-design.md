@@ -94,7 +94,7 @@ Replace the `SUPPORTED_SYMBOL = "SPY"` string (`world_client.py:46`) with a decl
 Three independent, already-or-minimally-additive signals make a proxy non-silent:
 1. **`provider_symbol`** (exists, `models.py`) carries the actual served ticker (`EWJ`/`FXI`/`EWS`) — ≠ the asked symbol.
 2. **`value_unit`** = USD (≠ the asked index's local currency).
-3. **NEW warning token `proxy_substitution`** (mirrors the existing `fallback_instrument_served` precedent at `world_client.py:48-51`), e.g.: `proxy_substitution: requested ^N225 (Nikkei 225) served as EWJ (iShares MSCI Japan ETF, USD) — a USD ETF proxy, not the raw index; embeds USD/JPY FX`.
+3. **NEW warning token `proxy_substitution`** (mirrors the existing `fallback_instrument_served` precedent at `world_client.py:48-52`), e.g.: `proxy_substitution: requested ^N225 (Nikkei 225) served as EWJ (iShares MSCI Japan ETF, USD) — a USD ETF proxy, not the raw index; embeds USD/JPY FX`.
 
 **Recommendation:** the token is the **must-have** (loud, human-readable, already a repo pattern). An additive **`proxy_for: Optional[str] = None`** on `PriceHistory` (machine-readable: the asked index when a proxy was served) is a nice-to-have — **Q2** for the gate. Proxy-labeling test FAILS if a proxy is served without the token (and, if added, the field).
 
@@ -121,7 +121,7 @@ Three independent, already-or-minimally-additive signals make a proxy non-silent
 
 - `world()` `vnfin/indices/world_client.py:166`; `SUPPORTED_SYMBOL` `:46`; `_validate_symbol` enumerates the supported set `:202-214`.
 - `PriceHistory` `vnfin/models.py:76` (has `value_unit`/`source`/`provider_symbol`/`warnings`; **no** `adjusted_close`/`proxy_for`); `PriceBar` `:48`.
-- Source chain `default_world_index_sources()` `world_client.py:55-69` → `[AlphaVantage(BYOK), Stooq]`; AV key read `world_sources.py:89`; no-key error `:127-128`; `AllSourcesFailed` `vnfin/exceptions.py:71`.
+- Source chain `default_world_index_sources()` `world_client.py:55-69` → `[AlphaVantage(BYOK), Stooq]`; AV key read `world_sources.py:89`; no-key error `:127-130`; `AllSourcesFailed` `vnfin/exceptions.py:71`.
 - Exceptions: **no `MissingKey`** (`exceptions.py`, verified) → add it.
 - **`_WARNING_TOKENS_180` = 46** (verified by import — NOT 37; the arch-map sub-agent miscounted, caught pre-gate). New `proxy_substitution` token → **46→47**: add to the tuple (`tests/test_docs_contract.py`) + `skills/vnfin/SKILL.md` table + emit as a literal stem at a `warnings=` sink (#188 forward-scanner). **Gate on the bijection SWEEP, not the count.**
 - Snapshot `tests/snapshots/public_api_v0_2_0.json` **stays frozen** (no regen): new allowlist symbols = no surface change; `MissingKey` export = additive; new `proxy_for`/`adjusted_close` = additive-appended-defaulted; `proxy_substitution` = test/doc only. **Never run `dump_api_surface.py` mid-feature.**
