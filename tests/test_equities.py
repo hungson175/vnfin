@@ -499,3 +499,387 @@ def test_fetched_at_utc_is_aware():
     assert res.fetched_at_utc is not None
     assert res.fetched_at_utc.tzinfo is not None
     assert res.as_of is None
+
+
+# =============================================================================
+# #195 — GICS sector classification (clean-room; derived by inverting the 10
+# VNAllShare sector baskets through the existing IndexConstituentsSource).
+#
+# Synthetic baskets only — CI never hits iboard. The classifier takes an injected
+# ``fetch_constituents`` callable (code -> IndexConstituents); the facade routes the
+# 10 sector-group URLs + the 3 board URLs through one injected ``http_get`` stub.
+# =============================================================================
+
+from vnfin.exceptions import VnfinError  # noqa: E402
+from vnfin.indices.models import IndexConstituents, IndexMember  # noqa: E402
+from vnfin.equities.sectors import (  # noqa: E402
+    _GICS_L1,
+    _SECTOR_MAP_CACHE_TTL,
+    SectorClassifier,
+)
+from vnfin.equities.models import EquitySector, GicsSector  # noqa: E402
+import vnfin.equities as eq  # noqa: E402
+
+# The 10 VNAllShare GICS L1 sector basket codes (clean-room: derived from the index
+# registry, never from vnstock industry ids).
+_SECTOR_CODES = (
+    "VNCOND",
+    "VNCONS",
+    "VNENE",
+    "VNFIN",
+    "VNHEAL",
+    "VNIND",
+    "VNIT",
+    "VNMAT",
+    "VNREAL",
+    "VNUTI",
+)
+
+# Expected GICS L1 code -> public MSCI/S&P name (asserted for ALL 10 in case 1).
+_EXPECTED_GICS = {
+    "VNFIN": "Financials",
+    "VNIT": "Information Technology",
+    "VNREAL": "Real Estate",
+    "VNMAT": "Materials",
+    "VNCONS": "Consumer Staples",
+    "VNCOND": "Consumer Discretionary",
+    "VNIND": "Industrials",
+    "VNENE": "Energy",
+    "VNHEAL": "Health Care",
+    "VNUTI": "Utilities",
+}
+
+
+def _members(symbols, exch="HOSE"):
+    return tuple(
+        IndexMember(symbol=s, exchange=exch, company_name=f"{s} Corp", isin=f"VN000000{s}")
+        for s in symbols
+    )
+
+
+def _constituents(code, symbols):
+    return IndexConstituents(
+        index=code,
+        source="ssi_iboard_query",
+        members=_members(symbols),
+        provider_group=code,
+        warnings=("current_snapshot_only: ...", "weights_not_available: ..."),
+    )
+
+
+def _fake_fetch(baskets):
+    """A synthetic ``fetch_constituents`` (code -> IndexConstituents) + a call counter.
+
+    ``baskets`` maps sector code -> tuple of member symbols. Unlisted codes return an
+    empty basket. Returns ``(fetch, calls)`` where ``calls`` is a list of fetched codes.
+    """
+    calls = []
+
+    def _fetch(code):
+        calls.append(code)
+        return _constituents(code, baskets.get(code, ()))
+
+    return _fetch, calls
+
+
+# --------------------------- (1) known symbol mapped --------------------------
+
+
+def test_classify_known_symbol_in_vnfin_basket():
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA", "BBB"), "VNIT": ("CCC",)})
+    clf = SectorClassifier(fetch_constituents=fetch)
+    got = clf.classify("AAA")
+    assert got == ("VNFIN", "Financials", "GICS", "ssi_iboard_query")
+
+
+def test_gics_l1_map_correct_for_all_ten_codes():
+    # _GICS_L1 must carry EXACTLY the 10 codes with the public MSCI/S&P L1 names.
+    assert set(_GICS_L1) == set(_SECTOR_CODES)
+    for code, name in _EXPECTED_GICS.items():
+        assert _GICS_L1[code] == name
+
+
+# ----------------------- (2) unmapped HOSE -> all None ------------------------
+
+
+def test_classify_unmapped_symbol_returns_none():
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
+    clf = SectorClassifier(fetch_constituents=fetch)
+    assert clf.classify("ZZZ") is None
+
+
+def test_universe_with_sector_unmapped_hose_all_four_fields_none():
+    # An unmapped HOSE symbol gets all 4 sector fields None as a unit (never fabricated).
+    by_board = {
+        "HOSE": _payload([_row("AAA", "HOSE"), _row("NOPE", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
+    res = universe(http_get=_board_router(by_board), with_sector=True, _fetch_constituents=fetch)
+    nope = next(s for s in res.securities if s.symbol == "NOPE")
+    assert nope.sector_code is None
+    assert nope.sector_name is None
+    assert nope.sector_scheme is None
+    assert nope.sector_source is None
+    aaa = next(s for s in res.securities if s.symbol == "AAA")
+    assert aaa.sector_code == "VNFIN"
+    assert aaa.sector_name == "Financials"
+    assert aaa.sector_scheme == "GICS"
+    assert aaa.sector_source == "ssi_iboard_query"
+    assert any(w.startswith("sector_partial_coverage") for w in res.warnings)
+
+
+# ----------------------- (3) HNX/UPCoM -> all None ----------------------------
+
+
+def test_universe_with_sector_hnx_upcom_rows_all_four_none():
+    by_board = {
+        "HOSE": _payload([_row("AAA", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})  # baskets are HOSE-only by nature
+    res = universe(http_get=_board_router(by_board), with_sector=True, _fetch_constituents=fetch)
+    for sym in ("HNX1", "UP1"):
+        sec = next(s for s in res.securities if s.symbol == sym)
+        assert sec.sector_code is None
+        assert sec.sector_name is None
+        assert sec.sector_scheme is None
+        assert sec.sector_source is None
+    # coverage token present
+    assert any(w.startswith("sector_partial_coverage") for w in res.warnings)
+
+
+# ------------------- (4) by_sector + sectors() static -------------------------
+
+
+def test_by_sector_code_and_name_case_insensitive_equivalent():
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA", "BBB", "CCC")})
+    by_code = eq.by_sector("VNFIN", _fetch_constituents=fetch)
+    by_name = eq.by_sector("financials", _fetch_constituents=fetch)
+    by_code2 = eq.by_sector("vnfin", _fetch_constituents=fetch)
+    assert isinstance(by_code, EquitySector)
+    assert by_code.sector_code == "VNFIN"
+    assert by_code.sector_name == "Financials"
+    assert by_code.sector_scheme == "GICS"
+    assert by_code.sector_source == "ssi_iboard_query"
+    assert by_code.members == ("AAA", "BBB", "CCC")  # sorted
+    assert by_name.members == by_code.members
+    assert by_code2.members == by_code.members
+    assert any(w.startswith("sector_partial_coverage") for w in by_code.warnings)
+
+
+def test_sectors_static_ten_no_fetch():
+    # sectors() is static from _GICS_L1 — no constituents fetch at all.
+    def _boom(code):
+        raise AssertionError("sectors() must NOT fetch any basket")
+
+    secs = eq.sectors(_fetch_constituents=_boom)
+    assert len(secs) == 10
+    assert all(isinstance(s, GicsSector) for s in secs)
+    # sorted by code
+    assert [s.code for s in secs] == sorted(_SECTOR_CODES)
+    by = {s.code: s.name for s in secs}
+    assert by == _EXPECTED_GICS
+
+
+def test_by_sector_unknown_raises_clear_error():
+    fetch, _ = _fake_fetch({})
+    with pytest.raises((InvalidData, ValueError)):
+        eq.by_sector("NotASector", _fetch_constituents=fetch)
+
+
+# ---------- (5) coverage token whenever sector data is served -----------------
+
+
+def test_profile_returns_full_enriched_security_with_coverage_token():
+    by_board = {
+        "HOSE": _payload([_row("AAA", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
+    prof = eq.profile("AAA", http_get=_board_router(by_board), _fetch_constituents=fetch)
+    assert isinstance(prof, EquitySecurity)
+    # full enriched row — not a sector-only fragment (reuses EquitySecurity)
+    assert prof.symbol == "AAA"
+    assert prof.company_name_en == "AAA Corp"
+    assert prof.sector_code == "VNFIN"
+    assert prof.sector_name == "Financials"
+    assert prof.sector_scheme == "GICS"
+    assert prof.sector_source == "ssi_iboard_query"
+
+
+def test_profile_unmapped_symbol_full_row_all_sector_none():
+    by_board = {
+        "HOSE": _payload([_row("NOPE", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
+    prof = eq.profile("NOPE", http_get=_board_router(by_board), _fetch_constituents=fetch)
+    assert prof.symbol == "NOPE"
+    assert prof.sector_code is None and prof.sector_name is None
+    assert prof.sector_scheme is None and prof.sector_source is None
+
+
+def test_profile_absent_symbol_raises_not_found_naming_symbol():
+    by_board = {
+        "HOSE": _payload([_row("AAA", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
+    with pytest.raises(VnfinError) as exc:
+        eq.profile("MISSING", http_get=_board_router(by_board), _fetch_constituents=fetch)
+    assert "MISSING" in str(exc.value)
+
+
+# ------------------------ (6) overlap -> deterministic None -------------------
+
+
+def test_overlap_symbol_in_two_baskets_is_none_and_disclosed():
+    # DUP is synthesized into 2 baskets -> ambiguous -> None (never picked), disclosed.
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA", "DUP"), "VNIT": ("DUP", "CCC")})
+    clf = SectorClassifier(fetch_constituents=fetch)
+    assert clf.classify("DUP") is None
+    # the single-basket symbols still classify
+    assert clf.classify("AAA")[0] == "VNFIN"
+    assert clf.classify("CCC")[0] == "VNIT"
+    # overlap disclosed
+    ov = clf.overlaps()
+    assert "DUP" in ov
+    assert set(ov["DUP"]) == {"VNFIN", "VNIT"}
+
+
+def test_overlap_deterministic_across_reruns():
+    baskets = {"VNFIN": ("DUP",), "VNIT": ("DUP",)}
+    fetch1, _ = _fake_fetch(baskets)
+    fetch2, _ = _fake_fetch(baskets)
+    assert SectorClassifier(fetch_constituents=fetch1).classify("DUP") is None
+    assert SectorClassifier(fetch_constituents=fetch2).classify("DUP") is None
+
+
+def test_universe_with_sector_overlap_emits_named_disclosure_line():
+    by_board = {
+        "HOSE": _payload([_row("DUP", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("DUP",), "VNIT": ("DUP",)})
+    res = universe(http_get=_board_router(by_board), with_sector=True, _fetch_constituents=fetch)
+    dup = next(s for s in res.securities if s.symbol == "DUP")
+    assert dup.sector_code is None  # overlap -> None, never picked
+    overlap_lines = [
+        w for w in res.warnings if w.startswith("sector_partial_coverage:") and "DUP" in w
+    ]
+    assert overlap_lines, "expected an overlap disclosure line naming the symbol"
+    assert "baskets" in overlap_lines[0]
+
+
+# ---------------------------- (7) caching -------------------------------------
+
+
+def test_build_map_fetches_each_basket_exactly_once():
+    fetch, calls = _fake_fetch({"VNFIN": ("AAA",)})
+    clf = SectorClassifier(fetch_constituents=fetch)
+    clf.classify("AAA")  # triggers the lazy build
+    # exactly 10 baskets fetched, one per code, no duplicates
+    assert len(calls) == 10
+    assert sorted(calls) == sorted(_SECTOR_CODES)
+
+
+def test_second_sector_call_within_ttl_does_not_refetch():
+    fetch, calls = _fake_fetch({"VNFIN": ("AAA",)})
+    clf = SectorClassifier(fetch_constituents=fetch)
+    clf.classify("AAA")
+    assert len(calls) == 10
+    clf.classify("AAA")  # second call within TTL — no new fetch
+    clf.classify("ZZZ")
+    assert len(calls) == 10
+
+
+def test_cache_ttl_default_is_six_hours():
+    assert _SECTOR_MAP_CACHE_TTL == 21600.0
+
+
+def test_cache_expiry_rebuilds_after_ttl():
+    fetch, calls = _fake_fetch({"VNFIN": ("AAA",)})
+    clock = {"t": 1000.0}
+    clf = SectorClassifier(fetch_constituents=fetch, clock=lambda: clock["t"])
+    clf.classify("AAA")
+    assert len(calls) == 10
+    clock["t"] += _SECTOR_MAP_CACHE_TTL + 1.0  # past the TTL
+    clf.classify("AAA")
+    assert len(calls) == 20  # rebuilt
+
+
+# ------------------------ (9) plain universe() unchanged ----------------------
+
+
+def test_plain_universe_default_does_not_fetch_baskets_and_keeps_sector_not_available():
+    by_board = {
+        "HOSE": _payload([_row("AAA", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+
+    def _boom(code):
+        raise AssertionError("plain universe() must NOT fetch any sector basket")
+
+    res = universe(http_get=_board_router(by_board), _fetch_constituents=_boom)
+    # default with_sector=False: sector fields stay None, sector_not_available retained,
+    # NO sector_partial_coverage anywhere.
+    prefixes = {w.split(":", 1)[0].strip() for w in res.warnings}
+    assert "sector_not_available" in prefixes
+    assert "sector_partial_coverage" not in prefixes
+    for sec in res.securities:
+        assert sec.sector_code is None
+        assert sec.sector_scheme is None
+
+
+def test_with_sector_swaps_sector_not_available_for_partial_coverage():
+    by_board = {
+        "HOSE": _payload([_row("AAA", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
+    res = universe(http_get=_board_router(by_board), with_sector=True, _fetch_constituents=fetch)
+    prefixes = {w.split(":", 1)[0].strip() for w in res.warnings}
+    # the per-board sector_not_available is REPLACED by sector_partial_coverage
+    assert "sector_partial_coverage" in prefixes
+    assert "sector_not_available" not in prefixes
+    # the other honest-gap tokens are untouched
+    assert "partial_universe_coverage" in prefixes
+    assert "listing_date_not_available" in prefixes
+
+
+def test_default_universe_unchanged_byte_for_byte():
+    # Plain universe() with no sector kwargs is identical to the pre-#195 result.
+    by_board = {
+        "HOSE": _payload([_row("AAA", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    res = universe(http_get=_board_router(by_board))
+    # 4 additive fields are present but default None (additive dataclass)
+    sec = res.securities[0]
+    assert sec.sector_code is None and sec.sector_name is None
+
+
+# ------------------------ (10) offline-only / no network ----------------------
+
+
+def test_classifier_default_fetch_is_index_constituents_source():
+    # With no injected fetch, the default is a private IndexConstituentsSource bound method;
+    # constructing the classifier must NOT touch the network.
+    clf = SectorClassifier()
+    assert callable(clf._fetch_constituents)
+
+
+def test_classify_blank_symbol_returns_none():
+    fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
+    clf = SectorClassifier(fetch_constituents=fetch)
+    assert clf.classify("aaa") == ("VNFIN", "Financials", "GICS", "ssi_iboard_query")

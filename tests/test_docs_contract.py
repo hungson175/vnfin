@@ -589,6 +589,8 @@ _WARNING_TOKENS_180 = (
     "partial_universe_coverage",
     "listing_date_not_available",
     "sector_not_available",
+    # #195 — derived GICS sector coverage gap (HOSE-only ~74%; also flags multi-basket symbols).
+    "sector_partial_coverage",
     "cross_board_duplicate_symbol",
     # #189 — a board skipped during the all-boards merge (partial availability).
     "board_unavailable",
@@ -930,6 +932,9 @@ def test_forward_discovery_finds_the_known_emission_corpus():
         "trailing_zero_volume_tail",             # C
         "fallback_instrument_served",            # D
         "stitched_segment",                      # E leading-text
+        # #195 — derived GICS sector coverage token, emitted from BOTH facade sinks
+        # (coverage + overlap) via _*warning helpers; must stay forward-discoverable.
+        "sector_partial_coverage",
     ):
         assert tok in discovered, f"forward discovery missed {tok!r}"
 

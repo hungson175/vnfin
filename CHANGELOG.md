@@ -27,6 +27,24 @@ All notable changes to `vnfin` are documented here. The format follows
   indicators (#152), and the `board_unavailable` (#189) / `current_snapshot_only` (#175) tokens. Docs only.
 
 ### Added
+- **Derived GICS L1 sector classification for equities** (#195) — `vnfin.equities` now derives the
+  GICS L1 sector for VN equities **clean-room**, by inverting the 10 VNAllShare sector index baskets it
+  already fetches via `vnfin.indices` (no vnstock; no `industryID`/`industryIDv2`/`industry_name`). New
+  primitives: **`vnfin.equities.profile(symbol)`** (un-defers the previously-deferred `profile` —
+  returns the symbol's full sector-enriched `EquitySecurity`), **`vnfin.equities.sectors()`** (the
+  static 10 `GicsSector(code, name)` pairs — no fetch), **`vnfin.equities.by_sector(code_or_name)`**
+  (one sector's basket members; accepts a code `"VNFIN"` or GICS name `"Financials"`, case-insensitive),
+  and a new **`universe(..., with_sector=True)`** opt-in that enriches each row. `EquitySecurity` gains
+  four additive `Optional[str]` fields (`sector_code`/`sector_name`/`sector_scheme`/`sector_source`),
+  and two new result types (`GicsSector`, `EquitySector`) are exported. **Honest coverage:** the
+  baskets are **HOSE-only (~74%)** and **current-snapshot** (survivorship), so an unmapped HOSE symbol
+  and **every** HNX/UPCoM symbol keep all four sector fields `None` **as a unit** (never fabricated), and
+  a multi-basket symbol degrades to a deterministic `None` — all disclosed via the new
+  **`sector_partial_coverage`** warning token (which replaces the per-board `sector_not_available` on the
+  enriched path; the plain default `universe()` is byte-for-byte unchanged, with no basket fetch). The
+  inverted map is built once (≤10 fetches) and cached 6h per process. The finer
+  `industries()`/`industry_peers()` tier is intentionally **not** shipped (no clean finer data).
+  ([#195](https://github.com/hungson175/vnfin/issues/195))
 - **World-index coverage to 5 symbols + keyless-from-server reliability** (#193) — `vnfin.indices.world`
   now serves **`SPY`, `QQQ`, `^N225`, `^SSEC`, `^STI`** (was SPY only), ALL via Alpha Vantage
   `TIME_SERIES_DAILY` in **USD** (US-listed ETFs) through a declarative per-symbol mapping. `SPY`→SPY

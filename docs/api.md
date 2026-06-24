@@ -71,6 +71,10 @@ src   = vnfin.equities.source()              # SsiIboardUniverseSource (client()
 uni   = vnfin.equities.universe("HOSE")      # EquityUniverse for one board
 allu  = vnfin.equities.universe()            # merges HOSE + HNX + UPCOM (cross-board keep-first)
 fpt   = next(s for s in vnfin.equities.universe("HOSE") if s.symbol == "FPT")  # one-symbol pattern
+prof  = vnfin.equities.profile("FPT")        # EquitySecurity, sector-enriched (derived GICS L1)
+secs  = vnfin.equities.sectors()             # tuple[GicsSector] — the 10 GICS L1 (code, name)
+fin   = vnfin.equities.by_sector("VNFIN")    # EquitySector — basket members (or by name "Financials")
+rich  = vnfin.equities.universe("HOSE", with_sector=True)  # rows enriched with derived GICS sector
 
 # fundamentals — financial statements (raw VND). Failover VNDirect -> CafeF.
 c       = vnfin.fundamentals.client()        # FailoverFundamentalClient (VNDirect -> CafeF)
@@ -312,13 +316,43 @@ It is a **data primitive only** — NOT a screener/ranker/advisor. Single-source
   `len()`, iteration, `.symbols`, and `.to_dataframe()`. Each `EquitySecurity` carries
   `symbol`, `exchange`, `company_name_en`, `company_name_vi`, `isin`, `listing_status`,
   `par_value`, `currency` — every optional field is `None` when the provider omits it
-  (never fabricated).
+  (never fabricated) — plus the four additive **derived GICS sector** fields
+  `sector_code`, `sector_name`, `sector_scheme`, `sector_source` (all `None` unless the
+  symbol is sector-mapped; see below).
 
-`profile(symbol)` is **deferred**: to get one symbol, call `universe(exchange=...)` and
-filter (`next(s for s in universe("HOSE") if s.symbol == "FPT")`). The result's
-`warnings` ALWAYS disclose the known gaps — `partial_universe_coverage` (index-basket
-derived, ~96% of the full SSC roster), `listing_date_not_available` (provider
-`firstTradingDate` is `'0'`), `sector_not_available` — plus `cross_board_duplicate_symbol`
+### Derived GICS L1 sector (issue #195)
+
+The raw SSI iBoard payload carries **no** sector field, so `vnfin.equities` **derives**
+the GICS L1 sector — clean-room — by inverting the 10 VNAllShare sector baskets that
+`vnfin.indices` already fetches (no provider industry id is adopted). The sector primitives:
+
+- `vnfin.equities.profile(symbol, *, http_get=None, timeout=25.0) -> EquitySecurity` — one
+  symbol's **full sector-enriched** `EquitySecurity` (all reference fields plus the four
+  sector fields) from the merged all-board universe. A symbol absent from every board
+  raises `EmptyData` naming the symbol. *(This un-defers the previously-deferred
+  `profile`.)*
+- `vnfin.equities.sectors() -> tuple[GicsSector, ...]` — the **static** 10 `GicsSector(code,
+  name)` pairs (sorted by code). No fetch, no warning token.
+- `vnfin.equities.by_sector(code_or_name, *, http_get=None, timeout=25.0) -> EquitySector` —
+  the basket members of one sector. Accepts a code (`"VNFIN"`) **or** a GICS name
+  (`"Financials"`), case-insensitive; unknown → `InvalidData`. HOSE-only by nature.
+- `vnfin.equities.universe(exchange=None, *, with_sector=False, http_get=None, timeout=25.0)` —
+  `with_sector=False` (default) is **byte-for-byte** as before (no sector basket fetch,
+  `sector_not_available` retained); `with_sector=True` enriches each row and swaps the
+  per-board `sector_not_available` token for `sector_partial_coverage`.
+
+**Current-snapshot caveat:** the baskets are the **current** membership (survivorship), so
+the derived sector is the symbol's *current* GICS sector, not point-in-time. Coverage is
+**HOSE-only (~74% of HOSE)**: an unmapped HOSE symbol and **every** HNX/UPCoM symbol keep
+all four sector fields `None` **as a unit** — never fabricated — and a multi-basket symbol
+(should not happen for GICS L1) degrades to a deterministic `None`. The
+`sector_partial_coverage` token discloses both gaps (and names any multi-basket symbol).
+
+`profile(symbol)` now exists (above). The result's `warnings` ALWAYS disclose the known
+gaps — `partial_universe_coverage` (index-basket derived, ~96% of the full SSC roster),
+`listing_date_not_available` (provider `firstTradingDate` is `'0'`), and either
+`sector_not_available` (plain `universe()`) or `sector_partial_coverage`
+(`with_sector=True` / `profile` / `by_sector`) — plus `cross_board_duplicate_symbol`
 on a merge, and `board_unavailable` (issue #189) when a board fetch is skipped during the
 all-boards `universe()` merge (partial failure skips-and-warns and serves the healthy boards;
 total failure of all three re-raises the last source error). See

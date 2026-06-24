@@ -35,6 +35,46 @@ class EquitySecurity:
     listing_status: Optional[str] = None
     par_value: Optional[float] = None
     currency: Optional[str] = None
+    # #195 — derived GICS L1 sector (clean-room, inverted from the 10 VNAllShare sector
+    # baskets). All four are populated AS A UNIT when the symbol maps to exactly one
+    # basket, and are ALL ``None`` when unmapped / HNX / UPCoM / multi-basket overlap —
+    # NEVER fabricated. ``sector_scheme`` is ``"GICS"`` and ``sector_source`` is
+    # ``"ssi_iboard_query"`` only on the mapped path. Additive (frozen dataclass,
+    # appended after ``currency``, all defaulted) so the public-API surface stays
+    # non-breaking.
+    sector_code: Optional[str] = None
+    sector_name: Optional[str] = None
+    sector_scheme: Optional[str] = None
+    sector_source: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class GicsSector:
+    """One GICS L1 sector — a ``(code, name)`` pair (e.g. ``"VNFIN"`` / ``"Financials"``).
+
+    Returned by :func:`vnfin.equities.sectors` (the static 10-sector list). Carries NO
+    membership — that is :class:`EquitySector` (a separate basket fetch).
+    """
+
+    code: str
+    name: str
+
+
+@dataclass(frozen=True)
+class EquitySector:
+    """A GICS L1 sector plus its current basket membership.
+
+    Returned by :func:`vnfin.equities.by_sector`. ``members`` is the sorted tuple of
+    member symbols of the one VNAllShare sector basket; HOSE-only by nature. ``warnings``
+    always carries the ``sector_partial_coverage`` honest-coverage token.
+    """
+
+    sector_code: str
+    sector_name: str
+    sector_scheme: str = "GICS"
+    sector_source: str = "ssi_iboard_query"
+    members: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
