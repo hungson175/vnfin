@@ -36,12 +36,14 @@ no vnstock)** → **adversarial-verify Workflow `wf_9b83088f-8a9` (5 fresh skept
 silent-gap:** `profile()` serves a mapped sector but returns a bare `EquitySecurity` (NO `.warnings`) → never-silent
 contract broken on the single-symbol entry point; violates gate-approved matrix case-5 + design-note L91 + SKILL.md
 L164 + docs/api.md:351-355 (4 surfaces); masking test `..._with_coverage_token` asserts NO token (green-blind). Other
-4 skeptics: 0 defects. **Fix = profile must carry `sector_partial_coverage` (token count UNCHANGED 49). Design-ruling
-out to reviewer:** REC a1 (new `EquityProfile(security, warnings)` wrapper, matches result-carries-warnings convention)
-vs a3 (add `warnings` field to EquitySecurity); reject (b) drop-from-scope. Packet `/tmp/195-profile-gap-20260625.md`.
-NEXT: reviewer rules a1/a3 → fix-spec → fresh-agent TDD (RED = rewrite masking test + add overlap-profile test) →
-merged green + re-verify profile → Codex×2 → push+close. NOTE: snapshot `dump_api_surface` regen is a RELEASE task,
-NOT this commit. Not P0.
+4 skeptics: 0 defects. **Reviewer RULED a1** (`gate-202606250208-issue195-profile-gap.md`): new frozen
+`EquityProfile(security, warnings)` wrapper (matches result-carries-warnings convention; reject a3/b). Fix-spec
+`tasks/195-fix-spec.md` (`7db6798`, locked to a1) → fresh-agent TDD (rewrote masking test to assert the token RED-first +
+added overlap-profile test) → **integrated + committed @ `91d1bdc`**; merged-tree verified by me (suite exit0, tuple=49,
+snapshot byte-identical, #180/#188 bijection, no vnstock) → **adversarial re-verify Workflow `wf_8a360ee5-acc` (3 lenses,
+real probes) = CLEAN, 0 defects** → **routed to Codex×2** (handoff `/tmp/195-codereview-handoff-20260625.md`; flagged the
+`cross_board_duplicate` deviation as review-focus). NEXT: await reviewer APPROVE → push to master + close #195 (reviewer
+owns watermark; snapshot regen = separate RELEASE task). Not P0.
 >
 > **✅ DONE 2026-06-24: #194 `funds.nav_history` aborts whole series on one conflicting navDate — port the #186 quarantine.**
 > Reviewer-routed poller intake; **triage = ACCEPTED** (trusted vf-advisor↔vnfin reporter, clean repro, no
