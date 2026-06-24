@@ -14,7 +14,24 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-06-24 +07_
 
-> **🔵 NOW (active 2026-06-24): #193 `vnfin.indices.world` — world-index coverage + keyless-from-server reliability.**
+> **🔵 NOW (active 2026-06-24): #194 `funds.nav_history` aborts whole series on one conflicting navDate — port the #186 quarantine.**
+> Reviewer-routed poller intake; **triage = ACCEPTED** (trusted vf-advisor↔vnfin reporter, clean repro, no
+> untrusted code). Real degrade-not-fabricate / never-silent defect: `funds.source().nav_history()` hard-raises
+> `InvalidData` on ONE conflicting `navDate` (`vnfin/funds/fmarket.py:356-373`, the #158 hard-raise) → nukes a
+> fund's whole multi-year series; **21/65 VN funds lose all NAV** over one bad date (repro `nav_history(21)` VFF
+> 2018-07-31 / 2017-01-31). Fix = **port the #186 VN-Index quarantine** to the Fmarket NAV parser: conflicting
+> navDate → quarantine the date + never-silent warning + return the rest; identical-dup → dedup keep-first;
+> **threshold guard preserved** (`max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION×n)` → systematically-broken
+> still raises); **NEVER average**. **DESIGN-NOTE-FIRST → reviewer gate before any code.** 3 gate questions:
+> (1) keep policy — drop-the-date (#186 mirror, reviewer-recommended) vs keep-first/last; (2) token — reuse
+> `quarantined_invalid_bars` (recommended, one cross-domain never-silent token) vs new `conflicting_navdate`
+> (#180/#188 lockstep either way); (3) threshold constants — reuse `udf.py` `_QUARANTINE_FRACTION=0.10` /
+> `_QUARANTINE_ABS_FLOOR=3` vs a funds-tuned floor (monthly NAV series are SHORT → abs floor dominates).
+> Tests: one-conflict→rest+warning (not raise); systematically-conflicting→still raises; identical-dup→dedup;
+> threshold boundary. Offline fixtures only, zero VNStock. **STATUS:** intake recorded → gathering #186-pattern
+> + Fmarket-parser + funds-result + token-state facts → draft design note → route to reviewer gate. Not P0.
+>
+> **✅ DONE TODAY (2026-06-24): #193 `vnfin.indices.world` — world-index coverage + keyless-from-server reliability.**
 > Design note `tasks/193-world-index-design.md` (`9c219b2`, fact-checked clean) **GATED → APPROVED to TDD**
 > (gate `~/tools/vnfin-oss-reviewer/reviews/gate-202606241410-issue193-design-note.md`). Probe verdict: NO
 > keyless-from-server source (Yahoo 429 / Stooq JS-wall) → AlphaVantage BYOK is the only server source.
@@ -39,9 +56,11 @@ _Last synced: 2026-06-24 +07_
 > token 47, additive-only, zero VNStock). My 3-skeptic adversarial verify was CLEAN before handoff. **PUSHED
 > `e0e37aa..e25151b`** (whole #193 series), **#193 CLOSED** (issuecomment-4787257540) with a public coverage +
 > never-silent + keyless-MissingKey + thread-safe resolution comment. Watermark = reviewer's (NOT advanced).
-> **NON-BLOCKING FAST-FOLLOW (reviewer-requested, in progress):** add a committed threaded/barrier-synced B3
-> concurrency stress test (existing shared-client bleed test is sequential-only) — delegated, mutation-verified,
-> then a quick reviewer pass before its own push. NOT gating the #193 close.
+> **NON-BLOCKING FAST-FOLLOW — ✅ DONE + PUSHED `5fe026f` (Codex×1 lead APPROVE 2026-06-24 15:23):** committed
+> threaded/barrier-synced B3 concurrency stress test (1 shared client, 1 thread/symbol ×50 on a Barrier,
+> asserts per-thread symbol+proxy_for+provider+distinct close). Mutation-verified load-bearing (stateful
+> pre-#193 clone 19 bleeds/8 trials, stateless 0/8); 3× non-flaky; suite 3681; snapshot frozen; token 47.
+> Pushed `4e4ded6..5fe026f`. Closes the round-2 non-blocking note. **#193 + fast-follow FULLY DONE.**
 
 > **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
 > worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
