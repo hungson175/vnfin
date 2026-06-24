@@ -31,9 +31,17 @@ _Last synced: 2026-06-25 +07_
 constituents path has NO allow-list gate, tuple=48, surface additive-safe) → reviewer **GATE APPROVED**
 (`gate-202606250135-issue195-design-note.md`; all 3 RECs ratified: Q1 opt-in `with_sector`, Q2 overlap fold under
 prefix, Q3 6h lazy cache) → binding build spec `tasks/195-build-spec.md` (`5cfbbcc`, 10-case matrix) → **fresh
-general-purpose agent BUILDING (TDD)** → next: integrate merged tree + full suite/gates + adversarial-verify
-Workflow → Codex×2 → push+close. NOTE: snapshot `dump_api_surface` regen is a RELEASE task (new profile/sectors/
-by_sector are real surface), NOT this commit. Not P0.
+general-purpose agent BUILT @ `3fe21bd` (3713 green; merged-tree verified by me: snapshot byte-identical, tuple=49,
+no vnstock)** → **adversarial-verify Workflow `wf_9b83088f-8a9` (5 fresh skeptics) found 1 CONFIRMED major
+silent-gap:** `profile()` serves a mapped sector but returns a bare `EquitySecurity` (NO `.warnings`) → never-silent
+contract broken on the single-symbol entry point; violates gate-approved matrix case-5 + design-note L91 + SKILL.md
+L164 + docs/api.md:351-355 (4 surfaces); masking test `..._with_coverage_token` asserts NO token (green-blind). Other
+4 skeptics: 0 defects. **Fix = profile must carry `sector_partial_coverage` (token count UNCHANGED 49). Design-ruling
+out to reviewer:** REC a1 (new `EquityProfile(security, warnings)` wrapper, matches result-carries-warnings convention)
+vs a3 (add `warnings` field to EquitySecurity); reject (b) drop-from-scope. Packet `/tmp/195-profile-gap-20260625.md`.
+NEXT: reviewer rules a1/a3 → fix-spec → fresh-agent TDD (RED = rewrite masking test + add overlap-profile test) →
+merged green + re-verify profile → Codex×2 → push+close. NOTE: snapshot `dump_api_surface` regen is a RELEASE task,
+NOT this commit. Not P0.
 >
 > **✅ DONE 2026-06-24: #194 `funds.nav_history` aborts whole series on one conflicting navDate — port the #186 quarantine.**
 > Reviewer-routed poller intake; **triage = ACCEPTED** (trusted vf-advisor↔vnfin reporter, clean repro, no
