@@ -18,6 +18,7 @@ __all__ = [
     "AdjustmentPolicyError",
     "UnitMismatchError",
     "AllSourcesFailed",
+    "MissingKey",
 ]
 
 
@@ -78,3 +79,25 @@ class AllSourcesFailed(VnfinError):
         iv = getattr(interval, "value", interval)
         reasons = "; ".join(f"{a.name}:{a.reason}" for a in attempts) or "no sources attempted"
         super().__init__(f"all sources failed for {symbol} {iv} -> {reasons}")
+
+
+class MissingKey(VnfinError):
+    """A BYOK source needs an API key that is not set, and no keyless fallback could
+    serve the request.
+
+    Distinct from :class:`AllSourcesFailed`: that means a key WAS configured but every
+    source still failed (throttle/network/anti-bot). ``MissingKey`` is the cleaner,
+    actionable config signal — no API key anywhere AND the keyless fallback is walled
+    (e.g. Stooq's anti-bot challenge from a datacenter IP). The message names the env
+    var and the symbol; it deliberately carries **no** per-source attempt trail (the
+    #157 lesson — do not fold the aggregated failover trail onto a public message).
+    """
+
+    def __init__(self, symbol, env_var="ALPHAVANTAGE_API_KEY"):
+        self.symbol = symbol
+        self.env_var = env_var
+        super().__init__(
+            f"world index {symbol}: no {env_var} configured and no keyless source is "
+            f"reachable from this environment; set {env_var} or pass api_key= to use "
+            "world-index data server-side"
+        )

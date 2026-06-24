@@ -27,6 +27,23 @@ All notable changes to `vnfin` are documented here. The format follows
   indicators (#152), and the `board_unavailable` (#189) / `current_snapshot_only` (#175) tokens. Docs only.
 
 ### Added
+- **World-index coverage to 5 symbols + keyless-from-server reliability** (#193) — `vnfin.indices.world`
+  now serves **`SPY`, `QQQ`, `^N225`, `^SSEC`, `^STI`** (was SPY only), ALL via Alpha Vantage
+  `TIME_SERIES_DAILY` in **USD** (US-listed ETFs) through a declarative per-symbol mapping. `SPY`→SPY
+  and `QQQ`→QQQ are direct; the three Asian indices are **loudly-labeled USD ETF proxies** —
+  `^N225`→EWJ, `^SSEC`→FXI, `^STI`→EWS. A proxy result carries BOTH a new structured
+  **`PriceHistory.proxy_for`** field (the asked index; `None` for a direct result — additive, defaulted)
+  AND a new **`proxy_substitution`** warning token. **Caveats (documented prominently):** the proxy ETFs
+  embed USD/local FX and are **not faithful trackers** (EWJ≠Nikkei 225, FXI≠SSE Composite, EWS≠STI); and
+  v1 world series are **PRICE-RETURN, not total-return** (dividends not reinvested — material over
+  10–25y). **Reliability:** with **no `ALPHAVANTAGE_API_KEY`** and the keyless Stooq fallback walled
+  (datacenter anti-bot), `world(...)` now raises a new **`MissingKey`** (naming the env var + the symbol,
+  trail-free) — the actionable config signal — instead of an opaque `AllSourcesFailed`; `AllSourcesFailed`
+  is reserved for a key-set-but-AV-failed chain. An AV error/no-data envelope for an allowlisted symbol
+  raises `InvalidData` **naming the symbol** (never an empty/fabricated series). All changes are
+  additive (the v0.2 surface snapshot is unchanged). See
+  [`docs/sources/indices-world.md`](docs/sources/indices-world.md).
+  ([#193](https://github.com/hungson175/vnfin/issues/193))
 - **Richer Fmarket fund metadata + allocation coverage diagnostics** (#155) — the `vnfin.funds`
   domain now serves a confirmed metadata core, never fabricated. `Fund` gains three appended,
   defaulted optional fields: `management_fee_pct` (annual management fee %, populated from the

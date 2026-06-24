@@ -38,7 +38,7 @@ from vnfin.models import AdjustmentPolicy, Interval, PriceHistory
 _FAKE_KEY = "fake-av-key-1234567890"  # placeholder; hyphens keep alnum runs < the secret-scanner floor
 
 
-def _av_payload(rows=None):
+def _av_payload(rows=None, *, meta_symbol="SPY"):
     """A minimal Alpha Vantage TIME_SERIES_DAILY JSON body with fabricated bars."""
     if rows is None:
         rows = {
@@ -58,7 +58,7 @@ def _av_payload(rows=None):
     }
     return json.dumps(
         {
-            "Meta Data": {"2. Symbol": "SPY"},
+            "Meta Data": {"2. Symbol": meta_symbol},
             "Time Series (Daily)": series,
         }
     )
@@ -343,13 +343,17 @@ def test_av_has_default_cache_ttl():
 
 
 # --------------------------------------------------------------------------- #
-# Matrix #9 — non-SPY symbol in v1 -> clear error
+# Matrix #9 — unsupported symbol in v1 -> clear error (QQQ is now SUPPORTED, #193)
 # --------------------------------------------------------------------------- #
-@pytest.mark.parametrize("sym", ["QQQ", "AAPL", "^GSPC", "spx", ""])
-def test_non_spy_symbol_clear_error(sym):
+@pytest.mark.parametrize("sym", ["AAPL", "^GSPC", "spx", ""])
+def test_unsupported_symbol_clear_error(sym):
+    # QQQ moved to the supported set in #193, so it is no longer here. The error must
+    # enumerate the full supported set so a caller learns what IS allowed.
     with pytest.raises((InvalidData, ValueError)) as ei:
         world(sym, http_get=lambda *a, **k: _stooq_csv())
-    assert "SPY" in str(ei.value)
+    msg = str(ei.value)
+    for supported in ("SPY", "QQQ", "^N225", "^SSEC", "^STI"):
+        assert supported in msg, f"{supported!r} not enumerated in error: {msg!r}"
 
 
 def test_spy_lowercase_accepted():
@@ -689,3 +693,163 @@ def test_world_default_chain_keyless_serves_stooq(monkeypatch):
     hist = world("SPY", http_get=lambda *a, **k: _stooq_csv())
     assert hist.source == "stooq"
     assert any(w.startswith(f"{_FALLBACK_TOKEN}:") for w in hist.warnings)
+
+
+# =========================================================================== #
+# #193 — coverage to 5 symbols (USD ETF proxies) + MissingKey + proxy labeling
+# =========================================================================== #
+from vnfin.exceptions import MissingKey  # noqa: E402  (additive #193 export)
+
+_PROXY_TOKEN = "proxy_substitution"
+
+# asked symbol -> (av_ticker, value_unit, proxy_for-or-None)
+_SYMBOL_MATRIX = {
+    "SPY": ("SPY", "USD/share (SPY ETF, S&P 500 proxy)", None),
+    "QQQ": ("QQQ", "USD/share (QQQ ETF, Nasdaq-100 proxy)", None),
+    "^N225": ("EWJ", "USD/share (EWJ ETF)", "^N225"),
+    "^SSEC": ("FXI", "USD/share (FXI ETF)", "^SSEC"),
+    "^STI": ("EWS", "USD/share (EWS ETF)", "^STI"),
+}
+
+
+# --- happy path per new symbol: typed history, USD, correct AV ticker fetched --- #
+@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI"])
+def test_new_symbol_happy_path_fetches_correct_av_ticker(asked):
+    av_ticker, value_unit, _proxy = _SYMBOL_MATRIX[asked]
+    rec = []
+    src = _av_source(_av_payload(meta_symbol=av_ticker), recorder=rec)
+    hist = src.get_history(asked)
+    assert isinstance(hist, PriceHistory)
+    assert hist.source == "alphavantage"
+    assert hist.symbol == asked
+    assert hist.currency == "USD"
+    assert hist.value_unit == value_unit
+    assert hist.provider_symbol == av_ticker
+    assert hist.interval is Interval.D1
+    assert hist.adjustment_policy is AdjustmentPolicy.RAW
+    assert hist.bars, "expected bars"
+    # the request actually fetched the av_ticker (not the hard-pinned SPY)
+    assert rec, "AV source should make a request"
+    _url, params, _headers = rec[0]
+    assert params is not None and params.get("symbol") == av_ticker
+
+
+def test_qqq_lowercase_canonicalized_and_fetches_qqq():
+    rec = []
+    src = _av_source(_av_payload(meta_symbol="QQQ"), recorder=rec)
+    hist = src.get_history("qqq")
+    assert hist.symbol == "QQQ"
+    assert rec[0][1]["symbol"] == "QQQ"
+
+
+# --- proxy-labeling: BOTH proxy_for field AND proxy_substitution token (or NEITHER) --- #
+@pytest.mark.parametrize("asked", ["^N225", "^SSEC", "^STI"])
+def test_proxy_symbol_carries_both_field_and_token(asked):
+    av_ticker, _unit, proxy_for = _SYMBOL_MATRIX[asked]
+    src = _av_source(_av_payload(meta_symbol=av_ticker))
+    hist = default_world_index_client(sources=[src]).get_history(asked)
+    # MUST-HAVE structured field
+    assert hist.proxy_for == proxy_for, "proxy_for field missing/wrong on a proxy result"
+    # AND the loud warning token
+    proxy_warns = [w for w in hist.warnings if w.startswith(f"{_PROXY_TOKEN}:")]
+    assert len(proxy_warns) == 1, f"expected exactly one proxy_substitution warning, got {hist.warnings!r}"
+    w = proxy_warns[0]
+    assert asked in w and av_ticker in w
+
+
+@pytest.mark.parametrize("asked", ["SPY", "QQQ"])
+def test_direct_symbol_has_no_proxy_field_or_token(asked):
+    av_ticker = _SYMBOL_MATRIX[asked][0]
+    src = _av_source(_av_payload(meta_symbol=av_ticker))
+    hist = default_world_index_client(sources=[src]).get_history(asked)
+    assert hist.proxy_for is None
+    assert not any(w.startswith(f"{_PROXY_TOKEN}:") for w in hist.warnings)
+
+
+def test_proxy_substitution_warning_survives_world_accessor():
+    src = _av_source(_av_payload(meta_symbol="EWJ"))
+    hist = world("^N225", sources=[src])
+    assert hist.proxy_for == "^N225"
+    assert any(w.startswith(f"{_PROXY_TOKEN}:") for w in hist.warnings)
+
+
+# --- unit-correctness: every served unit is USD (NOT the local index currency) --- #
+@pytest.mark.parametrize("asked", list(_SYMBOL_MATRIX))
+def test_value_unit_is_usd_not_local_currency(asked):
+    av_ticker, value_unit, _proxy = _SYMBOL_MATRIX[asked]
+    src = _av_source(_av_payload(meta_symbol=av_ticker))
+    hist = src.get_history(asked)
+    assert hist.currency == "USD"
+    assert hist.value_unit == value_unit
+    # explicitly NOT the local index currency (the ETF-in-USD-vs-index-local trap)
+    for local in ("JPY", "CNY", "SGD"):
+        assert local not in hist.value_unit
+
+
+# --- Q5 hard guard: AV error / missing series for an allowlisted symbol -> InvalidData naming it --- #
+@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI"])
+def test_av_error_envelope_names_symbol_q5(asked):
+    payload = json.dumps({"Error Message": "Invalid API call for this ticker"})
+    src = _av_source(payload)
+    with pytest.raises(InvalidData) as ei:
+        src.get_history(asked)
+    assert asked in str(ei.value)
+
+
+@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI"])
+def test_av_missing_series_names_symbol_q5(asked):
+    src = _av_source(json.dumps({"Meta Data": {}}))
+    with pytest.raises(InvalidData) as ei:
+        src.get_history(asked)
+    assert asked in str(ei.value)
+
+
+# --- MissingKey vs AllSourcesFailed clean branch --- #
+def test_no_key_walled_fallback_raises_missing_key(monkeypatch):
+    # no AV key + anti-bot Stooq -> a config-actionable MissingKey, not opaque AllSourcesFailed.
+    monkeypatch.delenv("ALPHAVANTAGE_API_KEY", raising=False)
+    av = AlphaVantageIndexSource(api_key=None, http_get=lambda *a, **k: _av_payload())
+    stooq = _stooq_source("<html><noscript>bot</noscript></html>")
+    client = default_world_index_client(sources=[av, stooq])
+    with pytest.raises(MissingKey) as ei:
+        client.get_history("SPY")
+    msg = str(ei.value)
+    assert "ALPHAVANTAGE_API_KEY" in msg
+    assert "SPY" in msg
+
+
+def test_no_key_walled_fallback_missing_key_via_world_accessor(monkeypatch):
+    monkeypatch.delenv("ALPHAVANTAGE_API_KEY", raising=False)
+    av = AlphaVantageIndexSource(api_key=None, http_get=lambda *a, **k: _av_payload())
+    stooq = _stooq_source("<html><noscript>bot</noscript></html>")
+    with pytest.raises(MissingKey) as ei:
+        world("^N225", sources=[av, stooq])
+    assert "ALPHAVANTAGE_API_KEY" in str(ei.value) and "^N225" in str(ei.value)
+
+
+def test_missing_key_has_no_trail_enumeration(monkeypatch):
+    # #157 lesson: MissingKey must not fold per-source attempt strings into its message.
+    monkeypatch.delenv("ALPHAVANTAGE_API_KEY", raising=False)
+    av = AlphaVantageIndexSource(api_key=None, http_get=lambda *a, **k: _av_payload())
+    stooq = _stooq_source("<html><noscript>bot</noscript></html>")
+    with pytest.raises(MissingKey) as ei:
+        world("SPY", sources=[av, stooq])
+    msg = str(ei.value)
+    assert "anti-bot" not in msg and "stooq:" not in msg
+
+
+def test_keyed_av_fail_keeps_all_sources_failed():
+    # A key WAS set (synthetic) but AV throttled + Stooq walled -> genuine AllSourcesFailed,
+    # NOT MissingKey (key is present, so it is a real all-sources failure).
+    av = _av_source(json.dumps({"Note": "throttled"}))  # keyed (_FAKE_KEY) + throttle
+    stooq = _stooq_source("<html><noscript>bot</noscript></html>")
+    client = default_world_index_client(sources=[av, stooq])
+    with pytest.raises(AllSourcesFailed):
+        client.get_history("SPY")
+
+
+def test_av_serves_when_key_set_no_missing_key():
+    # When AV serves with a key, neither error is raised (sanity guard for the branch).
+    av = _av_source(_av_payload())
+    hist = default_world_index_client(sources=[av]).get_history("SPY")
+    assert hist.source == "alphavantage"

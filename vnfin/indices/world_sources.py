@@ -1,18 +1,26 @@
-"""World/US equity-index value sources (#177) — S&P 500 via SPY / ^SPX.
+"""World/US equity-index value sources (#177, extended #193).
 
 Two clean-room, failover-safe daily-history adapters that return the shared
 :class:`~vnfin.models.PriceHistory` (NOT a VN-index result). They form their OWN
 failover chain (``default_world_index_sources`` / ``default_world_index_client``)
 and never touch the VN HOSE/HNX ``index_history`` path.
 
-(a) :class:`AlphaVantageIndexSource` — PRIMARY, **bring-your-own-key (BYOK)**.
-    Official Alpha Vantage ``TIME_SERIES_DAILY`` JSON for the **SPY ETF** (a liquid
-    S&P 500 proxy; lighter IP than the proprietary ``^GSPC`` index). The key is read
-    from ``api_key`` or ``ALPHAVANTAGE_API_KEY`` (the SAME key as the #140 news
-    source) and is **redacted from every error**. With no key the source is cleanly
-    skippable: ``has_key``/``supports`` are ``False`` and any data call raises
+(a) :class:`AlphaVantageIndexSource` — PRIMARY (and only server-usable) source,
+    **bring-your-own-key (BYOK)**. Official Alpha Vantage ``TIME_SERIES_DAILY`` JSON
+    for one of **5 allowlisted symbols**, ALL served in USD (every served instrument
+    is a US-listed ETF) via the declarative ``WORLD_INDEX_SPECS`` table (#193):
+    ``SPY``→SPY and ``QQQ``→QQQ are direct (caller asked the ETF, got the ETF); the
+    three Asian indices are **loudly-labeled USD ETF proxies** — ``^N225``→EWJ,
+    ``^SSEC``→FXI, ``^STI``→EWS — never silently the raw index. A proxy result
+    carries both the ``PriceHistory.proxy_for`` field and a ``proxy_substitution``
+    warning (emitted in the client). NOTE: the proxy ETFs are not even precise
+    trackers (EWJ=MSCI Japan ≠ Nikkei 225; FXI=FTSE China 50 ≠ SSE Composite;
+    EWS=MSCI Singapore ≠ STI) and embed USD/local FX. The key is read from
+    ``api_key`` or ``ALPHAVANTAGE_API_KEY`` (the SAME key as the #140 news source) and
+    is **redacted from every error**. With no key the source is cleanly skippable:
+    ``has_key``/``supports`` are ``False`` and any data call raises
     :class:`~vnfin.exceptions.SourceUnavailable` BEFORE any network call (exact FRED
-    BYOK pattern). Result unit: ``USD/share (SPY ETF, S&P 500 proxy)`` / ``USD``.
+    BYOK pattern).
 
 (b) :class:`StooqIndexSource` — FALLBACK, keyless best-effort (**residential-only**).
     Stooq's daily ``^spx`` CSV (the S&P 500 **index level**, in *points*). Anti-bot
@@ -22,9 +30,11 @@ and never touch the VN HOSE/HNX ``index_history`` path.
     Result unit: ``index points`` / ``points``.
 
 With no key on a datacenter host BOTH legs are legitimately unavailable, so
-``vnfin.indices.world("SPY", ...)`` raising :class:`~vnfin.exceptions.AllSourcesFailed`
-is the EXPECTED outcome there (not a flaky bug); set ``ALPHAVANTAGE_API_KEY`` to use
-world-index server-side. See ``docs/sources/indices-world.md``.
+``vnfin.indices.world(...)`` raises :class:`~vnfin.exceptions.MissingKey` (naming
+``ALPHAVANTAGE_API_KEY`` + the symbol) — the actionable config signal. Set
+``ALPHAVANTAGE_API_KEY`` to use world-index server-side. (``AllSourcesFailed`` is
+reserved for the case where a key WAS set but AV still failed.) See
+``docs/sources/indices-world.md``.
 
 **Cross-instrument note:** SPY (USD/share) and ^SPX (index points) are different
 instruments whose magnitudes differ ~10x. Only one leg is ever returned per call
@@ -48,6 +58,7 @@ import csv as _csv
 import io
 import math
 import os
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from typing import Optional
 
@@ -65,13 +76,69 @@ _PROVIDER_SPY = "SPY"
 _PROVIDER_SPX = "^SPX"
 
 
+@dataclass(frozen=True)
+class _WorldIndexSpec:
+    """Declarative per-symbol mapping (single source of truth, #193).
+
+    All 5 series are served via AlphaVantage ``TIME_SERIES_DAILY`` in USD (every
+    served instrument is a US-listed ETF). ``proxy_for`` is ``None`` when the
+    ``av_ticker`` IS the asked instrument (SPY/QQQ — caller asked the ETF, got the
+    ETF); for the three Asian indices the caller asked the raw index but a USD ETF
+    proxy was served, so ``proxy_for`` is the asked symbol + ``fx_pair`` is set.
+    """
+
+    symbol: str            # canonical asked symbol (UPPER)
+    av_ticker: str         # AV TIME_SERIES_DAILY symbol actually fetched
+    value_unit: str        # explicit; all USD
+    currency: str          # "USD"
+    index_name: str        # human label for warnings/docs
+    proxy_for: Optional[str]  # None when av_ticker IS the asked instrument; else asked
+    fx_pair: Optional[str]    # e.g. "USD/JPY" for a proxy FX-embed note; None when not a proxy
+
+
+# Per-symbol mapping table — single source of truth (spec §1). Keys are the canonical
+# (UPPER) asked symbols; the client gates membership against these keys.
+WORLD_INDEX_SPECS: dict[str, _WorldIndexSpec] = {
+    "SPY": _WorldIndexSpec("SPY", "SPY", SPY_VALUE_UNIT, "USD", "S&P 500", None, None),
+    "QQQ": _WorldIndexSpec(
+        "QQQ", "QQQ", "USD/share (QQQ ETF, Nasdaq-100 proxy)", "USD",
+        "Nasdaq-100", None, None,
+    ),
+    "^N225": _WorldIndexSpec(
+        "^N225", "EWJ", "USD/share (EWJ ETF)", "USD",
+        "Nikkei 225", "^N225", "USD/JPY",
+    ),
+    "^SSEC": _WorldIndexSpec(
+        "^SSEC", "FXI", "USD/share (FXI ETF)", "USD",
+        "SSE Composite", "^SSEC", "USD/CNY",
+    ),
+    "^STI": _WorldIndexSpec(
+        "^STI", "EWS", "USD/share (EWS ETF)", "USD",
+        "Straits Times Index", "^STI", "USD/SGD",
+    ),
+}
+
+# The supported (asked) symbol set the client/accessor gates against (stable order).
+SUPPORTED_WORLD_SYMBOLS: tuple[str, ...] = tuple(WORLD_INDEX_SPECS)
+
+
+def world_index_spec(symbol) -> _WorldIndexSpec:
+    """Resolve the ``_WorldIndexSpec`` for a (possibly un-canonicalized) symbol.
+
+    Unknown/blank → the SPY spec (membership gating lives in the client/accessor, not
+    the source — this preserves the direct-source default-to-SPY contract)."""
+    canonical = AlphaVantageIndexSource._canonical_symbol(symbol)
+    return WORLD_INDEX_SPECS.get(canonical, WORLD_INDEX_SPECS["SPY"])
+
+
 def _as_window_date(value, label: str) -> date:
     """Coerce a caller window bound to a plain ``date`` (stable InvalidData on garbage)."""
     return validate_iso_date_string(value, label=label)
 
 
 class AlphaVantageIndexSource(HttpDataSource):
-    """BYOK Alpha Vantage ``TIME_SERIES_DAILY`` adapter for the SPY ETF (USD/share)."""
+    """BYOK Alpha Vantage ``TIME_SERIES_DAILY`` adapter for the 5 allowlisted world
+    symbols, all served in USD (US-listed ETFs) via ``WORLD_INDEX_SPECS`` (#193)."""
 
     NAME = "alphavantage"
     BASE_URL = "https://www.alphavantage.co/query"
@@ -128,9 +195,11 @@ class AlphaVantageIndexSource(HttpDataSource):
                 f"{self.NAME}: no ALPHAVANTAGE_API_KEY configured (bring-your-own-key); "
                 "pass api_key= or set the env var"
             )
-        # v1: `symbol` is normalized into the result label only — the request below is
-        # pinned to SPY regardless. SPY-only gating lives in the client/accessor, not here.
+        # Resolve the per-symbol spec (#193): SPY/QQQ direct, ^N225/^SSEC/^STI as
+        # loudly-labeled USD ETF proxies. Unknown/blank → SPY spec (the client gates
+        # membership; the source preserves the default-to-SPY direct-source contract).
         canonical = self._canonical_symbol(symbol)
+        spec = world_index_spec(canonical)
         window_start = _as_window_date(start, "start") if start is not None else None
         window_end = _as_window_date(end, "end") if end is not None else None
         if window_start is not None and window_end is not None and window_start > window_end:
@@ -141,7 +210,7 @@ class AlphaVantageIndexSource(HttpDataSource):
 
         params = {
             "function": "TIME_SERIES_DAILY",
-            "symbol": _PROVIDER_SPY,
+            "symbol": spec.av_ticker,
             "outputsize": "full",
             "apikey": self._api_key,
             "datatype": "json",
@@ -149,11 +218,14 @@ class AlphaVantageIndexSource(HttpDataSource):
         data = self._fetch_json(params)
 
         if not isinstance(data, dict):
-            raise InvalidData(f"{self.NAME}: response is not a JSON object")
+            raise InvalidData(f"{self.NAME}: {canonical}: response is not a JSON object")
         # AV status envelopes (provider-controlled; redact in case the key is echoed).
+        # Q5 hard guard: an error envelope / no series for an ALLOWLISTED symbol means
+        # AV does not cover the ticker → InvalidData NAMING the symbol, never empty.
         if "Error Message" in data:
             raise InvalidData(
-                f"{self.NAME}: provider error: {self._redact_key(str(data.get('Error Message')))}"
+                f"{self.NAME}: {canonical}: provider error: "
+                f"{self._redact_key(str(data.get('Error Message')))}"
             )
         for throttle in ("Note", "Information"):
             if throttle in data:
@@ -165,7 +237,11 @@ class AlphaVantageIndexSource(HttpDataSource):
 
         series = data.get("Time Series (Daily)")
         if not isinstance(series, dict):
-            raise InvalidData(f"{self.NAME}: missing 'Time Series (Daily)' object")
+            # Q5: missing series for an allowlisted symbol → name it; never fabricate.
+            raise InvalidData(
+                f"{self.NAME}: {canonical}: missing 'Time Series (Daily)' object "
+                f"(AV returned no data for {spec.av_ticker})"
+            )
 
         bars = self._parse_bars(series, window_start, window_end)
         if not bars:
@@ -177,9 +253,10 @@ class AlphaVantageIndexSource(HttpDataSource):
             adjustment_policy=AdjustmentPolicy.RAW,
             source=self.NAME,
             bars=tuple(bars),
-            currency="USD",
-            value_unit=SPY_VALUE_UNIT,
-            provider_symbol=_PROVIDER_SPY,
+            currency=spec.currency,
+            value_unit=spec.value_unit,
+            provider_symbol=spec.av_ticker,
+            proxy_for=spec.proxy_for,
             fetched_at_utc=datetime.now(timezone.utc),
         )
 

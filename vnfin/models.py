@@ -94,6 +94,11 @@ class PriceHistory(TimeSeriesResult):
     fetched_at_utc: Optional[datetime] = None
     warnings: tuple[str, ...] = ()
     attempts: tuple[SourceAttempt, ...] = ()
+    proxy_for: Optional[str] = None
+    """When set, the series is a labeled proxy: the caller asked for this index symbol
+    (e.g. ``'^N225'``) but a US-listed ETF in USD was served (see ``provider_symbol``
+    for the actual instrument). ``None`` for a direct (non-proxy) result. A consumer
+    detects a proxy via this field — never by regexing ``warnings``."""
 
     _items_attr = "bars"
     _index_column = "time"

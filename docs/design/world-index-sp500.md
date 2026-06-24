@@ -1,5 +1,12 @@
 # Design note — #177 US/global equity index (S&P 500) — world-index accessor
 
+> **SUPERSEDED in part by #193 (coverage + keyless-from-server reliability).** This note records the
+> ORIGINAL #177 SPY-only design. As of #193 `world(...)` supports **5 symbols** — `SPY`,`QQQ`,`^N225`,
+> `^SSEC`,`^STI`, all served via Alpha Vantage in USD (US-listed ETFs; the three Asian symbols are
+> loudly-labeled USD ETF proxies EWJ/FXI/EWS with `proxy_for` + a `proxy_substitution` warning) — and the
+> no-key path now raises **`MissingKey`** (not `AllSourcesFailed`). See `tasks/193-world-index-design.md`
+> + `docs/sources/indices-world.md` for current behavior; the SPY-only statements below are historical.
+
 **Status:** design-first, awaiting `vnfin-oss-reviewer` lead quick-gate (no code yet).
 **Scope:** additive — new source adapters + one accessor; reuses `PriceHistory`. Boss-greenlit (2026-06-20);
 TL handoff `handoff-202606202209`; specs `spec-202606201815-issue177`.

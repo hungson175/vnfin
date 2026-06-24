@@ -66,7 +66,7 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 | Fund NAV/holdings | `vnfin.funds.source().nav_history(fund_id, ...)` · `.holdings(fund_id)` (stocks+bonds) · `.asset_allocation(fund_id)` | `NavHistory` · `tuple[FundHolding]` · `AssetAllocation` |
 | Index value | `vnfin.indices.index_history(idx, start, end)` | `PriceHistory` · **points** (bar `volume` = constituent **shares**, directional proxy only — not exact for liquidity) |
 | Index members | `vnfin.indices.index_constituents(idx)` | `IndexConstituents` (no weights) |
-| World index (S&P 500) | `vnfin.indices.world("SPY", start=, end=)` | `PriceHistory` · `USD/share` (SPY) or `index points` (^SPX); **needs `ALPHAVANTAGE_API_KEY` on servers** — keyless Stooq fallback is residential-only, so a datacenter `AllSourcesFailed` is expected |
+| World index (5 symbols) | `vnfin.indices.world("SPY", start=, end=)` — `SPY`,`QQQ`,`^N225`,`^SSEC`,`^STI` | `PriceHistory` · all **USD** (US ETFs); `^N225`/`^SSEC`/`^STI` are **USD ETF proxies** (`proxy_for` + `proxy_substitution`, embed FX, not faithful trackers); series are **price-return, not total-return**. **Needs `ALPHAVANTAGE_API_KEY` on servers** — no key + walled fallback → `MissingKey` (names the env var); keyless Stooq `^SPX` fallback is residential-only |
 | VN gold spot | `vnfin.gold.vn("btmc").get_quotes()` | `GoldQuote` · VND/lượng |
 | World gold | `vnfin.gold.world().get_history(start, end)` | `GoldHistory` · USD/oz |
 | Crypto OHLCV | `vnfin.crypto.client().get_klines(sym, vnfin.Interval.D1, start, end)` | `CryptoHistory` · USD |
@@ -138,6 +138,7 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `weights_not_available` | `index_constituents` | Membership only — no per-stock index weights (`weight=None`); never fabricated. | — |
 | `current_snapshot_only` | `index_constituents` | **Always present** — the basket is the CURRENT membership as fetched, NOT a point-in-time/historical snapshot (`as_of=None`, never fabricated); backtests using it inherit survivorship and look-ahead bias. | #175 |
 | `fallback_instrument_served` | `indices.world` | Requested SPY (USD/share) unavailable; served Stooq `^SPX` (index points, ~10× different magnitude) — rebase before comparing. | #177 |
+| `proxy_substitution` | `indices.world` | Asked a raw index (`^N225`/`^SSEC`/`^STI`) but served a **USD ETF proxy** (`EWJ`/`FXI`/`EWS`) — embeds USD/local FX, NOT a faithful tracker of the raw index. Also exposed via the structured `PriceHistory.proxy_for` field. | #193 |
 | `world_reference_excludes_domestic_premium` | `gold.world_reference_history_vnd` | **Always present** — world-gold-implied VND, excludes the +10–21% VN domestic (SJC/BTMC) premium; NOT the domestic price. | #178 |
 | `world_reference_annual_basis` | `gold.world_reference_history_vnd` | **Always present** — one point per calendar year (annual-avg gold × annual USD/VND × 37.5/31.1035), stamped Jan-1; not a daily series. | #178 |
 | `world_reference_partial_year_coverage` | `gold.world_reference_history_vnd` | Some requested years dropped for lack of a paired gold+FX observation (honest intersection). | #178 |

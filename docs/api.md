@@ -101,6 +101,27 @@ mem  = vnfin.indices.index_constituents("VN30")  # IndexConstituents (membership
 # carry weights_not_available + current_snapshot_only (#175 — this is the CURRENT basket, NOT
 # point-in-time; backtests using it inherit survivorship/look-ahead bias).
 
+# indices.world — US/global equity index, SEPARATE chain (#177, extended #193). 5 symbols,
+# ALL served via Alpha Vantage in USD (US-listed ETFs):
+#   asked → served av_ticker → value_unit                                proxy_for
+#   SPY   → SPY  → "USD/share (SPY ETF, S&P 500 proxy)"                   None (direct)
+#   QQQ   → QQQ  → "USD/share (QQQ ETF, Nasdaq-100 proxy)"                None (direct)
+#   ^N225 → EWJ  → "USD/share (EWJ ETF)"                                  "^N225"
+#   ^SSEC → FXI  → "USD/share (FXI ETF)"                                  "^SSEC"
+#   ^STI  → EWS  → "USD/share (EWS ETF)"                                  "^STI"
+w = vnfin.indices.world("^N225", start=date(2024, 1, 1), end=date(2024, 6, 30))  # PriceHistory · USD
+# CAVEAT 1 — the 3 Asian symbols are USD ETF PROXIES: they embed USD/local FX and are NOT
+#   faithful trackers (EWJ=MSCI Japan ≠ Nikkei 225; FXI=FTSE China 50 ≠ SSE Composite;
+#   EWS=MSCI Singapore ≠ STI). A proxy result carries BOTH w.proxy_for (= asked index) AND a
+#   "proxy_substitution" warning. Detect a proxy via w.proxy_for (not by regexing warnings).
+#   SPY/QQQ are direct: w.proxy_for is None, no proxy_substitution warning.
+# CAVEAT 2 — v1 world series are PRICE-RETURN, not total-return (dividends NOT reinvested;
+#   adjustment_policy=RAW). Material over 10–25y. (adjusted close needs AV's premium endpoint.)
+# RELIABILITY — needs ALPHAVANTAGE_API_KEY server-side (BYOK). With NO key and the keyless Stooq
+#   fallback walled (datacenter anti-bot), world(...) raises MissingKey (names the env var + the
+#   symbol, trail-free) — the actionable config signal. AllSourcesFailed is reserved for a
+#   key-set-but-AV-failed chain. Unsupported symbol → InvalidData enumerating the 5-symbol set.
+
 # gold — VN domestic (VND/lượng) and world XAU (USD/oz). Provider is explicit.
 vn    = vnfin.gold.vn("btmc")                # BTMCGoldSource (default), or "pnj"
 world = vnfin.gold.world("currency_api")     # CurrencyApiGoldSource (default), or "gold_api"

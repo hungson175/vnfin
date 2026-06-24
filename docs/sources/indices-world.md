@@ -1,4 +1,4 @@
-# World/US equity-index sources (S&P 500) — provenance & vetting notes
+# World/US equity-index sources — provenance & vetting notes
 
 Clean-room: every endpoint, parameter, column order and unit below was learned **only**
 from Alpha Vantage's and Stooq's own official documentation / servers and the project
@@ -8,50 +8,97 @@ read, cited, or copied.
 > **Redistribution:** neither provider grants redistribution here. Treat as
 > personal/internal research, **runtime-fetch only** — do not bundle/redistribute data.
 > Attribute the provider; poll modestly. Alpha Vantage is **bring-your-own-key (BYOK)**:
-> the end user is the API customer.
+> the end user is the API customer. No market data is vendored in the package.
 
 These power **`vnfin.indices.world(symbol="SPY", start=None, end=None, *, interval=Interval.D1)`**
-— a daily `PriceHistory` for the S&P 500 over its **own** 2-source failover chain. This is
-entirely separate from the VN HOSE/HNX `index_history()` / `index_constituents()` path, which
-is untouched.
+— a daily `PriceHistory` over its **own** 2-source failover chain. This is entirely separate from
+the VN HOSE/HNX `index_history()` / `index_constituents()` path, which is untouched.
+
+## Supported symbols (#193) — all served in USD as US-listed ETFs
+
+`world(...)` supports **5 symbols**, all fetched from Alpha Vantage `TIME_SERIES_DAILY` in **USD**
+(every served instrument is a US-listed ETF):
+
+| Asked symbol | Served AV ticker | `value_unit` | Proxy? (`proxy_for`) | Note |
+|---|---|---|---|---|
+| `SPY` | `SPY` | `USD/share (SPY ETF, S&P 500 proxy)` | — (direct) | caller asked the ETF; got the ETF |
+| `QQQ` | `QQQ` | `USD/share (QQQ ETF, Nasdaq-100 proxy)` | — (direct) | caller asked the ETF; got the ETF |
+| `^N225` | `EWJ` | `USD/share (EWJ ETF)` | `^N225` | EWJ = MSCI Japan ETF — **not** the JPY Nikkei 225 index |
+| `^SSEC` | `FXI` | `USD/share (FXI ETF)` | `^SSEC` | FXI = FTSE China 50 ETF — **not** the CNY SSE Composite |
+| `^STI` | `EWS` | `USD/share (EWS ETF)` | `^STI` | EWS = MSCI Singapore ETF — **not** the SGD Straits Times Index |
+
+Any other symbol → a clear `InvalidData` enumerating the supported set.
+
+> ## ⚠️ Caveat 1 — the three Asian symbols are USD ETF PROXIES (FX-embedding, not faithful trackers)
+>
+> `^N225`/`^SSEC`/`^STI` are **not** served as the raw local-currency index. There is no
+> keyless-from-server raw-index OHLCV source (Yahoo is blocked + ToS-prohibited; FRED is close-only
+> and S&P-license-capped; the rest are key-gated/wrong-shape), so the only server-usable feed serves
+> **US-listed ETFs in USD**. Two distortions follow, **never silent**:
+>
+> 1. **Not even precise trackers.** EWJ = MSCI Japan ≠ Nikkei 225; FXI = FTSE China 50 ≠ SSE
+>    Composite; EWS = MSCI Singapore ≠ STI. Different constituents/weights.
+> 2. **They embed USD/local FX.** A USD ETF series rebased ≠ the raw local-currency index rebased —
+>    they diverge by the local currency's move against the dollar (USD/JPY, USD/CNY, USD/SGD). For a
+>    rebasing/normalized chart this is a **real distortion**.
+>
+> Both are disclosed on every proxy result via the structured **`PriceHistory.proxy_for`** field
+> (the asked index symbol) AND a **`proxy_substitution`** warning. Detect a proxy via `proxy_for`,
+> never by regexing `warnings`. `SPY`/`QQQ` are direct (`proxy_for is None`, no proxy warning).
+
+> ## ⚠️ Caveat 2 — v1 world series are PRICE-RETURN, not total-return
+>
+> AV's **free** `TIME_SERIES_DAILY` returns raw OHLCV only (`adjustment_policy=RAW`); the adjusted
+> close (dividend-reinvested total return) needs the **premium** `TIME_SERIES_DAILY_ADJUSTED` endpoint,
+> which v1 does not use. So **dividends are NOT reinvested** in these series. Over a long horizon this
+> is material: a price-return chart understates total return by the cumulative dividend yield —
+> **material over 10–25 years** (roughly the dividend yield compounded). Do not treat a v1 world series
+> as a total-return index.
 
 ## Accessor & chain (`vnfin/indices/world_client.py`)
 
 - `world(...)` → `default_world_index_client(...)` → `FailoverWorldIndexClient`, a thin
   specialization of the domain-agnostic `vnfin.failover.FailoverClient`.
 - **Chain:** `[AlphaVantageIndexSource (if key), StooqIndexSource]`. AV throttle/keyless and
-  Stooq anti-bot are all `SourceUnavailable` (best-effort) → the chain tries the next, raising
-  `AllSourcesFailed` only if **both** are unavailable. An incapable (keyless) AV source is
-  skipped **before any network call** and does not burn `max_attempts`.
-- **v1 supports `symbol="SPY"` only.** Any other symbol → a clear `InvalidData`. `symbol` is a
-  defaulted param kept for forward-compat (future world indices), not because v1 accepts others.
+  Stooq anti-bot are all `SourceUnavailable` (best-effort) → the chain tries the next. An incapable
+  (keyless) AV source is skipped **before any network call** and does not burn `max_attempts`.
 
-## Server-side / deployment reality — a keyless datacenter `AllSourcesFailed` is EXPECTED
+## `MissingKey` contract + server-side deployment reality
 
 The two source facts compound on a typical **server / cloud / CI host (a datacenter IP)**:
 
 - **No `ALPHAVANTAGE_API_KEY`** → the BYOK AV primary is skipped *before any network call*.
 - **Stooq from a datacenter IP** → almost always the anti-bot HTML challenge → `SourceUnavailable`.
 
-So **on a datacenter host with no AV key, `vnfin.indices.world("SPY", ...)` raising `AllSourcesFailed`
-is the correct, EXPECTED outcome — not a transient bug or a flaky test.** Both legs are legitimately
-unavailable and the chain has nothing left to serve. To use world-index from a server, **set
-`ALPHAVANTAGE_API_KEY`** (BYOK): the AV primary then serves SPY directly and never depends on Stooq.
-The keyless Stooq `^SPX` fallback is **residential-only / best-effort** — the path for a developer on
-a residential IP, never something a server deployment should rely on.
+So on a datacenter host with no AV key, both legs are legitimately unavailable. **`world(...)` then
+raises `MissingKey`** (a `VnfinError`) whose message names **`ALPHAVANTAGE_API_KEY`** + the requested
+symbol and the fix (`set ALPHAVANTAGE_API_KEY or pass api_key=`) — the actionable config signal, with
+**no per-source attempt trail**. This is the correct, EXPECTED outcome there — not a transient bug.
+
+`AllSourcesFailed` is **reserved** for the genuinely-failed case: a key **was** configured but AV still
+failed (throttle/network) and the keyless fallback is down too. (No key + walled fallback → `MissingKey`;
+key set + AV fail + fallback down → `AllSourcesFailed`.)
+
+To use world-index from a server, **set `ALPHAVANTAGE_API_KEY`** (BYOK): the AV primary then serves
+directly and never depends on Stooq. The keyless Stooq `^SPX` fallback is **residential-only /
+best-effort** — never something a server deployment should rely on.
 
 ## Sources
 
 | Adapter | Host | Auth | Instrument · unit | Role |
 |---|---|---|---|---|
-| `AlphaVantageIndexSource` | `www.alphavantage.co/query` | **BYOK** `ALPHAVANTAGE_API_KEY` | **SPY ETF** · `USD/share (SPY ETF, S&P 500 proxy)` / `USD` | **PRIMARY** |
-| `StooqIndexSource` | `stooq.com/q/d/l/?s=^spx&i=d` | none | **^SPX index level** · `index points` / `points` | **FALLBACK** (keyless, best-effort) |
+| `AlphaVantageIndexSource` | `www.alphavantage.co/query` | **BYOK** `ALPHAVANTAGE_API_KEY` | **5 US-listed ETFs** (SPY/QQQ direct; EWJ/FXI/EWS proxies) · all `USD` | **PRIMARY** (only server-usable) |
+| `StooqIndexSource` | `stooq.com/q/d/l/?s=^spx&i=d` | none | **^SPX index level** · `index points` / `points` | **FALLBACK** (keyless, residential-only) |
 
 ### `AlphaVantageIndexSource` — PRIMARY (BYOK)
 
-- `function=TIME_SERIES_DAILY`, `symbol=SPY`, `outputsize=full` (20y+ daily in one call),
-  `datatype=json`. Reads the key from `api_key=` or the `ALPHAVANTAGE_API_KEY` env var (the
-  **same** key as the #140 news source).
+- `function=TIME_SERIES_DAILY`, `symbol=<per-symbol av_ticker>` (resolved from the declarative
+  `WORLD_INDEX_SPECS` table: SPY→SPY, QQQ→QQQ, ^N225→EWJ, ^SSEC→FXI, ^STI→EWS), `outputsize=full`
+  (20y+ daily in one call), `datatype=json`. Reads the key from `api_key=` or the
+  `ALPHAVANTAGE_API_KEY` env var (the **same** key as the #140 news source).
+- **Q5 hard guard:** if AV returns an `"Error Message"` envelope or no `Time Series (Daily)` for an
+  allowlisted symbol (the ETF is uncovered), the source raises `InvalidData` **naming the symbol** —
+  never an empty or fabricated series.
 - **Keyless → skip with no network call:** `supports()` returns `has_key`; `get_history` raises
   `SourceUnavailable` before any request (exact FRED BYOK pattern).
 - **Key redaction:** every error/transport message is passed through `_redact_key(...)` so the
@@ -107,13 +154,17 @@ for w in h.warnings:                                # 'fallback_instrument_serve
 ## Licensing / redistribution posture
 
 - **Alpha Vantage:** BYOK — the end user is the API customer; official API only; key redacted in
-  errors; no data bundled or redistributed. **SPY (ETF market price), not `^GSPC`:** lighter IP
-  than S&P DJI's proprietary index; ~0.1%/yr ETF tracking divergence, negligible for a
-  rebased chart; SPY-only in v1 with the proxy provenance documented in the unit label + here.
+  errors; no data bundled or redistributed. All 5 symbols are served as **US-listed ETF market
+  prices** (SPY/QQQ/EWJ/FXI/EWS), never the proprietary raw indices (`^GSPC`/`^NDX`/`^N225`/etc.) —
+  lighter IP than S&P DJI / index-licensor data; the proxy provenance is documented in the unit
+  label, the `proxy_for` field, the `proxy_substitution` warning, and the caveats above.
 - **Stooq:** keyless, runtime-fetched by the end user, best-effort, **no redistribution claim**,
-  no bundled data.
-- **Ruled out:** FRED (≤10y S&P license cap + S&P DJI redistribution prohibited); yfinance/Yahoo
-  (ToS); Nasdaq Data Link (paid).
+  no bundled data. ToS body not machine-readable in 2026; no explicit permit/prohibit — runtime-fetch
+  tolerated, redistribution treated as prohibited.
+- **Yahoo NOT used:** its ToS **explicitly prohibits automated access AND redistribution** (data from
+  ICE/LSEG/CSI/S&P/CME, each with its own bans); also structurally blocked from datacenter IPs.
+- **Ruled out:** FRED (≤10y S&P license cap + S&P DJI redistribution prohibited; also close-only);
+  Nasdaq Data Link / Tiingo / TwelveData / FMP (paid / key-gated).
 
 ## Failover safety
 

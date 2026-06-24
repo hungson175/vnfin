@@ -563,6 +563,8 @@ _WARNING_TOKENS_180 = (
     # #175 Tier-1 — index_constituents is the CURRENT basket, not point-in-time.
     "current_snapshot_only",
     "fallback_instrument_served",
+    # #193 — a world-index symbol asked as a raw index was served as a USD ETF proxy.
+    "proxy_substitution",
     "world_reference_excludes_domestic_premium",
     "world_reference_annual_basis",
     "world_reference_partial_year_coverage",
