@@ -155,7 +155,8 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `imf_weo` | `macro.get_indicator` | Years ≥ the projection year are WEO forecasts (excluded from `latest()`). | — |
 | `failover` | `macro.get_indicator` | Result required failover across sources (carries the per-source note). | — |
 | `nav_end_gap` | `funds.nav_history` | Latest fund NAV is older than the fund's own trailing cadence allows (stale / paused / dormant feed). | #172 |
-| `deduped_duplicate_nav_rows` | `funds.nav_history` | Identical-value duplicate `navDate` rows collapsed to one (kept once + warned); a *conflicting* same-date NAV still raises. | #158 |
+| `deduped_duplicate_nav_rows` | `funds.nav_history` | Identical-value duplicate `navDate` rows collapsed to one (kept once + warned); a *conflicting* same-date NAV is quarantined (see `quarantined_conflicting_navdates`). | #158 |
+| `quarantined_conflicting_navdates` | `funds.nav_history` | Same-date NAV conflict(s) quarantined — two different NAV values for one `navDate`; that date is **dropped** entirely (never picked, never averaged) and the rest of the series is served. Names the dropped dates. A systematically-conflicting feed (>10% of in-window dates, floor 3) still raises `InvalidData`. | #194 |
 | `partial_universe_coverage` | `equities.universe` | **Always present** per board — the universe is index-basket-derived (~96% of the full SSC roster), not the complete listing. | #167 |
 | `listing_date_not_available` | `equities.universe` | **Always present** per board — the provider's `firstTradingDate` is `'0'` (unusable), so no listing date is exposed. | #167 |
 | `sector_not_available` | `equities.universe` | **Always present** per board — sector/industry is absent from this payload (not fabricated). | #167 |

@@ -885,17 +885,25 @@ def test_nav_history_missing_envelope_status_and_code_raises_invalid():
         _src(payload).nav_history(FAKE_ID_A)
 
 
-def test_nav_history_duplicate_nav_date_raises_invalid():
-    # Issue #66 + #158 (Fmarket part): a duplicate navDate with a CONFLICTING NAV must
-    # raise InvalidData (ambiguous observation); identical-value duplicates dedupe (see
-    # test_nav_history_in_window_identical_duplicate_deduped_with_warning).
+def test_nav_history_single_conflicting_nav_date_quarantined_not_fatal():
+    # Issue #194 (INVERTS the old #66/#158 raise): a SINGLE conflicting navDate no
+    # longer aborts the whole series. The date is QUARANTINED (dropped — never picked,
+    # never averaged), the rest is served, and the drop is disclosed via the never-silent
+    # `quarantined_conflicting_navdates` token. (Was: raise InvalidData "conflicting
+    # navDate".) Here poisoned=1, considered=2 -> 1 > max(3, 0.2) is False -> serves.
     rows = [
         {"navDate": "2024-01-02", "nav": 10100.0, "productId": FAKE_ID_A},
         {"navDate": "2024-01-03", "nav": 10200.0, "productId": FAKE_ID_A},
         {"navDate": "2024-01-02", "nav": 10300.0, "productId": FAKE_ID_A},
     ]
-    with pytest.raises(InvalidData, match="conflicting navDate"):
-        _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    assert isinstance(hist, NavHistory)
+    # the conflicting date is ABSENT; the clean date is served
+    assert [p.date for p in hist.points] == [date(2024, 1, 3)]
+    # never-silent token naming the dropped date
+    matches = [w for w in hist.warnings if w.startswith("quarantined_conflicting_navdates:")]
+    assert len(matches) == 1
+    assert "2024-01-02" in matches[0]
 
 
 def test_nav_history_malformed_nav_raises_invalid():
@@ -1950,12 +1958,18 @@ def test_nav_history_out_of_window_duplicate_not_fatal():
     assert [p.date for p in hist.points] == [date(2024, 4, 4)]
 
 
-def test_nav_history_in_window_conflicting_duplicate_fatal():
-    # #158: a duplicate navDate with a CONFLICTING NAV is fatal.
+def test_nav_history_in_window_all_conflict_sub_threshold_falls_to_empty():
+    # #194 (INVERTS the old #158 fatal-conflict raise; this is matrix case 8): the ONLY
+    # in-window date conflicts (2024-04-04: 100 vs 101). poisoned=1, considered=1,
+    # points=[] -> sub-threshold (1 <= floor 3) so the quarantine verdict does NOT fire;
+    # the empty result falls through to the existing #172 block. max_navdate (2024-04-04)
+    # is >= the window start, so it is plain EmptyData (NOT StaleData, NOT InvalidData).
     full = [_nav_row("2024-04-04", nav=100.0), _nav_row("2024-04-04", nav=101.0)]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
-    with pytest.raises(InvalidData, match="conflicting navDate"):
+    with pytest.raises(EmptyData) as exc:
         src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+    # not the systematically-broken raise, and not a stale-data subclass
+    assert not isinstance(exc.value, StaleData)
 
 
 def test_nav_history_in_window_identical_duplicate_deduped_with_warning():
@@ -2795,3 +2809,196 @@ def test_asset_allocation_back_compat_new_fields_default():
     assert a.sector_weights == ()
     assert a.inception_date is None
     assert a.description is None
+
+
+# ---------------------------------------------------------------------------
+# Issue #194 — quarantine a conflicting navDate (mirror #186) instead of aborting
+# the whole NAV series. DROP the date (never pick, never average); serve the rest;
+# disclose via the never-silent `quarantined_conflicting_navdates` token. A
+# systematically-conflicting feed still raises InvalidData. Constants reuse #186's
+# `_QUARANTINE_FRACTION = 0.10` / `_QUARANTINE_ABS_FLOOR = 3`, counting each
+# conflicting DATE once. All fixtures SYNTHETIC (FAKE_ID_A; fabricated NAVs).
+# ---------------------------------------------------------------------------
+
+
+def _conflict_rows(conflicting_dates, clean_dates):
+    """Build a synthetic nav-history `data` array: each date in `conflicting_dates`
+    gets TWO rows with DIFFERENT NAVs (a same-date conflict); each in `clean_dates`
+    gets one row. NAVs are fabricated and obviously fake."""
+    rows = []
+    nav = 1000.0
+    for d in conflicting_dates:
+        rows.append({"navDate": d, "nav": nav, "productId": FAKE_ID_A})
+        rows.append({"navDate": d, "nav": nav + 7.0, "productId": FAKE_ID_A})
+        nav += 100.0
+    for d in clean_dates:
+        rows.append({"navDate": d, "nav": nav, "productId": FAKE_ID_A})
+        nav += 100.0
+    return rows
+
+
+# --- case 1: one conflicting navDate -> served-with-warning, NOT InvalidData -------
+
+def test_nav_history_case1_one_conflict_serves_rest_with_token():
+    # poisoned=1, considered=4 (1 quarantined + 3 clean): 1 > max(3, 0.4)=3 is False ->
+    # serves the 3 clean dates; 2024-01-02 ABSENT; token names the dropped date.
+    rows = _conflict_rows(["2024-01-02"], ["2024-01-01", "2024-01-03", "2024-01-04"])
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    assert isinstance(hist, NavHistory)
+    assert [p.date for p in hist.points] == [
+        date(2024, 1, 1), date(2024, 1, 3), date(2024, 1, 4)
+    ]
+    assert date(2024, 1, 2) not in [p.date for p in hist.points]
+    matches = [w for w in hist.warnings if w.startswith("quarantined_conflicting_navdates:")]
+    assert len(matches) == 1 and "2024-01-02" in matches[0]
+
+
+# --- case 2: systematically-conflicting -> still raises (threshold preserved) ------
+
+def test_nav_history_case2_systematic_conflict_raises_invalid():
+    # 5 conflicting dates + 3 clean -> considered=8, poisoned=5; 5 > max(3, 0.8)=3 -> RAISE.
+    conflicting = ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]
+    clean = ["2024-01-06", "2024-01-07", "2024-01-08"]
+    rows = _conflict_rows(conflicting, clean)
+    with pytest.raises(InvalidData) as exc:
+        _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    msg = str(exc.value)
+    assert "5/8" in msg
+    assert "systematically broken" in msg
+
+
+# --- case 3: threshold boundary (short series, floor dominates) --------------------
+
+def test_nav_history_case3_three_conflicts_at_floor_serves():
+    # 3 conflicting dates + 4 clean -> considered=7, poisoned=3; 3 > max(3, 0.7)=3 is
+    # False -> SERVES the 4 clean dates + warning lists the 3 dropped dates.
+    conflicting = ["2024-01-01", "2024-01-02", "2024-01-03"]
+    clean = ["2024-01-04", "2024-01-05", "2024-01-06", "2024-01-07"]
+    rows = _conflict_rows(conflicting, clean)
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    assert [p.date for p in hist.points] == [
+        date(2024, 1, 4), date(2024, 1, 5), date(2024, 1, 6), date(2024, 1, 7)
+    ]
+    matches = [w for w in hist.warnings if w.startswith("quarantined_conflicting_navdates:")]
+    assert len(matches) == 1
+    for d in ("2024-01-01", "2024-01-02", "2024-01-03"):
+        assert d in matches[0]
+
+
+def test_nav_history_case3_four_conflicts_above_floor_raises():
+    # 4 conflicting dates + 4 clean -> considered=8, poisoned=4; 4 > max(3, 0.8)=3 ->
+    # RAISE. Pins the absolute floor at 3.
+    conflicting = ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"]
+    clean = ["2024-01-05", "2024-01-06", "2024-01-07", "2024-01-08"]
+    rows = _conflict_rows(conflicting, clean)
+    with pytest.raises(InvalidData) as exc:
+        _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    assert "4/8" in str(exc.value)
+    assert "systematically broken" in str(exc.value)
+
+
+# --- case 4: identical-value duplicate (regression — behavior UNCHANGED) -----------
+
+def test_nav_history_case4_identical_dup_dedupes_no_quarantine_token():
+    # Same date, SAME nav -> keep-first + `deduped_duplicate_nav_rows`, NO quarantine
+    # token, date PRESENT in points. (Unchanged #158/#162 behavior.)
+    rows = [
+        {"navDate": "2024-01-02", "nav": 10100.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-01-02", "nav": 10100.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-01-03", "nav": 10200.0, "productId": FAKE_ID_A},
+    ]
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    assert [p.date for p in hist.points] == [date(2024, 1, 2), date(2024, 1, 3)]
+    assert any(w.startswith("deduped_duplicate_nav_rows:") for w in hist.warnings)
+    assert not any(w.startswith("quarantined_conflicting_navdates:") for w in hist.warnings)
+
+
+# --- case 5: never averages / never picks (degrade-not-fabricate) ------------------
+
+def test_nav_history_case5_never_averages_conflicting_date():
+    # The repro values: 15091.0 vs 15120.0 (mean 15105.5). The conflicting date is
+    # ABSENT — no served point equals or is near the mean, and neither raw value
+    # survives for that date.
+    rows = [
+        {"navDate": "2018-07-31", "nav": 15091.0, "productId": FAKE_ID_A},
+        {"navDate": "2018-07-31", "nav": 15120.0, "productId": FAKE_ID_A},
+        {"navDate": "2018-08-01", "nav": 15200.0, "productId": FAKE_ID_A},
+    ]
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    assert [p.date for p in hist.points] == [date(2018, 8, 1)]
+    for p in hist.points:
+        assert p.date != date(2018, 7, 31)
+        # no fabricated value anywhere near the mean / either raw value
+        assert abs(p.nav - 15105.5) > 1.0
+        assert p.nav not in (15091.0, 15120.0)
+
+
+# --- case 6: two distinct conflicting dates under threshold (long series) ----------
+
+def test_nav_history_case6_two_conflicts_under_threshold_both_dropped_sorted():
+    # 2 conflicting + 18 clean -> considered=20, poisoned=2; 2 > max(3, 2.0)=3 is False
+    # -> both dropped, the rest served, the warning lists BOTH dates SORTED.
+    conflicting = ["2024-03-15", "2024-01-10"]   # deliberately unsorted on input
+    clean = [f"2024-02-{day:02d}" for day in range(1, 19)]  # 18 clean Feb dates
+    rows = _conflict_rows(conflicting, clean)
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    got = [p.date for p in hist.points]
+    assert date(2024, 1, 10) not in got and date(2024, 3, 15) not in got
+    assert len(got) == 18
+    matches = [w for w in hist.warnings if w.startswith("quarantined_conflicting_navdates:")]
+    assert len(matches) == 1
+    # both dates listed, SORTED (2024-01-10 before 2024-03-15)
+    assert matches[0].index("2024-01-10") < matches[0].index("2024-03-15")
+
+
+# --- case 7: conflict beats dedup on the SAME date (Note 1) ------------------------
+
+def test_nav_history_case7_conflict_beats_dedup_on_same_date():
+    # One date has an identical dup AND a conflicting row -> the date is QUARANTINED
+    # (conflict wins), ABSENT from points, in the quarantine token, and does NOT inflate
+    # the dedup count. The other date's genuine identical dup still dedupes normally.
+    rows = [
+        # poisoned date: two identical 100.0 rows + one conflicting 101.0 row
+        {"navDate": "2024-04-04", "nav": 100.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-04-04", "nav": 100.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-04-04", "nav": 101.0, "productId": FAKE_ID_A},
+        # a separate, genuinely-deduped date (identical dup) so dedup is still exercised
+        {"navDate": "2024-04-05", "nav": 200.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-04-05", "nav": 200.0, "productId": FAKE_ID_A},
+        # a clean date
+        {"navDate": "2024-04-06", "nav": 300.0, "productId": FAKE_ID_A},
+    ]
+    hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
+    got = [p.date for p in hist.points]
+    assert date(2024, 4, 4) not in got           # quarantined, not deduped
+    assert got == [date(2024, 4, 5), date(2024, 4, 6)]
+    qmatches = [w for w in hist.warnings if w.startswith("quarantined_conflicting_navdates:")]
+    assert len(qmatches) == 1 and "2024-04-04" in qmatches[0]
+    # the dedup token is present ONLY for the OTHER date (2024-04-05); its count must be
+    # exactly 1 (the poisoned date's earlier identical dup does NOT inflate it).
+    dmatches = [w for w in hist.warnings if w.startswith("deduped_duplicate_nav_rows:")]
+    assert len(dmatches) == 1
+    assert "1 duplicate" in dmatches[0]
+
+
+# --- case 8: quarantine runs BEFORE #172 empty/stale (Note 3) ----------------------
+# The EmptyData variant (window emptied by a sub-threshold quarantine -> #172 EmptyData)
+# lives in test_nav_history_in_window_all_conflict_sub_threshold_falls_to_empty. Here we
+# pin the ORDERING with TWO in-window conflicting dates (still sub-threshold: poisoned=2
+# <= floor 3, points=[]): the result is the #172 EmptyData, NOT the systematically-broken
+# InvalidData and NOT a NavHistory. (StaleData is unreachable for an in-window quarantine:
+# an in-window date means max_navdate >= lo, so #172 yields plain EmptyData, not stale.)
+
+def test_nav_history_case8_two_inwindow_conflicts_sub_threshold_falls_to_empty():
+    full = [
+        _nav_row("2024-04-04", nav=100.0),
+        _nav_row("2024-04-04", nav=101.0),   # conflict #1 (in window)
+        _nav_row("2024-05-05", nav=200.0),
+        _nav_row("2024-05-05", nav=202.0),   # conflict #2 (in window)
+    ]
+    src = FmarketFundSource(http_get=_window_aware_get(full, []))
+    with pytest.raises(EmptyData) as exc:
+        src.nav_history(FAKE_ID_A, date(2024, 1, 1), date(2024, 12, 31))
+    # NOT the systematically-broken InvalidData (poisoned=2 <= floor 3), NOT StaleData
+    assert not isinstance(exc.value, StaleData)
+    assert "in range" in str(exc.value)

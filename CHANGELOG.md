@@ -339,6 +339,20 @@ All notable changes to `vnfin` are documented here. The format follows
   strict `index_history` is unchanged.
 
 ### Changed
+- **`funds.nav_history` no longer aborts the whole series on a single conflicting `navDate`** (#194) —
+  a same-date NAV conflict (two DIFFERENT NAV values for one `navDate`) previously raised `InvalidData`
+  and discarded the fund's ENTIRE NAV history over one bad date (~21/65 VN funds affected). It now
+  mirrors the #186 VN-Index quarantine: the conflicting date is **dropped** entirely (never picked,
+  never averaged), the rest of the series is served, and the drop is disclosed via the new never-silent
+  **`quarantined_conflicting_navdates`** warning token (names the dropped dates). A *systematically*-
+  conflicting feed still fails over — `InvalidData` is raised (naming the `N/considered` ratio) when the
+  number of conflicting in-window dates exceeds `max(floor 3, 10% of distinct in-window dates)`, reusing
+  #186's `_QUARANTINE_FRACTION`/`_QUARANTINE_ABS_FLOOR` unchanged but counting each conflicting **date**
+  once (so a short fund with ≤3 conflicting dates always serves). Identical-value duplicate rows still
+  dedupe with `deduped_duplicate_nav_rows` (conflict beats dedup on the same date); a window emptied by a
+  sub-threshold quarantine still yields the existing `EmptyData`/`StaleData`. Behavior change only — the
+  v0.2 public-API surface is unchanged (`NavHistory.warnings` was already defaulted).
+  ([#194](https://github.com/hungson175/vnfin/issues/194))
 - **VSDC no longer classifies net-vs-gross dividend ratios — conservative v1-surface shrink** (#163
   v1 de-scope) — a ratio line carrying a **tax/withholding signal** (thuế / TNCN / khấu trừ) is
   net-vs-gross ambiguous; rather than classify it (an open-ended, silent-wrong-prone problem that

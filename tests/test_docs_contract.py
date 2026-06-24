@@ -581,6 +581,8 @@ _WARNING_TOKENS_180 = (
     "failover",
     "nav_end_gap",
     "deduped_duplicate_nav_rows",
+    # #194 — a same-date NAV conflict quarantined (the date dropped; the rest served).
+    "quarantined_conflicting_navdates",
     "skipped_mismatched_report_rows",
     "skipped_period_rows",
     # #167 — equity-universe honest-gap + cross-board dedup tokens.

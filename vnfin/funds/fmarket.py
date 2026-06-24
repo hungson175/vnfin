@@ -69,6 +69,20 @@ _NAV_END_GAP_MIN_DAYS = 7                # daily-fund floor (a holiday weekend n
 _NAV_END_GAP_SINGLE_POINT_DAYS = 14     # single-point fallback (cadence unknown)
 _NAV_END_GAP_CADENCE_WINDOW = 8         # most-recent diffs feeding the cadence median (all if fewer)
 
+# Issue #194: quarantine-and-warn for a conflicting navDate (same date, two DIFFERENT
+# NAV values) instead of aborting the fund's ENTIRE series (~21/65 VN funds lost all NAV
+# over one bad date). Mirrors the #186 VN-Index quarantine: DROP the conflicting date
+# entirely (never pick, never average), serve the rest, disclose via this never-silent
+# token. A systematically-conflicting feed still fails over (threshold below). The #186
+# constants are reused UNCHANGED (no funds-specific magic numbers), but the bad UNIT is the
+# DATE counted ONCE — "this date can't be trusted" is one bad date, regardless of how many
+# rows collided on it — NOT #186's +2-per-conflict (a raw +2 port re-creates the bug for a
+# short fund: 2 conflicts -> bad=4 > floor=3 -> still aborts). `considered` = distinct
+# in-window dates examined (kept + quarantined; identical-value dups excluded).
+QUARANTINED_CONFLICTING_NAVDATES = "quarantined_conflicting_navdates"
+_QUARANTINE_FRACTION = 0.10              # >10% of in-window dates conflicting -> fail over
+_QUARANTINE_ABS_FLOOR = 3                # <=3 conflicting dates ALWAYS serve (short-fund floor)
+
 # Issue #190: list-level NAV-staleness warning on FundList. A fund whose own
 # `nav_as_of` is older than this many CALENDAR days (vs the injected `today`) is stale.
 # Calendar days (no holiday-calendar dep); list-level (one token, enumeration capped).
@@ -324,7 +338,12 @@ class FmarketFundSource(HttpDataSource):
             raise EmptyData(f"fmarket: no NAV history for product {product_id}")
         seen: dict[date, float] = {}
         points: list[NavPoint] = []
-        deduped = 0
+        # #158/#162: identical-value duplicate count, keyed by date so a date later
+        # poisoned by a #194 conflict can have its earlier identical dups backed out
+        # (Note 1: a poisoned date's dups must NOT inflate the dedup count).
+        dedup_count: dict[date, int] = {}
+        poisoned: set[date] = set()       # #194: dates with a same-date NAV conflict (dropped)
+        conflict_dates: list[str] = []    # #194: the dropped dates, sorted on warning emit
         max_navdate: date | None = None  # #172: latest navDate over ALL rows (pre-filter)
         for r in rows:
             # Issue #144: parse navDate FIRST and skip out-of-window rows BEFORE the
@@ -353,21 +372,50 @@ class FmarketFundSource(HttpDataSource):
                         f"fmarket: nav row productId {row_pid!r} != requested {fid}"
                     )
             point = self._parse_nav_point(r)
-            # Issue #158: a duplicate navDate within the window is only fatal when the NAV
-            # CONFLICTS. An identical-value duplicate is harmless provider repetition —
-            # dedupe it (keep first) and warn; a different NAV for the same date is
-            # ambiguous data and fails closed.
-            if point.date in seen:
-                if point.nav != seen[point.date]:
-                    raise InvalidData(
-                        f"fmarket: conflicting navDate {point.date.isoformat()} for product "
-                        f"{product_id} ({seen[point.date]} vs {point.nav})"
-                    )
-                deduped += 1
+            d = point.date
+            # Issue #194: a date already poisoned by a same-date conflict is ignored for
+            # every further row — the conflict is counted ONCE (per-date), not per-row.
+            if d in poisoned:
                 continue
-            seen[point.date] = point.nav
+            # Issue #158/#194: a duplicate navDate within the window. An identical-value
+            # duplicate is harmless provider repetition -> dedupe (keep first) and warn
+            # (#158/#162). A DIFFERENT NAV for the same date is ambiguous data: rather than
+            # abort the whole series (#194), QUARANTINE the date — drop it entirely (never
+            # pick, never average) and disclose it. Conflict BEATS dedup on the same date:
+            # a date with both an identical dup and a conflicting row is quarantined, and
+            # its earlier identical dups do NOT inflate the dedup count (Note 1).
+            if d in seen:
+                if point.nav == seen[d]:
+                    dedup_count[d] = dedup_count.get(d, 0) + 1
+                    continue
+                poisoned.add(d)
+                conflict_dates.append(d.isoformat())
+                seen.pop(d, None)
+                dedup_count.pop(d, None)
+                continue
+            seen[d] = point.nav
             points.append(point)
+        # Issue #194: drop the already-kept point for any date later poisoned (#186 pattern).
+        if poisoned:
+            points = [p for p in points if p.date not in poisoned]
         points.sort(key=lambda p: p.date)
+        # Issue #194: QUARANTINE VERDICT — runs BEFORE the #172 empty/stale block (Note 3).
+        # `considered` = number of DISTINCT in-window dates examined (kept + quarantined;
+        # identical-value dups excluded). Counting the bad UNIT as the DATE (once) — not
+        # #186's +2 physical rows — keeps short/new funds safe (<=3 conflicting dates always
+        # serve) while a systematically-broken feed (>10% of dates conflicting) still fails
+        # over. An above-threshold all-conflict window raises here (systematically broken),
+        # NOT EmptyData below; a sub-threshold all-conflict window (nothing left) falls
+        # through to the existing #172 EmptyData/StaleData.
+        considered = len(points) + len(poisoned)
+        if considered and len(poisoned) > max(
+            _QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION * considered
+        ):
+            raise InvalidData(
+                f"fmarket: {len(poisoned)}/{considered} in-window navDate(s) conflict "
+                f"(> max(floor={_QUARANTINE_ABS_FLOOR}, "
+                f"{int(_QUARANTINE_FRACTION * 100)}%)) — source systematically broken"
+            )
         if not points:
             # Issue #172: history is non-empty but no row falls in the caller's window.
             # If the newest navDate is strictly BEFORE the requested window start, the
@@ -383,14 +431,24 @@ class FmarketFundSource(HttpDataSource):
                 )
             raise EmptyData(f"fmarket: no NAV history for product {product_id} in range")
         warnings: tuple[str, ...] = ()
+        deduped = sum(dedup_count.values())
         if deduped:
             warnings = (
                 # #180: mechanical token prefix (fact-first), cause in the tail.
                 f"deduped_duplicate_nav_rows: {deduped} duplicate navDate row(s) with identical NAV",
             )
+        # Issue #194: the never-silent conflict-quarantine token (the #188 sink literal).
+        # Emitted only when >=1 date was poisoned, AFTER the dedup warning and BEFORE the
+        # end-gap warning. Names the dropped dates (sorted) — never picked, never averaged.
+        if poisoned:
+            warnings = warnings + (
+                f"{QUARANTINED_CONFLICTING_NAVDATES}: dropped {len(poisoned)} "
+                f"conflicting navDate(s) — {', '.join(sorted(conflict_dates))}",
+            )
         # Issue #172-RESIDUAL: success-path cadence-relative end-gap warning. Appended
-        # AFTER the dedup warning (dedup stays first). `today` is injected (never
-        # written into the result); `fetched_at_utc` below stays the real fetch stamp.
+        # AFTER the dedup + quarantine warnings (dedup stays first, end-gap last). `today`
+        # is injected (never written into the result); `fetched_at_utc` below stays the
+        # real fetch stamp.
         warnings = warnings + _nav_end_gap_warning(points, hi, _today())
         return NavHistory(
             product_id=fid,
