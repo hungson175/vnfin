@@ -12,7 +12,18 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-21 11:2x +07_
+_Last synced: 2026-06-24 +07_
+
+> **🔵 NOW (active 2026-06-24): #193 `vnfin.indices.world` — world-index coverage + keyless-from-server reliability.**
+> Poller-surfaced, reviewer-ACCEPTED with tech-lead spec `/tmp/spec-193.md`. **DESIGN-NOTE-FIRST — no build
+> until the reviewer gates the note.** Core unknown = empirically probe keyless-from-server sources (stooq `.us`
+> variants, Yahoo chart `v8/finance/chart`) from my server env + report. **Axis A** (coverage): extend `world`
+> allowlist `SPY`→+`QQQ`/`^N225`/`^SSEC`/`^STI` + explicit `value_unit` + `adjusted_close` for ETFs + LABELED
+> proxy (NEVER silent ETF substitution for an asked index). **Axis B floor** (ships regardless): replace opaque
+> `AllSourcesFailed` → clear `MissingKey` naming `ALPHAVANTAGE_API_KEY`. Same shape as `index_history`
+> (`PriceHistory`); offline VCR cassettes, never live in CI; runtime-fetch/no-redistribution (HNX posture).
+> **STATUS:** design-note investigation IN PROGRESS (env probe + arch map + source terms) → reviewer gate →
+> TDD → Codex×2 → push+close. Deliverable order/test matrix in the spec.
 
 > **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
 > worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
