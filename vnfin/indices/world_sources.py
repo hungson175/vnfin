@@ -245,7 +245,11 @@ class AlphaVantageIndexSource(HttpDataSource):
 
         bars = self._parse_bars(series, window_start, window_end)
         if not bars:
-            raise EmptyData(f"{self.NAME}: no daily bars in requested window")
+            # B2 (#193): name the symbol on the empty-window path too (extends the Q5
+            # "name the symbol" rule to EmptyData). For SPY this still legitimately
+            # falls over to the Stooq ^SPX leg; for a non-SPY symbol Stooq is now
+            # incapable (SPY-only), so the chain raises AllSourcesFailed naming it.
+            raise EmptyData(f"{self.NAME}: {canonical}: no daily bars in requested window")
 
         return PriceHistory(
             symbol=canonical,
@@ -357,7 +361,12 @@ class StooqIndexSource(HttpDataSource):
         return self.NAME
 
     def supports(self, symbol=None) -> bool:
-        return True
+        # Stooq serves only ^SPX (S&P 500 index points) — a legitimate fallback ONLY for
+        # SPY (same market). For QQQ/^N225/^SSEC/^STI the engine must skip Stooq so AV is
+        # the sole source and a non-SPY AV failure raises naming the symbol (never relabels
+        # ^SPX). ``_canonical_symbol(None/"")`` → "SPY", so ``supports()``/``supports(None)``
+        # stay True (preserves the direct-source default + the SPY chain). #193 B1.
+        return AlphaVantageIndexSource._canonical_symbol(symbol) == _PROVIDER_SPY
 
     def get_history(
         self,
@@ -368,8 +377,15 @@ class StooqIndexSource(HttpDataSource):
         interval: Interval = Interval.D1,
     ) -> PriceHistory:
         # v1: `symbol` is normalized into the result label only — the CSV fetched below is
-        # pinned to ^SPX regardless. SPY-only gating lives in the client/accessor, not here.
+        # pinned to ^SPX regardless. SPY-only gating lives in the client/accessor, but we
+        # also refuse here (defense-in-depth) so a silent wrong-MARKET relabel is
+        # structurally impossible even on a DIRECT get_history call. #193 B1.
         canonical = AlphaVantageIndexSource._canonical_symbol(symbol)
+        if canonical != _PROVIDER_SPY:
+            raise InvalidData(
+                f"{self.NAME}: {canonical}: this source serves only the S&P 500 (SPY / ^SPX "
+                f"index points); it is not a valid source for {canonical}"
+            )
         window_start = _as_window_date(start, "start") if start is not None else None
         window_end = _as_window_date(end, "end") if end is not None else None
         if window_start is not None and window_end is not None and window_start > window_end:
@@ -381,7 +397,8 @@ class StooqIndexSource(HttpDataSource):
         text = self._fetch_csv()
         bars = self._parse(text, window_start, window_end)
         if not bars:
-            raise EmptyData(f"{self.NAME}: no daily bars in requested window")
+            # B2 (#193): name the symbol on the empty-window path for consistency.
+            raise EmptyData(f"{self.NAME}: {canonical}: no daily bars in requested window")
 
         return PriceHistory(
             symbol=canonical,

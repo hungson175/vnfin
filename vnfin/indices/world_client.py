@@ -88,26 +88,32 @@ class FailoverWorldIndexClient:
     are unavailable. Incapable (keyless AV) sources are skipped without a network
     call and do not count against ``max_attempts``. The unit-homogeneity guard is
     disabled for this disclosed cross-instrument chain.
+
+    **Stateless / safe to reuse across threads (#193):** the requested symbol is
+    threaded through ``engine.run`` per call (no per-call instance state), so a single
+    client — and the 6h AV cache it holds — may be shared across concurrent calls for
+    different symbols without state bleed.
     """
 
     def __init__(self, sources, *, max_attempts: int = 3):
-        # The requested symbol for the in-flight call. ``get_history`` sets this before
-        # ``self._engine.run(...)`` so the operation/capability/failure closures fetch
-        # the per-symbol AV ticker (QQQ→QQQ, ^N225→EWJ, ...) instead of a pinned SPY.
-        self._requested_symbol = SUPPORTED_SYMBOL
+        # STATELESS / concurrency-safe (#193 B3): the requested ``symbol`` is threaded as
+        # the FIRST positional arg through ``self._engine.run(canonical, start, end,
+        # interval)``; the engine forwards ``*args`` to every closure unchanged. There is
+        # NO per-call mutable instance state, so a single client (and the 6h AV cache it
+        # holds) is safe to reuse across threads.
         self._engine = FailoverClient(
             list(sources),
-            operation=lambda src, start, end, interval: src.get_history(
-                self._requested_symbol, start, end, interval=interval
+            operation=lambda src, symbol, start, end, interval: src.get_history(
+                symbol, start, end, interval=interval
             ),
-            capability=lambda src, start, end, interval: src.supports(self._requested_symbol),
+            capability=lambda src, symbol, start, end, interval: src.supports(symbol),
             # Disclosed single-source pick (NOT a merge): do not enforce unit/currency
             # homogeneity — returning None for every source disables the guard.
             unit_of=lambda src: None,
             provenance_of=lambda hist: getattr(hist, "source", None),
             max_attempts=max_attempts,
-            failure_factory=lambda attempts, start, end, interval: AllSourcesFailed(
-                self._requested_symbol, getattr(interval, "value", str(interval)), attempts
+            failure_factory=lambda attempts, symbol, start, end, interval: AllSourcesFailed(
+                symbol, getattr(interval, "value", str(interval)), attempts
             ),
             finalize=self._finalize,
         )
@@ -129,9 +135,8 @@ class FailoverWorldIndexClient:
         interval: Interval = Interval.D1,
     ) -> PriceHistory:
         canonical = _validate_symbol(symbol)
-        self._requested_symbol = canonical
         try:
-            hist = self._engine.run(start, end, interval)
+            hist = self._engine.run(canonical, start, end, interval)
         except AllSourcesFailed:
             # MissingKey vs AllSourcesFailed clean branch (#193): if NO source has a key
             # (the BYOK AV primary is unconfigured) AND the chain still failed (the
@@ -145,7 +150,7 @@ class FailoverWorldIndexClient:
             hist = replace(hist, symbol=canonical)
         return hist
 
-    def _finalize(self, hist, attempts, start, end, interval) -> PriceHistory:
+    def _finalize(self, hist, attempts, symbol, start, end, interval) -> PriceHistory:
         warnings = (
             tuple(hist.warnings)
             + self._substitution_warnings(hist)

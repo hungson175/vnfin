@@ -853,3 +853,139 @@ def test_av_serves_when_key_set_no_missing_key():
     av = _av_source(_av_payload())
     hist = default_world_index_client(sources=[av]).get_history("SPY")
     assert hist.source == "alphavantage"
+
+
+# =========================================================================== #
+# #193 round-2 — Stooq is SPY-only; non-SPY never falls over to ^SPX;
+# the failover client is stateless (concurrency-safe). (BLOCK B1/B2/B3)
+# =========================================================================== #
+_NON_SPY = ["QQQ", "^N225", "^SSEC", "^STI"]
+
+
+# --- B1: a WORKING Stooq must NEVER serve ^SPX under a non-SPY symbol --- #
+@pytest.mark.parametrize("asked", _NON_SPY)
+def test_b1_non_spy_keyed_throttled_av_working_stooq_raises_naming_symbol(asked):
+    # key set + AV throttled + a fully-WORKING Stooq leg. Because Stooq is SPY-only
+    # it is now incapable for a non-SPY symbol, so the only capable source (AV) fails
+    # -> AllSourcesFailed naming the symbol. It must NOT relabel ^SPX as `asked`.
+    av = _av_source(json.dumps({"Note": "throttled"}))  # keyed (_FAKE_KEY) + throttle
+    stooq = _stooq_source(_stooq_csv())  # a genuinely working Stooq CSV leg
+    client = default_world_index_client(sources=[av, stooq])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_history(asked)
+    assert asked in str(ei.value)
+    # belt-and-suspenders: the Stooq source itself reports it cannot serve a non-SPY symbol
+    assert _stooq_source(_stooq_csv()).supports(asked) is False
+
+
+@pytest.mark.parametrize("asked", _NON_SPY)
+def test_b1_non_spy_no_key_working_stooq_raises_missing_key(asked, monkeypatch):
+    # no AV key + a fully-WORKING Stooq leg. AV is keyless-incapable, Stooq is SPY-only
+    # incapable -> no capable source -> AllSourcesFailed -> caught (no key) -> MissingKey
+    # naming the env var + the symbol (never a ^SPX series).
+    monkeypatch.delenv("ALPHAVANTAGE_API_KEY", raising=False)
+    av = AlphaVantageIndexSource(api_key=None, http_get=lambda *a, **k: _av_payload())
+    stooq = _stooq_source(_stooq_csv())
+    client = default_world_index_client(sources=[av, stooq])
+    with pytest.raises(MissingKey) as ei:
+        client.get_history(asked)
+    msg = str(ei.value)
+    assert "ALPHAVANTAGE_API_KEY" in msg
+    assert asked in msg
+
+
+def test_b1_stooq_supports_only_spy():
+    # SPY (and the keyless/None default) stay capable; every other symbol is skipped.
+    stooq = _stooq_source(_stooq_csv())
+    assert stooq.supports("SPY") is True
+    assert stooq.supports("spy") is True
+    assert stooq.supports() is True       # default → SPY → capable (direct-source contract)
+    assert stooq.supports(None) is True
+    for asked in _NON_SPY:
+        assert stooq.supports(asked) is False
+
+
+def test_b1_stooq_get_history_refuses_non_spy_defense_in_depth():
+    # Defense-in-depth: even a DIRECT get_history call on a non-SPY symbol must refuse
+    # (InvalidData naming the symbol) rather than relabel the ^SPX series.
+    stooq = _stooq_source(_stooq_csv())
+    for asked in _NON_SPY:
+        with pytest.raises(InvalidData) as ei:
+            stooq.get_history(asked)
+        assert asked in str(ei.value)
+    # and SPY still serves ^SPX as before
+    hist = stooq.get_history("SPY")
+    assert hist.source == "stooq"
+    assert hist.provider_symbol == "^SPX"
+
+
+# --- B2: empty-window for a proxy symbol must name the symbol, no ^SPX fallover --- #
+def test_b2_non_spy_empty_window_raises_naming_symbol_no_spx():
+    # A valid AV envelope whose bars all fall OUTSIDE the requested window -> EmptyData
+    # naming the symbol; with Stooq now SPY-only there is no capable fallback, so the
+    # client raises AllSourcesFailed naming the symbol (never a ^SPX series).
+    #
+    # The window deliberately OVERLAPS the Stooq CSV (2024-01-03) but NOT the AV bars
+    # (AV has only 2024-01-02). Pre-fix, AV's empty-window EmptyData fell over to a
+    # WORKING Stooq → ^SPX relabeled as ^N225; the fix (Stooq SPY-only) makes that
+    # structurally impossible.
+    av = _av_source(  # keyed, valid envelope with a bar ONLY on 2024-01-02
+        _av_payload(
+            {"2024-01-02": ("100.0", "101.0", "99.0", "100.5", "10")},
+            meta_symbol="EWJ",
+        )
+    )
+    stooq = _stooq_source(_stooq_csv())  # working Stooq with 2024-01-02..04 data
+    client = default_world_index_client(sources=[av, stooq])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_history("^N225", start=date(2024, 1, 3), end=date(2024, 1, 3))
+    assert "^N225" in str(ei.value)
+
+
+def test_b2_av_empty_window_error_names_symbol():
+    # The AV empty-window EmptyData itself names the symbol (Q5 "name the symbol" rule).
+    src = _av_source(_av_payload(meta_symbol="EWJ"))
+    with pytest.raises(EmptyData) as ei:
+        src.get_history("^N225", start=date(2030, 1, 1), end=date(2030, 1, 2))
+    assert "^N225" in str(ei.value)
+
+
+def test_b2_stooq_empty_window_error_names_symbol():
+    # The Stooq empty-window EmptyData names the symbol too (consistency, SPY only).
+    src = _stooq_source(_stooq_csv())
+    with pytest.raises(EmptyData) as ei:
+        src.get_history("SPY", start=date(2030, 1, 1), end=date(2030, 1, 2))
+    assert "SPY" in str(ei.value)
+
+
+# --- B3: stateless client (no _requested_symbol), no cross-call state bleed --- #
+def test_b3_client_has_no_requested_symbol_state():
+    client = default_world_index_client(sources=[_av_source(_av_payload())])
+    assert not hasattr(client, "_requested_symbol")
+
+
+def test_b3_shared_client_no_cross_call_state_bleed():
+    # ONE client, two get_history calls for DIFFERENT symbols served per-call by AV.
+    # Each result must carry its OWN symbol + proxy_for (proving no instance-state bleed).
+    payloads = {"QQQ": _av_payload(meta_symbol="QQQ"), "^N225": _av_payload(meta_symbol="EWJ")}
+
+    def _g(url, params=None, headers=None):
+        ticker = (params or {}).get("symbol")
+        # QQQ→QQQ, ^N225→EWJ ; map the fetched AV ticker back to a matching payload
+        if ticker == "QQQ":
+            return payloads["QQQ"]
+        return payloads["^N225"]
+
+    av = AlphaVantageIndexSource(api_key=_FAKE_KEY, http_get=_g)
+    client = default_world_index_client(sources=[av])
+
+    h_qqq = client.get_history("QQQ")
+    h_n225 = client.get_history("^N225")
+
+    assert h_qqq.symbol == "QQQ"
+    assert h_qqq.proxy_for is None
+    assert h_qqq.provider_symbol == "QQQ"
+
+    assert h_n225.symbol == "^N225"
+    assert h_n225.proxy_for == "^N225"
+    assert h_n225.provider_symbol == "EWJ"
