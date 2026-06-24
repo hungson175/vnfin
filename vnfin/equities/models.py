@@ -78,6 +78,22 @@ class EquitySector:
 
 
 @dataclass(frozen=True)
+class EquityProfile:
+    """One symbol's full enriched security + honest-coverage warnings (result type).
+
+    Returned by :func:`vnfin.equities.profile`. ``security`` is the full sector-enriched
+    :class:`EquitySecurity` (every reference field plus the four derived GICS sector fields,
+    all ``None`` as a unit when unmapped / HNX / UPCoM / overlap — never fabricated).
+    ``warnings`` ALWAYS carries the ``sector_partial_coverage`` honest-coverage token (and a
+    named overlap line when the symbol appears in more than one VNAllShare basket), so the
+    single-symbol entry point is never silent about the HOSE-only (~74%) derivation.
+    """
+
+    security: EquitySecurity
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class EquityUniverse:
     """The investable equity universe for one board (or ``"ALL"`` for a merge).
 

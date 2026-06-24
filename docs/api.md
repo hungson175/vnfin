@@ -71,7 +71,7 @@ src   = vnfin.equities.source()              # SsiIboardUniverseSource (client()
 uni   = vnfin.equities.universe("HOSE")      # EquityUniverse for one board
 allu  = vnfin.equities.universe()            # merges HOSE + HNX + UPCOM (cross-board keep-first)
 fpt   = next(s for s in vnfin.equities.universe("HOSE") if s.symbol == "FPT")  # one-symbol pattern
-prof  = vnfin.equities.profile("FPT")        # EquitySecurity, sector-enriched (derived GICS L1)
+prof  = vnfin.equities.profile("FPT")        # EquityProfile: .security (sector-enriched) + .warnings
 secs  = vnfin.equities.sectors()             # tuple[GicsSector] — the 10 GICS L1 (code, name)
 fin   = vnfin.equities.by_sector("VNFIN")    # EquitySector — basket members (or by name "Financials")
 rich  = vnfin.equities.universe("HOSE", with_sector=True)  # rows enriched with derived GICS sector
@@ -326,9 +326,11 @@ The raw SSI iBoard payload carries **no** sector field, so `vnfin.equities` **de
 the GICS L1 sector — clean-room — by inverting the 10 VNAllShare sector baskets that
 `vnfin.indices` already fetches (no provider industry id is adopted). The sector primitives:
 
-- `vnfin.equities.profile(symbol, *, http_get=None, timeout=25.0) -> EquitySecurity` — one
-  symbol's **full sector-enriched** `EquitySecurity` (all reference fields plus the four
-  sector fields) from the merged all-board universe. A symbol absent from every board
+- `vnfin.equities.profile(symbol, *, http_get=None, timeout=25.0) -> EquityProfile` — one
+  symbol's disclosure-carrying `EquityProfile`: `.security` is the **full sector-enriched**
+  `EquitySecurity` (all reference fields plus the four sector fields) from the merged all-board
+  universe, and `.warnings` ALWAYS carries the `sector_partial_coverage` honest-coverage line
+  (plus a named overlap line for a multi-basket symbol). A symbol absent from every board
   raises `EmptyData` naming the symbol. *(This un-defers the previously-deferred
   `profile`.)*
 - `vnfin.equities.sectors() -> tuple[GicsSector, ...]` — the **static** 10 `GicsSector(code,
@@ -348,14 +350,16 @@ all four sector fields `None` **as a unit** — never fabricated — and a multi
 (should not happen for GICS L1) degrades to a deterministic `None`. The
 `sector_partial_coverage` token discloses both gaps (and names any multi-basket symbol).
 
-`profile(symbol)` now exists (above). The result's `warnings` ALWAYS disclose the known
-gaps — `partial_universe_coverage` (index-basket derived, ~96% of the full SSC roster),
-`listing_date_not_available` (provider `firstTradingDate` is `'0'`), and either
-`sector_not_available` (plain `universe()`) or `sector_partial_coverage`
-(`with_sector=True` / `profile` / `by_sector`) — plus `cross_board_duplicate_symbol`
-on a merge, and `board_unavailable` (issue #189) when a board fetch is skipped during the
-all-boards `universe()` merge (partial failure skips-and-warns and serves the healthy boards;
-total failure of all three re-raises the last source error). See
+`profile(symbol)` now exists (above) and returns an `EquityProfile` whose `.warnings` ALWAYS
+disclose the derived-sector gap: the always-on `sector_partial_coverage` coverage line (HOSE-only
+~74%), plus a named overlap line when the symbol is multi-basket. The `EquityUniverse` result's
+`warnings` ALWAYS disclose the known per-board gaps — `partial_universe_coverage` (index-basket
+derived, ~96% of the full SSC roster), `listing_date_not_available` (provider `firstTradingDate`
+is `'0'`), and either `sector_not_available` (plain `universe()`) or `sector_partial_coverage`
+(`with_sector=True` / `profile` / `by_sector`) — plus `cross_board_duplicate_symbol` on a merge,
+and `board_unavailable` (issue #189) when a board fetch is skipped during the all-boards
+`universe()` merge (partial failure skips-and-warns and serves the healthy boards; total failure
+of all three re-raises the last source error). See
 [sources/equities-universe.md](sources/equities-universe.md).
 
 ## `vnfin.corp_actions` — cash dividends (VND/share, VSDC scrape)

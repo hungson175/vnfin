@@ -31,12 +31,15 @@ All notable changes to `vnfin` are documented here. The format follows
   GICS L1 sector for VN equities **clean-room**, by inverting the 10 VNAllShare sector index baskets it
   already fetches via `vnfin.indices` (no vnstock; no `industryID`/`industryIDv2`/`industry_name`). New
   primitives: **`vnfin.equities.profile(symbol)`** (un-defers the previously-deferred `profile` —
-  returns the symbol's full sector-enriched `EquitySecurity`), **`vnfin.equities.sectors()`** (the
+  returns a disclosure-carrying **`EquityProfile`** that wraps the symbol's full sector-enriched
+  `EquitySecurity` in `.security` plus an always-on `sector_partial_coverage` coverage line in
+  `.warnings`, so the single-symbol entry point is never silent about the HOSE-only ~74% derivation),
+  **`vnfin.equities.sectors()`** (the
   static 10 `GicsSector(code, name)` pairs — no fetch), **`vnfin.equities.by_sector(code_or_name)`**
   (one sector's basket members; accepts a code `"VNFIN"` or GICS name `"Financials"`, case-insensitive),
   and a new **`universe(..., with_sector=True)`** opt-in that enriches each row. `EquitySecurity` gains
   four additive `Optional[str]` fields (`sector_code`/`sector_name`/`sector_scheme`/`sector_source`),
-  and two new result types (`GicsSector`, `EquitySector`) are exported. **Honest coverage:** the
+  and three new result types (`GicsSector`, `EquitySector`, `EquityProfile`) are exported. **Honest coverage:** the
   baskets are **HOSE-only (~74%)** and **current-snapshot** (survivorship), so an unmapped HOSE symbol
   and **every** HNX/UPCoM symbol keep all four sector fields `None` **as a unit** (never fabricated), and
   a multi-basket symbol degrades to a deterministic `None` — all disclosed via the new

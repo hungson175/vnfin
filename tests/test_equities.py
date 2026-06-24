@@ -517,7 +517,7 @@ from vnfin.equities.sectors import (  # noqa: E402
     _SECTOR_MAP_CACHE_TTL,
     SectorClassifier,
 )
-from vnfin.equities.models import EquitySector, GicsSector  # noqa: E402
+from vnfin.equities.models import EquityProfile, EquitySector, GicsSector  # noqa: E402
 import vnfin.equities as eq  # noqa: E402
 
 # The 10 VNAllShare GICS L1 sector basket codes (clean-room: derived from the index
@@ -701,14 +701,51 @@ def test_profile_returns_full_enriched_security_with_coverage_token():
     }
     fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
     prof = eq.profile("AAA", http_get=_board_router(by_board), _fetch_constituents=fetch)
-    assert isinstance(prof, EquitySecurity)
-    # full enriched row — not a sector-only fragment (reuses EquitySecurity)
-    assert prof.symbol == "AAA"
-    assert prof.company_name_en == "AAA Corp"
-    assert prof.sector_code == "VNFIN"
-    assert prof.sector_name == "Financials"
-    assert prof.sector_scheme == "GICS"
-    assert prof.sector_source == "ssi_iboard_query"
+    # #195 — profile() returns the disclosure-carrying EquityProfile wrapper, not a bare row.
+    assert isinstance(prof, EquityProfile)
+    # full enriched row preserved via .security — not a sector-only fragment (reuses EquitySecurity)
+    assert prof.security.symbol == "AAA"
+    assert prof.security.company_name_en == "AAA Corp"
+    assert prof.security.sector_code == "VNFIN"
+    assert prof.security.sector_name == "Financials"
+    assert prof.security.sector_scheme == "GICS"
+    assert prof.security.sector_source == "ssi_iboard_query"
+    # the never-silent honest-coverage token is now actually carried on profile()
+    assert any(w.startswith("sector_partial_coverage") for w in prof.warnings)
+
+
+def test_profile_overlap_symbol_all_sector_none_carries_both_disclosure_lines():
+    # DUP is synthesized into 2 baskets -> ambiguous overlap -> all 4 sector fields None,
+    # AND the warnings carry BOTH the coverage line and the named overlap line.
+    by_board = {
+        "HOSE": _payload([_row("DUP", "HOSE")]),
+        "HNX": _payload([_row("HNX1", "HNX")]),
+        "UPCOM": _payload([_row("UP1", "UPCOM")]),
+    }
+    fetch, _ = _fake_fetch({"VNFIN": ("DUP",), "VNIT": ("DUP",)})
+    prof = eq.profile("DUP", http_get=_board_router(by_board), _fetch_constituents=fetch)
+    assert isinstance(prof, EquityProfile)
+    # all four sector fields None as a unit (overlap -> never picked, never fabricated)
+    assert prof.security.sector_code is None and prof.security.sector_name is None
+    assert prof.security.sector_scheme is None and prof.security.sector_source is None
+    # the always-on coverage line (scope = the symbol's board; does NOT use the overlap phrasing)
+    coverage_lines = [
+        w
+        for w in prof.warnings
+        if w.startswith("sector_partial_coverage:") and "appears in" not in w
+    ]
+    assert coverage_lines, "expected the always-on coverage disclosure line"
+    # ... AND a named multi-basket overlap line (names the symbol + mentions baskets)
+    overlap_lines = [
+        w
+        for w in prof.warnings
+        if w.startswith("sector_partial_coverage:") and "DUP" in w and "baskets" in w
+    ]
+    assert overlap_lines, "expected the named multi-basket overlap disclosure line"
+    # deterministic across re-runs (same inputs -> identical warnings tuple)
+    fetch2, _ = _fake_fetch({"VNFIN": ("DUP",), "VNIT": ("DUP",)})
+    prof2 = eq.profile("DUP", http_get=_board_router(by_board), _fetch_constituents=fetch2)
+    assert prof.warnings == prof2.warnings
 
 
 def test_profile_unmapped_symbol_full_row_all_sector_none():
@@ -719,9 +756,12 @@ def test_profile_unmapped_symbol_full_row_all_sector_none():
     }
     fetch, _ = _fake_fetch({"VNFIN": ("AAA",)})
     prof = eq.profile("NOPE", http_get=_board_router(by_board), _fetch_constituents=fetch)
-    assert prof.symbol == "NOPE"
-    assert prof.sector_code is None and prof.sector_name is None
-    assert prof.sector_scheme is None and prof.sector_source is None
+    assert isinstance(prof, EquityProfile)
+    assert prof.security.symbol == "NOPE"
+    assert prof.security.sector_code is None and prof.security.sector_name is None
+    assert prof.security.sector_scheme is None and prof.security.sector_source is None
+    # unmapped row still carries the always-on coverage disclosure line
+    assert any(w.startswith("sector_partial_coverage") for w in prof.warnings)
 
 
 def test_profile_absent_symbol_raises_not_found_naming_symbol():

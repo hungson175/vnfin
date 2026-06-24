@@ -3,9 +3,9 @@
 One obvious entry: :func:`universe` (a convenience over :class:`SsiIboardUniverseSource`).
 It enumerates the investable equities per board with source-backed per-symbol reference
 metadata + honest coverage diagnostics — a data primitive only, NOT a screener/ranker/
-advisor. :func:`profile` returns one symbol's sector-enriched ``EquitySecurity``;
-:func:`sectors` lists the 10 derived GICS L1 sectors; :func:`by_sector` returns one
-sector's basket members.
+advisor. :func:`profile` returns one symbol's disclosure-carrying ``EquityProfile`` (the
+sector-enriched ``EquitySecurity`` plus its honest-coverage warnings); :func:`sectors`
+lists the 10 derived GICS L1 sectors; :func:`by_sector` returns one sector's basket members.
 
     import vnfin
     from vnfin.equities import universe, profile, sectors, by_sector
@@ -13,7 +13,7 @@ sector's basket members.
     hose = universe("HOSE")          # one board (no sector fetch)
     rich = universe("HOSE", with_sector=True)   # rows enriched with derived GICS sector
     everything = universe()          # merges HOSE + HNX + UPCOM (cross-board keep-first)
-    fpt = profile("FPT")             # one symbol, sector-enriched EquitySecurity
+    fpt = profile("FPT")             # one symbol → EquityProfile (security + coverage warnings)
     tech = by_sector("Information Technology")  # the basket members (code or name)
     for s in sectors():
         print(s.code, s.name)        # the 10 GICS L1 (code, name) pairs
@@ -28,11 +28,12 @@ never fabricated (the ``sector_partial_coverage`` token discloses the gap). The 
 from __future__ import annotations
 
 from ..exceptions import EmptyData, InvalidData
-from .models import EquitySecurity, EquitySector, EquityUniverse, GicsSector
+from .models import EquityProfile, EquitySecurity, EquitySector, EquityUniverse, GicsSector
 from .sectors import _GICS_L1, _SECTOR_SCHEME, _SECTOR_SOURCE, SectorClassifier
 from .sources import SsiIboardUniverseSource
 
 __all__ = [
+    "EquityProfile",
     "EquitySecurity",
     "EquitySector",
     "EquityUniverse",
@@ -156,27 +157,31 @@ def profile(
     http_get=None,
     timeout: float = 25.0,
     _fetch_constituents=None,
-) -> EquitySecurity:
-    """Return one symbol's sector-enriched :class:`EquitySecurity` (full row, not a
-    fragment) from the merged all-board universe.
+) -> EquityProfile:
+    """Return one symbol's disclosure-carrying :class:`EquityProfile` from the merged
+    all-board universe.
 
-    The returned security carries every reference field PLUS the four derived GICS sector
-    fields (all ``None`` as a unit when the symbol is unmapped / HNX / UPCoM / overlap).
-    A symbol absent from every board raises :class:`~vnfin.exceptions.EmptyData` naming
-    the symbol.
+    ``.security`` is the full sector-enriched :class:`EquitySecurity` (every reference field
+    PLUS the four derived GICS sector fields, all ``None`` as a unit when the symbol is
+    unmapped / HNX / UPCoM / overlap — never fabricated). ``.warnings`` ALWAYS carries the
+    ``sector_partial_coverage`` honest-coverage line (the derivation is HOSE-only ~74%), plus a
+    named overlap line when the symbol appears in more than one VNAllShare basket — so the
+    single-symbol entry point is never silent about the gap. A symbol absent from every board
+    raises :class:`~vnfin.exceptions.EmptyData` naming the symbol.
     """
     if not isinstance(symbol, str) or not symbol.strip():
         raise InvalidData(f"equities.profile: symbol must be a non-empty string, got {symbol!r}")
     canon = symbol.strip().upper()
-    merged = universe(
-        http_get=http_get,
-        timeout=timeout,
-        with_sector=True,
-        _fetch_constituents=_fetch_constituents,
-    )
-    for sec in merged.securities:
+    clf = _classifier(http_get=http_get, timeout=timeout, _fetch_constituents=_fetch_constituents)
+    base = source(http_get=http_get, timeout=timeout).universe(None)
+    for sec in base.securities:
         if sec.symbol == canon:
-            return sec
+            enriched = _enrich_security(sec, clf)
+            warnings = [_sector_coverage_warning(enriched.exchange or "universe")]
+            overlaps = clf.overlaps()
+            if canon in overlaps:
+                warnings.append(_sector_overlap_warning(canon, overlaps[canon]))
+            return EquityProfile(security=enriched, warnings=tuple(warnings))
     raise EmptyData(
         f"equities.profile: symbol {canon!r} not found in any board (HOSE/HNX/UPCOM)"
     )

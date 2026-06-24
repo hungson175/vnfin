@@ -120,7 +120,8 @@ A symbol's sector is the basket it belongs to; the pinned code→name map gives 
   the symbol's *current* GICS sector, **not** point-in-time — backtests inherit survivorship.
 - **Clean-room.** No vnstock; no `industryID`/`industryIDv2`/Vietnamese `industry_name`.
 
-Accessors: `vnfin.equities.profile(symbol)` (full sector-enriched `EquitySecurity`),
+Accessors: `vnfin.equities.profile(symbol)` (an `EquityProfile` wrapping the full sector-enriched
+`EquitySecurity` in `.security` + a `sector_partial_coverage` coverage line in `.warnings`),
 `vnfin.equities.sectors()` (the static 10 `GicsSector`), `vnfin.equities.by_sector(code_or_name)`
 (one basket's members), and `vnfin.equities.universe(..., with_sector=True)` (enriched rows;
 the per-board `sector_not_available` token becomes `sector_partial_coverage`).
