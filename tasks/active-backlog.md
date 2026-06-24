@@ -22,9 +22,17 @@ _Last synced: 2026-06-24 +07_
 > ^N225/^SSEC/^STI); Q2 `proxy_for` field MUST-HAVE + `proxy_substitution` token (both); Q3 DEFER
 > `adjusted_close`, document price-return-not-total-return; Q4 synthetic http_get injection = VCR; Q5 hard
 > guard InvalidData-naming-symbol on empty AV; MissingKey(no-key) vs AllSourcesFailed(key-set-fail) cleanly
-> branched; token sweep 46→47; snapshot frozen. **Build spec:** `tasks/193-build-spec.md` (committed).
-> **STATUS:** spec committed → delegating TDD build to a fresh general-purpose agent → integrate + merged-tree
-> green + gates → Codex×2 review → push+close.
+> branched; token sweep 46→47; snapshot frozen. **Build spec:** `tasks/193-build-spec.md`.
+> Build `c79325a` (green merged tree) → **Codex×2 round-1 = BLOCK**
+> (`review-202606241450-issue193-codex2-verdict-BLOCK.md`): AV-only paths + all gate housekeeping CORRECT; 3
+> blockers in the Stooq-fallback + client-reuse seam — **B1** Stooq `^SPX`-pinned for ANY symbol →
+> `world(^N225)`+working-Stooq returns S&P500 relabeled (silent wrong-MARKET, violates Q2); **B2** proxy
+> empty-window → EmptyData fallover to `^SPX` bypassing Q5; **B3** `FailoverWorldIndexClient` concurrency-unsafe
+> (mutable `_requested_symbol`) + public + 6h cache incentivizes reuse. **Fix spec:** `tasks/193-fix-spec-round2.md`
+> — gate Stooq SPY-only + stateless closures (thread symbol through `engine.run`) + non-SPY-working-Stooq /
+> empty-window / stateless tests, ONE commit, SPY unchanged.
+> **STATUS:** fix-spec committed → delegating round-2 fix to fresh general-purpose agent → merged-tree green +
+> adversarial self-verify → Codex×2 re-review → push+close.
 
 > **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
 > worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
