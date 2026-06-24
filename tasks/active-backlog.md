@@ -33,9 +33,12 @@ _Last synced: 2026-06-24 +07_
 > one-conflict→rest+warning (not raise); systematically-conflicting→still raises; threshold boundary 3-serves/
 > 4-raises; identical-dup→dedup unchanged; never-averages; 2-dates-under-threshold; conflict-vs-dedup
 > precedence; #172 empty/stale unchanged. Offline synthetic fixtures only, zero VNStock. NavHistory.warnings
-> already defaulted + in frozen snapshot → NO surface change. **STATUS:** facts verified → **design note
-> WRITTEN `tasks/194-nav-quarantine-design.md` → ROUTED to reviewer DESIGN GATE (awaiting ruling, esp. Q2).**
-> No code until gated. Not P0.
+> already defaulted + in frozen snapshot → NO surface change. **STATUS:** design GATED→APPROVED (Q2 divergence
+> RATIFIED). Build spec `tasks/194-build-spec.md` (`024961b`). Fresh-agent TDD build (8-case RED-first + 2
+> inverted #158 tests) integrated + committed `4228242`: merged tree **3690 green**, docs-contract 35 green
+> (#180+#188 real), tuple 47→48, snapshot frozen, no contamination. **Adversarial-verify Workflow running**
+> (5 skeptics×distinct lenses → confirm) before routing to Codex×2. **NEXT:** verify clean → reviewer code
+> review → push+close (watermark left to reviewer). Not P0.
 >
 > **✅ DONE TODAY (2026-06-24): #193 `vnfin.indices.world` — world-index coverage + keyless-from-server reliability.**
 > Design note `tasks/193-world-index-design.md` (`9c219b2`, fact-checked clean) **GATED → APPROVED to TDD**
