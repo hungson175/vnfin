@@ -15,12 +15,13 @@ already-derived sector. Synthetic fixtures only; assert zero network.
 
 ---
 
-## ⏳ PENDING reviewer ruling — type mechanism (a1 primary / a3 fallback)
+## Type mechanism — a1 RULED (reviewer `gate-202606250208-issue195-profile-gap.md`)
 
-> Reviewer ruling on a1 vs a3 is OUT (`/tmp/195-profile-gap-20260625.md`). Build the a1 shape
-> below unless the reviewer rules a3; the a3 delta is noted inline. Everything else is identical.
+Reviewer ruled **a1** (reject a3/b): profile is a single-symbol RESULT → carries `.warnings`
+via a wrapper, matching the repo convention (`EquitySector`:77 / `EquityUniverse`:94 carry
+`.warnings`; `EquitySecurity` row type does not). `.security` keeps the full record
+(REVIEW-FOCUS #1 intent — reuse, no half-None — preserved).
 
-### a1 (PRIMARY — my REC): new `EquityProfile` result wrapper
 `vnfin/equities/models.py` — add a frozen dataclass AFTER `EquitySector`:
 ```python
 @dataclass(frozen=True)
@@ -32,17 +33,13 @@ class EquityProfile:
 `vnfin/equities/__init__.py` — `profile()` returns `EquityProfile(security=<enriched sec>,
 warnings=(...))`. Export `EquityProfile` in `__all__`.
 
-### a3 (FALLBACK — only if reviewer rules a3): `warnings` field on `EquitySecurity`
-Add `warnings: tuple[str, ...] = ()` to `EquitySecurity` (after `sector_source`); `profile()`
-returns the enriched `EquitySecurity` with `warnings` populated; universe rows keep `warnings=()`.
-
 ---
 
 ## profile() warnings content (BOTH mechanisms)
 The warnings tuple `profile()` carries:
-1. **Always** the coverage line `_sector_coverage_warning(<board of the symbol, e.g. "HOSE">)`
-   — reuse the existing helper in `__init__.py`. (Scope = the symbol's own board; mapped or
-   not, the derivation is HOSE-only-partial so the disclosure always applies.)
+1. **Always** the coverage line `_sector_coverage_warning(sec.exchange or "universe")` — reuse
+   the existing helper in `__init__.py`. Scope = the symbol's own board (`sec.exchange`); mapped
+   or not, the derivation is HOSE-only-partial so the disclosure always applies.
 2. **If the symbol is a multi-basket overlap** → ALSO append `_sector_overlap_warning(sym, codes)`
    for that symbol (reuse the existing helper; `clf.overlaps()` already exposes it).
 Both helpers already start with the `sector_partial_coverage:` prefix → **token count stays 49**
@@ -51,24 +48,21 @@ Both helpers already start with the `sector_partial_coverage:` prefix → **toke
 ## RED-first tests (`tests/test_equities.py`)
 1. **Rewrite the masking test** `test_profile_returns_full_enriched_security_with_coverage_token`
    (currently L696-711 — asserts NO token, passes green). Make it assert the token:
-   - a1: `assert isinstance(prof, EquityProfile)`; `prof.security.sector_code == "VNFIN"` etc.;
-     `assert any(w.startswith("sector_partial_coverage") for w in prof.warnings)`.
-   - a3: keep `isinstance(prof, EquitySecurity)`; `prof.sector_code == "VNFIN"`;
-     `assert any(w.startswith("sector_partial_coverage") for w in prof.warnings)`.
-   Watch it FAIL on the current build first.
+   `assert isinstance(prof, EquityProfile)`; `prof.security.sector_code == "VNFIN"` (+ name/scheme/
+   source + `prof.security.company_name_en`); `assert any(w.startswith("sector_partial_coverage")
+   for w in prof.warnings)`. Watch it FAIL on the current build first.
 2. **NEW overlap-profile test:** a symbol synthesized into 2 baskets → all 4 sector fields `None`
    (mapped→None as a unit) **AND** `prof.warnings` contains both a `sector_partial_coverage:`
    coverage line and the `sector_partial_coverage: <sym> … baskets …` overlap line. Deterministic.
 3. **Update** `test_profile_unmapped_symbol_full_row_all_sector_none` (L714+) and the not-found
-   test (L727+) for the new return shape (a1: assert via `prof.security.*`; the unmapped row still
+   test (L727+) for the new return shape (assert via `prof.security.*`; the unmapped row still
    carries the coverage line in `prof.warnings`). Not-found still raises `EmptyData` naming the symbol.
 
 ## Docs / SKILL lockstep (same commit)
-- **a1:** `docs/api.md` (profile now returns `EquityProfile`; `.warnings` genuinely present —
-  the L351-355 promise becomes TRUE); `skills/vnfin/SKILL.md:77` change profile's return
+- `docs/api.md` (profile now returns `EquityProfile`; `.warnings` genuinely present — the
+  L351-355 promise becomes TRUE); `skills/vnfin/SKILL.md:77` change profile's return
   `EquitySecurity`→`EquityProfile`; keep SKILL.md:164 (profile stays an emission site — now true);
-  `CHANGELOG.md` note the wrapper. **a3:** docs/api.md L351-355 already true; SKILL.md:77 stays
-  `EquitySecurity` (note "+ warnings"); CHANGELOG note the field.
+  `CHANGELOG.md` note the wrapper.
 - `vnfin/equities/__init__.py` profile() docstring: state it returns the disclosure-carrying result.
 
 ## Gates to pass on the merged tree
