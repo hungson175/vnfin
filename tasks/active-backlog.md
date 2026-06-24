@@ -26,10 +26,14 @@ _Last synced: 2026-06-25 +07_
 > HOSE + ALL HNX/UPCoM → `None` + NEW `sector_partial_coverage` warning (full #180/#188 token lockstep), NEVER a
 > fabricated sector; two-basket symbol handled deterministically + flagged. **v1 surface = GICS L1 ONLY**: enrich
 > EquitySecurity/universe (additive→snapshot-safe) + `profile()`/`sectors()`/`by_sector(code_or_name)`; **NO
-> industries() tier** (no clean finer data); `industry_peers` composes over by_sector (DEFER). **STATUS:** intake
-> recorded → Explore agent mapping surfaces (`index_registry`, constituents plumbing, equities sources/models/
-> facade, token machinery, snapshot test) → next write design note (derivation+caching, coverage contract, field
-> shape, sector-only surface) → fact-check → reviewer GATE before any code. Not P0.
+> industries() tier** (no clean finer data); `industry_peers` composes over by_sector (DEFER). **STATUS
+(2026-06-25 01:38):** intake → Explore-mapped → design note `tasks/195-design-note.md` (`fdf7393`; fact-checked:
+constituents path has NO allow-list gate, tuple=48, surface additive-safe) → reviewer **GATE APPROVED**
+(`gate-202606250135-issue195-design-note.md`; all 3 RECs ratified: Q1 opt-in `with_sector`, Q2 overlap fold under
+prefix, Q3 6h lazy cache) → binding build spec `tasks/195-build-spec.md` (`5cfbbcc`, 10-case matrix) → **fresh
+general-purpose agent BUILDING (TDD)** → next: integrate merged tree + full suite/gates + adversarial-verify
+Workflow → Codex×2 → push+close. NOTE: snapshot `dump_api_surface` regen is a RELEASE task (new profile/sectors/
+by_sector are real surface), NOT this commit. Not P0.
 >
 > **✅ DONE 2026-06-24: #194 `funds.nav_history` aborts whole series on one conflicting navDate — port the #186 quarantine.**
 > Reviewer-routed poller intake; **triage = ACCEPTED** (trusted vf-advisor↔vnfin reporter, clean repro, no
