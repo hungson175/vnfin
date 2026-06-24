@@ -2986,8 +2986,10 @@ def test_nav_history_case7_conflict_beats_dedup_on_same_date():
 # lives in test_nav_history_in_window_all_conflict_sub_threshold_falls_to_empty. Here we
 # pin the ORDERING with TWO in-window conflicting dates (still sub-threshold: poisoned=2
 # <= floor 3, points=[]): the result is the #172 EmptyData, NOT the systematically-broken
-# InvalidData and NOT a NavHistory. (StaleData is unreachable for an in-window quarantine:
-# an in-window date means max_navdate >= lo, so #172 yields plain EmptyData, not stale.)
+# InvalidData and NOT a NavHistory. (StaleData is unreachable *via the quarantine path*: an
+# in-window quarantined date means max_navdate >= lo, so #172 yields plain EmptyData, not
+# stale. StaleData stays reachable on the orthogonal non-conflict stale-feed path — see
+# test_nav_history_stale_window_raises_staledata.)
 
 def test_nav_history_case8_two_inwindow_conflicts_sub_threshold_falls_to_empty():
     full = [
