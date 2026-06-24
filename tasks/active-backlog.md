@@ -22,14 +22,20 @@ _Last synced: 2026-06-24 +07_
 > 2018-07-31 / 2017-01-31). Fix = **port the #186 VN-Index quarantine** to the Fmarket NAV parser: conflicting
 > navDate → quarantine the date + never-silent warning + return the rest; identical-dup → dedup keep-first;
 > **threshold guard preserved** (`max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION×n)` → systematically-broken
-> still raises); **NEVER average**. **DESIGN-NOTE-FIRST → reviewer gate before any code.** 3 gate questions:
-> (1) keep policy — drop-the-date (#186 mirror, reviewer-recommended) vs keep-first/last; (2) token — reuse
-> `quarantined_invalid_bars` (recommended, one cross-domain never-silent token) vs new `conflicting_navdate`
-> (#180/#188 lockstep either way); (3) threshold constants — reuse `udf.py` `_QUARANTINE_FRACTION=0.10` /
-> `_QUARANTINE_ABS_FLOOR=3` vs a funds-tuned floor (monthly NAV series are SHORT → abs floor dominates).
-> Tests: one-conflict→rest+warning (not raise); systematically-conflicting→still raises; identical-dup→dedup;
-> threshold boundary. Offline fixtures only, zero VNStock. **STATUS:** intake recorded → gathering #186-pattern
-> + Fmarket-parser + funds-result + token-state facts → draft design note → route to reviewer gate. Not P0.
+> still raises); **NEVER average**. **DESIGN-NOTE-FIRST → reviewer gate before any code.** 3 gate questions
+> (my recs after fact-check, some DIVERGE from triage lean): (1) keep policy — **DROP-the-date (#186 mirror,
+> firm rec)**; (2) token — **NEW `quarantined_conflicting_navdates` (DIVERGE from triage's reuse lean)**
+> because the existing token says `..._bars` but `NavHistory` has `points` (name/scope honesty wart) + funds
+> already has a `nav_`/`deduped_duplicate_nav_rows` token family — this is the ONE open gate call; (3) threshold
+> — **reuse `_QUARANTINE_FRACTION=0.10`/`_QUARANTINE_ABS_FLOOR=3` UNCHANGED but count each conflicting DATE once
+> (not #186's `+2` rows)** → ≤3 conflicts always serve, solves the short-series worry without a magic floor
+> (NB: fmarket NAV is DAILY per the parser docstring, not monthly — cadence varies by issuer). Tests (8):
+> one-conflict→rest+warning (not raise); systematically-conflicting→still raises; threshold boundary 3-serves/
+> 4-raises; identical-dup→dedup unchanged; never-averages; 2-dates-under-threshold; conflict-vs-dedup
+> precedence; #172 empty/stale unchanged. Offline synthetic fixtures only, zero VNStock. NavHistory.warnings
+> already defaulted + in frozen snapshot → NO surface change. **STATUS:** facts verified → **design note
+> WRITTEN `tasks/194-nav-quarantine-design.md` → ROUTED to reviewer DESIGN GATE (awaiting ruling, esp. Q2).**
+> No code until gated. Not P0.
 >
 > **✅ DONE TODAY (2026-06-24): #193 `vnfin.indices.world` — world-index coverage + keyless-from-server reliability.**
 > Design note `tasks/193-world-index-design.md` (`9c219b2`, fact-checked clean) **GATED → APPROVED to TDD**
