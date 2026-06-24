@@ -31,8 +31,13 @@ _Last synced: 2026-06-24 +07_
 > (mutable `_requested_symbol`) + public + 6h cache incentivizes reuse. **Fix spec:** `tasks/193-fix-spec-round2.md`
 > — gate Stooq SPY-only + stateless closures (thread symbol through `engine.run`) + non-SPY-working-Stooq /
 > empty-window / stateless tests, ONE commit, SPY unchanged.
-> **STATUS:** fix-spec committed → delegating round-2 fix to fresh general-purpose agent → merged-tree green +
-> adversarial self-verify → Codex×2 re-review → push+close.
+> **STATUS:** round-2 fix BUILT + committed `3ad1a3a` (B1 Stooq SPY-only via `supports()`==SPY + defense-in-depth
+> `InvalidData` refuse; B2 empty-window names symbol; B3 stateless — symbol threaded through `engine.run`, no
+> `_requested_symbol`). Merged-tree GREEN (pytest exit 0, snapshot frozen, token 47, 0 `_requested_symbol`); +9
+> fail-first regression tests. **Adversarial self-verify CLEAN** (3 independent skeptics wrong-market/concurrency/
+> never-empty — all `hole_found:false`, 5000-call thread stress, per-ticker cache isolation, SPY ^SPX fallover
+> intact). **→ routed to vnfin-oss-reviewer for Codex×2 re-review against the BLOCK verdict.** Push+close only on
+> APPROVE.
 
 > **🚀 BATCH FLOW ACTIVE (Boss directive 2026-06-21 ~10:50):** cluster similar issues, fan out
 > worktree sub-agents in PARALLEL, integrate + run integration tests on the MERGED tree, GO FAST
