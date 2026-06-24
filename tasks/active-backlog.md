@@ -12,9 +12,26 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-24 +07_
+_Last synced: 2026-06-25 +07_
 
-> **🔵 NOW (active 2026-06-24): #194 `funds.nav_history` aborts whole series on one conflicting navDate — port the #186 quarantine.**
+> **🔵 NOW (active 2026-06-25): #195 `vnfin.equities` GICS sector classification — DESIGN-NOTE-FIRST.**
+> Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
+> reviews/). **CLEAN-ROOM CRITICAL:** derive GICS sector by fetching the 10 VNAllShare sector-index baskets we
+> ALREADY fetch (`index_registry.py:84+`, `IndexConstituentsSource.get_constituents`) and **inverting membership**
+> (symbol→sector). **ZERO vnstock**; do NOT adopt its `industryID`/`industryIDv2`/Vietnamese `industry_name` — the
+> issue's source suggestion is BLACKLISTED. Field shape: `sector_code`/`sector_name` (GICS English)/`sector_scheme`
+> ="GICS"/`sector_source`="ssi_iboard_query". GICS map: VNFIN=Financials, VNIT=Information Technology, VNREAL=Real
+> Estate, VNMAT=Materials, VNCONS=Consumer Staples, VNCOND=Consumer Discretionary, VNIND=Industrials, VNENE=Energy,
+> VNHEAL=Health Care, VNUTI=Utilities. **HONEST-COVERAGE core invariant:** HOSE-only ~74% (~297/403); unmapped
+> HOSE + ALL HNX/UPCoM → `None` + NEW `sector_partial_coverage` warning (full #180/#188 token lockstep), NEVER a
+> fabricated sector; two-basket symbol handled deterministically + flagged. **v1 surface = GICS L1 ONLY**: enrich
+> EquitySecurity/universe (additive→snapshot-safe) + `profile()`/`sectors()`/`by_sector(code_or_name)`; **NO
+> industries() tier** (no clean finer data); `industry_peers` composes over by_sector (DEFER). **STATUS:** intake
+> recorded → Explore agent mapping surfaces (`index_registry`, constituents plumbing, equities sources/models/
+> facade, token machinery, snapshot test) → next write design note (derivation+caching, coverage contract, field
+> shape, sector-only surface) → fact-check → reviewer GATE before any code. Not P0.
+>
+> **✅ DONE 2026-06-24: #194 `funds.nav_history` aborts whole series on one conflicting navDate — port the #186 quarantine.**
 > Reviewer-routed poller intake; **triage = ACCEPTED** (trusted vf-advisor↔vnfin reporter, clean repro, no
 > untrusted code). Real degrade-not-fabricate / never-silent defect: `funds.source().nav_history()` hard-raises
 > `InvalidData` on ONE conflicting `navDate` (`vnfin/funds/fmarket.py:356-373`, the #158 hard-raise) → nukes a
