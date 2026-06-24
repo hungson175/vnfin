@@ -989,3 +989,102 @@ def test_b3_shared_client_no_cross_call_state_bleed():
     assert h_n225.symbol == "^N225"
     assert h_n225.proxy_for == "^N225"
     assert h_n225.provider_symbol == "EWJ"
+
+
+# --- B3 fast-follow: THREADED/barrier-synced concurrency stress (statelessness) --- #
+# asked symbol -> (av_ticker, proxy_for-or-None, distinct synthetic close level)
+# A distinct close per symbol makes every returned series identifiable so a
+# cross-thread bleed shows up as a value mismatch, not just a label mismatch.
+_CONCURRENCY_MATRIX = {
+    "QQQ": ("QQQ", None, 100.5),
+    "^N225": ("EWJ", "^N225", 200.5),
+    "^SSEC": ("FXI", "^SSEC", 300.5),
+    "^STI": ("EWS", "^STI", 400.5),
+}
+# Reverse map: the AV ticker actually fetched (params["symbol"]) -> asked symbol.
+_AV_TICKER_TO_ASKED = {av: asked for asked, (av, _p, _c) in _CONCURRENCY_MATRIX.items()}
+
+
+def _concurrency_payload(asked):
+    """A 1-bar AV payload whose close is the symbol's DISTINCT level (identifiable)."""
+    av_ticker, _proxy, close = _CONCURRENCY_MATRIX[asked]
+    o = close - 0.5
+    return _av_payload(
+        {"2024-01-02": (f"{o}", f"{close}", f"{o}", f"{close}", "10")},
+        meta_symbol=av_ticker,
+    )
+
+
+def test_b3_concurrent_shared_client_no_cross_symbol_bleed():
+    """THREADED regression for #193 B3 statelessness (barrier-synced stress).
+
+    ONE shared client (cache ON — the default) whose single AV source routes by the
+    fetched ``params["symbol"]`` to a DISTINCT synthetic series per symbol. One thread
+    per non-trivial symbol (QQQ/^N225/^SSEC/^STI) loops ``_ROUNDS`` calls to
+    ``client.get_history(its_symbol)``; all threads rendezvous on a
+    ``threading.Barrier`` so they fire essentially simultaneously to MAXIMIZE
+    interleaving. Each thread asserts EVERY returned ``PriceHistory`` matches the
+    symbol IT requested (``.symbol`` / ``.proxy_for`` / ``.provider_symbol`` / the
+    distinct close). Failures + exceptions are collected into thread-safe lists and
+    asserted empty. A stateless client can never bleed regardless of scheduling, so
+    this holds deterministically (non-flaky); a per-call mutable ``_requested_symbol``
+    would let a concurrent call's symbol leak across — the MUTATION-VERIFY harness in
+    the round-PR notes confirms a stateful clone fails this exact interleave logic.
+    """
+    import threading
+
+    from vnfin.indices import AlphaVantageIndexSource
+
+    symbols = ["QQQ", "^N225", "^SSEC", "^STI"]  # >= 4 non-trivial, all AV-served
+    _ROUNDS = 50
+
+    payloads = {asked: _concurrency_payload(asked) for asked in symbols}
+
+    def _g(url, params=None, headers=None):
+        # Route by the AV ticker actually fetched back to its asked-symbol payload.
+        ticker = (params or {}).get("symbol")
+        asked = _AV_TICKER_TO_ASKED.get(ticker)
+        if asked is None:  # defensive: an unexpected fetch is itself a bleed signal
+            raise AssertionError(f"unexpected AV ticker fetched: {ticker!r}")
+        return payloads[asked]
+
+    av = AlphaVantageIndexSource(api_key=_FAKE_KEY, http_get=_g)
+    client = default_world_index_client(sources=[av])  # cache ON (default)
+
+    failures: list[str] = []
+    errors: list[BaseException] = []
+    lock = threading.Lock()
+    barrier = threading.Barrier(len(symbols))
+
+    def _worker(asked):
+        av_ticker, proxy_for, close = _CONCURRENCY_MATRIX[asked]
+        try:
+            barrier.wait()  # rendezvous → maximal interleaving
+            for _ in range(_ROUNDS):
+                hist = client.get_history(asked)
+                if (
+                    hist.symbol != asked
+                    or hist.proxy_for != proxy_for
+                    or hist.provider_symbol != av_ticker
+                    or hist.bars[-1].close != pytest.approx(close)
+                ):
+                    with lock:
+                        failures.append(
+                            f"asked={asked!r} got symbol={hist.symbol!r} "
+                            f"proxy_for={hist.proxy_for!r} provider={hist.provider_symbol!r} "
+                            f"close={hist.bars[-1].close!r}"
+                        )
+                    break  # one mismatch is enough to prove bleed for this thread
+        except BaseException as exc:  # noqa: BLE001 — capture, assert in main thread
+            with lock:
+                errors.append(exc)
+
+    threads = [threading.Thread(target=_worker, args=(s,)) for s in symbols]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join(timeout=2.0)
+
+    assert not any(th.is_alive() for th in threads), "a worker thread hung (>2s)"
+    assert errors == [], f"unexpected exceptions across threads: {errors!r}"
+    assert failures == [], f"cross-symbol state bleed observed: {failures!r}"
