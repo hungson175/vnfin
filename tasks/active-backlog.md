@@ -14,7 +14,7 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-06-25 +07_
 
-> **🔵 NOW (active 2026-06-25): #195 `vnfin.equities` GICS sector classification — DESIGN-NOTE-FIRST.**
+> **✅ DONE 2026-06-25: #195 `vnfin.equities` GICS sector classification (PUSHED + CLOSED).**
 > Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
 > reviews/). **CLEAN-ROOM CRITICAL:** derive GICS sector by fetching the 10 VNAllShare sector-index baskets we
 > ALREADY fetch (`index_registry.py:84+`, `IndexConstituentsSource.get_constituents`) and **inverting membership**
@@ -42,8 +42,12 @@ L164 + docs/api.md:351-355 (4 surfaces); masking test `..._with_coverage_token` 
 added overlap-profile test) → **integrated + committed @ `91d1bdc`**; merged-tree verified by me (suite exit0, tuple=49,
 snapshot byte-identical, #180/#188 bijection, no vnstock) → **adversarial re-verify Workflow `wf_8a360ee5-acc` (3 lenses,
 real probes) = CLEAN, 0 defects** → **routed to Codex×2** (handoff `/tmp/195-codereview-handoff-20260625.md`; flagged the
-`cross_board_duplicate` deviation as review-focus). NEXT: await reviewer APPROVE → push to master + close #195 (reviewer
-owns watermark; snapshot regen = separate RELEASE task). Not P0.
+`cross_board_duplicate` deviation as review-focus) → **reviewer Codex×2 = APPROVE** (`review-202606250230-issue195-codex2-
+APPROVE.md`; 0 blockers; REVIEW-FOCUS profile sector-scoped ACCEPTED as-is; 3 optional non-blocking notes) → **PUSHED to
+master `5b5318d`** (feature `3fe21bd` + a1 fix `91d1bdc`, 10-commit fast-forward, no private-path leak, suite exit0) →
+**#195 CLOSED completed** (public scope comment: v1 = GICS L1 only; finer industry/sub-industry tier deferred = no
+clean-room finer source). RELEASE follow-up (NOT now): regen the public-API surface baseline (`scripts/dump_api_surface.py`).
+state/ left to the reviewer (owns watermark).
 >
 > **✅ DONE 2026-06-24: #194 `funds.nav_history` aborts whole series on one conflicting navDate — port the #186 quarantine.**
 > Reviewer-routed poller intake; **triage = ACCEPTED** (trusted vf-advisor↔vnfin reporter, clean repro, no
