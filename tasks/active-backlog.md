@@ -14,6 +14,22 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-06-25 +07_
 
+> **🔵 NOW (active 2026-06-25): #196 public ANNUAL precious-metals history (silver + platinum, USD/oz) — DESIGN-NOTE-FIRST.**
+> Reviewer-routed intake (reporter `hungle03111987`, 3rd-party; reviewer ACCEPTED, public comment `#issuecomment-4797649475`).
+> Spec: `~/tools/vnfin-oss-reviewer/tasks/196-precious-metals-spec.md`. Serve **silver+platinum annual USD/oz** from the
+> EXISTING World Bank CMO "Pink Sheet" (same `Annual Prices (Nominal)` sheet that serves gold annual; verified **silver
+> col69 / platinum col68**, both `($/troy oz)`; **match by split-header TEXT not index** — index unstable across vintages).
+> Fixture `tests/fixtures/cmo/CMO-Historical-Data-Annual.xlsx`. Recent: Si 2025≈39.80, Pt 2025≈1278.29, Au 2025≈3441.51.
+> **OUT:** palladium (NOT in source — never fabricate), daily/spot, broader commodities (deferred). **Invariants:**
+> never-fabricate (unsupported metal → raise naming it, never relabel another column), never-silent (unit USD/oz / currency
+> USD / product XAU·XAG·XPT / frequency=annual / source / fetched_at_utc / CC-BY attribution), **gold path BYTE-FOR-BYTE
+> unchanged** (+ `world_reference_history_vnd` + all gold tests), clean-room WB-only zero-vnstock. Design note must resolve:
+> (1) **domain placement + public shape** (reviewer lean: generalize internal `WorldBankCmoGoldSource`→metal-param +
+> thin PUBLIC facade, do NOT duplicate xlsx parsing; reuse GoldBar/GoldHistory w/ product field vs new MetalBar/MetalHistory
+> — justify), (2) **per-metal plausibility bands** (silver ~single-digits–~40, platinum ~hundreds–~1300+; band must reject a
+> mis-column read — adapt threshold per metal, NOT byte-copy gold's ~35–3441). STATUS (2026-06-25): intake recorded +
+> reviewer ack'd; reading gold CMO code → design note → reviewer GATE before any build. P-normal.
+>
 > **✅ DONE 2026-06-25: #195 `vnfin.equities` GICS sector classification (PUSHED + CLOSED).**
 > Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
 > reviews/). **CLEAN-ROOM CRITICAL:** derive GICS sector by fetching the 10 VNAllShare sector-index baskets we
