@@ -195,6 +195,123 @@ def _build_cmo_xlsx_metals(
     return buf.getvalue()
 
 
+def _build_cmo_xlsx_dup_header(
+    *,
+    headers,
+    rows,
+    sheet_name="Annual Prices (Nominal)",
+    name_row=7,
+    units_row=8,
+    data_start_row=9,
+    worksheet_target="worksheets/sheet2.xml",
+):
+    """Build a CMO-shaped xlsx that may place SEVERAL columns under the SAME split header.
+
+    Unlike :func:`_build_cmo_xlsx_metals` (which keys columns by metal NAME, so it cannot
+    represent a duplicate header), this takes an explicit ``headers`` list of
+    ``(name, col0, units)`` tuples — so two entries may share a ``name`` in different
+    columns (each with ``units`` directly below). ``rows`` maps ``{year: {col0: value}}``
+    (value placed in that exact column for that year). Years go in column 0. This is the
+    only way to forge the dup-header file the #196 ambiguity guard must reject.
+    """
+    shared: list[str] = []
+    shared_idx: dict[str, int] = {}
+
+    def _ss(text: str) -> int:
+        if text not in shared_idx:
+            shared_idx[text] = len(shared)
+            shared.append(text)
+        return shared_idx[text]
+
+    title_idx = _ss("World Bank Commodity Price Data (The Pink Sheet)")
+
+    def _cell(col0: int, row: int, value, *, shared_string=False):
+        ref = f"{_col_letters(col0)}{row}"
+        if shared_string:
+            return f'<c r="{ref}" t="s"><v>{value}</v></c>'
+        return f'<c r="{ref}"><v>{value}</v></c>'
+
+    rows_xml: list[str] = []
+    rows_xml.append(f'<row r="1">{_cell(0, 1, title_idx, shared_string=True)}</row>')
+
+    # name row + units row (one cell per header tuple)
+    name_cells = [
+        _cell(col, name_row, _ss(name), shared_string=True) for (name, col, _u) in headers
+    ]
+    rows_xml.append(f'<row r="{name_row}">{"".join(name_cells)}</row>')
+    units_cells = [
+        _cell(col, units_row, _ss(units), shared_string=True)
+        for (_name, col, units) in headers
+    ]
+    rows_xml.append(f'<row r="{units_row}">{"".join(units_cells)}</row>')
+
+    r = data_start_row
+    for year in sorted(rows):
+        per_col = rows[year]
+        cells = [_cell(0, r, year)]
+        for col0 in sorted(per_col):
+            val = per_col[col0]
+            if val is not None:
+                cells.append(_cell(col0, r, val))
+        rows_xml.append(f'<row r="{r}">{"".join(cells)}</row>')
+        r += 1
+
+    sheet_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<worksheet xmlns="{_NS}"><sheetData>{"".join(rows_xml)}</sheetData></worksheet>'
+    )
+    si_xml = "".join(f"<si><t>{_xml_escape(s)}</t></si>" for s in shared)
+    shared_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<sst xmlns="{_NS}" count="{len(shared)}" uniqueCount="{len(shared)}">'
+        f"{si_xml}</sst>"
+    )
+    workbook_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<workbook xmlns="{_NS}" xmlns:r="{_REL_NS}"><sheets>'
+        '<sheet name="AFOSHEET" sheetId="22" state="hidden" r:id="rId1"/>'
+        f'<sheet name="{_xml_escape(sheet_name)}" sheetId="26" r:id="rId2"/>'
+        "</sheets></workbook>"
+    )
+    rels_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+        f'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="{worksheet_target}"/>'
+        '<Relationship Id="rId12" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>'
+        "</Relationships>"
+    )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        "</Types>"
+    )
+    root_rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        "</Relationships>"
+    )
+    empty_sheet = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<worksheet xmlns="{_NS}"><sheetData/></worksheet>'
+    )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", content_types)
+        z.writestr("_rels/.rels", root_rels)
+        z.writestr("xl/workbook.xml", workbook_xml)
+        z.writestr("xl/_rels/workbook.xml.rels", rels_xml)
+        z.writestr("xl/sharedStrings.xml", shared_xml)
+        z.writestr("xl/worksheets/sheet1.xml", empty_sheet)
+        z.writestr(f"xl/{worksheet_target}", sheet_xml)
+    return buf.getvalue()
+
+
 def _serve(raw: bytes, calls=None):
     """An http_get that returns the xlsx bytes for the CMO URL (records calls if given)."""
 
@@ -506,3 +623,111 @@ def test_iter_and_len_over_bars():
     out = history("silver", date(2022, 1, 1), date(2024, 12, 31), http_get=_serve(raw))
     assert len(out) == 3
     assert [b.date.year for b in out] == [2022, 2023, 2024]
+
+
+# --------------------------------------------------------------------------- #
+# 7. #196 follow-up — duplicate-split-header ambiguity guard (never-fabricate)  #
+#    A sheet carrying TWO columns that BOTH satisfy a metal's split header must  #
+#    fail-safe as InvalidData (ambiguous), never silently serve the first-in-    #
+#    scan column relabelled. RED against the current first-match-`break`.        #
+# --------------------------------------------------------------------------- #
+_SILVER_COL_A = 69
+_SILVER_COL_B = 71
+_PLAT_DECOY_COL = 68
+_PLAT_REAL_COL = 70
+_GOLD_COL_A = 67
+_GOLD_COL_B = 73
+
+
+def test_dup_silver_header_raises_ambiguous_at_parser():
+    # TWO "Silver" split-headers in different columns (both with "($/troy oz)" below);
+    # one column carries 20.0, the other 39.8. Against the CURRENT first-match-`break`
+    # the parser returns {2024: 20.0} (first column wins) -> this test fails with
+    # "DID NOT RAISE" (RED is on the NEW guard, not an ImportError). After the fix the
+    # parser must raise InvalidData naming Silver + the ambiguity.
+    raw = _build_cmo_xlsx_dup_header(
+        headers=[
+            ("Silver", _SILVER_COL_A, "($/troy oz)"),
+            ("Silver", _SILVER_COL_B, "($/troy oz)"),
+        ],
+        rows={2024: {_SILVER_COL_A: 20.0, _SILVER_COL_B: 39.8}},
+    )
+    with pytest.raises(InvalidData) as exc:
+        parse_cmo_annual(raw, _SILVER_SPEC)
+    msg = str(exc.value)
+    print("DUP_SILVER_MSG:", msg)
+    assert "Silver" in msg
+    assert ("ambiguous" in msg) or ("multiple" in msg)
+
+
+def test_dup_platinum_decoy_does_not_serve_gold_magnitude_bars():
+    # Weaponized never-fabricate: a DECOY "Platinum" column (first-in-scan) carrying
+    # gold-magnitude values (1942/2386/3441 — all inside platinum's band [50,5000]) PLUS
+    # the real "Platinum" column (966/955/1278). Against the current code the decoy wins
+    # and gold-magnitude bars are served as product=XPT (the fabrication). After the fix
+    # `history("platinum", ...)` must RAISE (the source wraps the parser InvalidData) and
+    # must NOT return bars with the gold-magnitude values.
+    raw = _build_cmo_xlsx_dup_header(
+        headers=[
+            ("Platinum", _PLAT_DECOY_COL, "($/troy oz)"),  # decoy, first-in-scan
+            ("Platinum", _PLAT_REAL_COL, "($/troy oz)"),  # the real platinum column
+        ],
+        rows={
+            2023: {_PLAT_DECOY_COL: 1942.0, _PLAT_REAL_COL: 966.0},
+            2024: {_PLAT_DECOY_COL: 2386.0, _PLAT_REAL_COL: 955.0},
+            2025: {_PLAT_DECOY_COL: 3441.0, _PLAT_REAL_COL: 1278.0},
+        },
+    )
+    with pytest.raises(SourceError):
+        history("platinum", date(2023, 1, 1), date(2025, 12, 31), http_get=_serve(raw))
+    # and the parser itself refuses to fabricate the gold-magnitude column
+    with pytest.raises(InvalidData) as exc:
+        parse_cmo_annual(raw, _PLATINUM_SPEC)
+    msg = str(exc.value)
+    print("DUP_PLAT_MSG:", msg)
+    assert "Platinum" in msg
+    assert ("ambiguous" in msg) or ("multiple" in msg)
+    # never-fabricate: the gold-magnitude values must not have leaked through as a parse
+    out = None
+    try:
+        out = parse_cmo_annual(raw, _PLATINUM_SPEC)
+    except InvalidData:
+        out = None
+    assert out is None  # NOT {2023: 1942.0, 2024: 2386.0, 2025: 3441.0}
+
+
+def test_dup_gold_header_raises_ambiguous_at_parser():
+    # Shared-guard parity: TWO "Gold" split-headers -> parse_cmo_annual(raw, _GOLD_SPEC)
+    # (== _parse_cmo_annual_gold(raw)) raises InvalidData naming Gold. Confirms the guard
+    # lives in the shared parser and covers gold.
+    raw = _build_cmo_xlsx_dup_header(
+        headers=[
+            ("Gold", _GOLD_COL_A, "($/troy oz)"),
+            ("Gold", _GOLD_COL_B, "($/troy oz)"),
+        ],
+        rows={2024: {_GOLD_COL_A: 2387.70, _GOLD_COL_B: 1942.0}},
+    )
+    gold_spec = MetalSpec(
+        product="XAU", name_row="Gold", min_usd_oz=20.0, max_usd_oz=10000.0
+    )
+    with pytest.raises(InvalidData) as exc:
+        parse_cmo_annual(raw, gold_spec)
+    msg = str(exc.value)
+    print("DUP_GOLD_MSG:", msg)
+    assert "Gold" in msg
+    assert ("ambiguous" in msg) or ("multiple" in msg)
+    # the gold delegator path raises identically
+    with pytest.raises(InvalidData):
+        _parse_cmo_annual_gold(raw)
+
+
+def test_single_silver_column_still_parses_no_false_ambiguity():
+    # Regression-negative: a NORMAL single-"Silver" sheet still parses (the new guard does
+    # NOT false-positive when there is exactly one matching column).
+    raw = _build_cmo_xlsx_dup_header(
+        headers=[("Silver", _SILVER_COL_A, "($/troy oz)")],
+        rows={2023: {_SILVER_COL_A: 23.3}, 2024: {_SILVER_COL_A: 28.27}},
+    )
+    out = parse_cmo_annual(raw, _SILVER_SPEC)
+    print("SINGLE_SILVER_OUT:", out)
+    assert out == {2023: 23.3, 2024: 28.27}

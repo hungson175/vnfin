@@ -295,17 +295,24 @@ def parse_cmo_annual(raw: bytes, spec: MetalSpec) -> dict:
                 cells[rc] = _cell_text(c, shared)
 
         # --- locate the metal column by the SPLIT header (name + units directly below,
-        #     same column) ---
-        metal_col = None
-        units_row = None
+        #     same column). Collect EVERY distinct matching column rather than stopping at
+        #     the first: a forged/duplicate-header sheet with two columns that both satisfy
+        #     the split header is AMBIGUOUS and must fail safe (never silently serve the
+        #     first-in-scan column relabelled — never-fabricate, #196). ---
+        matches: dict = {}  # col -> units_row (distinct matching columns)
         for (col, row), text in cells.items():
             if text is None or text.strip() != spec.name_row:
                 continue
             below = cells.get((col, row + 1))
             if below is not None and below.strip() == spec.units_row:
-                metal_col = col
-                units_row = row + 1
-                break
+                matches.setdefault(col, row + 1)
+        if len(matches) > 1:
+            raise InvalidData(
+                f"worldbank_cmo: ambiguous — multiple {spec.name_row!r} ({spec.units_row}) "
+                f"columns in sheet {_SHEET_NAME!r}"
+            )
+        metal_col = next(iter(matches), None)
+        units_row = matches.get(metal_col) if metal_col is not None else None
         if metal_col is None:
             # Distinguish a missing/units-mismatched header for a clearer diagnostic.
             has_name = any(
