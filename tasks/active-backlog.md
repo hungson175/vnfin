@@ -47,8 +47,17 @@ _Last synced: 2026-06-25 +07_
 > 2024=2387.70/2025=3441.51 IDENTICAL; Si 39.80/XAG, Pt 1278.29/XPT, USD/oz, annual, CC-BY, fetched_at_utc set; gold→
 > InvalidData(routes vnfin.gold) + palladium→InvalidData BEFORE network; band silver@3441.51 raises / @39.80 serves (RED on
 > band); #180=49; snapshot byte-identical; zero vnstock. (Fixed my own backlog secret-blob false-positive that tripped
-> test_no_secrets.) → **adversarial-verify Workflow `wf_e3ddaf5a-b2e` (6 fresh REFUTE skeptics, real probes) IN FLIGHT.**
-> NEXT: read skeptic verdicts → if clean, route Codex×2 via reviewer → push+close ONLY after APPROVE + green merged tree.
+> test_no_secrets.) → **adversarial-verify Workflow `wf_e3ddaf5a-b2e` (6 fresh REFUTE skeptics, real probes): 4 lenses
+> CLEAN (gold-identity / band / parser-discipline / lockstep-surface, each re-probed). 2 medium findings:** (A) NEVER-
+> FABRICATE — forged DUP-split-header XLSX served first-match silently (gold-magnitude decoy → XPT); not reachable from
+> real single-column WB file + gold had identical pre-existing behavior, but completes gate cond (d). **FIXED** via fresh
+> agent @ `ef17999` (spec `248fc57`; collect-all-matches → InvalidData naming metal on >1; gold real-data identical;
+> RED-first 4 tests). Merged tree re-verified by me: full suite + gates exit 0, dup-Silver/dup-Pt-decoy both RAISE naming
+> metal (no fabrication), single-col still parses, gold 2025=3441.51/2024=2387.70, snapshot byte-identical, #180=49.
+> (B) `fetched_at_utc=now()` — debatable: mirrors GoldHistory exactly + field IS "fetched-at"; NOT changed unilaterally →
+> reviewer ruling requested (my rec: keep; any as-of change spans gold → separate issue). → **ROUTING Codex×2** (handoff
+> `/tmp/vnfin-196-codex-review-handoff-20260625.md`). Commits: 5d39f3f/817d04a/57609b3 + ef17999. NEXT: Codex×2 → rule on
+> (B) → push+close #196 ONLY after APPROVE + green merged tree.
 >
 > **✅ DONE 2026-06-25: #195 `vnfin.equities` GICS sector classification (PUSHED + CLOSED).**
 > Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
