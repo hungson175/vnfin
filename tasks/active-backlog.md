@@ -27,8 +27,14 @@ _Last synced: 2026-06-25 +07_
 > (1) **domain placement + public shape** (reviewer lean: generalize internal `WorldBankCmoGoldSource`→metal-param +
 > thin PUBLIC facade, do NOT duplicate xlsx parsing; reuse GoldBar/GoldHistory w/ product field vs new MetalBar/MetalHistory
 > — justify), (2) **per-metal plausibility bands** (silver ~single-digits–~40, platinum ~hundreds–~1300+; band must reject a
-> mis-column read — adapt threshold per metal, NOT byte-copy gold's ~35–3441). STATUS (2026-06-25): intake recorded +
-> reviewer ack'd; reading gold CMO code → design note → reviewer GATE before any build. P-normal.
+> mis-column read — adapt threshold per metal, NOT byte-copy gold's ~35–3441). STATUS (2026-06-25): **DESIGN NOTE
+> committed `9cdbd00` (`tasks/196-design-note.md`) + ROUTED to reviewer GATE — awaiting ruling.** Resolved: Q1 = new
+> `vnfin/metals/` domain + NEW `MetalBar`/`MetalHistory` (frequency=annual + CC-BY attribution as TYPED fields → NO new
+> warning token, #180 stays 49); shared xlsx parser EXTRACTED to `_contracts/worldbank_cmo.py` (no duplication), gold
+> output byte-identical + value-identity regression-pinned. Q2 evidence-based bands from full 1960–2025 fixture probe
+> (Au 34.95–3441.51 / Pt 80.93–1719.48 / Ag 0.91–39.80): **Silver [0.10, 75.0]** (capped below Pt floor 80.93 → rejects
+> adjacent col + gold-recent), **Platinum [50.0, 5000.0]** (rejects silver; gold fully overlaps → name-match), **Gold
+> [20, 10000] UNCHANGED**. 3 open Qs (parser placement / gold-symmetry defer / bounds type). NO code until APPROVE. P-normal.
 >
 > **✅ DONE 2026-06-25: #195 `vnfin.equities` GICS sector classification (PUSHED + CLOSED).**
 > Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
