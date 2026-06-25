@@ -34,7 +34,15 @@ _Last synced: 2026-06-25 +07_
 > output byte-identical + value-identity regression-pinned. Q2 evidence-based bands from full 1960–2025 fixture probe
 > (Au 34.95–3441.51 / Pt 80.93–1719.48 / Ag 0.91–39.80): **Silver [0.10, 75.0]** (capped below Pt floor 80.93 → rejects
 > adjacent col + gold-recent), **Platinum [50.0, 5000.0]** (rejects silver; gold fully overlaps → name-match), **Gold
-> [20, 10000] UNCHANGED**. 3 open Qs (parser placement / gold-symmetry defer / bounds type). NO code until APPROVE. P-normal.
+> [20, 10000] UNCHANGED**. 3 open Qs (parser placement / gold-symmetry defer / bounds type). P-normal.
+> **GATE = PASS** (`reviews/gate-202606251627-issue196-design-note.md`): all 3 rulings (1 EXTRACT to `_contracts` YES; 2 DEFER
+> public gold YES but `metals.history("gold")`→InvalidData ROUTING to vnfin.gold; 3 date-only bounds) + 6 BLOCKING conditions
+> (a) gold value-identity pin (b) band RED on the band via widen-not-ImportError (c) shared parser keeps dup/non-monotonic-year
+> guard (d) never-fabricate naming the metal (e) lockstep+additive no-new-token #180=49 (f) clean-room + recon doc generalized.
+> → Binding **build spec `tasks/196-build-spec.md` committed `fbb1944`** (extraction keeps gold's `_parse_cmo_annual_gold`
+> delegator + `_CMO_ANNUAL_URLS` re-export so gold test file UNTOUCHED; surface needs `vnfin.metals` added to `DOMAIN_MODULES`
+> + additive-capture test, NO baseline regen). → **fresh general-purpose build agent `a08bf3f59773725e1` BUILDING (background).**
+> NEXT: integrate + verify merged tree + adversarial-verify Workflow → Codex×2 → push+close ONLY after APPROVE.
 >
 > **✅ DONE 2026-06-25: #195 `vnfin.equities` GICS sector classification (PUSHED + CLOSED).**
 > Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
