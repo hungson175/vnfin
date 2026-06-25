@@ -14,50 +14,24 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-06-25 +07_
 
-> **🔵 NOW (active 2026-06-25): #196 public ANNUAL precious-metals history (silver + platinum, USD/oz) — DESIGN-NOTE-FIRST.**
-> Reviewer-routed intake (reporter `hungle03111987`, 3rd-party; reviewer ACCEPTED, public comment `#issuecomment-4797649475`).
-> Spec: `~/tools/vnfin-oss-reviewer/tasks/196-precious-metals-spec.md`. Serve **silver+platinum annual USD/oz** from the
-> EXISTING World Bank CMO "Pink Sheet" (same `Annual Prices (Nominal)` sheet that serves gold annual; verified **silver
-> col69 / platinum col68**, both `($/troy oz)`; **match by split-header TEXT not index** — index unstable across vintages).
-> Fixture `tests/fixtures/cmo/CMO-Historical-Data-Annual.xlsx`. Recent: Si 2025≈39.80, Pt 2025≈1278.29, Au 2025≈3441.51.
-> **OUT:** palladium (NOT in source — never fabricate), daily/spot, broader commodities (deferred). **Invariants:**
-> never-fabricate (unsupported metal → raise naming it, never relabel another column), never-silent (unit USD/oz / currency
-> USD / product XAU·XAG·XPT / frequency=annual / source / fetched_at_utc / CC-BY attribution), **gold path BYTE-FOR-BYTE
-> unchanged** (+ `world_reference_history_vnd` + all gold tests), clean-room WB-only zero-vnstock. Design note must resolve:
-> (1) **domain placement + public shape** (reviewer lean: generalize internal `WorldBankCmoGoldSource`→metal-param +
-> thin PUBLIC facade, do NOT duplicate xlsx parsing; reuse GoldBar/GoldHistory w/ product field vs new MetalBar/MetalHistory
-> — justify), (2) **per-metal plausibility bands** (silver ~single-digits–~40, platinum ~hundreds–~1300+; band must reject a
-> mis-column read — adapt threshold per metal, NOT byte-copy gold's ~35–3441). STATUS (2026-06-25): **DESIGN NOTE
-> committed `9cdbd00` (`tasks/196-design-note.md`) + ROUTED to reviewer GATE — awaiting ruling.** Resolved: Q1 = new
-> `vnfin/metals/` domain + NEW `MetalBar`/`MetalHistory` (frequency=annual + CC-BY attribution as TYPED fields → NO new
-> warning token, #180 stays 49); shared xlsx parser EXTRACTED to `_contracts/worldbank_cmo.py` (no duplication), gold
-> output byte-identical + value-identity regression-pinned. Q2 evidence-based bands from full 1960–2025 fixture probe
-> (Au 34.95–3441.51 / Pt 80.93–1719.48 / Ag 0.91–39.80): **Silver [0.10, 75.0]** (capped below Pt floor 80.93 → rejects
-> adjacent col + gold-recent), **Platinum [50.0, 5000.0]** (rejects silver; gold fully overlaps → name-match), **Gold
-> [20, 10000] UNCHANGED**. 3 open Qs (parser placement / gold-symmetry defer / bounds type). P-normal.
-> **GATE = PASS** (`reviews/gate-202606251627-issue196-design-note.md`): all 3 rulings (1 EXTRACT to `_contracts` YES; 2 DEFER
-> public gold YES but `metals.history("gold")`→InvalidData ROUTING to vnfin.gold; 3 date-only bounds) + 6 BLOCKING conditions
-> (a) gold value-identity pin (b) band RED on the band via widen-not-ImportError (c) shared parser keeps dup/non-monotonic-year
-> guard (d) never-fabricate naming the metal (e) lockstep+additive no-new-token #180=49 (f) clean-room + recon doc generalized.
-> → Binding **build spec `tasks/196-build-spec.md` committed `fbb1944`** (extraction keeps gold's `_parse_cmo_annual_gold`
-> delegator + `_CMO_ANNUAL_URLS` re-export so gold test file UNTOUCHED; surface needs `vnfin.metals` added to `DOMAIN_MODULES`
-> + additive-capture test, NO baseline regen). → **fresh general-purpose build agent (id `a08bf3f5…`) BUILT** @ commits
-> `5d39f3f` (extract parser→_contracts, gold identical) + `817d04a` (feat vnfin.metals silver+platinum TDD, 34 tests) +
-> `57609b3` (docs lockstep). **MERGED-TREE VERIFIED BY ME (real-fixture probe):** full suite + gate files exit 0; gold
-> 2024=2387.70/2025=3441.51 IDENTICAL; Si 39.80/XAG, Pt 1278.29/XPT, USD/oz, annual, CC-BY, fetched_at_utc set; gold→
-> InvalidData(routes vnfin.gold) + palladium→InvalidData BEFORE network; band silver@3441.51 raises / @39.80 serves (RED on
-> band); #180=49; snapshot byte-identical; zero vnstock. (Fixed my own backlog secret-blob false-positive that tripped
-> test_no_secrets.) → **adversarial-verify Workflow `wf_e3ddaf5a-b2e` (6 fresh REFUTE skeptics, real probes): 4 lenses
-> CLEAN (gold-identity / band / parser-discipline / lockstep-surface, each re-probed). 2 medium findings:** (A) NEVER-
-> FABRICATE — forged DUP-split-header XLSX served first-match silently (gold-magnitude decoy → XPT); not reachable from
-> real single-column WB file + gold had identical pre-existing behavior, but completes gate cond (d). **FIXED** via fresh
-> agent @ `ef17999` (spec `248fc57`; collect-all-matches → InvalidData naming metal on >1; gold real-data identical;
-> RED-first 4 tests). Merged tree re-verified by me: full suite + gates exit 0, dup-Silver/dup-Pt-decoy both RAISE naming
-> metal (no fabrication), single-col still parses, gold 2025=3441.51/2024=2387.70, snapshot byte-identical, #180=49.
-> (B) `fetched_at_utc=now()` — debatable: mirrors GoldHistory exactly + field IS "fetched-at"; NOT changed unilaterally →
-> reviewer ruling requested (my rec: keep; any as-of change spans gold → separate issue). → **ROUTING Codex×2** (handoff
-> `/tmp/vnfin-196-codex-review-handoff-20260625.md`). Commits: 5d39f3f/817d04a/57609b3 + ef17999. NEXT: Codex×2 → rule on
-> (B) → push+close #196 ONLY after APPROVE + green merged tree.
+> **✅ DONE 2026-06-25: #196 public ANNUAL precious-metals history (silver + platinum, USD/oz) — PUSHED + CLOSED.**
+> Reporter `hungle03111987` (3rd-party; reviewer-ACCEPTED). New public `vnfin/metals/` domain serving annual
+> silver+platinum USD/oz from the EXISTING World Bank CMO "Pink Sheet" (`Annual Prices (Nominal)` sheet, CC-BY 4.0).
+> Shared xlsx parser EXTRACTED to `_contracts/worldbank_cmo.py` (gold output byte-identical + value-identity pinned);
+> NEW frozen `MetalBar`/`MetalHistory` carry `frequency="annual"` + CC-BY `attribution` as TYPED fields → NO new warning
+> token (#180 stays 49). Evidence-based bands: Au [20,10000] UNCHANGED, Ag [0.10,75.0], Pt [50,5000]. Never-fabricate:
+> unsupported metal → InvalidData naming it BEFORE network; `metals.history("gold")` → InvalidData routing to `vnfin.gold`;
+> dup-header ambiguity → InvalidData. Design GATE PASS + adversarial-verify Workflow `wf_e3ddaf5a-b2e` (6 lenses; Finding A
+> dup-header FIXED `ef17999`, Finding B fetched_at_utc reviewer-ruled KEEP now()) + **Codex×2 APPROVE**
+> (`reviews/review-202606251718-issue196-codex2-APPROVE.md`). **PUSHED `963d2c2..83ad886` to master; closed #196**
+> (comment `#issuecomment-4798215571`). Commits: 5d39f3f/817d04a/57609b3/248fc57/ef17999.
+>
+> **Follow-up candidates from #196 Codex×2 (non-blocking; NOT yet filed — reviewer/Boss to triage, do NOT auto-file):**
+> (1) integrity-vs-availability: dup-header/band rejections surface as `SourceUnavailable` (availability) not `InvalidData`
+>     (data-integrity) at the public layer — gold-symmetric. (2) `to_dataframe().attrs` omits `fetched_at_utc` (both gold +
+>     metals). (3) gold band fully overlaps platinum → only the split-header name-match defends platinum from a gold
+>     mis-column (accepted as-is). RELEASE task: regen public-API surface baseline (`scripts/dump_api_surface.py`) —
+>     escalate to Boss at release.
 >
 > **✅ DONE 2026-06-25: #195 `vnfin.equities` GICS sector classification (PUSHED + CLOSED).**
 > Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
