@@ -12,6 +12,7 @@ There is **one obvious entry per domain**, reachable as an attribute of ``vnfin`
     vnfin.funds         # mutual fund NAV (VND/unit)     -> .client()/.source()
     vnfin.indices       # index value (points) + members -> .client() / index_history()
     vnfin.gold          # gold spot/history              -> .vn() / .world() / .source()
+    vnfin.metals        # annual silver/platinum (USD/oz) -> .history() / .source()
     vnfin.crypto        # crypto OHLCV (USD)             -> .client()/.source()
     vnfin.macro         # macro indicators               -> .client()/.source()
     vnfin.corp_actions  # cash dividends (VND)           -> .dividends()
@@ -34,6 +35,7 @@ from . import (
     indices,
     liquidity,
     macro,
+    metals,
     news,
     prices,
 )
@@ -72,6 +74,7 @@ __all__ = [
     "diagnostics",
     "news",
     "liquidity",
+    "metals",
 ]
 __version__ = "0.2.0"
 
