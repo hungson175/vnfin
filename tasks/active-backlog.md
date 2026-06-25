@@ -41,8 +41,14 @@ _Last synced: 2026-06-25 +07_
 > guard (d) never-fabricate naming the metal (e) lockstep+additive no-new-token #180=49 (f) clean-room + recon doc generalized.
 > → Binding **build spec `tasks/196-build-spec.md` committed `fbb1944`** (extraction keeps gold's `_parse_cmo_annual_gold`
 > delegator + `_CMO_ANNUAL_URLS` re-export so gold test file UNTOUCHED; surface needs `vnfin.metals` added to `DOMAIN_MODULES`
-> + additive-capture test, NO baseline regen). → **fresh general-purpose build agent `a08bf3f59773725e1` BUILDING (background).**
-> NEXT: integrate + verify merged tree + adversarial-verify Workflow → Codex×2 → push+close ONLY after APPROVE.
+> + additive-capture test, NO baseline regen). → **fresh general-purpose build agent (id `a08bf3f5…`) BUILT** @ commits
+> `5d39f3f` (extract parser→_contracts, gold identical) + `817d04a` (feat vnfin.metals silver+platinum TDD, 34 tests) +
+> `57609b3` (docs lockstep). **MERGED-TREE VERIFIED BY ME (real-fixture probe):** full suite + gate files exit 0; gold
+> 2024=2387.70/2025=3441.51 IDENTICAL; Si 39.80/XAG, Pt 1278.29/XPT, USD/oz, annual, CC-BY, fetched_at_utc set; gold→
+> InvalidData(routes vnfin.gold) + palladium→InvalidData BEFORE network; band silver@3441.51 raises / @39.80 serves (RED on
+> band); #180=49; snapshot byte-identical; zero vnstock. (Fixed my own backlog secret-blob false-positive that tripped
+> test_no_secrets.) → **adversarial-verify Workflow `wf_e3ddaf5a-b2e` (6 fresh REFUTE skeptics, real probes) IN FLIGHT.**
+> NEXT: read skeptic verdicts → if clean, route Codex×2 via reviewer → push+close ONLY after APPROVE + green merged tree.
 >
 > **✅ DONE 2026-06-25: #195 `vnfin.equities` GICS sector classification (PUSHED + CLOSED).**
 > Reviewer-routed intake; **triage = ACCEPTED, source CONFIRMED clean** (spec `/tmp/spec-195.md` + reviewer
