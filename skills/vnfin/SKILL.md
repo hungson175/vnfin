@@ -69,6 +69,7 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 | World index (5 symbols) | `vnfin.indices.world("SPY", start=, end=)` — `SPY`,`QQQ`,`^N225`,`^SSEC`,`^STI` | `PriceHistory` · all **USD** (US ETFs); `^N225`/`^SSEC`/`^STI` are **USD ETF proxies** (`proxy_for` + `proxy_substitution`, embed FX, not faithful trackers); series are **price-return, not total-return**. **Needs `ALPHAVANTAGE_API_KEY` on servers** — no key + walled fallback → `MissingKey` (names the env var); keyless Stooq `^SPX` fallback is residential-only |
 | VN gold spot | `vnfin.gold.vn("btmc").get_quotes()` | `GoldQuote` · VND/lượng |
 | World gold | `vnfin.gold.world().get_history(start, end)` | `GoldHistory` · USD/oz |
+| Silver / platinum (annual) | `vnfin.metals.history(metal, start, end)` — `metal` ∈ `"silver"`/`"XAG"`/`"platinum"`/`"XPT"`; `SUPPORTED_METALS == ("silver","platinum")` | `MetalHistory` of `MetalBar` · **USD/oz**, annual (Jan-1). World Bank CMO Pink Sheet. **`history("gold")`/`"XAU"` → `InvalidData` routing to `vnfin.gold`** (gold lives there, not here); any other metal (palladium/XPD/copper) → `InvalidData` naming it, **before network**. Never-silent typed `frequency="annual"` + CC-BY `attribution` |
 | Crypto OHLCV | `vnfin.crypto.client().get_klines(sym, vnfin.Interval.D1, start, end)` | `CryptoHistory` · USD |
 | FX rate | `vnfin.fx.get_rate("USD")` | `FXRate` · VND per 1 USD |
 | Macro | `vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP)` — indicators: `GDP`, `GDP_GROWTH`, `CPI`, `INFLATION`, `UNEMPLOYMENT`, `CPI_YOY`, `POLICY_RATE` (monthly SBV proxy), `LENDING_RATE` / `DEPOSIT_RATE` / `REAL_INTEREST_RATE` (annual, World Bank `FR.INR.*`) | `IndicatorSeries` |
@@ -99,6 +100,11 @@ print(idx.value_unit, idx.bars[-1].close)         # 'points' ...
 # FX (spot, VND per 1 USD) and Macro (Vietnam GDP, current US$)
 print(vnfin.fx.get_rate("USD").rate)
 print(vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP).latest())
+
+# Silver / platinum — ANNUAL history (USD/oz), World Bank CMO Pink Sheet
+mh = vnfin.metals.history("silver", date(2000, 1, 1), date(2025, 12, 31))
+print(mh.product, mh.value_unit, mh.frequency, len(mh.bars))  # 'XAG' 'USD/oz' 'annual' ...
+# vnfin.metals.history("gold") -> InvalidData (use vnfin.gold); "palladium" -> InvalidData (named)
 ```
 
 ## Errors

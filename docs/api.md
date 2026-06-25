@@ -14,6 +14,7 @@ vnfin.fundamentals  # financial statements (raw VND)
 vnfin.funds         # mutual-fund NAV (VND / fund unit)
 vnfin.indices       # index value (points) + constituents
 vnfin.gold          # gold spot / history (VN domestic + world XAU)
+vnfin.metals        # annual silver/platinum history (USD/oz, World Bank CMO)
 vnfin.crypto        # crypto OHLCV (USD)
 vnfin.fx            # FX reference rates (daily/current, VND per 1 unit)
 vnfin.macro         # macroeconomic indicators
@@ -133,6 +134,15 @@ any_  = vnfin.gold.source("btmc")            # generic provider selector (vn + w
 # World-gold daily history has a failover client (currency-api; opt-in Stooq backup):
 wc    = vnfin.gold.default_world_gold_client()  # FailoverGoldClient (USD/oz)
 
+# metals — ANNUAL silver/platinum history (USD/oz) from the World Bank CMO Pink Sheet.
+mh    = vnfin.metals.history("silver", date(2000, 1, 1), date(2025, 12, 31))  # MetalHistory (XAG)
+ms    = vnfin.metals.source("platinum")     # WorldBankCmoMetalSource (XPT) — explicit/injected fetch
+# vnfin.metals.SUPPORTED_METALS == ("silver", "platinum"); metal accepts "XAG"/"XPT" too.
+# NEVER-FABRICATE: history("gold") raises InvalidData routing to vnfin.gold (gold lives there, not
+#   here); an unsupported metal (palladium/XPD/copper) raises InvalidData naming it BEFORE any
+#   network. NEVER-SILENT: every MetalHistory states frequency="annual" + a CC-BY attribution as
+#   typed fields (always present), product XAG/XPT, unit/value_unit USD/oz, currency USD.
+
 # crypto — OHLCV (USD). Failover Binance -> Coinbase.
 c   = vnfin.crypto.client()                  # FailoverCryptoClient (Binance -> Coinbase)
 src = vnfin.crypto.source()                  # BinanceCryptoSource (primary only)
@@ -164,6 +174,35 @@ Gold spans two unit families — VN domestic (**VND/lượng**) and world XAU (*
 so there is no single cross-unit default. `vnfin.gold.vn(...)`, `vnfin.gold.world(...)`,
 and `vnfin.gold.source(provider=...)` make the choice explicit. Unknown provider names
 raise `ValueError`.
+
+## `vnfin.metals.history` — annual precious-metals history (silver + platinum)
+
+`vnfin.metals.history(...)` (issue #196) returns a `MetalHistory` time series of `MetalBar`
+(`date` = Jan-1 of the year, `price` = USD/oz), served from the **World Bank Commodity
+Markets "Pink Sheet"** annual `.xlsx` — the same workbook the internal gold annual source
+reads, via one shared parser (gold's behaviour is unchanged).
+
+- `vnfin.metals.history(metal, start, end, *, http_get=None, timeout=25.0) -> MetalHistory` —
+  `metal` is a name (`"silver"`/`"platinum"`, case-insensitive) **or** an ISO-4217 product code
+  (`"XAG"`/`"XPT"`). `start`/`end` are `datetime.date` bounds (an inclusive **calendar-year**
+  window — one Jan-1-stamped `MetalBar` per year in `[start.year, end.year]`).
+- `vnfin.metals.source(metal, *, http_get=None, timeout=25.0) -> WorldBankCmoMetalSource` — the
+  underlying single source (for explicit/injected-`http_get` use). `vnfin.metals.SUPPORTED_METALS
+  == ("silver", "platinum")`.
+- **Never-fabricate:** `history("gold")` (or `"XAU"`) raises `InvalidData` **routing the caller to
+  `vnfin.gold`** (gold annual history lives there, untouched); any other unsupported metal
+  (`"palladium"`/`"XPD"`/`"copper"`/garbage) raises `InvalidData` **naming the metal**, raised
+  **before** any network call. A metal's column is never relabelled as another's.
+- **Never-silent:** every `MetalHistory` carries `product` (`XAG`/`XPT`), `unit`/`value_unit`
+  (`USD/oz`), `currency` (`USD`), `source` (`worldbank_cmo_metal`), `fetched_at_utc`, and — as
+  **typed fields** — `frequency="annual"` and the CC-BY `attribution` (`"Source: The World Bank —
+  Commodity Markets (Pink Sheet)"`). No new `result.warnings` token is introduced.
+- `MetalHistory.to_dataframe()` — indexed by `date`, column `price`, provenance in `df.attrs`.
+
+v1 serves **silver + platinum, annual only** (no palladium, no daily/spot, no broader commodities).
+Per-metal plausibility bands (`Silver [0.10, 75.0]`, `Platinum [50.0, 5000.0]` USD/oz) and the
+silver-ceiling-below-platinum-floor rationale are documented in
+[`docs/sources/cmo-gold-annual.md`](sources/cmo-gold-annual.md).
 
 ## `vnfin.fx.history` — historical FX (annual USD/VND)
 

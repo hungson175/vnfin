@@ -27,6 +27,24 @@ All notable changes to `vnfin` are documented here. The format follows
   indicators (#152), and the `board_unavailable` (#189) / `current_snapshot_only` (#175) tokens. Docs only.
 
 ### Added
+- **Public annual silver + platinum history — `vnfin.metals`** (#196) — a new public domain serving
+  annual precious-metals price history (USD/oz) from the **World Bank Commodity Markets "Pink Sheet"**
+  annual `.xlsx` — the same workbook the internal gold annual source (#185) reads, now via one
+  **shared, domain-neutral stdlib parser** (`vnfin/_contracts/worldbank_cmo.py`, `parse_cmo_annual(raw,
+  spec)`) parameterized per metal by a frozen `MetalSpec`. Gold's observable output is **byte-for-byte
+  identical** to its pre-extraction behaviour (`WorldBankCmoGoldSource` unchanged). New surface:
+  **`vnfin.metals.history(metal, start, end)`** → a `MetalHistory` of `MetalBar` (one Jan-1-stamped
+  point per calendar year), **`vnfin.metals.source(metal)`**, **`vnfin.metals.SUPPORTED_METALS ==
+  ("silver", "platinum")`**. `metal` accepts a name (`"silver"`/`"platinum"`) or ISO-4217 code
+  (`"XAG"`/`"XPT"`). **Never-fabricate:** `history("gold")`/`"XAU"` raises `InvalidData` **routing the
+  caller to `vnfin.gold`** (gold annual history stays there, untouched); any other unsupported metal
+  (`"palladium"`/`"XPD"`/`"copper"`/…) raises `InvalidData` **naming the metal**, raised **before** any
+  network call. **Never-silent:** every `MetalHistory` carries typed `frequency="annual"` and the CC-BY
+  `attribution` (no new `result.warnings` token). Per-metal plausibility bands (`Silver [0.10, 75.0]`,
+  `Platinum [50.0, 5000.0]` USD/oz) are re-derived per metal from each metal's own measured range — a
+  magnitude backstop behind the split-header name-match, exploiting that silver's all-time ceiling sits
+  below platinum's floor so an adjacent-column mis-read is rejected. Annual only (no palladium, no
+  daily/spot). ([#196](https://github.com/hungson175/vnfin/issues/196))
 - **Derived GICS L1 sector classification for equities** (#195) — `vnfin.equities` now derives the
   GICS L1 sector for VN equities **clean-room**, by inverting the 10 VNAllShare sector index baskets it
   already fetches via `vnfin.indices` (no vnstock; no `industryID`/`industryIDv2`/`industry_name`). New

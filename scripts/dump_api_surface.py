@@ -40,6 +40,7 @@ DOMAIN_MODULES = [
     "vnfin.funds",
     "vnfin.indices",
     "vnfin.gold",
+    "vnfin.metals",
     "vnfin.crypto",
     "vnfin.macro",
     "vnfin.fx",

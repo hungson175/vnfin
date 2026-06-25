@@ -432,6 +432,38 @@ def test_liquidity_module_is_in_surface():
     assert liq["members"]["LiquidityProfile"]["frozen"] is True
 
 
+def test_metals_module_is_in_surface():
+    # #196: the additive public vnfin.metals module must be captured (dataclasses + funcs).
+    live = build_surface()
+    assert "vnfin.metals" in live["modules"]
+    metals = live["modules"]["vnfin.metals"]
+    for name in ("MetalBar", "MetalHistory", "history", "source", "SUPPORTED_METALS"):
+        assert name in metals["all"], name
+        assert name in metals["members"], name
+    assert metals["members"]["MetalBar"]["kind"] == "dataclass"
+    assert metals["members"]["MetalBar"]["frozen"] is True
+    assert metals["members"]["MetalHistory"]["kind"] == "dataclass"
+    assert metals["members"]["MetalHistory"]["frozen"] is True
+
+
+def test_metals_module_is_additive_vs_baseline():
+    # #196: vnfin.metals is absent from the frozen baseline (release-only regen), so it
+    # must show up as a wholly ADDITIVE module-add with NO breaking diff. This is the
+    # public-surface lockstep proof — the snapshot is intentionally NOT regenerated here.
+    baseline = json.loads(_BASELINE.read_text())
+    live = build_surface()
+    assert "vnfin.metals" not in baseline.get("modules", {})
+    diffs = compare_surfaces(baseline, live)
+    breaking = [d for d in diffs if d["severity"] == "breaking"]
+    assert not breaking, "metals must be additive, found breaking: " + "; ".join(
+        f"[{d['kind']}] {d['path']}: {d['detail']}" for d in breaking
+    )
+    additive_modules = {
+        d["path"] for d in diffs if d["severity"] == "additive" and d["kind"] == "module"
+    }
+    assert "vnfin.metals" in additive_modules
+
+
 def test_public_classes_capture_constructor():
     live = build_surface()
     # BTMCGoldSource takes a widget_key; its constructor must be in the surface
