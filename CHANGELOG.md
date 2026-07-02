@@ -27,6 +27,15 @@ All notable changes to `vnfin` are documented here. The format follows
   indicators (#152), and the `board_unavailable` (#189) / `current_snapshot_only` (#175) tokens. Docs only.
 
 ### Added
+- **World-index coverage to 8 symbols** (#197) — `vnfin.indices.world` now adds three
+  canonical, loudly-labeled Asian USD ETF proxies to the existing #193 set:
+  `^KS11`→EWY (KOSPI Composite proxy; MSCI Korea 25/50 ETF), `^CSI300`→ASHR (CSI 300 ETF
+  price, not raw CNY index points), and `^HSI`→EWH (Hang Seng proxy; MSCI Hong Kong
+  25-50 ETF). The existing five entries (`SPY`, `QQQ`, `^N225`, `^SSEC`, `^STI`) keep
+  their order and labels. No aliases were added; unsupported symbols such as `^DAX` and
+  `^FTSE` still raise before network and are never served as SPY/Stooq `^SPX`. No new
+  warning token: all six raw-index asks reuse `proxy_substitution` plus structured
+  `PriceHistory.proxy_for` and FX-pair disclosure. ([#197](https://github.com/hungson175/vnfin/issues/197))
 - **Public annual silver + platinum history — `vnfin.metals`** (#196) — a new public domain serving
   annual precious-metals price history (USD/oz) from the **World Bank Commodity Markets "Pink Sheet"**
   annual `.xlsx` — the same workbook the internal gold annual source (#185) reads, now via one

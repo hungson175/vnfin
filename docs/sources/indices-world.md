@@ -14,9 +14,9 @@ These power **`vnfin.indices.world(symbol="SPY", start=None, end=None, *, interv
 — a daily `PriceHistory` over its **own** 2-source failover chain. This is entirely separate from
 the VN HOSE/HNX `index_history()` / `index_constituents()` path, which is untouched.
 
-## Supported symbols (#193) — all served in USD as US-listed ETFs
+## Supported symbols (#193/#197) — all served in USD as US-listed ETFs
 
-`world(...)` supports **5 symbols**, all fetched from Alpha Vantage `TIME_SERIES_DAILY` in **USD**
+`world(...)` supports **8 symbols**, all fetched from Alpha Vantage `TIME_SERIES_DAILY` in **USD**
 (every served instrument is a US-listed ETF):
 
 | Asked symbol | Served AV ticker | `value_unit` | Proxy? (`proxy_for`) | Note |
@@ -26,21 +26,27 @@ the VN HOSE/HNX `index_history()` / `index_constituents()` path, which is untouc
 | `^N225` | `EWJ` | `USD/share (EWJ ETF)` | `^N225` | EWJ = MSCI Japan ETF — **not** the JPY Nikkei 225 index |
 | `^SSEC` | `FXI` | `USD/share (FXI ETF)` | `^SSEC` | FXI = FTSE China 50 ETF — **not** the CNY SSE Composite |
 | `^STI` | `EWS` | `USD/share (EWS ETF)` | `^STI` | EWS = MSCI Singapore ETF — **not** the SGD Straits Times Index |
+| `^KS11` | `EWY` | `USD/share (EWY ETF)` | `^KS11` | EWY = MSCI Korea 25/50 ETF — **not** the KRW KOSPI Composite |
+| `^CSI300` | `ASHR` | `USD/share (ASHR ETF)` | `^CSI300` | ASHR tracks CSI 300, but this is a USD ETF price — **not** CNY index points |
+| `^HSI` | `EWH` | `USD/share (EWH ETF)` | `^HSI` | EWH = MSCI Hong Kong 25-50 ETF — **not** the Hang Seng Index |
 
 Any other symbol → a clear `InvalidData` enumerating the supported set.
 
-> ## ⚠️ Caveat 1 — the three Asian symbols are USD ETF PROXIES (FX-embedding, not faithful trackers)
+> ## ⚠️ Caveat 1 — the Asian symbols are USD ETF PROXIES (FX-embedding, not faithful trackers)
 >
-> `^N225`/`^SSEC`/`^STI` are **not** served as the raw local-currency index. There is no
+> `^N225`/`^SSEC`/`^STI`/`^KS11`/`^CSI300`/`^HSI` are **not** served as the raw
+> local-currency index. There is no
 > keyless-from-server raw-index OHLCV source (Yahoo is blocked + ToS-prohibited; FRED is close-only
 > and S&P-license-capped; the rest are key-gated/wrong-shape), so the only server-usable feed serves
 > **US-listed ETFs in USD**. Two distortions follow, **never silent**:
 >
 > 1. **Not even precise trackers.** EWJ = MSCI Japan ≠ Nikkei 225; FXI = FTSE China 50 ≠ SSE
->    Composite; EWS = MSCI Singapore ≠ STI. Different constituents/weights.
+>    Composite; EWS = MSCI Singapore ≠ STI; EWY = MSCI Korea 25/50 ≠ KOSPI Composite;
+>    EWH = MSCI Hong Kong 25-50 ≠ Hang Seng. ASHR is closest because its benchmark is CSI 300,
+>    but the served series is still a USD ETF market price, not raw CNY index points.
 > 2. **They embed USD/local FX.** A USD ETF series rebased ≠ the raw local-currency index rebased —
->    they diverge by the local currency's move against the dollar (USD/JPY, USD/CNY, USD/SGD). For a
->    rebasing/normalized chart this is a **real distortion**.
+>    they diverge by the local currency's move against the dollar (USD/JPY, USD/CNY, USD/SGD,
+>    USD/KRW, USD/HKD). For a rebasing/normalized chart this is a **real distortion**.
 >
 > Both are disclosed on every proxy result via the structured **`PriceHistory.proxy_for`** field
 > (the asked index symbol) AND a **`proxy_substitution`** warning. Detect a proxy via `proxy_for`,
@@ -87,14 +93,15 @@ best-effort** — never something a server deployment should rely on.
 
 | Adapter | Host | Auth | Instrument · unit | Role |
 |---|---|---|---|---|
-| `AlphaVantageIndexSource` | `www.alphavantage.co/query` | **BYOK** `ALPHAVANTAGE_API_KEY` | **5 US-listed ETFs** (SPY/QQQ direct; EWJ/FXI/EWS proxies) · all `USD` | **PRIMARY** (only server-usable) |
+| `AlphaVantageIndexSource` | `www.alphavantage.co/query` | **BYOK** `ALPHAVANTAGE_API_KEY` | **8 US-listed ETFs** (SPY/QQQ direct; EWJ/FXI/EWS/EWY/ASHR/EWH proxies) · all `USD` | **PRIMARY** (only server-usable) |
 | `StooqIndexSource` | `stooq.com/q/d/l/?s=^spx&i=d` | none | **^SPX index level** · `index points` / `points` | **FALLBACK** (keyless, residential-only) |
 
 ### `AlphaVantageIndexSource` — PRIMARY (BYOK)
 
 - `function=TIME_SERIES_DAILY`, `symbol=<per-symbol av_ticker>` (resolved from the declarative
-  `WORLD_INDEX_SPECS` table: SPY→SPY, QQQ→QQQ, ^N225→EWJ, ^SSEC→FXI, ^STI→EWS), `outputsize=full`
-  (20y+ daily in one call), `datatype=json`. Reads the key from `api_key=` or the
+  `WORLD_INDEX_SPECS` table: SPY→SPY, QQQ→QQQ, ^N225→EWJ, ^SSEC→FXI, ^STI→EWS,
+  ^KS11→EWY, ^CSI300→ASHR, ^HSI→EWH), `outputsize=full` (20y+ daily in one call),
+  `datatype=json`. Reads the key from `api_key=` or the
   `ALPHAVANTAGE_API_KEY` env var (the **same** key as the #140 news source).
 - **Q5 hard guard:** if AV returns an `"Error Message"` envelope or no `Time Series (Daily)` for an
   allowlisted symbol (the ETF is uncovered), the source raises `InvalidData` **naming the symbol** —
@@ -154,8 +161,9 @@ for w in h.warnings:                                # 'fallback_instrument_serve
 ## Licensing / redistribution posture
 
 - **Alpha Vantage:** BYOK — the end user is the API customer; official API only; key redacted in
-  errors; no data bundled or redistributed. All 5 symbols are served as **US-listed ETF market
-  prices** (SPY/QQQ/EWJ/FXI/EWS), never the proprietary raw indices (`^GSPC`/`^NDX`/`^N225`/etc.) —
+  errors; no data bundled or redistributed. All 8 symbols are served as **US-listed ETF market
+  prices** (SPY/QQQ/EWJ/FXI/EWS/EWY/ASHR/EWH), never the proprietary raw indices
+  (`^GSPC`/`^NDX`/`^N225`/etc.) —
   lighter IP than S&P DJI / index-licensor data; the proxy provenance is documented in the unit
   label, the `proxy_for` field, the `proxy_substitution` warning, and the caveats above.
 - **Stooq:** keyless, runtime-fetched by the end user, best-effort, **no redistribution claim**,

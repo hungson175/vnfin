@@ -7,16 +7,19 @@ and never touch the VN HOSE/HNX ``index_history`` path.
 
 (a) :class:`AlphaVantageIndexSource` — PRIMARY (and only server-usable) source,
     **bring-your-own-key (BYOK)**. Official Alpha Vantage ``TIME_SERIES_DAILY`` JSON
-    for one of **5 allowlisted symbols**, ALL served in USD (every served instrument
+    for one of **8 allowlisted symbols**, ALL served in USD (every served instrument
     is a US-listed ETF) via the declarative ``WORLD_INDEX_SPECS`` table (#193):
     ``SPY``→SPY and ``QQQ``→QQQ are direct (caller asked the ETF, got the ETF); the
-    three Asian indices are **loudly-labeled USD ETF proxies** — ``^N225``→EWJ,
-    ``^SSEC``→FXI, ``^STI``→EWS — never silently the raw index. A proxy result
+    Asian indices are **loudly-labeled USD ETF proxies** — ``^N225``→EWJ,
+    ``^SSEC``→FXI, ``^STI``→EWS, ``^KS11``→EWY, ``^CSI300``→ASHR,
+    ``^HSI``→EWH — never silently the raw index. A proxy result
     carries both the ``PriceHistory.proxy_for`` field and a ``proxy_substitution``
     warning (emitted in the client). NOTE: the proxy ETFs are not even precise
     trackers (EWJ=MSCI Japan ≠ Nikkei 225; FXI=FTSE China 50 ≠ SSE Composite;
-    EWS=MSCI Singapore ≠ STI) and embed USD/local FX. The key is read from
-    ``api_key`` or ``ALPHAVANTAGE_API_KEY`` (the SAME key as the #140 news source) and
+    EWS=MSCI Singapore ≠ STI; EWY=MSCI Korea 25/50 ≠ KOSPI Composite;
+    EWH=MSCI Hong Kong 25-50 ≠ Hang Seng; ASHR is an ETF market price, not raw
+    CSI 300 index points) and embed USD/local FX. The key is read from ``api_key`` or
+    ``ALPHAVANTAGE_API_KEY`` (the SAME key as the #140 news source) and
     is **redacted from every error**. With no key the source is cleanly skippable:
     ``has_key``/``supports`` are ``False`` and any data call raises
     :class:`~vnfin.exceptions.SourceUnavailable` BEFORE any network call (exact FRED
@@ -80,10 +83,10 @@ _PROVIDER_SPX = "^SPX"
 class _WorldIndexSpec:
     """Declarative per-symbol mapping (single source of truth, #193).
 
-    All 5 series are served via AlphaVantage ``TIME_SERIES_DAILY`` in USD (every
+    All 8 series are served via AlphaVantage ``TIME_SERIES_DAILY`` in USD (every
     served instrument is a US-listed ETF). ``proxy_for`` is ``None`` when the
     ``av_ticker`` IS the asked instrument (SPY/QQQ — caller asked the ETF, got the
-    ETF); for the three Asian indices the caller asked the raw index but a USD ETF
+    ETF); for the Asian indices the caller asked the raw index but a USD ETF
     proxy was served, so ``proxy_for`` is the asked symbol + ``fx_pair`` is set.
     """
 
@@ -116,6 +119,18 @@ WORLD_INDEX_SPECS: dict[str, _WorldIndexSpec] = {
         "^STI", "EWS", "USD/share (EWS ETF)", "USD",
         "Straits Times Index", "^STI", "USD/SGD",
     ),
+    "^KS11": _WorldIndexSpec(
+        "^KS11", "EWY", "USD/share (EWY ETF)", "USD",
+        "KOSPI Composite", "^KS11", "USD/KRW",
+    ),
+    "^CSI300": _WorldIndexSpec(
+        "^CSI300", "ASHR", "USD/share (ASHR ETF)", "USD",
+        "CSI 300", "^CSI300", "USD/CNY",
+    ),
+    "^HSI": _WorldIndexSpec(
+        "^HSI", "EWH", "USD/share (EWH ETF)", "USD",
+        "Hang Seng Index", "^HSI", "USD/HKD",
+    ),
 }
 
 # The supported (asked) symbol set the client/accessor gates against (stable order).
@@ -137,7 +152,7 @@ def _as_window_date(value, label: str) -> date:
 
 
 class AlphaVantageIndexSource(HttpDataSource):
-    """BYOK Alpha Vantage ``TIME_SERIES_DAILY`` adapter for the 5 allowlisted world
+    """BYOK Alpha Vantage ``TIME_SERIES_DAILY`` adapter for the 8 allowlisted world
     symbols, all served in USD (US-listed ETFs) via ``WORLD_INDEX_SPECS`` (#193)."""
 
     NAME = "alphavantage"
@@ -195,7 +210,7 @@ class AlphaVantageIndexSource(HttpDataSource):
                 f"{self.NAME}: no ALPHAVANTAGE_API_KEY configured (bring-your-own-key); "
                 "pass api_key= or set the env var"
             )
-        # Resolve the per-symbol spec (#193): SPY/QQQ direct, ^N225/^SSEC/^STI as
+        # Resolve the per-symbol spec (#193/#197): SPY/QQQ direct; Asian indices as
         # loudly-labeled USD ETF proxies. Unknown/blank → SPY spec (the client gates
         # membership; the source preserves the default-to-SPY direct-source contract).
         canonical = self._canonical_symbol(symbol)
@@ -362,7 +377,7 @@ class StooqIndexSource(HttpDataSource):
 
     def supports(self, symbol=None) -> bool:
         # Stooq serves only ^SPX (S&P 500 index points) — a legitimate fallback ONLY for
-        # SPY (same market). For QQQ/^N225/^SSEC/^STI the engine must skip Stooq so AV is
+        # SPY (same market). For non-SPY symbols the engine must skip Stooq so AV is
         # the sole source and a non-SPY AV failure raises naming the symbol (never relabels
         # ^SPX). ``_canonical_symbol(None/"")`` → "SPY", so ``supports()``/``supports(None)``
         # stay True (preserves the direct-source default + the SPY chain). #193 B1.

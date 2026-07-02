@@ -3,14 +3,15 @@
 A thin specialization of the domain-agnostic :class:`vnfin.failover.FailoverClient`
 (mirroring :class:`vnfin.gold.failover.FailoverGoldClient`) that wires the two
 world-index sources — :class:`~vnfin.indices.world_sources.AlphaVantageIndexSource`
-(PRIMARY, BYOK; 5 allowlisted symbols, all USD US-listed ETFs) and
+(PRIMARY, BYOK; 8 allowlisted symbols, all USD US-listed ETFs) and
 :class:`~vnfin.indices.world_sources.StooqIndexSource` (FALLBACK, keyless, ^SPX
 index points) — into one disclosed-failover chain that returns the shared
 :class:`~vnfin.models.PriceHistory`.
 
 **Coverage (#193):** ``SPY``→SPY and ``QQQ``→QQQ are direct; ``^N225``→EWJ,
-``^SSEC``→FXI, ``^STI``→EWS are loudly-labeled USD ETF proxies (the result carries
-both ``proxy_for`` and a ``proxy_substitution`` warning). **Keyless reliability
+``^SSEC``→FXI, ``^STI``→EWS, ``^KS11``→EWY, ``^CSI300``→ASHR, and ``^HSI``→EWH
+are loudly-labeled USD ETF proxies (the result carries both ``proxy_for`` and a
+``proxy_substitution`` warning). **Keyless reliability
 (#193):** with no key + a walled keyless fallback, ``get_history`` raises
 :class:`~vnfin.exceptions.MissingKey` (naming ``ALPHAVANTAGE_API_KEY`` + the symbol),
 the actionable config signal; ``AllSourcesFailed`` is reserved for a key-set-but-AV-failed
@@ -51,7 +52,8 @@ from .world_sources import (
 )
 
 # The default/forward-compat symbol. The full supported set is now
-# ``SUPPORTED_WORLD_SYMBOLS`` (SPY, QQQ, ^N225, ^SSEC, ^STI) — see #193. ``symbol``
+# ``SUPPORTED_WORLD_SYMBOLS`` (SPY, QQQ, ^N225, ^SSEC, ^STI, ^KS11, ^CSI300, ^HSI)
+# — see #193/#197. ``symbol``
 # stays a defaulted param (default SPY) for the common case + forward compat.
 SUPPORTED_SYMBOL = "SPY"
 _SUPPORTED_SET_REPR = ", ".join(repr(s) for s in SUPPORTED_WORLD_SYMBOLS)
@@ -232,13 +234,14 @@ def world(
 ) -> PriceHistory:
     """World/US equity index daily history via a 2-source failover chain (#177, #193).
 
-    Supported symbols: ``SPY``, ``QQQ``, ``^N225``, ``^SSEC``, ``^STI`` — ALL served in
-    USD via Alpha Vantage (US-listed ETFs). ``SPY``/``QQQ`` are direct; ``^N225``/
-    ``^SSEC``/``^STI`` are **loudly-labeled USD ETF proxies** (``EWJ``/``FXI``/``EWS``):
-    the result carries ``proxy_for=<asked>`` AND a ``proxy_substitution`` warning. These
-    proxies embed USD/local FX and are NOT faithful trackers of the raw local-currency
-    index. Any unsupported symbol raises a clear :class:`~vnfin.exceptions.InvalidData`
-    enumerating the supported set.
+    Supported symbols: ``SPY``, ``QQQ``, ``^N225``, ``^SSEC``, ``^STI``, ``^KS11``,
+    ``^CSI300``, ``^HSI`` — ALL served in USD via Alpha Vantage (US-listed ETFs).
+    ``SPY``/``QQQ`` are direct; the caret-prefixed Asian symbols are
+    **loudly-labeled USD ETF proxies** (``EWJ``/``FXI``/``EWS``/``EWY``/``ASHR``/
+    ``EWH``): the result carries ``proxy_for=<asked>`` AND a ``proxy_substitution``
+    warning. These proxies embed USD/local FX and are NOT faithful trackers of the raw
+    local-currency index. Any unsupported symbol raises a clear
+    :class:`~vnfin.exceptions.InvalidData` enumerating the supported set.
 
     **v1 series are PRICE-RETURN, not total-return** (dividends are not reinvested) —
     material over 10–25y. The returned :class:`~vnfin.models.PriceHistory` self-discloses
@@ -273,7 +276,7 @@ def _validate_symbol(symbol) -> str:
     if canonical not in SUPPORTED_WORLD_SYMBOLS:
         raise InvalidData(
             f"world index {symbol!r} not supported; supported: {_SUPPORTED_SET_REPR} "
-            "(US ETFs in USD; the three ^-prefixed Asian symbols are loudly-labeled "
+            "(US ETFs in USD; the ^-prefixed Asian symbols are loudly-labeled "
             "USD ETF proxies, not the raw local-currency index)"
         )
     return canonical

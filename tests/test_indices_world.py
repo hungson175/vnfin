@@ -352,12 +352,12 @@ def test_unsupported_symbol_clear_error(sym):
     with pytest.raises((InvalidData, ValueError)) as ei:
         world(sym, http_get=lambda *a, **k: _stooq_csv())
     msg = str(ei.value)
-    for supported in ("SPY", "QQQ", "^N225", "^SSEC", "^STI"):
+    for supported in ("SPY", "QQQ", "^N225", "^SSEC", "^STI", "^KS11", "^CSI300", "^HSI"):
         assert supported in msg, f"{supported!r} not enumerated in error: {msg!r}"
 
 
 def test_spy_lowercase_accepted():
-    # SPY is the only supported symbol; case-insensitive acceptance is fine.
+    # SPY is the default supported symbol; case-insensitive acceptance is fine.
     rec = []
     hist = world(
         "spy",
@@ -696,26 +696,89 @@ def test_world_default_chain_keyless_serves_stooq(monkeypatch):
 
 
 # =========================================================================== #
-# #193 — coverage to 5 symbols (USD ETF proxies) + MissingKey + proxy labeling
+# #193/#197 — world coverage (USD ETF proxies) + MissingKey + proxy labeling
 # =========================================================================== #
 from vnfin.exceptions import MissingKey  # noqa: E402  (additive #193 export)
+from vnfin.indices.world_sources import (  # noqa: E402
+    SUPPORTED_WORLD_SYMBOLS,
+    WORLD_INDEX_SPECS,
+)
 
 _PROXY_TOKEN = "proxy_substitution"
 
-# asked symbol -> (av_ticker, value_unit, proxy_for-or-None)
+# asked symbol -> (av_ticker, value_unit, proxy_for-or-None, index_name, fx_pair-or-None)
 _SYMBOL_MATRIX = {
-    "SPY": ("SPY", "USD/share (SPY ETF, S&P 500 proxy)", None),
-    "QQQ": ("QQQ", "USD/share (QQQ ETF, Nasdaq-100 proxy)", None),
-    "^N225": ("EWJ", "USD/share (EWJ ETF)", "^N225"),
-    "^SSEC": ("FXI", "USD/share (FXI ETF)", "^SSEC"),
-    "^STI": ("EWS", "USD/share (EWS ETF)", "^STI"),
+    "SPY": ("SPY", "USD/share (SPY ETF, S&P 500 proxy)", None, "S&P 500", None),
+    "QQQ": ("QQQ", "USD/share (QQQ ETF, Nasdaq-100 proxy)", None, "Nasdaq-100", None),
+    "^N225": ("EWJ", "USD/share (EWJ ETF)", "^N225", "Nikkei 225", "USD/JPY"),
+    "^SSEC": ("FXI", "USD/share (FXI ETF)", "^SSEC", "SSE Composite", "USD/CNY"),
+    "^STI": ("EWS", "USD/share (EWS ETF)", "^STI", "Straits Times Index", "USD/SGD"),
+    "^KS11": ("EWY", "USD/share (EWY ETF)", "^KS11", "KOSPI Composite", "USD/KRW"),
+    "^CSI300": ("ASHR", "USD/share (ASHR ETF)", "^CSI300", "CSI 300", "USD/CNY"),
+    "^HSI": ("EWH", "USD/share (EWH ETF)", "^HSI", "Hang Seng Index", "USD/HKD"),
 }
 
 
+def test_supported_world_symbols_are_additive_ordered_eight():
+    assert SUPPORTED_WORLD_SYMBOLS == (
+        "SPY",
+        "QQQ",
+        "^N225",
+        "^SSEC",
+        "^STI",
+        "^KS11",
+        "^CSI300",
+        "^HSI",
+    )
+
+
+def test_existing_five_specs_regression_pinned_and_first():
+    # #197 is a declarative append: the #193 five specs must remain equivalent at the
+    # object-field level and occupy the same first five positions.
+    assert SUPPORTED_WORLD_SYMBOLS[:5] == ("SPY", "QQQ", "^N225", "^SSEC", "^STI")
+    expected = {
+        "SPY": ("SPY", "SPY", "USD/share (SPY ETF, S&P 500 proxy)", "USD", "S&P 500", None, None),
+        "QQQ": ("QQQ", "QQQ", "USD/share (QQQ ETF, Nasdaq-100 proxy)", "USD", "Nasdaq-100", None, None),
+        "^N225": ("^N225", "EWJ", "USD/share (EWJ ETF)", "USD", "Nikkei 225", "^N225", "USD/JPY"),
+        "^SSEC": ("^SSEC", "FXI", "USD/share (FXI ETF)", "USD", "SSE Composite", "^SSEC", "USD/CNY"),
+        "^STI": ("^STI", "EWS", "USD/share (EWS ETF)", "USD", "Straits Times Index", "^STI", "USD/SGD"),
+    }
+    observed = {
+        symbol: (
+            spec.symbol,
+            spec.av_ticker,
+            spec.value_unit,
+            spec.currency,
+            spec.index_name,
+            spec.proxy_for,
+            spec.fx_pair,
+        )
+        for symbol, spec in WORLD_INDEX_SPECS.items()
+        if symbol in expected
+    }
+    assert observed == expected
+
+
+def test_new_proxy_specs_have_loud_structured_metadata():
+    expected = {
+        "^KS11": ("EWY", "USD/share (EWY ETF)", "KOSPI Composite", "USD/KRW"),
+        "^CSI300": ("ASHR", "USD/share (ASHR ETF)", "CSI 300", "USD/CNY"),
+        "^HSI": ("EWH", "USD/share (EWH ETF)", "Hang Seng Index", "USD/HKD"),
+    }
+    for asked, (av_ticker, value_unit, index_name, fx_pair) in expected.items():
+        spec = WORLD_INDEX_SPECS[asked]
+        assert spec.av_ticker == av_ticker
+        assert spec.value_unit == value_unit
+        assert spec.currency == "USD"
+        assert spec.index_name == index_name
+        assert spec.proxy_for == asked
+        assert spec.fx_pair == fx_pair
+
+
 # --- happy path per new symbol: typed history, USD, correct AV ticker fetched --- #
-@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI"])
+@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI", "^KS11", "^CSI300", "^HSI"])
 def test_new_symbol_happy_path_fetches_correct_av_ticker(asked):
-    av_ticker, value_unit, _proxy = _SYMBOL_MATRIX[asked]
+    av_ticker, value_unit, _proxy, _index_name, _fx_pair = _SYMBOL_MATRIX[asked]
     rec = []
     src = _av_source(_av_payload(meta_symbol=av_ticker), recorder=rec)
     hist = src.get_history(asked)
@@ -743,18 +806,23 @@ def test_qqq_lowercase_canonicalized_and_fetches_qqq():
 
 
 # --- proxy-labeling: BOTH proxy_for field AND proxy_substitution token (or NEITHER) --- #
-@pytest.mark.parametrize("asked", ["^N225", "^SSEC", "^STI"])
+@pytest.mark.parametrize("asked", ["^N225", "^SSEC", "^STI", "^KS11", "^CSI300", "^HSI"])
 def test_proxy_symbol_carries_both_field_and_token(asked):
-    av_ticker, _unit, proxy_for = _SYMBOL_MATRIX[asked]
+    av_ticker, unit, proxy_for, index_name, fx_pair = _SYMBOL_MATRIX[asked]
     src = _av_source(_av_payload(meta_symbol=av_ticker))
     hist = default_world_index_client(sources=[src]).get_history(asked)
     # MUST-HAVE structured field
     assert hist.proxy_for == proxy_for, "proxy_for field missing/wrong on a proxy result"
+    assert hist.value_unit == unit
+    assert hist.currency == "USD"
+    assert hist.provider_symbol == av_ticker
     # AND the loud warning token
     proxy_warns = [w for w in hist.warnings if w.startswith(f"{_PROXY_TOKEN}:")]
     assert len(proxy_warns) == 1, f"expected exactly one proxy_substitution warning, got {hist.warnings!r}"
     w = proxy_warns[0]
     assert asked in w and av_ticker in w
+    assert index_name in w and fx_pair in w
+    assert f"not the raw {index_name} index" in w
 
 
 @pytest.mark.parametrize("asked", ["SPY", "QQQ"])
@@ -776,18 +844,18 @@ def test_proxy_substitution_warning_survives_world_accessor():
 # --- unit-correctness: every served unit is USD (NOT the local index currency) --- #
 @pytest.mark.parametrize("asked", list(_SYMBOL_MATRIX))
 def test_value_unit_is_usd_not_local_currency(asked):
-    av_ticker, value_unit, _proxy = _SYMBOL_MATRIX[asked]
+    av_ticker, value_unit, _proxy, _index_name, _fx_pair = _SYMBOL_MATRIX[asked]
     src = _av_source(_av_payload(meta_symbol=av_ticker))
     hist = src.get_history(asked)
     assert hist.currency == "USD"
     assert hist.value_unit == value_unit
     # explicitly NOT the local index currency (the ETF-in-USD-vs-index-local trap)
-    for local in ("JPY", "CNY", "SGD"):
+    for local in ("JPY", "CNY", "SGD", "KRW", "HKD"):
         assert local not in hist.value_unit
 
 
 # --- Q5 hard guard: AV error / missing series for an allowlisted symbol -> InvalidData naming it --- #
-@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI"])
+@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI", "^KS11", "^CSI300", "^HSI"])
 def test_av_error_envelope_names_symbol_q5(asked):
     payload = json.dumps({"Error Message": "Invalid API call for this ticker"})
     src = _av_source(payload)
@@ -796,7 +864,7 @@ def test_av_error_envelope_names_symbol_q5(asked):
     assert asked in str(ei.value)
 
 
-@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI"])
+@pytest.mark.parametrize("asked", ["QQQ", "^N225", "^SSEC", "^STI", "^KS11", "^CSI300", "^HSI"])
 def test_av_missing_series_names_symbol_q5(asked):
     src = _av_source(json.dumps({"Meta Data": {}}))
     with pytest.raises(InvalidData) as ei:
@@ -859,7 +927,7 @@ def test_av_serves_when_key_set_no_missing_key():
 # #193 round-2 — Stooq is SPY-only; non-SPY never falls over to ^SPX;
 # the failover client is stateless (concurrency-safe). (BLOCK B1/B2/B3)
 # =========================================================================== #
-_NON_SPY = ["QQQ", "^N225", "^SSEC", "^STI"]
+_NON_SPY = ["QQQ", "^N225", "^SSEC", "^STI", "^KS11", "^CSI300", "^HSI"]
 
 
 # --- B1: a WORKING Stooq must NEVER serve ^SPX under a non-SPY symbol --- #
@@ -917,6 +985,24 @@ def test_b1_stooq_get_history_refuses_non_spy_defense_in_depth():
     hist = stooq.get_history("SPY")
     assert hist.source == "stooq"
     assert hist.provider_symbol == "^SPX"
+
+
+@pytest.mark.parametrize("asked", ["^DAX", "^FTSE"])
+def test_unsupported_world_symbols_raise_before_network_never_spy_or_spx(asked):
+    calls = []
+
+    def _g(url, params=None, headers=None):
+        calls.append((url, params, headers))
+        return _av_payload()
+
+    with pytest.raises(InvalidData) as ei:
+        world(asked, http_get=_g, api_key=_FAKE_KEY)
+    msg = str(ei.value)
+    assert asked in msg
+    assert "SPY" in msg  # supported-set enumeration is OK
+    assert "^SPX" not in msg
+    assert "served" not in msg.lower()
+    assert calls == []
 
 
 # --- B2: empty-window for a proxy symbol must name the symbol, no ^SPX fallover --- #
@@ -1000,6 +1086,9 @@ _CONCURRENCY_MATRIX = {
     "^N225": ("EWJ", "^N225", 200.5),
     "^SSEC": ("FXI", "^SSEC", 300.5),
     "^STI": ("EWS", "^STI", 400.5),
+    "^KS11": ("EWY", "^KS11", 500.5),
+    "^CSI300": ("ASHR", "^CSI300", 600.5),
+    "^HSI": ("EWH", "^HSI", 700.5),
 }
 # Reverse map: the AV ticker actually fetched (params["symbol"]) -> asked symbol.
 _AV_TICKER_TO_ASKED = {av: asked for asked, (av, _p, _c) in _CONCURRENCY_MATRIX.items()}
@@ -1020,7 +1109,7 @@ def test_b3_concurrent_shared_client_no_cross_symbol_bleed():
 
     ONE shared client (cache ON — the default) whose single AV source routes by the
     fetched ``params["symbol"]`` to a DISTINCT synthetic series per symbol. One thread
-    per non-trivial symbol (QQQ/^N225/^SSEC/^STI) loops ``_ROUNDS`` calls to
+    per non-trivial symbol (QQQ plus the Asian proxy symbols) loops ``_ROUNDS`` calls to
     ``client.get_history(its_symbol)``; all threads rendezvous on a
     ``threading.Barrier`` so they fire essentially simultaneously to MAXIMIZE
     interleaving. Each thread asserts EVERY returned ``PriceHistory`` matches the
@@ -1035,7 +1124,7 @@ def test_b3_concurrent_shared_client_no_cross_symbol_bleed():
 
     from vnfin.indices import AlphaVantageIndexSource
 
-    symbols = ["QQQ", "^N225", "^SSEC", "^STI"]  # >= 4 non-trivial, all AV-served
+    symbols = ["QQQ", "^N225", "^SSEC", "^STI", "^KS11", "^CSI300", "^HSI"]
     _ROUNDS = 50
 
     payloads = {asked: _concurrency_payload(asked) for asked in symbols}
