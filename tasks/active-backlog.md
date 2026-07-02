@@ -14,6 +14,14 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-06-25 +07_
 
+
+> **🟡 ACTIVE 2026-07-02: #197 main CN/KR/JP world indices as loudly-labeled USD ETF proxies.**
+> Reviewer-routed Boss intake at 17:28 +07; spec `/home/hungson175/tools/vnfin-oss-reviewer/tasks/197-world-indices-cn-kr-jp-spec.md`.
+> Design-note-first gate before any code. Scope expected declarative extension of `WORLD_INDEX_SPECS`: add `^KS11`→EWY,
+> `^CSI300`→ASHR, `^HSI`→EWH; keep existing 5 specs byte-unchanged; Japan stays `^N225`→EWJ only (no TOPIX); reuse
+> existing `proxy_substitution` warning/token; every proxy carries `proxy_for` + `value_unit` + `fx_pair`; non-member symbols
+> must still raise naming the symbol, never silently SPY/Stooq; clean-room AlphaVantage US-listed ETFs, zero vnstock.
+
 > **✅ DONE 2026-06-25: #196 public ANNUAL precious-metals history (silver + platinum, USD/oz) — PUSHED + CLOSED.**
 > Reporter `hungle03111987` (3rd-party; reviewer-ACCEPTED). New public `vnfin/metals/` domain serving annual
 > silver+platinum USD/oz from the EXISTING World Bank CMO "Pink Sheet" (`Annual Prices (Nominal)` sheet, CC-BY 4.0).
