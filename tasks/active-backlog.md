@@ -12,9 +12,48 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-06-25 +07_
+_Last synced: 2026-07-20 +07_
 
-
+> **🔵 NOW (active 2026-07-20): #198 corporate fundamentals P0 — inverted balance/income routing +
+> broken catalog + pagination truncation — DESIGN-NOTE-FIRST, no code yet.**
+> Reviewer-routed intake, external GitHub issue (not a PR, no reporter code run); reviewer **ACCEPT
+> P0** + upgraded scope from "2 missing codes" to a systemic-correctness repair
+> (`~/tools/vnfin-oss-reviewer/reviews/triage-202607202156-issue198-corporate-fundamentals.md`,
+> reviewer commit `d794c71`). Root cause: `vndirect.py:_CORP_MODEL` routes corporate
+> `INCOME→modelType 1`/`BALANCE→modelType 2` — **inverted** (1=balance, 2=income); AND the corporate
+> `itemcodes.py`/`metric_api.py` catalog codes (25000/30000/40000/20000/21000/etc.) **do not exist**
+> in real provider data at all — the catalog was never derived from a live query. Some current
+> "AVAILABLE" values are silently a DIFFERENT statement's number under the wrong label — more
+> dangerous than reported MISSING. Separately: single-page tall-row fetch (`size=limit*80`, no
+> `page`/`totalPages` follow) silently truncates a wide fiscal period (live-reproduced: VIC's 142-item
+> newest annual balance drops to 80, losing `14000`/owners' equity with no warning).
+> **Live-probed 2026-07-20 (FPT/VIC/HPG/VNM, clean-room, no VNStock) — every identity below holds to
+> the EXACT VND:** balance `13000+14000==12700` (6 ticker/period combos); income
+> `21001-22100==23100` (gross profit), `23800-22070==23003` (PBT-tax=PAT total),
+> `23000+23500==23003` (parent+NCI=total — **independently corroborates** the reviewer's
+> flagged-open `23000` candidate as CONFIRMED parent-PAT). Bonus find: cashflow `37000` (not the
+> catalog's `35000`) exactly matches balance `11100` (cash) — `CASH_END_OF_PERIOD` is ALSO
+> mismapped, a second independent defect. New pagination finding (not in reviewer's packet): page
+> ≥2's envelope OMITS `totalElements`/`totalPages` entirely (only page 1 carries them) — the fix must
+> cache page-1's `totalPages`, not re-read it every page. Reproduced live via the adapter itself:
+> `scripts/probe_corporate_itemcodes.py` (`VNFIN_LIVE=1`) FAILS on current `master` by design (proves
+> both bugs at once); must flip to PASS post-fix (regression check).
+> **Design/evidence note committed:** `tasks/198-design-note.md` + companion
+> `docs/design/corporate-itemcodes-probe-20260720.md` + probe script
+> `scripts/probe_corporate_itemcodes.py`. Proposes: atomic `_CORP_MODEL` swap (balance=1/income=2,
+> cashflow=3 unchanged, no aliasing); full corporate balance+income catalog replacement (HIGH-confidence
+> codes only — 12700/13000/14000/11000/13100/13300/11100 balance, 21001/23100/23800/23003/23000
+> income); `OPERATING_PROFIT` → unmapped (no closing identity found, never guess); bounded multi-page
+> pagination loop (stop on first row of fiscal-date `limit+1`, or provider-declared final page;
+> fail-closed on any transport/schema error mid-pagination; reuses existing per-date duplicate-itemCode
+> guard, no new dup-check needed). **4 open gate questions for the reviewer** (§7 of the design note):
+> Q1 operating-profit unmapped-vs-guess, Q2 `NET_INCOME`(total,23003) vs `NET_INCOME_PARENT`(23000)
+> asymmetry confirm, Q3 corporate cashflow headline codes (31000/32000/33000/34000) unverified —
+> descope to a non-blocking follow-up (mirrors #157 Q3 bank-cashflow-fully-raw precedent) except the
+> proven `CASH_END_OF_PERIOD` fix, Q4 sub-line display names (11200-11500) MEDIUM-confidence via
+> aggregate-sum proof only. **STATUS:** design note routed to `vnfin-oss-reviewer` for the design gate;
+> NO code/tests/docs changed yet; do not build until GATE PASS.
+>
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
 > (`gate-202607021733-issue197-design-note.md`). Build `8c5676e` pushed to `master` (`d3ba214..8c5676e`) and #197
