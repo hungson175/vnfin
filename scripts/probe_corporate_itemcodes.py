@@ -35,9 +35,11 @@ collected by pytest.
 
     VNFIN_LIVE=1 ./.venv/bin/python scripts/probe_corporate_itemcodes.py
 
-Exit 0 only if every LEG A identity (two observed identity-bearing periods) holds exact-VND, LEG B resolves
-the correct tuple + headline codes for every ticker, and LEG C's adapter set
-equals the raw oracle set. Confirmed live 2026-07-20/2026-07-21 (FPT/VIC/HPG/VNM).
+Exit 0 only if every LEG A identity (two observed identity-bearing periods) holds exact-VND, LEG B
+resolves the correct tuple + headline codes for every ticker, and LEG C's adapter set equals the raw
+oracle set. Observed live 2026-07-20/2026-07-21 (FPT/VIC/HPG/VNM): LEG A PASS, and — against current
+(inverted, pre-fix) master — LEG B and LEG C FAIL by design. The full three-leg live PASS is expected
+only AFTER the #198 routing + pagination fix ships; it has not been observed yet.
 """
 from __future__ import annotations
 
