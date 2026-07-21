@@ -47,10 +47,36 @@ import re
 import sys
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from decimal import Decimal
 
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
-_TWO53 = 2 ** 53  # above this, a float cannot hold an integer VND value exactly
+_TWO53 = 2 ** 53  # at/above this magnitude a float cannot hold an integer VND value exactly
+
+
+def _valid_iso(fd):
+    """Exact unpadded YYYY-MM-DD AND a real calendar date (rejects 2025-99-99)."""
+    if not isinstance(fd, str) or not _ISO_DATE.fullmatch(fd):
+        return False
+    try:
+        datetime.strptime(fd, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
+def _row_identity_ok(row, sym, model):
+    """A raw row must carry the requested symbol / ANNUAL cadence / template before
+    it may certify semantics or enter the oracle (reviewer R16.3)."""
+    code = row.get("code")
+    if not isinstance(code, str) or code.strip().upper() != sym:
+        return False
+    if row.get("reportType") != "ANNUAL":
+        return False
+    try:
+        return int(row.get("modelType")) == model
+    except (TypeError, ValueError):
+        return False
 
 _TICKERS = ("FPT", "VIC", "HPG", "VNM")
 _BASE = "https://api-finfo.vndirect.com.vn/v4/financial_statements"
@@ -96,11 +122,12 @@ def _is_raw_int(x):
     return isinstance(x, int) and not isinstance(x, bool)
 
 
-def _bucket(env, fd):
-    """{itemCode(str): Decimal VND} for one fiscalDate in a raw envelope (exact)."""
+def _bucket(env, fd, *, sym, model):
+    """{itemCode(str): Decimal VND} for one fiscalDate — only rows whose raw
+    identity (code/reportType/modelType) matches the request (reviewer R16.3)."""
     out = {}
     for row in env.get("data") or []:
-        if row.get("fiscalDate") != fd:
+        if row.get("fiscalDate") != fd or not _row_identity_ok(row, sym, model):
             continue
         code, val = row.get("itemCode"), row.get("numericValue")
         if code is None or val is None:
@@ -109,11 +136,12 @@ def _bucket(env, fd):
     return out
 
 
-def _distinct_dates(env):
+def _distinct_dates(env, *, sym, model):
+    """Distinct valid-calendar fiscalDates from identity-matching rows only."""
     dates = []
     for row in env.get("data") or []:
         fd = row.get("fiscalDate")
-        if fd and fd not in dates:
+        if _valid_iso(fd) and _row_identity_ok(row, sym, model) and fd not in dates:
             dates.append(fd)
     return dates
 
@@ -150,23 +178,23 @@ def leg_a_raw(sym):
     # period COMPLETENESS is LEG C's oracle. Dates reported as observed, not
     # hard-coded year labels.
     bal_env = _raw_fetch(sym, 1)
-    bal_dates = _distinct_dates(bal_env)
+    bal_dates = _distinct_dates(bal_env, sym=sym, model=1)
     if len(bal_dates) < 2:
-        print(f"  LEG A FAIL: need 2 balance periods, saw {bal_dates}")
+        print(f"  LEG A FAIL: need 2 observed identity-bearing balance periods, saw {bal_dates}")
         return False
     for fd in bal_dates[:2]:
         print(f"  modelType 1 = BALANCE (fd={fd})")
-        ok = _check_ids(_bucket(bal_env, fd), _BAL_IDS, label=fd) and ok
+        ok = _check_ids(_bucket(bal_env, fd, sym=sym, model=1), _BAL_IDS, label=fd) and ok
     # income + cashflow: newest only
     for model, name, ids in ((2, "INCOME", _INC_IDS), (3, "CASHFLOW", _CF_IDS)):
         env = _raw_fetch(sym, model)
-        dates = _distinct_dates(env)
+        dates = _distinct_dates(env, sym=sym, model=model)
         if not dates:
             print(f"  LEG A FAIL: no {name} period")
             return False
         fd = dates[0]
         print(f"  modelType {model} = {name} (fd={fd})")
-        ok = _check_ids(_bucket(env, fd), ids, label=fd) and ok
+        ok = _check_ids(_bucket(env, fd, sym=sym, model=model), ids, label=fd) and ok
     return ok
 
 
@@ -198,14 +226,16 @@ def leg_b_adapter(src, sym, StatementType, Period):
 
 def _raw_newest_group_oracle(sym, model, *, page_size=80):
     """Finite, validated, fail-closed raw oracle of the NEWEST fiscalDate group
-    (reviewer R9 + R13). Returns (newest_fd, {code: Decimal}) or None on ANY defect.
-    Validates the WHOLE stream (not just the first date change): every row is a
-    canonical ISO date; dates are strictly descending and contiguous (a date, once
-    left, may never reappear — so a newest-date reappearance after the boundary
+    (reviewer R9 + R13 + R16). Returns (newest_fd, {code: Decimal}) or None on ANY
+    defect. Validates the fetched PREFIX up to and including the boundary page (NOT
+    every declared historical page — only enough to prove the newest group complete):
+    every row carries the requested identity (code/ANNUAL/model — R16.3) and a real
+    calendar ISO date (R16.2); within that prefix dates are strictly descending and
+    contiguous (a date, once left, may never reappear — a newest-date reappearance
     fails); `currentPage`/`totalPages` are raw non-bool ints (`2.0 != 2` fails);
     duplicate newest-group codes fail. The newest group is 'complete' only once a
     STRICTLY-OLDER date is observed (not merely 'different') or a validated final
-    page is exhausted. The full page is scanned after the boundary."""
+    page is exhausted; the full boundary page is scanned to catch a reappearance."""
     page, cached_tp, newest_fd, last_fd = 1, None, None, None
     closed, oracle, complete = set(), {}, False
     while True:
@@ -228,7 +258,10 @@ def _raw_newest_group_oracle(sym, model, *, page_size=80):
             if not isinstance(row, dict):
                 return None
             fd, code, val = row.get("fiscalDate"), row.get("itemCode"), row.get("numericValue")
-            if not isinstance(fd, str) or not _ISO_DATE.fullmatch(fd) or code is None or val is None:
+            # R16.2: real calendar date (rejects 2025-99-99); R16.3: raw identity must match request.
+            if not _valid_iso(fd) or code is None or val is None:
+                return None
+            if not _row_identity_ok(row, sym, model):
                 return None
             if newest_fd is None:
                 newest_fd = fd
@@ -270,12 +303,13 @@ def leg_c_pagination(src, StatementType, Period):
         return False
     newest_fd, oracle = built
     print(f"  oracle: newest_fd={newest_fd} complete_group_size={len(oracle)}")
-    # Fail closed if any exact VND value exceeds float's exact-integer range: the
-    # adapter stored LineItem.value as a float, so Decimal(str(value)) cannot then
-    # restore lost precision and a 1-VND mismatch could pass (reviewer R13).
-    if any(v > _TWO53 for v in oracle.values()):
-        big = sorted((c for c, v in oracle.items() if v > _TWO53))
-        print(f"  FAIL closed: oracle values exceed 2**53, unverifiable via float adapter: {big[:5]}")
+    # Fail closed if any value is non-integral or its MAGNITUDE reaches float's
+    # exact-integer boundary (|v| >= 2**53, both signs): the adapter stored
+    # LineItem.value as a float, so Decimal(str(value)) cannot restore lost precision
+    # and an adjacent 1-VND value could alias to the same float (reviewer R13 + R16.1).
+    bad = sorted(c for c, v in oracle.items() if v != v.to_integral_value() or abs(v) >= _TWO53)
+    if bad:
+        print(f"  FAIL closed: non-integral or |value|>=2**53, unverifiable via float adapter: {bad[:5]}")
         return False
     reports = src.get_financials("VIC", StatementType.BALANCE, Period.ANNUAL, is_bank=False, limit=1)
     if not reports:
@@ -310,7 +344,8 @@ def main() -> int:
     leg_c = leg_c_pagination(src, StatementType, Period)
 
     all_ok = leg_a and leg_b and leg_c
-    print(f"\nLEG A raw identities (2yr balance + income + cashflow): {'PASS' if leg_a else 'FAIL'}")
+    print(f"\nLEG A raw identities (two observed identity-bearing balance periods + income + cashflow): "
+          f"{'PASS' if leg_a else 'FAIL'}")
     print(f"LEG B adapter routing tuple                           : {'PASS' if leg_b else 'FAIL (expected on inverted master)'}")
     print(f"LEG C pagination completeness oracle                  : {'PASS' if leg_c else 'FAIL (expected pre-fix)'}")
     print(f"VERDICT: {'PASS' if all_ok else 'FAIL'}")

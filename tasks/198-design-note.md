@@ -1,16 +1,15 @@
 # Design/evidence note — #198 corporate fundamentals: inverted routing + broken catalog + pagination
 
-- Status: **DESIGN RE-GATE REQUESTED (round 5).** Revised against reviewer gates round-1
-  `gate-202607202233` (`0345fcc`, B1–B10), round-2 `gate-202607212049` (`bf60ecb`, R1–R7), round-3
-  `gate-202607212112` (`9e74f50`, R8–R10 + strict-int), and round-4
-  `gate-202607212126-issue198-regate-round4.md` (`f20f457`, R11–R13). Round-4 fixes: **R11** AUTO
-  detects the template from raw rows and paginates under the DETECTED model (candidate-relative
-  eligibility no longer erases the model-102 rows AUTO needs); **R12** two-state validation
-  (all-row raw checks vs eligible-boundary) with a structured `_row_disposition` and **no**
-  `keep`-filter, so the builder's skip-warning / all-dropped `InvalidData` / cap survive; **R13**
-  probe oracle validates the whole date stream (strictly-descending, no reappearance, full-page scan,
-  raw-int `totalPages`, `Decimal` + fail-closed above `2**53`) and LEG A's claim narrowed to
-  identity-bearing periods. **No package runtime code or tests changed** (evidence + design only).
+- Status: **DESIGN RE-GATE REQUESTED (round 6).** Revised against reviewer gates round-1 `0345fcc`
+  (B1–B10), round-2 `bf60ecb` (R1–R7), round-3 `9e74f50` (R8–R10 + strict-int), round-4 `f20f457`
+  (R11–R13), and round-5 `gate-202607212143-issue198-regate-round5.md` (`49d4e9b`, R14–R16). Round-5
+  fixes: **R14** AUTO defines ONE atomic pagination query — on a detected≠candidate template it
+  restarts page 1 under the detected model (≤1 redirect, else fail closed), no cross-query stitch;
+  **R15** `SKIP_CODE` increments **both** `skipped_rows` and `code_mismatches` (mixed wrong-code
+  warning + all-dropped precedence preserved); **R16** probe fails closed on `abs(value) >= 2**53`
+  (both signs) / non-integral, rejects `2025-99-99` (real-calendar parse) and raw symbol/cadence/model
+  identity mismatch, and narrows the oracle's claim to the fetched prefix. **No package runtime code
+  or tests changed** (evidence + design only).
 - Binding spec: `reviews/triage-202607202156-issue198-corporate-fundamentals.md` (reviewer `d794c71`).
 - Date: 2026-07-20 (revised 2026-07-21).
 - Related: `docs/design/bank-fundamentals-itemcodes.md` + `docs/design/bank-itemcodes-probe-20260620.md`
@@ -245,9 +244,12 @@ existing parser):**
   that is non-string / blank / `!= psym` → `SKIP_CODE`; otherwise `ELIGIBLE` (absent keys keep the
   legacy "no-signal → eligible" behavior). Both the pagination loop AND `_build_statement_reports`
   call this ONE function, so the completeness contract and the skip contract cannot drift: pagination
-  treats only `ELIGIBLE` as eligible; the builder maps `SKIP_CODE → code_mismatches`,
-  `SKIP_CADENCE/SKIP_MODEL → skipped_rows`, preserving its two distinct all-dropped `InvalidData`
-  diagnostics (`vndirect.py:349-357` code-mismatch, `:365-370` cadence/model). Structural
+  treats only `ELIGIBLE` as eligible; the builder preserves its EXACT current counter semantics
+  (reviewer R15) — `SKIP_CODE` increments **both** `skipped_rows` **and** `code_mismatches`
+  (`vndirect.py:329-330`); `SKIP_CADENCE`/`SKIP_MODEL` increment `skipped_rows` **only** — so the
+  mixed-row warning (driven by `skipped_rows`) still fires for a skipped wrong-`code` row, and the
+  two all-dropped diagnostics keep their precedence (`vndirect.py:353-357` wrong-identity
+  `code_mismatches>0` is checked **before** `:365-370` cadence/model `skipped_rows>0`). Structural
   `InvalidData` guards (malformed `modelType` etc.) still raise inside the parser; the classifier only
   answers which contract bucket a **well-formed** row falls in.
 
@@ -312,24 +314,32 @@ return all_rows   # -> _build_statement_reports(..., rows=all_rows, limit=limit)
                   #    it skips SKIP_* rows (warning), raises the all-dropped diagnostics, and caps [:limit].
 ```
 
-**Explicit vs. AUTO flows (reviewer R11) — the eligibility model must be the DETECTED template, never
-the initial candidate:**
+**Explicit vs. AUTO flows (reviewer R11 + R14) — ONE atomic pagination stream has ONE query/model/
+metadata envelope; the eligibility model is the DETECTED template, never the initial candidate:**
 
 - **Explicit** (`is_bank` given): `model_type = model_type_for(statement, is_bank=resolved)`;
-  `_paginate(..., model_type=model_type)`; build under `resolved`.
+  `_paginate(..., model_type=model_type)` — one query, one envelope; build under `resolved`.
 - **AUTO** (`_get_statements_auto`): for each candidate template (bank-first if `is_known_bank`, else
   corporate-first):
-  1. Fetch **page 1** under the candidate's model filter. On `EmptyData`, record the miss and try the
+  1. Fetch **page 1** under the candidate's model query. On `EmptyData`, record the miss and try the
      other candidate (existing failover — in production a wrong `modelType` filter returns zero rows).
   2. Run STATE-1 raw validation on page-1 rows, then **detect** the template from those raw rows
      (`_detect_is_bank(page1_rows, default=candidate)`) — detection reads the rows' own `modelType`
      tags, exactly as today (`vndirect.py:184-215`, `tests/test_fundamentals.py:293-328`), and is
      **not** eligibility-filtered.
-  3. `_paginate` the whole request with `model_type = model_type_for(statement, is_bank=detected)` —
-     so the eligible-date boundary counts the DETECTED template's rows. (Page 1 is reused; subsequent
-     pages continue the same query, which in production already returns detected-template rows.)
-  4. Build under `detected`. Because eligibility now uses the detected model, an unknown bank whose
-     response is model 102 yields a complete bank report instead of `order=[]` → corporate fallback.
+  3. **Atomic query resolution (R14):**
+     - if `detected == candidate`: `_paginate` continues on the SAME candidate query (page 1 already
+       belongs to this stream — no cross-query stitch).
+     - if `detected != candidate`: **discard the candidate page 1** for completeness, and **restart at
+       page 1 with the DETECTED model in the query** (`modelType` changes the query → its envelope and
+       row stream change, so the candidate page cannot be stitched to it). Validate that the restarted
+       page-1 rows actually carry the detected template; then `_paginate` every page under this one
+       detected-model query with a single cached metadata envelope. Allow **at most one** such
+       redirect — a second mismatch (or oscillation back to the candidate) **fails closed** with
+       `InvalidData`.
+  4. Build under `detected`. So an unknown bank whose response is model 102 yields a **complete** bank
+     report from a single all-102 query, never `order=[]` → corporate fallback, and never a
+     page-1(candidate)/page-2(detected) cross-query stitch.
 
 - **Finite (B6):** every fetch requests the local `page`; termination is bounded by
   `cached_total_pages`, and a header that does not equal the requested page or falls outside
@@ -433,21 +443,26 @@ opt-in live probe (`scripts/probe_corporate_itemcodes.py`, `VNFIN_LIVE=1`) is no
   duplicate `(fiscalDate, itemCode)` across pages (retained window **and** boundary date) →
   `InvalidData`; a page containing dates older than `limit+1` retained correctly; mid-pagination
   transport failure on page 2 → exception propagates, no partial success.
-- **Row eligibility pre-count (reviewer R8 + R12):** for each of `reportType`, `modelType`, and
-  provider `code` mismatch, the three-date regression — valid annual 2025, **ineligible** 2024, valid
-  annual 2023, `limit=2` — returns **2025 + 2023** (the ineligible 2024 never advances the eligible
-  boundary), **with the builder's skip-warning surfaced** (rows are handed unfiltered, so the builder
-  warns). Assert the shared `_row_disposition` drives both the pagination boundary and the builder
-  skip. Preserve: **all-wrong-`code`** rows → the existing wrong-identity `InvalidData`
-  (`vndirect.py:349-357`); **all-cadence/model-skipped** → the existing `:365-370` `InvalidData`.
+- **Row eligibility pre-count + dual counters (reviewer R8 + R12 + R15):** for each of `reportType`,
+  `modelType`, and provider `code` mismatch, the three-date regression — valid annual 2025,
+  **ineligible** 2024, valid annual 2023, `limit=2` — returns **2025 + 2023** (the ineligible 2024
+  never advances the eligible boundary), **with the builder's skip-warning surfaced**. Assert the
+  shared `_row_disposition` drives both the pagination boundary and the builder skip, and the exact
+  counter semantics: `SKIP_CODE` bumps **both** `skipped_rows` and `code_mismatches` (so a mixed
+  wrong-`code` response still warns); an **all-wrong-`code`** response raises the wrong-identity
+  `InvalidData` (`vndirect.py:353-357`) — checked **before** the all-cadence/model `:365-370`
+  `InvalidData` (precedence pinned).
 - **Two-state validation (reviewer R12):** a raw **out-of-order / reappearing / duplicate** row raises
   `InvalidData` **even when that offending row is `SKIP_*` ineligible** (STATE-1 validates every row,
   independent of the eligible boundary).
-- **AUTO detection under pagination (reviewer R11):** an unknown-bank response of model-102 rows (the
-  existing `tests/test_fundamentals.py:293-328` case) **plus multi-page pagination** must auto-detect
-  bank and return a **complete** bank report — never `order=[]` → corporate fallback. Explicit
-  `is_bank` still overrides. Cover both a corporate (model-1/2/3) and a bank (model-101/102/103)
-  AUTO+pagination path.
+- **AUTO atomic-query detection under pagination (reviewer R11 + R14):** an unknown-bank response of
+  model-102 rows (the existing `tests/test_fundamentals.py:293-328` case) **plus multi-page
+  pagination** auto-detects bank and returns a **complete** bank report — never `order=[]` → corporate
+  fallback. **Call-sequence assertion** (the exact `(query model, requested page)` of every fetch),
+  not only the final report: on a detected≠candidate redirect, page 1 is **re-issued under the
+  detected model** (no page-1-candidate/page-2-detected stitch); **at most one** redirect — a second
+  mismatch/oscillation → `InvalidData`. Explicit `is_bank` still overrides. Cover a corporate
+  (model-1/2/3) and a bank (model-101/102/103) AUTO+pagination path.
 - **Empty-page seam (B8 + R1):** page-1 empty → `EmptyData` (failover) under explicit and AUTO calls;
   page-2 empty after non-empty page-1 → `InvalidData` under explicit **and** AUTO calls — asserted at
   the actual `_rows()` `EmptyData`-raising seam (not a non-raising `if not data`), so the translation
@@ -459,13 +474,16 @@ opt-in live probe (`scripts/probe_corporate_itemcodes.py`, `VNFIN_LIVE=1`) is no
   → rejected (strict non-bool int prefilter, since `2.0 == 2`); RATIOS and non-VNDirect with
   `model_type=None` accepted.
 - **End-to-end:** `metrics(..., source=injected_vndirect_source)` tests, not transformer-only fixtures.
-- **Probe unit seams (B10 + R5 + R9 + R10):** unit tests proving Leg B rejects a wrong `model_type`
-  (e.g. 999) even when headline codes exist; Leg A **fails when only one balance period exists**
-  (two required); the raw-oracle helper **fails a truncated oracle** (page-1 declares 3 pages, page-2
-  premature-empty) rather than certifying a partial, **rejects a duplicate code / out-of-order page /
-  over-`totalPages` page**, and detects a **one-VND** value mismatch (exact `Decimal`, never `float`
-  both sides). Live: `scripts/probe_corporate_itemcodes.py` LEG A/B/C all PASS post-fix (pre-fix LEG A
-  PASS, LEG B/C FAIL by design).
+- **Probe unit seams (B10 + R5 + R9 + R10 + R16):** unit tests proving Leg B rejects a wrong
+  `model_type` (e.g. 999) even when headline codes exist; Leg A **fails when only one balance period
+  exists** (two required); the raw-oracle helper **fails a truncated oracle** (page-1 declares 3
+  pages, page-2 premature-empty), **rejects a duplicate code / out-of-order or higher-date boundary /
+  reappearing newest date / over-`totalPages` page / non-bool `totalPages` (`2.0`)**; **rejects a
+  malformed-calendar date (`2025-99-99`)** and a row whose **raw `code`/`reportType`/`modelType`
+  identity mismatches** the request; **fails closed on a non-integral or `abs(value) >= 2**53` VND
+  value, both signs, through the real `_num()`/`LineItem.value` float seam** (an adjacent 1-VND value
+  must not alias). Live: `scripts/probe_corporate_itemcodes.py` LEG A/B/C all PASS post-fix (pre-fix
+  LEG A PASS, LEG B/C FAIL by design).
 - Run focused tests, full offline suite, and warning-token / docs / public-surface gates on the merged
   tree (not per-branch).
 
