@@ -219,3 +219,26 @@ identities in §1.)
   algebraic checks — satisfying reviewer B1.
 - No `xxx`, rounded-trillion, or "matches" placeholder is used under any "exact VND" claim; every
   headline value above is the full-dong integer returned by the provider, and every residual is `0`.
+
+## 5. Post-fix live-run receipt (durable)
+
+Recorded per the implementation review (B1). `VNFIN_LIVE=1 ./.venv/bin/python
+scripts/probe_corporate_itemcodes.py` run **2026-07-21 23:37 +07** against code SHA **`466c11a`** (the
+final #198 correction commit; this receipt-only doc commit adds no code). Process exit code **0**.
+
+```text
+LEG B adapter routing regression: FPT
+  balance: tuple=(balance,False,1,vndirect) expect(...,False,1,vndirect) tuple_ok=True headline_resolves=True
+  income:  tuple=(income,False,2,vndirect)  expect(...,False,2,vndirect) tuple_ok=True headline_resolves=True
+LEG C pagination completeness oracle (VIC balance)
+  adapter newest=2025-12-31 n_items=142 date_ok=True codes_ok=True values_ok=True missing_from_adapter=[]
+
+LEG A raw identities (two observed identity-bearing balance periods + income + cashflow): PASS
+LEG B adapter routing tuple                                                              : PASS (post-fix)
+LEG C pagination completeness oracle                                                     : PASS (post-fix)
+VERDICT: PASS
+```
+
+All four tickers (FPT/VIC/HPG/VNM) passed LEG A and LEG B; LEG C reproduced VIC's complete 142-item
+newest annual balance fiscal-date group with an exact code/value set. This supersedes the pre-fix
+"B/C fail by design" observation for the shipped code.
