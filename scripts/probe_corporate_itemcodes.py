@@ -13,9 +13,10 @@ pagination). THREE independent legs, each stating exactly what it proves:
   LEG B — ADAPTER routing regression: calls the public
   ``VNDirectFundamentalSource`` and asserts the FULL provenance tuple
   ``(statement_type, is_bank, model_type, source)`` on the returned report AND
-  that the headline codes resolve. On current ``master`` this FAILS by design
-  (BALANCE routes to modelType 2, INCOME to modelType 1). Asserting the tuple
-  (not just code presence) blocks a false PASS from a report tagged 999/998.
+  that the headline codes resolve. POST-FIX this PASSES (BALANCE->modelType 1,
+  INCOME->modelType 2); against pre-fix master it FAILED by design (BALANCE
+  routed to modelType 2, INCOME to modelType 1). Asserting the tuple (not just
+  code presence) blocks a false PASS from a report tagged 999/998.
 
   LEG C — PAGINATION completeness ORACLE: builds a FINITE, VALIDATED, fail-closed
   raw oracle of VIC's newest annual balance fiscal-date group (caps at page-1
@@ -37,9 +38,12 @@ collected by pytest.
 
 Exit 0 only if every LEG A identity (two observed identity-bearing periods) holds exact-VND, LEG B
 resolves the correct tuple + headline codes for every ticker, and LEG C's adapter set equals the raw
-oracle set. Observed live 2026-07-20/2026-07-21 (FPT/VIC/HPG/VNM): LEG A PASS, and — against current
-(inverted, pre-fix) master — LEG B and LEG C FAIL by design. The full three-leg live PASS is expected
-only AFTER the #198 routing + pagination fix ships; it has not been observed yet.
+oracle set. Observed live 2026-07-21, POST-FIX (FPT/VIC/HPG/VNM): LEG A, LEG B, and LEG C all PASS —
+the #198 routing + pagination fix has shipped, so the full three-leg live PASS is now the observed
+state (VIC's newest annual balance reproduces its complete 142-item fiscal-date group). Honest note:
+against pre-fix (inverted) master LEG B and LEG C FAILED by design (BALANCE routed to modelType 2,
+INCOME to modelType 1, and the single-page fetch truncated VIC's balance); LEG A passed pre-fix too
+(it bypasses the adapter).
 """
 from __future__ import annotations
 
@@ -371,8 +375,8 @@ def main() -> int:
     all_ok = leg_a and leg_b and leg_c
     print(f"\nLEG A raw identities (two observed identity-bearing balance periods + income + cashflow): "
           f"{'PASS' if leg_a else 'FAIL'}")
-    print(f"LEG B adapter routing tuple                           : {'PASS' if leg_b else 'FAIL (expected on inverted master)'}")
-    print(f"LEG C pagination completeness oracle                  : {'PASS' if leg_c else 'FAIL (expected pre-fix)'}")
+    print(f"LEG B adapter routing tuple                           : {'PASS (post-fix)' if leg_b else 'FAIL (pre-fix inverted master fails by design)'}")
+    print(f"LEG C pagination completeness oracle                  : {'PASS (post-fix)' if leg_c else 'FAIL (pre-fix single-page fetch truncates by design)'}")
     print(f"VERDICT: {'PASS' if all_ok else 'FAIL'}")
     return 0 if all_ok else 1
 

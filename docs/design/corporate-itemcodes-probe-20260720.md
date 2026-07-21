@@ -101,11 +101,15 @@ by the official cross-check in §3.
 
 ## 2. Adapter regression leg + pagination (reviewer B10)
 
-- **Pre-fix (current `master`), adapter leg FAILS by design:** `get_financials(..., BALANCE)` routes
-  to modelType 2 (real income) and `get_financials(..., INCOME)` routes to modelType 1 (real balance,
-  truncated), so none of the headline codes resolve on either side. Post-fix the leg must PASS. The
-  probe reports LEG A (raw identities), LEG B (adapter routing), LEG C (pagination) separately, so it
-  is never a single opaque pass/fail.
+- **Post-fix (2026-07-21, shipped), all three legs PASS (observed):** `get_financials(..., BALANCE)`
+  routes to modelType 1 (real balance) and `get_financials(..., INCOME)` to modelType 2 (real income),
+  the headline codes resolve on both sides, and the pagination loop reproduces VIC's complete 142-item
+  newest-balance fiscal-date group (LEG A + LEG B + LEG C all PASS). Honest pre-fix note: against the
+  pre-fix (inverted) `master` the adapter legs FAILED by design — BALANCE routed to modelType 2 (real
+  income) and INCOME to modelType 1 (real balance, single-page-truncated), so no headline code
+  resolved on either side; LEG A (raw identities, adapter-bypassing) passed pre-fix too. The probe
+  reports LEG A (raw identities), LEG B (adapter routing), LEG C (pagination) separately, so it is
+  never a single opaque pass/fail.
 - **Pagination truncation (live 2026-07-21):** VIC balance page 1 (`size=80`) returns 80 rows all for
   `2025-12-31` (of 142 for that date); `14000` (owners' equity) is **absent**. `page=2` returns the
   remaining 62 rows of `2025-12-31` then the start of `2024-12-31` — dates are **contiguous and
