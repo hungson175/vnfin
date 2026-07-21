@@ -1,9 +1,12 @@
 # Design/evidence note — #198 corporate fundamentals: inverted routing + broken catalog + pagination
 
-- Status: **DESIGN RE-GATE REQUESTED.** Revised against reviewer gate
-  `reviews/gate-202607202233-issue198-design-note.md` (reviewer commit `0345fcc`, BLOCK) —
-  every blocking revision B1–B10 addressed below. **No package runtime code or tests changed**
-  in this note (evidence + design only; two docs + one executable probe script updated).
+- Status: **DESIGN RE-GATE REQUESTED (round 3).** Revised against reviewer round-1 gate
+  `reviews/gate-202607202233-issue198-design-note.md` (`0345fcc`, B1–B10) **and** round-2 gate
+  `reviews/gate-202607212049-issue198-regate-round2.md` (`bf60ecb`, R1–R7) — all addressed below
+  (R1 empty-page seam, R2 source-aware tuple guard, R3 pagination helper contracts, R4 count/`12000`
+  reconciliation, R5 probe oracle + tuple assertion + all-tickers, R6 five derived metrics, R7
+  primary-source provenance). **No package runtime code or tests changed** (evidence + design only;
+  two docs + one executable probe script).
 - Binding spec: `reviews/triage-202607202156-issue198-corporate-fundamentals.md` (reviewer `d794c71`).
 - Date: 2026-07-20 (revised 2026-07-21).
 - Related: `docs/design/bank-fundamentals-itemcodes.md` + `docs/design/bank-itemcodes-probe-20260620.md`
@@ -201,6 +204,12 @@ no official line was correlated to each in this pass. (A future non-blocking iss
 each is individually official-confirmed.) The exact final label strings are pinned by the official
 cross-check in the probe doc; any label the cross-check does not confirm is dropped to `item_<code>`.
 
+**Count reconciliation (reviewer R4):** this map names **23** provider codes (8 balance incl. `12000`
+non-current assets, 8 income, 7 cash flow). All 23 are cross-checked to the official filings in the
+probe doc — **22 map 1:1 to a single printed official line; `22070` is the exact net of two disclosed
+tax lines** (current tax mã 51 − deferred-tax benefit mã 52). The FPT evidence matrix therefore lists
+23 rows (the earlier 22-row/omitted-`12000` matrix is corrected there).
+
 ## 8. Pagination + row-stream + metadata guards (reviewer B6 + B7)
 
 Replace the single-page fetch in `_fetch_statement_rows` with a bounded, validated multi-page loop.
@@ -208,57 +217,80 @@ The loop's only job is to gather the correct SET of raw rows, then hand them to 
 `_build_statement_reports` unchanged. All validation happens **before** any row affects the stop
 condition.
 
+**Helper contracts (reviewer R3 — all defined at the raw-envelope boundary; none reuse a lenient
+existing parser):**
+
+- `_require_raw_int(obj, key) -> int` — `key` must be present and its value a **raw, non-bool
+  `int`**. `True`/`False` (bool is an int subclass), a `float` (incl. `1.0`), a numeric `str`
+  (`"1"`), and an absent key all raise `InvalidData`. (Does **not** reuse `parse_canonical_int`,
+  which accepts numeric strings.)
+- `_require_iso_fiscal_date(row) -> str` — `row["fiscalDate"]` must be present and an **exact
+  unpadded `YYYY-MM-DD` string** (`re.fullmatch(r"\d{4}-\d{2}-\d{2}")` **and** a real calendar date
+  via `validate_iso_date_string`); a `date` object, a padded/whitespace string, or an absent key
+  raises `InvalidData`. The returned canonical string is the grouping/retention key throughout, so
+  the final membership filter never mismatches a normalized vs. raw form. (Does **not** reuse
+  `validate_iso_date_string` directly, which returns a `date` and tolerates padding/date objects.)
+- `_require_item_code(row) -> str` — `row["itemCode"]` must be present; normalized with the **same**
+  rule the row parser uses (`str(int(11200.0)) == "11200"`); an absent key or non-coercible value
+  raises `InvalidData`.
+
 ```
 PAGE_SIZE = _row_budget(limit)
 page = 1
 cached_total_pages = None          # captured on page 1 only (provider omits it on page >= 2)
-order = []                         # distinct fiscalDates, stream order (must be strictly descending)
+order = []                         # distinct canonical fiscalDate strings, stream order (strictly desc)
 closed = set()                     # dates whose contiguous group has ended
-seen_keys = set()                  # (fiscalDate, canonical itemCode) across ALL fetched rows
+seen_keys = set()                  # (fiscalDate, itemCode) across ALL fetched rows
 last_fd = None
-all_rows = []
+all_rows = []                      # (raw_row, canonical_fd) pairs
 
 while True:
-    resp = fetch(size=PAGE_SIZE, page=page)
-    data = _rows(resp)             # existing dict-envelope + list contract
-    # --- B8 empty-page semantics ---
-    if not data:                   # (existing _rows raises EmptyData on empty list)
-        # page 1 empty -> EmptyData (template miss, existing failover);
-        # page >= 2 empty after a non-empty page 1 -> InvalidData (schema failure, propagates through AUTO)
-        raise EmptyData(...) if page == 1 else raise InvalidData(...)
-    # --- B6 metadata identity (canonical, non-bool ints only) ---
-    current_page = require_canonical_int(resp, "currentPage")
+    resp = self._fetch_json(...page=page, size=PAGE_SIZE)
+    # --- B8 empty-page semantics AT THE ACTUAL _rows() SEAM (reviewer R1) ---
+    # _rows() RAISES EmptyData on []; it never returns an empty list. So catch it
+    # exactly here and translate by page position (page-1 EmptyData is preserved
+    # for the existing AUTO failover; page>=2 becomes InvalidData, which AUTO does
+    # not catch and therefore cannot recast as a template miss).
+    try:
+        data = self._rows(resp)                 # dict-envelope + list contract; raises EmptyData/[]
+    except EmptyData:
+        if page == 1:
+            raise                                # template miss -> existing failover
+        raise InvalidData(f"{self.name}: empty page {page} after a non-empty page 1")
+    # --- B6 metadata identity (raw, canonical, non-bool ints only) ---
+    current_page = _require_raw_int(resp, "currentPage")
     if page == 1:
-        cached_total_pages = require_canonical_int(resp, "totalPages")   # >= 1 else InvalidData
-    elif "totalPages" present in resp:
-        if require_canonical_int(resp, "totalPages") != cached_total_pages: raise InvalidData   # omission OK
-    if current_page != page: raise InvalidData                # repeated/ahead header -> raise, never loop
-    if not (1 <= current_page <= cached_total_pages): raise InvalidData
-    # --- B7 row-stream validation BEFORE completeness proof ---
+        cached_total_pages = _require_raw_int(resp, "totalPages")
+        if cached_total_pages < 1: raise InvalidData(...)          # page-1 totalPages >= 1
+    elif "totalPages" in resp:                                     # later pages MAY omit it (verified)
+        if _require_raw_int(resp, "totalPages") != cached_total_pages: raise InvalidData(...)
+    if current_page != page: raise InvalidData(...)               # repeated/ahead header -> raise, never loop
+    if not (1 <= current_page <= cached_total_pages): raise InvalidData(...)
+    # --- B7 row-stream validation BEFORE it can affect the stop condition ---
     for row in data:
-        row = require_object(row)
-        fd  = require_canonical_iso_fiscal_date(row["fiscalDate"])       # ISO date; else InvalidData
-        code = canonical_item_code(row["itemCode"])                      # same normalization as the parser
-        if fd != last_fd:                                               # new date group
-            if fd in closed: raise InvalidData                          # reappearing closed date
+        row = require_object(row, ...)                            # non-object row -> InvalidData
+        fd  = _require_iso_fiscal_date(row)                       # present + exact YYYY-MM-DD; else InvalidData
+        code = _require_item_code(row)                            # present + canonical; else InvalidData
+        if fd != last_fd:                                         # new date group
+            if fd in closed: raise InvalidData(...)               # reappearing closed date
             if last_fd is not None:
-                if fd >= last_fd: raise InvalidData                     # must be strictly descending
-                closed.add(last_fd)                                     # previous group closes
+                if fd >= last_fd: raise InvalidData(...)          # must be strictly descending
+                closed.add(last_fd)                               # previous group closes
             if fd not in order: order.append(fd)
             last_fd = fd
-        key = (fd, code)
-        if key in seen_keys: raise InvalidData                          # duplicate across ALL fetched rows
-        seen_keys.add(key)
-        all_rows.append(row)
+        if (fd, code) in seen_keys: raise InvalidData(...)        # duplicate across ALL fetched rows
+        seen_keys.add((fd, code))
+        all_rows.append((row, fd))
     # --- stop conditions (use VALIDATED order) ---
     if len(order) > limit: break                # first row of the (limit+1)-th date -> newest `limit` complete
     if current_page >= cached_total_pages: break  # provider declares exhaustion
     page += 1
 
-# retain ONLY the newest `limit` distinct dates (drops limit+1, limit+2, ... — one page may hold several)
+# retain ONLY the newest `limit` distinct dates (drops limit+1, limit+2, ... — one page may hold several),
+# filtering on the CANONICAL fd captured above (never a re-read raw string)
 keep = set(order[:limit])
-all_rows = [r for r in all_rows if r["fiscalDate"] in keep]
-# hand `all_rows` to _build_statement_reports(...) unchanged
+rows_out = [raw for (raw, fd) in all_rows if fd in keep]
+# hand `rows_out` to _build_statement_reports(...) unchanged
 ```
 
 - **Finite (B6):** every fetch requests the local `page`; termination is bounded by
@@ -271,8 +303,10 @@ all_rows = [r for r in all_rows if r["fiscalDate"] in keep]
   strictly-descending date groups are enforced across page boundaries.
 - **Correct retention (B7):** rows are filtered to the newest `limit` distinct dates, not merely by
   dropping the single boundary date — so a page containing dates `limit+2` and older is handled.
-- **Fail-closed:** no `try/except` wraps the loop; any transport/schema error on any page propagates,
-  so a half-fetched multi-page request never surfaces as a successful partial report.
+- **Fail-closed:** the only `try/except` is the narrow `EmptyData` seam above (page-1 re-raise /
+  page≥2→`InvalidData`); it catches nothing else, so any transport error or other schema failure on
+  any page propagates unchanged and a half-fetched multi-page request never surfaces as a successful
+  partial report.
 - `PAGE_SIZE` keeps the `_row_budget(limit)` heuristic as the per-page size; the fix is the multi-page
   LOOP, not a larger single page (a `limit` spanning many periods can exceed any fixed page size).
 
@@ -287,28 +321,41 @@ recast as a clean template miss / failover.
 ## 10. Statement/entity/model tuple guard (reviewer B9)
 
 Replace the pure membership check in `client.py:_validate_fundamental_result`
-(`mt not in _CANONICAL_MODEL_TYPES`, six numbers) with **source-aware relational** validation. A
-report's `model_type` must match the `(statement, is_bank)` it claims:
+(`mt not in _CANONICAL_MODEL_TYPES`, six numbers) with **source-aware relational** validation that
+branches on `report.source` — the prior draft branched only on `model_type is not None`, which wrongly
+accepted (a) a VNDirect *statement* report tagged `model_type=None` and (b) a non-VNDirect report
+carrying a canonical VNDirect model type (reviewer R2). The exact contract:
 
 ```python
-_EXPECTED_MODEL_TYPE = {   # VNDirect statement templates
+_VNDIRECT = "vndirect"
+_EXPECTED_MODEL_TYPE = {   # VNDirect STATEMENT templates only (RATIOS has no template)
     (StatementType.BALANCE,  False): 1,   (StatementType.BALANCE,  True): 101,
     (StatementType.INCOME,   False): 2,   (StatementType.INCOME,   True): 102,
     (StatementType.CASHFLOW, False): 3,   (StatementType.CASHFLOW, True): 103,
 }
 mt = report.model_type
-if mt is not None:                         # ratios + non-VNDirect (CafeF) carry None -> allowed
-    if isinstance(mt, bool) or not isinstance(mt, int) or mt not in _CANONICAL_MODEL_TYPES:
-        return "...malformed model_type..."
-    expected = _EXPECTED_MODEL_TYPE.get((statement, report.is_bank))
-    if mt != expected:
-        return (f"model_type {mt} does not match {statement.value} for "
-                f"{'bank' if report.is_bank else 'corporate'} (expected {expected})")
+if report.source == _VNDIRECT and statement in (BALANCE, INCOME, CASHFLOW):
+    # VNDirect statements MUST carry exactly the registered (statement, is_bank) -> model tuple.
+    expected = _EXPECTED_MODEL_TYPE[(statement, report.is_bank)]
+    if isinstance(mt, bool) or mt != expected:            # None, wrong int, or bool all fail
+        return (f"vndirect {statement.value} report for a "
+                f"{'bank' if report.is_bank else 'corporate'} entity must carry model_type "
+                f"{expected}, got {mt!r}")
+else:
+    # RATIOS (any source) and every non-VNDirect report MUST carry model_type None,
+    # unless a separate source contract is explicitly registered (none in v1).
+    if mt is not None:
+        return (f"{report.source} {statement.value} report must carry model_type None, got {mt!r}")
 ```
 
-Valid tuples: `(BALANCE,False,1)`, `(INCOME,False,2)`, `(CASHFLOW,False,3)`, `(BALANCE,True,101)`,
-`(INCOME,True,102)`, `(CASHFLOW,True,103)`; `model_type=None` for ratios/non-VNDirect. Negative tests:
-each number canonical but wrong-paired (e.g. `(BALANCE,False,2)`, `(INCOME,True,101)`) → rejected.
+Valid tuples: `(vndirect, BALANCE, False, 1)`, `(vndirect, INCOME, False, 2)`,
+`(vndirect, CASHFLOW, False, 3)`, `(vndirect, BALANCE, True, 101)`, `(vndirect, INCOME, True, 102)`,
+`(vndirect, CASHFLOW, True, 103)`; `model_type=None` for RATIOS and all non-VNDirect sources.
+Negative tests (reviewer R2): **VNDirect statement with `model_type=None`** → rejected; **non-VNDirect
+(e.g. CafeF) report carrying a canonical VNDirect model type** → rejected; plus each canonical-but-
+wrong-paired VNDirect tuple (`(BALANCE,False,2)`, `(INCOME,True,101)`, …) → rejected. The
+`_CANONICAL_MODEL_TYPES` membership set stays only as a coarse pre-filter for the arbitrary-int case
+(`-1/0/4/99/104/999`), subordinate to the relational check above.
 
 ## 11. TDD matrix (build phase — not run yet)
 
@@ -317,10 +364,15 @@ opt-in live probe (`scripts/probe_corporate_itemcodes.py`, `VNFIN_LIVE=1`) is no
 
 - **Routing:** corporate `BALANCE→1, INCOME→2, CASHFLOW→3` (regression for the inversion); bank
   `BALANCE→101, INCOME→102, CASHFLOW→103` unchanged. Annual + quarterly.
-- **Catalog (positive):** model-1 balance fixture resolves `12700`/`13000`/`14000`/`11000`/`13100`/
-  `13300`/`11100` and the balance identity holds; model-2 income fixture resolves `21001`/`23100`/
-  `23800`/`23003`/`23000` and `net_margin`; model-3 cashflow fixture resolves `32000`/`33000`/`34000`/
-  `35000`/`37000` with **both** cash-flow identities.
+- **Catalog (positive):** model-1 balance fixture resolves `12700`/`13000`/`14000`/`11000`/`12000`/
+  `13100`/`13300`/`11100` and the balance identity holds; model-2 income fixture resolves `21001`/
+  `23100`/`23800`/`23003`/`23000`; model-3 cashflow fixture resolves `32000`/`33000`/`34000`/`35000`/
+  `37000` with **both** cash-flow identities.
+- **Derived metrics end-to-end (reviewer R6):** through an injected VNDirect source, assert exact
+  values for **all five** derived metrics that consume remapped primitives —
+  `GROSS_MARGIN`(=`23100`/`21001`), `NET_MARGIN`(=`23003`/`21001`),
+  `LIABILITIES_TO_EQUITY`(=`13000`/`14000`), `CASH_TO_ASSETS`(=`11100`/`12700`),
+  `OPERATING_CASH_FLOW_MARGIN`(=`32000`/`21001`) — not `net_margin` alone.
 - **Catalog (negative):** old `21000=net_income` / `25000=total_assets` / `20000=PBT` / `31000=oper CF`
   / `35000=cash_end` never resolve to those meanings again.
 - **BLOCKED contract (B2):** `OPERATING_PROFIT` (corp `code=None`) → `BLOCKED` with
@@ -329,21 +381,29 @@ opt-in live probe (`scripts/probe_corporate_itemcodes.py`, `VNFIN_LIVE=1`) is no
   naming it.
 - **Name map (B5):** each mapped label resolves; `11200`/`11300`/`11400`/`11500` and any other
   unmapped code return `item_<code>`.
-- **Pagination (B6/B7):** `limit=1/2/8`; a fiscal date split across two pages (VIC 80+62); exact-limit
-  exhaustion; page-1 `totalPages` missing/non-int/`<1` → `InvalidData`; later-page `totalPages` present
-  but ≠ cached → `InvalidData`; later-page omitting `totalPages` → OK; `currentPage` missing/non-int →
-  `InvalidData`; repeated page-1 header and ahead/out-of-range `currentPage` → `InvalidData`; malformed/
-  non-object/non-ISO/out-of-order/reappearing `fiscalDate` → `InvalidData`; duplicate
-  `(fiscalDate, itemCode)` across pages (retained window **and** boundary date) → `InvalidData`; a page
-  containing dates older than `limit+1` retained correctly; mid-pagination transport failure on page 2
-  → exception propagates, no partial success.
-- **Empty-page (B8):** page-1 empty → `EmptyData` (failover) under explicit and AUTO calls; page-2
-  empty after non-empty page-1 → `InvalidData` under explicit **and** AUTO calls.
-- **Tuple guard (B9):** every valid `(statement, is_bank, model_type)` accepted; every canonical-but-
-  mismatched tuple rejected; `model_type=None` (ratios/CafeF) accepted.
+- **Pagination (B6/B7 + R3):** `limit=1/2/8`; a fiscal date split across two pages (VIC 80+62);
+  exact-limit exhaustion; page-1 `totalPages` missing/`<1` → `InvalidData`; **raw metadata types** —
+  `True`/`1.0`/`"1"` for `currentPage` and `totalPages` each → `InvalidData` (via `_require_raw_int`);
+  later-page `totalPages` present but ≠ cached → `InvalidData`; later-page omitting `totalPages` → OK;
+  repeated page-1 header and ahead/out-of-range `currentPage` → `InvalidData`; **row keys** — missing
+  `fiscalDate` key, missing `itemCode` key, a **padded** date string, and a **`date` object** all →
+  `InvalidData`; non-object / non-ISO / out-of-order / reappearing `fiscalDate` → `InvalidData`;
+  duplicate `(fiscalDate, itemCode)` across pages (retained window **and** boundary date) →
+  `InvalidData`; a page containing dates older than `limit+1` retained correctly; mid-pagination
+  transport failure on page 2 → exception propagates, no partial success.
+- **Empty-page seam (B8 + R1):** page-1 empty → `EmptyData` (failover) under explicit and AUTO calls;
+  page-2 empty after non-empty page-1 → `InvalidData` under explicit **and** AUTO calls — asserted at
+  the actual `_rows()` `EmptyData`-raising seam (not a non-raising `if not data`), so the translation
+  is reachable.
+- **Tuple guard (B9 + R2):** every valid `(source, statement, is_bank, model_type)` accepted; a
+  **VNDirect statement with `model_type=None`** → rejected; a **non-VNDirect report carrying a
+  canonical VNDirect model type** → rejected; every canonical-but-wrong-paired VNDirect tuple →
+  rejected; RATIOS and non-VNDirect with `model_type=None` accepted.
 - **End-to-end:** `metrics(..., source=injected_vndirect_source)` tests, not transformer-only fixtures.
-- **Probe (B10):** `scripts/probe_corporate_itemcodes.py` LEG A/B/C all PASS post-fix (pre-fix LEG A
-  PASS, LEG B/C FAIL by design).
+- **Probe unit seams (B10 + R5):** unit tests proving Leg B rejects a wrong `model_type` (e.g. 999)
+  even when headline codes exist, and Leg C's oracle labels a 142-of-200 partial newest-date response
+  as incomplete (FAIL). Live: `scripts/probe_corporate_itemcodes.py` LEG A/B/C all PASS post-fix
+  (pre-fix LEG A PASS, LEG B/C FAIL by design).
 - Run focused tests, full offline suite, and warning-token / docs / public-surface gates on the merged
   tree (not per-branch).
 

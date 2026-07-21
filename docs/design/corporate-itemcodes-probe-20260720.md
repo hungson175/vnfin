@@ -1,19 +1,23 @@
 # Provenance — corporate itemCode + pagination verification probe (2026-07-20, revised 2026-07-21)
 
-Dated evidence artifact for the #198 P0 corporate-fundamentals fix. Revised to satisfy reviewer gate
-`reviews/gate-202607202233-issue198-design-note.md` (reviewer `0345fcc`) — exact-VND residuals (no
-tolerance), an **official-filing cross-check per retained code**, reconciled evidence counts, and the
-full cash-flow audit. Binding spec `reviews/triage-202607202156-issue198-corporate-fundamentals.md`
-(reviewer `d794c71`). Mirrors `docs/design/bank-itemcodes-probe-20260620.md` (#157). Companion:
-`tasks/198-design-note.md`.
+Dated evidence artifact for the #198 P0 corporate-fundamentals fix. Revised to satisfy reviewer
+round-1 gate `reviews/gate-202607202233-issue198-design-note.md` (`0345fcc`) and round-2 gate
+`reviews/gate-202607212049-issue198-regate-round2.md` (`bf60ecb`) — exact-VND residuals (no
+tolerance), an **official-filing cross-check per retained code** (FPT FY2025 matrix now read directly
+from the audited PDF, incl. `12000`; FY2024 balance reproduced for all four tickers), reconciled
+evidence counts (23 named codes), and the full cash-flow audit. Binding spec
+`reviews/triage-202607202156-issue198-corporate-fundamentals.md` (`d794c71`). Mirrors
+`docs/design/bank-itemcodes-probe-20260620.md` (#157). Companion: `tasks/198-design-note.md`.
 
 ## Method
 
 - **Source (clean-room):** the project's own VNDirect api-finfo endpoint
-  (`api-finfo.vndirect.com.vn/v4/financial_statements`) via two legs — a **raw** query leg (bypasses
-  the adapter, proves template/code semantics independent of the currently-inverted routing) and an
-  **adapter regression** leg (`VNDirectFundamentalSource`, proves the shipped path is fixed). No
-  vnstock / no derived material.
+  (`api-finfo.vndirect.com.vn/v4/financial_statements`) via **three legs** — a **raw** query leg
+  (LEG A: bypasses the adapter, proves template/code semantics independent of the currently-inverted
+  routing), an **adapter routing** leg (LEG B: `VNDirectFundamentalSource`, asserts the full
+  provenance tuple, proves the shipped path is fixed), and a **pagination completeness oracle** leg
+  (LEG C: raw-fetches the full newest fiscal-date group and requires the adapter to reproduce it
+  exactly). No vnstock / no derived material.
 - **Script:** `scripts/probe_corporate_itemcodes.py`, gated behind `VNFIN_LIVE=1`, not collected by
   pytest. Re-runnable: `VNFIN_LIVE=1 ./.venv/bin/python scripts/probe_corporate_itemcodes.py`.
 - **Tickers:** FPT, VIC, HPG, VNM (tech / conglomerate / steel / consumer).
@@ -41,8 +45,21 @@ liabilities `13300`, cash & equivalents `11100`. Exact FY2025 values:
 
 Identities — **residual `0` on all four (FY2025), all exact**:
 `13000+14000==12700`; `11000+12000==12700`; `13100+13300==13000`; `14100+14300==14000`;
-`11100+11200+11300+11400+11500==11000`. FY2024 balance cross-check (`13000+14000==12700`) also exact
-on all four (e.g. VIC 2024: 682,769,422 + 153,834,481 == 836,603,903 million).
+`11100+11200+11300+11400+11500==11000`.
+
+**FY2024 balance identity `13000+14000==12700` — residual `0` on all four (reproduced by the probe's
+second-newest bucket, reviewer R4):**
+
+| Ticker | FY2024 `12700` total assets | `13000` total liab | `14000` equity | residual |
+|---|---:|---:|---:|:--:|
+| FPT | 71,999,995,678,620 | 36,272,455,573,820 | 35,727,540,104,800 | **0** |
+| VIC | 836,603,903,000,000 | 682,769,422,000,000 | 153,834,481,000,000 | **0** |
+| HPG | 224,489,707,553,981 | 109,842,249,570,282 | 114,647,457,983,699 | **0** |
+| VNM | 55,049,061,537,061 | 18,874,658,707,398 | 36,174,402,829,663 | **0** |
+
+That is 4 tickers × 2 fiscal years = **8 reproducible exact balance checks** (FPT FY2024 also matches
+its own official AR comparative, §3). `scripts/probe_corporate_itemcodes.py` LEG A now checks both
+the newest and second-newest balance bucket, so this count is reproducible, not asserted.
 
 ### modelType 2 = INCOME STATEMENT
 
@@ -146,6 +163,7 @@ is the complete-matrix issuer that also fixes the operating/investing/financing 
 |---|---|---:|:--:|
 | `12700` total assets | TỔNG TÀI SẢN (270) | 88,141,991,634,625 | **EXACT** |
 | `11000` current assets | TÀI SẢN NGẮN HẠN (100) | 58,137,438,254,908 | **EXACT** |
+| `12000` non-current assets | TÀI SẢN DÀI HẠN (200) | 30,004,553,379,717 | **EXACT** |
 | `11100` cash & equiv. | Tiền và các khoản tương đương tiền (110) | 10,522,105,729,992 | **EXACT** |
 | `13000` total liabilities | NỢ PHẢI TRẢ (300) | 44,393,950,887,086 | **EXACT** |
 | `13100` current liabilities | Nợ ngắn hạn (310) | 41,524,928,721,230 | **EXACT** |
@@ -167,23 +185,33 @@ is the complete-matrix issuer that also fixes the operating/investing/financing 
 | `36100` FX effect | Ảnh hưởng của thay đổi tỷ giá (61) | −105,957,902,706 | **EXACT** |
 | `37000` end cash | Tiền và tương đương tiền cuối năm (70) | 10,522,105,729,992 | **EXACT** |
 
-`22070` is the single exception to "one printed line": the audited statement splits current tax (mã
-51) and deferred-tax benefit (mã 52); the provider's `22070` is their exact net (1,916,998,192,442 −
-105,704,809,379 = 1,811,293,383,063), consistent with the identity `23800−22070==23003`. Every other
-retained code maps 1:1 to a single official printed line at the exact VND. The operating/investing/
-financing SECTION identities are thus officially named, not merely algebraically summed (reviewer B4).
+**Honest count (reviewer R4):** 23 named provider codes. **22 of them map 1:1 to a single printed
+official line** at the exact VND; **`22070` is the sole exception** — the audited statement prints no
+single "total tax expense" line, so `22070` is the exact net of two disclosed lines (current tax mã
+51 `1,916,998,192,442` − deferred-tax benefit mã 52 `105,704,809,379` = `1,811,293,383,063`),
+consistent with the identity `23800−22070==23003`. The operating/investing/financing SECTION
+identities are thus officially named, not merely algebraically summed (reviewer B4).
+
+**Provenance (reviewer R7):** the recorded basis for this FPT matrix is a **direct read of FPT's own
+official PwC-audited consolidated PDF** — balance sheet (Mẫu B01-DN/HN, report pp.5–8), income
+statement (Mẫu B02-DN/HN, p.9), and cash-flow statement (Mẫu B03-DN/HN, pp.10–11) — every value above
+was transcribed from those pages, not from any web-search snippet or aggregator. (A separate research
+pass that located the URL used non-exclusion-filtered searches and is **not** relied on as evidence;
+the numbers here stand on the official filing alone, and independently on the exact-VND accounting
+identities in §1.)
 
 ## 4. Evidence-count reconciliation (reviewer B1)
 
-- Balance identity `13000+14000==12700`: 4 tickers × (FY2025 + FY2024) = **8 exact checks**, plus the
-  four component identities (`11000+12000`, `13100+13300`, `14100+14300`, current-asset sum) each
-  exact on 4 tickers (FY2025).
+- Balance identity `13000+14000==12700`: 4 tickers × (FY2025 + FY2024) = **8 exact checks** (all 8
+  tabulated in §1, reproduced by the probe's two-bucket LEG A), plus the four component identities
+  (`11000+12000`, `13100+13300`, `14100+14300`, current-asset sum) each exact on 4 tickers (FY2025).
 - Income identities (gross-profit, PBT−tax=PAT, parent+NCI=PAT): each **4/4 exact** (FY2025).
 - Cash-flow identities (sections=net-change, net-change+begin+FX=end): each **4/4 exact** (FY2025).
-- **Official cross-check coverage:** FPT FY2025 covers the **complete retained matrix** (all 22
-  balance/income/cash-flow codes, each 1:1 to an official PwC-audited line, incl. the cash-flow
-  section labels); VIC FY2024 covers the 10 balance/income anchors incl. the parent/NCI split. Every
-  retained `MetricId` code therefore has at least one exact official-filing cross-check (the two
-  issuers combined), alongside the 4-ticker algebraic checks — satisfying reviewer B1.
+- **Official cross-check coverage:** FPT FY2025 covers the **complete retained matrix — 23 named
+  codes** (22 map 1:1 to an official PwC-audited line; `22070` is the exact net of mã 51 − mã 52),
+  incl. non-current assets `12000` and the cash-flow section labels; VIC FY2024 covers the 10
+  balance/income anchors incl. the parent/NCI split. Every retained `MetricId` code therefore has at
+  least one exact official-filing cross-check (the two issuers combined), alongside the 4-ticker
+  algebraic checks — satisfying reviewer B1.
 - No `xxx`, rounded-trillion, or "matches" placeholder is used under any "exact VND" claim; every
   headline value above is the full-dong integer returned by the provider, and every residual is `0`.

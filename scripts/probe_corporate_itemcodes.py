@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
 """Manually-invoked LIVE probe for #198 (corporate statement routing/mislabel +
-pagination). Two independent legs, each stating exactly what it proves:
+pagination). THREE independent legs, each stating exactly what it proves:
 
   LEG A — RAW template-identity (bypasses the adapter): queries VNDirect
   ``modelType`` 1/2/3 directly and checks provider-only accounting identities to
-  EXACT VND (integer residual == 0). This proves *which template is which* and
-  *which itemCodes participate in which identity* WITHOUT depending on the
-  library's (currently inverted) routing. This is the load-bearing evidence.
+  EXACT VND (integer residual == 0), on the newest AND second-newest (FY2024)
+  balance period. Proves *which template is which* and *which itemCodes
+  participate in which identity* WITHOUT depending on the library's (currently
+  inverted) routing. Load-bearing evidence.
 
-  LEG B — ADAPTER regression: calls the public ``VNDirectFundamentalSource``
-  routing path. On current ``master`` it FAILS by design (BALANCE requests
-  modelType 2 = real income; INCOME requests modelType 1 = real balance,
-  truncated to the single-page budget). Post-#198 (routing + pagination fix) it
-  must PASS. This proves the *shipped adapter* is fixed — it does not, by
-  itself, prove the semantics (LEG A does that).
+  LEG B — ADAPTER routing regression: calls the public
+  ``VNDirectFundamentalSource`` and asserts the FULL provenance tuple
+  ``(statement_type, is_bank, model_type, source)`` on the returned report AND
+  that the headline codes resolve. On current ``master`` this FAILS by design
+  (BALANCE routes to modelType 2, INCOME to modelType 1). Asserting the tuple
+  (not just code presence) blocks a false PASS from a report tagged 999/998.
 
-  LEG C — PAGINATION: reproduces the partial-period truncation and the
-  page-1-only metadata quirk (page >=2 omits totalPages/totalElements). Its
-  result GATES the exit code post-fix (pre-fix it documents the bug).
+  LEG C — PAGINATION completeness ORACLE: raw-fetches every page needed to close
+  VIC's newest annual balance fiscal-date group, builds the complete
+  ``itemCode -> value`` set for that date, then requires the adapter's newest
+  report to reproduce that date and set EXACTLY. No magic 142 threshold, so a
+  142-of-N partial cannot pass.
+
+Every leg's assertions affect the exit code, and every ticker is evaluated even
+after an earlier failure (no short-circuit).
 
 Clean-room: only the project's own VNDirect api-finfo endpoint + adapter; no
 vnstock / no derived material. Gated like scripts/probe_bank_itemcodes.py — NOT
@@ -25,10 +31,9 @@ collected by pytest.
 
     VNFIN_LIVE=1 ./.venv/bin/python scripts/probe_corporate_itemcodes.py
 
-Exit 0 only if (LEG A) every raw balance/income/cashflow identity holds to
-EXACT VND on every ticker AND (LEG B) the adapter resolves the headline codes
-under the correct statement AND (LEG C) the multi-page fetch returns the
-complete newest period. Confirmed live 2026-07-20/2026-07-21 (FPT/VIC/HPG/VNM).
+Exit 0 only if every LEG A identity (both years) holds exact-VND, LEG B resolves
+the correct tuple + headline codes for every ticker, and LEG C's adapter set
+equals the raw oracle set. Confirmed live 2026-07-20/2026-07-21 (FPT/VIC/HPG/VNM).
 """
 from __future__ import annotations
 
@@ -42,10 +47,6 @@ _TICKERS = ("FPT", "VIC", "HPG", "VNM")
 _BASE = "https://api-finfo.vndirect.com.vn/v4/financial_statements"
 _UA = {"User-Agent": os.environ.get("VNFIN_UA", "Mozilla/5.0 vnfin-oss-probe")}
 
-# Retained-code identities checked to EXACT VND (integer residual == 0). An
-# equality proves the operands participate in the relationship; the OFFICIAL
-# filing cross-check in docs/design/corporate-itemcodes-probe-20260720.md is
-# what names each operand ("current assets", "operating cash flow", ...).
 _BAL_IDS = (  # modelType 1 = balance
     ("13000+14000==12700", ("13000", "14000"), "12700"),
     ("11000+12000==12700", ("11000", "12000"), "12700"),
@@ -79,29 +80,32 @@ def _raw_fetch(sym, model, *, size=300, page=None):
         return json.load(resp)
 
 
-def _latest_bucket(env):
-    """{code(str): int VND} for the newest fiscalDate in the raw envelope."""
-    data = env.get("data") or []
-    if not data:
-        return {}, None
-    fd = data[0]["fiscalDate"]
+def _bucket(env, fd):
+    """{itemCode(str): int VND} for one fiscalDate in a raw envelope."""
     out = {}
-    for row in data:
+    for row in env.get("data") or []:
         if row.get("fiscalDate") != fd:
             continue
         code, val = row.get("itemCode"), row.get("numericValue")
         if code is None or val is None:
             continue
         out[str(int(code))] = int(val) if float(val).is_integer() else val
-    return out, fd
+    return out
 
 
-def _check_ids(bucket, ids):
-    """Every identity holds to EXACT VND (integer residual == 0)? Returns bool."""
+def _distinct_dates(env):
+    dates = []
+    for row in env.get("data") or []:
+        fd = row.get("fiscalDate")
+        if fd and fd not in dates:
+            dates.append(fd)
+    return dates
+
+
+def _check_ids(bucket, ids, *, label):
     ok = True
-    for label, addends, rhs in ids:
-        vals = []
-        missing = False
+    for name, addends, rhs in ids:
+        vals, missing = [], False
         for a in addends:
             neg = a.startswith("-")
             v = bucket.get(a[1:] if neg else a)
@@ -111,12 +115,11 @@ def _check_ids(bucket, ids):
             vals.append(-v if neg else v)
         r = bucket.get(rhs)
         if missing or r is None:
-            print(f"    {label}: SKIP (a retained code is absent)")
+            print(f"    [{label}] {name}: SKIP (a retained code is absent)")
             ok = False
             continue
         residual = sum(vals) - r
-        verdict = "EXACT" if residual == 0 else f"MISMATCH residual={residual}"
-        print(f"    {label}: {verdict}")
+        print(f"    [{label}] {name}: {'EXACT' if residual == 0 else f'MISMATCH residual={residual}'}")
         ok = ok and residual == 0
     return ok
 
@@ -124,54 +127,85 @@ def _check_ids(bucket, ids):
 def leg_a_raw(sym):
     print(f"=== LEG A raw template-identity: {sym} ===")
     ok = True
-    for model, name, ids in ((1, "BALANCE", _BAL_IDS), (2, "INCOME", _INC_IDS),
-                             (3, "CASHFLOW", _CF_IDS)):
-        bucket, fd = _latest_bucket(_raw_fetch(sym, model))
-        print(f"  modelType {model} = {name} (fd={fd}, n={len(bucket)})")
-        ok = _check_ids(bucket, ids) and ok
+    # balance: newest + second-newest (FY2024) — 2 years per ticker
+    bal_env = _raw_fetch(sym, 1)
+    bal_dates = _distinct_dates(bal_env)[:2]
+    for fd in bal_dates:
+        print(f"  modelType 1 = BALANCE (fd={fd})")
+        ok = _check_ids(_bucket(bal_env, fd), _BAL_IDS, label=fd) and ok
+    # income + cashflow: newest only
+    for model, name, ids in ((2, "INCOME", _INC_IDS), (3, "CASHFLOW", _CF_IDS)):
+        env = _raw_fetch(sym, model)
+        fd = _distinct_dates(env)[0]
+        print(f"  modelType {model} = {name} (fd={fd})")
+        ok = _check_ids(_bucket(env, fd), ids, label=fd) and ok
     return ok
 
 
 def leg_b_adapter(src, sym, StatementType, Period):
-    """Adapter regression: BALANCE must resolve 12700/13000/14000; INCOME must
-    resolve 21001/23800/23003. On inverted master these are absent -> FAIL."""
-    print(f"=== LEG B adapter regression: {sym} ===")
-    bal = src.get_financials(sym, StatementType.BALANCE, Period.ANNUAL, is_bank=False, limit=1)
-    inc = src.get_financials(sym, StatementType.INCOME, Period.ANNUAL, is_bank=False, limit=1)
-    if not bal or not inc:
-        print(f"  NO REPORTS (bal={bool(bal)} inc={bool(inc)})")
-        return False
-    b, i = bal[0], inc[0]
-    bal_ok = None not in (b.get("12700"), b.get("13000"), b.get("14000"))
-    inc_ok = None not in (i.get("21001"), i.get("23800"), i.get("23003"))
-    print(f"  BALANCE model_type={b.model_type} headline_resolves={bal_ok}")
-    print(f"  INCOME  model_type={i.model_type} headline_resolves={inc_ok}")
-    return bal_ok and inc_ok
+    """Assert the exact provenance tuple, not just code presence, so a report
+    tagged with a bogus model_type (999/998) cannot false-PASS."""
+    print(f"=== LEG B adapter routing regression: {sym} ===")
+    ok = True
+    for st, want_model, heads in (
+        (StatementType.BALANCE, 1, ("12700", "13000", "14000")),
+        (StatementType.INCOME, 2, ("21001", "23800", "23003")),
+    ):
+        reports = src.get_financials(sym, st, Period.ANNUAL, is_bank=False, limit=1)
+        if not reports:
+            print(f"  {st.value}: NO REPORTS -> FAIL")
+            ok = False
+            continue
+        r = reports[0]
+        tuple_ok = (
+            r.statement_type == st and r.is_bank is False
+            and r.model_type == want_model and r.source == "vndirect"
+        )
+        heads_ok = all(r.get(c) is not None for c in heads)
+        print(f"  {st.value}: tuple=({r.statement_type.value},{r.is_bank},{r.model_type},{r.source}) "
+              f"expect(...,False,{want_model},vndirect) tuple_ok={tuple_ok} headline_resolves={heads_ok}")
+        ok = ok and tuple_ok and heads_ok
+    return ok
 
 
 def leg_c_pagination(src, StatementType, Period):
-    """GATES exit post-fix: the adapter must return VIC's COMPLETE newest annual
-    balance period (>=142 line items, incl. 14000). Also documents the raw
-    single-page truncation + page->=2 metadata omission the fix must handle."""
-    print("=== LEG C pagination completeness (VIC balance) ===")
-    # Raw evidence of the bug + metadata quirk (informational).
+    """Completeness ORACLE: raw-fetch every page needed to CLOSE VIC's newest
+    annual balance fiscal-date group, then require the adapter to reproduce that
+    date and its full itemCode->value set exactly."""
+    print("=== LEG C pagination completeness oracle (VIC balance) ===")
+    oracle, newest_fd, page = {}, None, 1
+    while True:
+        env = _raw_fetch("VIC", 1, size=80, page=page)
+        data = env.get("data") or []
+        if not data:
+            break
+        if newest_fd is None:
+            newest_fd = data[0]["fiscalDate"]
+        closed = False
+        for row in data:
+            if row.get("fiscalDate") != newest_fd:
+                closed = True
+                break
+            oracle[str(int(row["itemCode"]))] = row["numericValue"]
+        if closed:
+            break
+        page += 1
     p1 = _raw_fetch("VIC", 1, size=80, page=1)
-    p2 = _raw_fetch("VIC", 1, size=80, page=2)
-    p1_keys = sorted(k for k in p1 if k != "data")
-    p2_keys = sorted(k for k in p2 if k != "data")
-    print(f"  raw page1 envelope keys={p1_keys} (totalPages={p1.get('totalPages')})")
-    print(f"  raw page2 envelope keys={p2_keys} (omits totalPages/totalElements)")
-    # Adapter completeness (GATING): post-fix must return the full newest period.
+    print(f"  oracle: newest_fd={newest_fd} complete_group_size={len(oracle)} "
+          f"(raw page1 keys={sorted(k for k in p1 if k != 'data')}, page-1 totalPages={p1.get('totalPages')})")
     reports = src.get_financials("VIC", StatementType.BALANCE, Period.ANNUAL, is_bank=False, limit=1)
     if not reports:
         print("  adapter: NO REPORTS -> FAIL")
         return False
     r = reports[0]
-    n, eq = len(r.items), r.get("14000")
-    complete = n >= 142 and eq is not None
-    print(f"  adapter newest-period n_items={n} owners_equity(14000)={eq!r} "
-          f"-> {'COMPLETE (post-fix)' if complete else 'PARTIAL (pre-fix bug)'}")
-    return complete
+    adapter = {li.item_code: li.value for li in r.items}
+    date_ok = str(r.fiscal_date) == newest_fd
+    codes_ok = set(adapter) == set(oracle)
+    values_ok = all(float(adapter[c]) == float(oracle[c]) for c in oracle if c in adapter)
+    missing = sorted(set(oracle) - set(adapter))
+    print(f"  adapter newest={r.fiscal_date} n_items={len(adapter)} date_ok={date_ok} "
+          f"codes_ok={codes_ok} values_ok={values_ok} missing_from_adapter={missing[:8]}")
+    return date_ok and codes_ok and values_ok
 
 
 def main() -> int:
@@ -184,14 +218,15 @@ def main() -> int:
 
     src = VNDirectFundamentalSource()
 
-    leg_a = all(leg_a_raw(sym) for sym in _TICKERS)
-    leg_b = all(leg_b_adapter(src, sym, StatementType, Period) for sym in _TICKERS)
+    # Materialize (not all(generator)) so every ticker is evaluated even on failure.
+    leg_a = all([leg_a_raw(sym) for sym in _TICKERS])
+    leg_b = all([leg_b_adapter(src, sym, StatementType, Period) for sym in _TICKERS])
     leg_c = leg_c_pagination(src, StatementType, Period)
 
     all_ok = leg_a and leg_b and leg_c
-    print(f"\nLEG A raw identities : {'PASS' if leg_a else 'FAIL'}")
-    print(f"LEG B adapter routing: {'PASS' if leg_b else 'FAIL (expected on inverted master)'}")
-    print(f"LEG C pagination     : {'PASS' if leg_c else 'FAIL (expected pre-fix)'}")
+    print(f"\nLEG A raw identities (2yr balance + income + cashflow): {'PASS' if leg_a else 'FAIL'}")
+    print(f"LEG B adapter routing tuple                           : {'PASS' if leg_b else 'FAIL (expected on inverted master)'}")
+    print(f"LEG C pagination completeness oracle                  : {'PASS' if leg_c else 'FAIL (expected pre-fix)'}")
     print(f"VERDICT: {'PASS' if all_ok else 'FAIL'}")
     return 0 if all_ok else 1
 
