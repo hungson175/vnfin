@@ -22,6 +22,7 @@ the research doc. No vnstock or derivative material was consulted.
 """
 from __future__ import annotations
 
+import enum
 import math
 import re
 from datetime import date, datetime, timezone
@@ -71,6 +72,28 @@ _BANK_MODEL = {
 _ALLOWED_LINE_UNITS = frozenset({"VND", "vnd_per_share", "ratio", None})
 
 _CANONICAL_INT_STR = re.compile(r"[1-9]\d*|0")
+
+#: #198(§8, R3): a fiscalDate must be an EXACT unpadded ``YYYY-MM-DD`` string.
+#: This is stricter than :func:`validate_iso_date_string` (which ``.strip()``s and
+#: accepts ``date`` objects) so a padded string or a ``date`` object fails closed.
+_ISO_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+class _Disposition(enum.Enum):
+    """#198(§8, R8+R12): the contract bucket a WELL-FORMED statement row falls in.
+
+    The single shared classifier :meth:`VNDirectFundamentalSource._row_disposition`
+    returns one of these; the pagination loop treats only ``ELIGIBLE`` as eligible,
+    while the builder preserves its exact counter semantics (``SKIP_CODE`` bumps
+    both ``skipped_rows`` and ``code_mismatches``; the cadence/model skips bump
+    ``skipped_rows`` only). Structural malformed-value guards still raise inside the
+    classifier — this enum only labels valid rows.
+    """
+
+    ELIGIBLE = "eligible"
+    SKIP_CADENCE = "skip_cadence"
+    SKIP_MODEL = "skip_model"
+    SKIP_CODE = "skip_code"
 
 #: Issue #44: allowed VNDirect ``reportType`` cadence tags (the request-side enum
 #: values). A present tag must be one of these (padded/unknown/blank/null/non-string
@@ -184,62 +207,123 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         )
 
     def _get_statements_auto(self, psym, statement, period, *, limit):
-        """Auto-detect bank vs corporate, then parse the matching statements.
+        """Auto-detect the exact statement template, then parse under it (#198 §8).
 
-        Step 1: pick a starting template from the known-bank heuristic (corporate
-        for unrecognised tickers) and fetch with that ``modelType`` filter.
+        The template is identified by the EXACT provider ``modelType`` (corporate
+        1/2/3, bank 101/102/103), not the ``is_bank`` class. One atomic pagination
+        stream has ONE query/model/metadata envelope, and the eligibility model is
+        the DETECTED template — never the initial candidate.
 
-        Step 2: read the dominant ``modelType`` actually present in the response
-        rows. The provider tags each row with its real template (corporate
-        1/2/3, bank 101/102/103), so the response itself reveals whether the
-        ticker is a bank — even if our starting guess was wrong. We re-derive
-        ``is_bank`` from that tag and parse the rows under the correct template
-        (so line-item names/metadata match).
+        For each candidate (bank-first for a known bank, else corporate-first):
 
-        Step 3: if the starting template returned NO rows (the provider filtered
-        them out because the guess was wrong), re-probe the other template once.
-        If both are empty we re-raise the first miss so a failover chain still
-        sees an ``EmptyData`` and can fall through to the backup source.
+        1. Fetch page 1 under the candidate's model query. ``EmptyData`` -> record
+           the miss and try the other candidate (a wrong ``modelType`` filter
+           returns zero rows in production).
+        2. Validate the candidate page-1 envelope/rows FIRST (``_rows``,
+           ``currentPage==1``, ``totalPages>=1``, STATE-1 row-stream) — before
+           trusting its tags — then read ``observed = _dominant_model(...)``.
+        3. If ``observed`` is tag-less (``None``) or equals the candidate, confirm
+           the candidate and paginate seeded by its already-fetched page 1 (no
+           re-fetch). If ``observed`` differs (a redirect, allowed ONCE), discard
+           the candidate page, fetch a FRESH page 1 under ``observed``'s query,
+           re-validate it, require ``_dominant_model(restart) == observed`` exactly
+           (tag-less / same-class-wrong-statement / tie / contradiction / a restart
+           ``EmptyData`` after the non-empty candidate all raise ``InvalidData``),
+           then paginate on FRESH state under ``observed``. No second redirect.
+
+        If every candidate page 1 is empty, re-raise the first ``EmptyData`` so a
+        failover chain can fall through to a backup source.
         """
         prefer_bank = is_known_bank(psym)
         order = (True, False) if prefer_bank else (False, True)
         first_miss: EmptyData | None = None
         for candidate in order:
+            candidate_model = self.model_type_for(statement, is_bank=candidate)
             try:
-                rows = self._fetch_statement_rows(psym, statement, period, is_bank=candidate, limit=limit)
+                page1 = self._fetch_statement_page(psym, period, candidate_model, limit=limit, page=1)
+                # Validate the candidate envelope/rows BEFORE trusting its tags.
+                page1_rows = self._validate_page1(
+                    page1, psym=psym, period=period, model_type=candidate_model
+                )
             except EmptyData as exc:
                 if first_miss is None:
                     first_miss = exc
                 continue
-            detected = self._detect_is_bank(rows, default=candidate)
+            observed = self._dominant_model(page1_rows, statement)
+            if observed is None or observed == candidate_model:
+                rows = self._paginate(
+                    psym, statement, period,
+                    model_type=candidate_model, limit=limit, page1_envelope=page1,
+                )
+                return self._build_statement_reports(
+                    psym, statement, period, rows, is_bank=candidate, limit=limit
+                )
+            # --- redirect (allowed once): discard the candidate, restart fresh ---
+            try:
+                restart = self._fetch_statement_page(psym, period, observed, limit=limit, page=1)
+                restart_rows = self._validate_page1(
+                    restart, psym=psym, period=period, model_type=observed
+                )
+            except EmptyData as exc:
+                raise InvalidData(
+                    f"{self.name}: modelType redirect to {observed} returned an empty "
+                    f"page 1 after a non-empty candidate page"
+                ) from exc
+            if self._dominant_model(restart_rows, statement) != observed:
+                raise InvalidData(
+                    f"{self.name}: modelType redirect to {observed} not confirmed by the "
+                    f"restarted response (a second redirect is not allowed)"
+                )
+            detected_is_bank = observed >= 100
+            rows = self._paginate(
+                psym, statement, period,
+                model_type=observed, limit=limit, page1_envelope=restart,
+            )
             return self._build_statement_reports(
-                psym, statement, period, rows, is_bank=detected, limit=limit
+                psym, statement, period, rows, is_bank=detected_is_bank, limit=limit
             )
         raise first_miss  # both templates empty -> failover-safe EmptyData
 
-    @staticmethod
-    def _detect_is_bank(rows, *, default: bool) -> bool:
-        """Infer bank vs corporate from the dominant ``modelType`` in the rows.
+    def _dominant_model(self, rows, statement):
+        """#198(§8, R19): the unique dominant EXACT model in a validated page.
 
-        VNDirect tags every statement row with its template's ``modelType``
-        (corporate 1/2/3, bank 101/102/103). We pick the most common parseable
-        tag and classify it (>= 100 -> bank). Rows with no usable tag fall back
-        to ``default`` (the template we requested), so a tag-less response keeps
-        the original behavior.
+        ``VALID`` = the two models valid for ``statement`` (corporate + bank).
+        Strict-parse each PRESENT ``modelType``:
+
+        * any parsed model outside ``VALID`` -> ``InvalidData`` (even a minority
+          tag — a foreign/wrong-statement template can never appear in a clean
+          stream);
+        * no present tags -> ``None`` (tag-less);
+        * a tie between the two ``VALID`` models -> ``InvalidData`` (no dominant
+          identity);
+        * else -> the unique dominant ``VALID`` model.
         """
-        votes = {True: 0, False: 0}
+        valid = {
+            self.model_type_for(statement, is_bank=False),
+            self.model_type_for(statement, is_bank=True),
+        }
+        counts: dict[int, int] = {}
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            # Issue #44(B2): absent modelType key -> no vote (legacy); a PRESENT
-            # value (incl. null) is parsed strictly so present-null fails closed.
             mt_raw = optional_present(row, "modelType")
             if mt_raw is MISSING:
                 continue
-            votes[_parse_model_type(mt_raw) >= 100] += 1
-        if votes[True] == 0 and votes[False] == 0:
-            return default
-        return votes[True] > votes[False]
+            model = _parse_model_type(mt_raw)  # strict; malformed -> InvalidData
+            if model not in valid:
+                raise InvalidData(
+                    f"{self.name}: response carries a foreign modelType {model} "
+                    f"(valid for {statement.value}: {sorted(valid)})"
+                )
+            counts[model] = counts.get(model, 0) + 1
+        if not counts:
+            return None
+        ordered = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
+        if len(ordered) >= 2 and ordered[0][1] == ordered[1][1]:
+            raise InvalidData(
+                f"{self.name}: modelType tie {counts}; no dominant template identity"
+            )
+        return ordered[0][0]
 
     # ------------------------------------------------------------------ #
     def _fetch_json(self, url, params):
@@ -260,18 +344,164 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
 
     # --- statements (LONG/tall numeric-itemCode rows -> pivot per fiscalDate) #
     def _get_statements(self, psym, statement, period, *, is_bank, limit):
-        rows = self._fetch_statement_rows(psym, statement, period, is_bank=is_bank, limit=limit)
+        model_type = self.model_type_for(statement, is_bank=is_bank)
+        rows = self._paginate(psym, statement, period, model_type=model_type, limit=limit)
         return self._build_statement_reports(
             psym, statement, period, rows, is_bank=is_bank, limit=limit
         )
 
-    def _fetch_statement_rows(self, psym, statement, period, *, is_bank, limit):
-        """Fetch the raw long/tall statement rows for one template (one network call)."""
-        model_type = self.model_type_for(statement, is_bank=is_bank)
+    def _fetch_statement_page(self, psym, period, model_type, *, limit, page):
+        """Fetch ONE raw statement page (the parsed envelope) for a model query."""
         q = f"code:{psym}~reportType:{period.value}~modelType:{model_type}"
-        params = {"q": q, "sort": "fiscalDate:desc", "size": self._row_budget(limit)}
-        parsed = self._fetch_json(self.BASE_URL + self.STATEMENTS_PATH, params)
-        return self._rows(parsed)
+        params = {
+            "q": q,
+            "sort": "fiscalDate:desc",
+            "size": self._row_budget(limit),
+            "page": page,
+        }
+        return self._fetch_json(self.BASE_URL + self.STATEMENTS_PATH, params)
+
+    @staticmethod
+    def _new_stream_state() -> dict:
+        """Fresh raw-stream + eligible-boundary state for one atomic pagination run."""
+        return {
+            "last_fd": None,       # descending-contiguity cursor (raw-stream state)
+            "closed": set(),       # dates whose contiguous group has ended (raw-stream)
+            "seen_keys": set(),    # (fiscalDate, itemCode) across ALL fetched rows
+            "eligible_order": [],  # distinct ELIGIBLE fiscalDates, newest-first (boundary)
+            "all_rows": [],        # every fetched raw row, unfiltered -> handed to builder
+        }
+
+    def _validate_metadata(self, resp, *, page, cached_total_pages):
+        """#198(§8, B6): envelope + raw-int pagination-metadata guards for one page.
+
+        Returns ``(data, current_page, cached_total_pages)``. ``_rows`` raises
+        ``EmptyData`` on an empty list (the caller translates it per the B8 seam)
+        and ``InvalidData`` on a non-list container. ``currentPage``/``totalPages``
+        must be RAW non-bool ints (so ``True``/``1.0``/``"1"`` fail closed); page 1
+        caches ``totalPages>=1``; later pages may omit ``totalPages`` but if present
+        it must equal the cached value.
+        """
+        data = self._rows(resp)  # RAISES EmptyData on []; InvalidData on non-list
+        current_page = self._require_raw_int(resp, "currentPage")
+        if page == 1:
+            cached_total_pages = self._require_raw_int(resp, "totalPages")
+            if cached_total_pages < 1:
+                raise InvalidData(
+                    f"{self.name}: page-1 totalPages must be >= 1, got {cached_total_pages}"
+                )
+        elif isinstance(resp, dict) and "totalPages" in resp:
+            if self._require_raw_int(resp, "totalPages") != cached_total_pages:
+                raise InvalidData(
+                    f"{self.name}: page {page} totalPages != cached {cached_total_pages}"
+                )
+        if current_page != page:
+            raise InvalidData(
+                f"{self.name}: currentPage {current_page} != requested page {page}"
+            )
+        if not (1 <= current_page <= cached_total_pages):
+            raise InvalidData(
+                f"{self.name}: currentPage {current_page} out of range "
+                f"[1, {cached_total_pages}]"
+            )
+        return data, current_page, cached_total_pages
+
+    def _consume_rows(self, data, *, psym, period, model_type, state):
+        """#198(§8, B7+R12): STATE-1 raw-stream validation on EVERY row + the
+        STATE-2 eligible-date boundary (which only drives the stop condition).
+
+        STATE 1 runs on every fetched row (object; exact ISO fiscalDate; canonical
+        itemCode; strictly-descending contiguous date groups via ``closed``+
+        ``last_fd``; no reappearance of a closed date; no duplicate ``(fd,code)``
+        across ALL fetched rows) — an offending row raises even when it is
+        ``SKIP_*`` ineligible. STATE 2 appends only distinct ``ELIGIBLE`` dates.
+        Every row (eligible or not) is appended to ``state['all_rows']`` for the
+        builder.
+        """
+        row_ctx = f"{self.name} statement row"
+        for row in data:
+            # === STATE 1: raw-stream validation for EVERY row (eligible or not) ===
+            row = require_object(row, row_ctx)
+            fd = self._require_iso_fiscal_date(row)
+            code = self._require_item_code(row)
+            if fd != state["last_fd"]:
+                if fd in state["closed"]:
+                    raise InvalidData(
+                        f"{self.name}: fiscalDate {fd} reappeared after its group closed"
+                    )
+                if state["last_fd"] is not None:
+                    if fd >= state["last_fd"]:
+                        raise InvalidData(
+                            f"{self.name}: fiscalDate stream not strictly descending "
+                            f"({fd} after {state['last_fd']})"
+                        )
+                    state["closed"].add(state["last_fd"])
+                state["last_fd"] = fd
+            if (fd, code) in state["seen_keys"]:
+                raise InvalidData(
+                    f"{self.name}: duplicate (fiscalDate={fd}, itemCode={code})"
+                )
+            state["seen_keys"].add((fd, code))
+            state["all_rows"].append(row)
+            # === STATE 2: eligible-date boundary ONLY (does not gate validation) ===
+            if (
+                self._row_disposition(row, psym=psym, period=period, model_type=model_type)
+                is _Disposition.ELIGIBLE
+            ):
+                if fd not in state["eligible_order"]:
+                    state["eligible_order"].append(fd)
+
+    def _validate_page1(self, resp, *, psym, period, model_type):
+        """Validate an already-fetched page-1 envelope on FRESH state; return its
+        validated raw rows (used by AUTO to read the dominant model before deciding
+        whether to seed or redirect). Identical validation to :meth:`_paginate`.
+        """
+        state = self._new_stream_state()
+        data, _cp, _tp = self._validate_metadata(resp, page=1, cached_total_pages=None)
+        self._consume_rows(data, psym=psym, period=period, model_type=model_type, state=state)
+        return state["all_rows"]
+
+    def _paginate(self, psym, statement, period, *, model_type, limit, page1_envelope=None):
+        """#198(§8): a bounded, validated multi-page fetch returning ALL raw rows.
+
+        Eligibility is gated on ``model_type`` (the model reports are BUILT under).
+        ``page1_envelope`` (R19) is an ALREADY-FETCHED page-1 response used to SEED
+        the loop (the candidate/restarted page); it flows through the SAME page-1
+        validation as a fetched page (no double-fetch, no un-validated shortcut).
+        All state is LOCAL to this call, so a redirect's fresh invocation shares
+        NOTHING with the candidate's. Stops at the first row of the ``(limit+1)``-th
+        ELIGIBLE date, or when the provider declares exhaustion
+        (``currentPage >= totalPages``). Returns every fetched row unfiltered.
+        """
+        page = 1
+        cached_total_pages = None
+        state = self._new_stream_state()
+        while True:
+            if page == 1 and page1_envelope is not None:
+                resp = page1_envelope  # SEED: reuse the already-fetched page 1
+            else:
+                resp = self._fetch_statement_page(psym, period, model_type, limit=limit, page=page)
+            # --- B8 empty-page semantics AT THE ACTUAL _rows() seam (R1) ---
+            try:
+                data, current_page, cached_total_pages = self._validate_metadata(
+                    resp, page=page, cached_total_pages=cached_total_pages
+                )
+            except EmptyData:
+                if page == 1:
+                    raise  # template miss -> existing AUTO/failover EmptyData
+                raise InvalidData(
+                    f"{self.name}: empty page {page} after a non-empty page 1"
+                )
+            self._consume_rows(
+                data, psym=psym, period=period, model_type=model_type, state=state
+            )
+            # --- stop conditions (eligible boundary; builder caps to `limit`) ---
+            if len(state["eligible_order"]) > limit:
+                break  # (limit+1)-th ELIGIBLE date seen -> newest `limit` complete
+            if current_page >= cached_total_pages:
+                break  # provider declares exhaustion
+            page += 1
+        return state["all_rows"]
 
     def _build_statement_reports(self, psym, statement, period, rows, *, is_bank, limit):
         """Pivot long/tall rows into one ``FinancialReport`` per fiscalDate.
@@ -293,44 +523,24 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
             fd = row.get("fiscalDate")
             if not fd:
                 raise InvalidData(f"{self.name}: row missing fiscalDate")
-            # Skip rows that contradict the requested contract (wrong reportType
-            # or modelType). These are provider-side mislabels, not fatal errors.
-            # Issue #44: reportType is a cadence enum — key-presence is the trigger.
-            # A PRESENT value must be a canonical tag in {ANNUAL, QUARTER}
-            # (padded/unknown/blank/null/non-string fail closed); a present valid
-            # tag naming a different cadence is skipped; a missing key keeps legacy.
-            tag = canonical_enum_tag(
-                optional_present(row, "reportType"),
-                _VNDIRECT_REPORT_TAGS,
-                f"{self.name} statement reportType",
-                missing_ok=True,
+            # #198(§8, R15): the SHARED classifier decides the contract bucket, and
+            # the builder preserves its EXACT counter semantics — SKIP_CODE bumps
+            # BOTH skipped_rows and code_mismatches (so a mixed wrong-`code` response
+            # still warns and the all-wrong-`code` wrong-identity diagnostic fires),
+            # while SKIP_CADENCE/SKIP_MODEL bump skipped_rows ONLY. Structural
+            # malformed-value guards (reportType/modelType) still raise inside the
+            # classifier. The classifier's condition ORDER (cadence -> model -> code)
+            # and precedence are identical to the prior inline checks.
+            disposition = self._row_disposition(
+                row, psym=psym, period=period, model_type=model_type
             )
-            if tag is not None and tag != period.value:
+            if disposition is _Disposition.SKIP_CADENCE or disposition is _Disposition.SKIP_MODEL:
                 skipped_rows += 1
                 continue
-            # Issue #44(B2): absent modelType -> no tag (legacy); a PRESENT value
-            # (incl. null) is parsed strictly so present-null fails closed.
-            mt_raw = optional_present(row, "modelType")
-            row_model = None if mt_raw is MISSING else _parse_model_type(mt_raw)
-            if row_model is not None and row_model != model_type:
+            if disposition is _Disposition.SKIP_CODE:
                 skipped_rows += 1
+                code_mismatches += 1
                 continue
-            # Issue #21 (+16:55 add-on): validate provider-exposed identity before
-            # stamping the requested symbol. Key-presence is the trigger (not
-            # truthiness): a PRESENT code that is null/falsey/non-string/blank or a
-            # different symbol must NOT bypass the check (the old `or ""` collapsed
-            # all of those to "" and accepted the row). An absent `code` key keeps
-            # the legacy no-identity behavior.
-            if "code" in row:
-                raw_code = row["code"]
-                if (
-                    not isinstance(raw_code, str)
-                    or not raw_code.strip()
-                    or raw_code.strip().upper() != psym
-                ):
-                    skipped_rows += 1
-                    code_mismatches += 1
-                    continue
             code = self._item_code_str(row.get("itemCode"))
             value = self._num(row.get("numericValue"))
             self._validate_value_unit("VND")
@@ -363,7 +573,7 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         # Raise rather than return () so it cannot read as a successful empty.
         # (A mix of valid + skipped rows still returns the valid reports with a
         # skip warning; the auto-probe falls through on an EMPTY provider response
-        # via _fetch_statement_rows -> EmptyData, which is a different path.)
+        # via _paginate -> _rows -> EmptyData at page 1, which is a different path.)
         if not buckets and skipped_rows > 0:
             raise InvalidData(
                 f"{self.name}: all {skipped_rows} statement rows skipped "
@@ -520,6 +730,103 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         """Reject line-item units that are not allowed in a VND chain."""
         if unit not in _ALLOWED_LINE_UNITS:
             raise InvalidData(f"vndirect: value_unit {unit!r} is not allowed")
+
+    @staticmethod
+    def _require_raw_int(obj, key) -> int:
+        """#198(§8, R3): ``obj[key]`` must be present and a RAW non-bool ``int``.
+
+        ``True``/``False`` (``bool`` is an ``int`` subclass), any ``float`` (incl.
+        ``1.0``), a numeric ``str`` (``"1"``), and an absent key all raise
+        ``InvalidData``. Does NOT reuse ``parse_canonical_int`` (which accepts
+        numeric strings) — pagination metadata is a strict raw-int contract.
+        """
+        if not isinstance(obj, dict) or key not in obj:
+            raise InvalidData(f"vndirect: missing required int {key!r}")
+        value = obj[key]
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise InvalidData(
+                f"vndirect: {key} must be a raw non-bool int, got {value!r}"
+            )
+        return value
+
+    @staticmethod
+    def _require_iso_fiscal_date(row) -> str:
+        """#198(§8, R3): ``row['fiscalDate']`` must be present and an EXACT unpadded
+        ``YYYY-MM-DD`` string that is also a REAL calendar date.
+
+        A ``date`` object, a padded/whitespace string, a malformed calendar
+        (``2025-99-99``), and an absent key all raise ``InvalidData``. The returned
+        canonical string is the grouping/retention key throughout, so the pagination
+        window never mismatches a normalized vs. raw form. Does NOT reuse
+        ``validate_iso_date_string`` directly for the shape (it ``.strip()``s and
+        accepts ``date`` objects), only for the calendar-validity check after the
+        strict unpadded ``fullmatch``.
+        """
+        if not isinstance(row, dict) or "fiscalDate" not in row:
+            raise InvalidData("vndirect: row missing fiscalDate")
+        raw = row["fiscalDate"]
+        if not isinstance(raw, str) or not _ISO_DATE_RE.fullmatch(raw):
+            raise InvalidData(
+                f"vndirect: bad date {raw!r}: fiscalDate must be an exact unpadded "
+                f"YYYY-MM-DD string"
+            )
+        try:
+            validate_iso_date_string(raw, label="fiscalDate")
+        except InvalidData as exc:
+            raise InvalidData(f"vndirect: bad date {raw!r}") from exc
+        return raw
+
+    @classmethod
+    def _require_item_code(cls, row) -> str:
+        """#198(§8, R20): ``row['itemCode']`` must be present and canonical via
+        DIRECT reuse of :meth:`_item_code_str` -> ``canonical_provider_key`` (NOT
+        ``str(int(...))``), so the pagination key is byte-for-byte the builder's key.
+
+        ``True``, a fractional float/``Decimal`` (``11000.9``), a negative, a
+        padded/signed/non-canonical string, ``null``, and containers all raise;
+        an integral provider float (``11000.0`` -> ``"11000"``) and a canonical
+        digit string (``"11000"``/``"0"``) pass. An absent key raises too.
+        """
+        if not isinstance(row, dict) or "itemCode" not in row:
+            raise InvalidData("vndirect: row missing itemCode")
+        return cls._item_code_str(row["itemCode"])
+
+    @staticmethod
+    def _row_disposition(row, *, psym, period, model_type) -> "_Disposition":
+        """#198(§8, R8+R12): the SINGLE shared classifier used by BOTH the
+        pagination loop and the builder, so the completeness contract and the skip
+        contract cannot drift.
+
+        A PRESENT ``reportType`` tag naming a different cadence -> ``SKIP_CADENCE``;
+        a PRESENT ``modelType`` (strict-parsed) ``!= model_type`` -> ``SKIP_MODEL``;
+        a PRESENT ``code`` that is non-string / blank / ``!= psym`` -> ``SKIP_CODE``;
+        otherwise ``ELIGIBLE`` (absent keys keep the legacy no-signal -> eligible
+        behavior). The condition ORDER (cadence -> model -> code) is load-bearing:
+        it pins the builder's counter precedence. Structural malformed values
+        (padded/unknown reportType, malformed/present-null modelType) still raise
+        ``InvalidData`` here (they are data-quality errors, not a skip bucket).
+        """
+        tag = canonical_enum_tag(
+            optional_present(row, "reportType"),
+            _VNDIRECT_REPORT_TAGS,
+            f"vndirect statement reportType",
+            missing_ok=True,
+        )
+        if tag is not None and tag != period.value:
+            return _Disposition.SKIP_CADENCE
+        mt_raw = optional_present(row, "modelType")
+        row_model = None if mt_raw is MISSING else _parse_model_type(mt_raw)
+        if row_model is not None and row_model != model_type:
+            return _Disposition.SKIP_MODEL
+        if "code" in row:
+            raw_code = row["code"]
+            if (
+                not isinstance(raw_code, str)
+                or not raw_code.strip()
+                or raw_code.strip().upper() != psym
+            ):
+                return _Disposition.SKIP_CODE
+        return _Disposition.ELIGIBLE
 
     @staticmethod
     def _item_code_str(raw) -> str:

@@ -764,10 +764,12 @@ def test_malformed_numericValue_raises_invalid():
 
 
 def test_nan_numericValue_raises_invalid():
+    # #198 Phase 2: carry valid pagination metadata so the row (not the envelope)
+    # is what fails — the NaN numericValue is the intended rejection.
     payload = (
         '{"data":[{"code":"TESTCO","itemCode":11000.0,"reportType":"ANNUAL",'
-        '"modelType":1.0,"numericValue":NaN,"fiscalDate":"2025-12-31"}],'
-        '"totalElements":1}'
+        '"modelType":2.0,"numericValue":NaN,"fiscalDate":"2025-12-31"}],'
+        '"currentPage":1,"totalPages":1,"totalElements":1}'
     )
     with pytest.raises(InvalidData):
         _src(payload).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
