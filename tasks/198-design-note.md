@@ -1,12 +1,12 @@
 # Design/evidence note — #198 corporate fundamentals: inverted routing + broken catalog + pagination
 
-- Status: **DESIGN RE-GATE REQUESTED (round 3).** Revised against reviewer round-1 gate
-  `reviews/gate-202607202233-issue198-design-note.md` (`0345fcc`, B1–B10) **and** round-2 gate
-  `reviews/gate-202607212049-issue198-regate-round2.md` (`bf60ecb`, R1–R7) — all addressed below
-  (R1 empty-page seam, R2 source-aware tuple guard, R3 pagination helper contracts, R4 count/`12000`
-  reconciliation, R5 probe oracle + tuple assertion + all-tickers, R6 five derived metrics, R7
-  primary-source provenance). **No package runtime code or tests changed** (evidence + design only;
-  two docs + one executable probe script).
+- Status: **DESIGN RE-GATE REQUESTED (round 4).** Revised against reviewer gates round-1
+  `gate-202607202233` (`0345fcc`, B1–B10), round-2 `gate-202607212049` (`bf60ecb`, R1–R7), and
+  round-3 `gate-202607212112-issue198-regate-round3.md` (`9e74f50`, R8–R10 + strict-int) — all
+  addressed (R8 shared `_row_eligible` pre-count so builder-skipped rows can't prove completeness;
+  R9 finite/validated/fail-closed raw oracle with exact `Decimal` compare; R10 Leg A requires two
+  balance periods; strict non-bool `int` prefilter before the relational tuple guard). **No package
+  runtime code or tests changed** (evidence + design only; two docs + one executable probe script).
 - Binding spec: `reviews/triage-202607202156-issue198-corporate-fundamentals.md` (reviewer `d794c71`).
 - Date: 2026-07-20 (revised 2026-07-21).
 - Related: `docs/design/bank-fundamentals-itemcodes.md` + `docs/design/bank-itemcodes-probe-20260620.md`
@@ -233,6 +233,16 @@ existing parser):**
 - `_require_item_code(row) -> str` — `row["itemCode"]` must be present; normalized with the **same**
   rule the row parser uses (`str(int(11200.0)) == "11200"`); an absent key or non-coercible value
   raises `InvalidData`.
+- `_row_eligible(row, *, psym, period, model_type) -> bool` (reviewer R8) — the **single shared
+  classifier** for "does this row belong to the requested statement contract?", extracted from the
+  three existing skip conditions in `_build_statement_reports`
+  (`vndirect.py:294-331`): (1) a **present** `reportType` tag that names a different cadence
+  (`canonical_enum_tag(...) != period.value`) → ineligible; (2) a **present** `modelType`
+  (`_parse_model_type`) `!= model_type` → ineligible; (3) a **present** `code` that is non-string /
+  blank / `!= psym` → ineligible. Absent keys keep the legacy "no-signal → eligible" behavior. Both
+  the pagination loop AND `_build_statement_reports` call this one function, so the completeness
+  contract and the skip contract cannot drift (structural `InvalidData` guards — malformed
+  `modelType` etc. — still fire inside the parser; `_row_eligible` only answers belongs-or-not).
 
 ```
 PAGE_SIZE = _row_budget(limit)
@@ -271,18 +281,24 @@ while True:
         row = require_object(row, ...)                            # non-object row -> InvalidData
         fd  = _require_iso_fiscal_date(row)                       # present + exact YYYY-MM-DD; else InvalidData
         code = _require_item_code(row)                            # present + canonical; else InvalidData
-        if fd != last_fd:                                         # new date group
+        all_rows.append((row, fd))                               # keep ALL rows for the builder (mixed-row warning)
+        # --- R8: ELIGIBILITY gate — a row the builder will later SKIP (wrong
+        # requested symbol / cadence / modelType) must NOT close a date group,
+        # advance `order`, or prove `limit+1`. Use the SAME classifier the
+        # builder uses so the two contracts cannot drift.
+        if not _row_eligible(row, psym=psym, period=period, model_type=model_type):
+            continue                                              # ineligible -> no effect on stop condition
+        if fd != last_fd:                                         # new ELIGIBLE date group
             if fd in closed: raise InvalidData(...)               # reappearing closed date
             if last_fd is not None:
                 if fd >= last_fd: raise InvalidData(...)          # must be strictly descending
                 closed.add(last_fd)                               # previous group closes
             if fd not in order: order.append(fd)
             last_fd = fd
-        if (fd, code) in seen_keys: raise InvalidData(...)        # duplicate across ALL fetched rows
+        if (fd, code) in seen_keys: raise InvalidData(...)        # duplicate eligible (fd,code) across ALL pages
         seen_keys.add((fd, code))
-        all_rows.append((row, fd))
-    # --- stop conditions (use VALIDATED order) ---
-    if len(order) > limit: break                # first row of the (limit+1)-th date -> newest `limit` complete
+    # --- stop conditions (use VALIDATED, ELIGIBLE-only order) ---
+    if len(order) > limit: break                # first row of the (limit+1)-th ELIGIBLE date -> newest `limit` complete
     if current_page >= cached_total_pages: break  # provider declares exhaustion
     page += 1
 
@@ -301,8 +317,15 @@ rows_out = [raw for (raw, fd) in all_rows if fd in keep]
   out-of-order or reappearing `fiscalDate`, or a duplicate `(fiscalDate, itemCode)` across any pages
   raises **before** it can inflate `order` past `limit` and cause a partial success. Contiguous,
   strictly-descending date groups are enforced across page boundaries.
-- **Correct retention (B7):** rows are filtered to the newest `limit` distinct dates, not merely by
-  dropping the single boundary date — so a page containing dates `limit+2` and older is handled.
+- **Eligibility pre-count (R8):** only rows that pass `_row_eligible` (right requested symbol /
+  cadence / model — the same classifier the builder skips on) advance `order` or count toward the
+  stop condition; an ineligible row can never close a valid date group or prove `limit+1`, so a
+  later builder-skip cannot silently drop a period that a completeness proof already "counted".
+  Ineligible rows are still handed to the builder (so the mixed-row warning fires) but are inert for
+  completeness.
+- **Correct retention (B7):** rows are filtered to the newest `limit` distinct **eligible** dates,
+  not merely by dropping the single boundary date — so a page containing dates `limit+2` and older is
+  handled.
 - **Fail-closed:** the only `try/except` is the narrow `EmptyData` seam above (page-1 re-raise /
   page≥2→`InvalidData`); it catches nothing else, so any transport error or other schema failure on
   any page propagates unchanged and a half-fetched multi-page request never surfaces as a successful
@@ -336,11 +359,14 @@ _EXPECTED_MODEL_TYPE = {   # VNDirect STATEMENT templates only (RATIOS has no te
 mt = report.model_type
 if report.source == _VNDIRECT and statement in (BALANCE, INCOME, CASHFLOW):
     # VNDirect statements MUST carry exactly the registered (statement, is_bank) -> model tuple.
+    # STRICT non-bool int prefilter FIRST: in Python `2.0 == 2` and `True == 1`, so the
+    # relational compare alone would accept an integral float / bool. Reject any non-int,
+    # bool, or numeric string BEFORE comparing to `expected`.
     expected = _EXPECTED_MODEL_TYPE[(statement, report.is_bank)]
-    if isinstance(mt, bool) or mt != expected:            # None, wrong int, or bool all fail
+    if not isinstance(mt, int) or isinstance(mt, bool) or mt != expected:  # None/2.0/"2"/True/wrong-int all fail
         return (f"vndirect {statement.value} report for a "
-                f"{'bank' if report.is_bank else 'corporate'} entity must carry model_type "
-                f"{expected}, got {mt!r}")
+                f"{'bank' if report.is_bank else 'corporate'} entity must carry a strict int "
+                f"model_type {expected}, got {mt!r}")
 else:
     # RATIOS (any source) and every non-VNDirect report MUST carry model_type None,
     # unless a separate source contract is explicitly registered (none in v1).
@@ -391,19 +417,30 @@ opt-in live probe (`scripts/probe_corporate_itemcodes.py`, `VNFIN_LIVE=1`) is no
   duplicate `(fiscalDate, itemCode)` across pages (retained window **and** boundary date) →
   `InvalidData`; a page containing dates older than `limit+1` retained correctly; mid-pagination
   transport failure on page 2 → exception propagates, no partial success.
+- **Row eligibility pre-count (reviewer R8):** for each of `reportType`, `modelType`, and provider
+  `code` mismatch, the exact three-date regression — valid annual 2025, **ineligible** 2024
+  (wrong-cadence / wrong-model / wrong-symbol), valid annual 2023, `limit=2` — must return
+  **2025 + 2023** (the ineligible 2024 never closes a group or proves `limit+1`), with the mixed-row
+  warning still surfaced. Assert the single shared `_row_eligible` classifier drives both the
+  pagination stop condition and the builder skip.
 - **Empty-page seam (B8 + R1):** page-1 empty → `EmptyData` (failover) under explicit and AUTO calls;
   page-2 empty after non-empty page-1 → `InvalidData` under explicit **and** AUTO calls — asserted at
   the actual `_rows()` `EmptyData`-raising seam (not a non-raising `if not data`), so the translation
   is reachable.
-- **Tuple guard (B9 + R2):** every valid `(source, statement, is_bank, model_type)` accepted; a
-  **VNDirect statement with `model_type=None`** → rejected; a **non-VNDirect report carrying a
-  canonical VNDirect model type** → rejected; every canonical-but-wrong-paired VNDirect tuple →
-  rejected; RATIOS and non-VNDirect with `model_type=None` accepted.
+- **Tuple guard (B9 + R2 + strict int):** every valid `(source, statement, is_bank, model_type)`
+  accepted; a **VNDirect statement with `model_type=None`** → rejected; a **non-VNDirect report
+  carrying a canonical VNDirect model type** → rejected; every canonical-but-wrong-paired VNDirect
+  tuple → rejected; **an otherwise-correct VNDirect tuple with `model_type` `2.0` / `"2"` / `True`**
+  → rejected (strict non-bool int prefilter, since `2.0 == 2`); RATIOS and non-VNDirect with
+  `model_type=None` accepted.
 - **End-to-end:** `metrics(..., source=injected_vndirect_source)` tests, not transformer-only fixtures.
-- **Probe unit seams (B10 + R5):** unit tests proving Leg B rejects a wrong `model_type` (e.g. 999)
-  even when headline codes exist, and Leg C's oracle labels a 142-of-200 partial newest-date response
-  as incomplete (FAIL). Live: `scripts/probe_corporate_itemcodes.py` LEG A/B/C all PASS post-fix
-  (pre-fix LEG A PASS, LEG B/C FAIL by design).
+- **Probe unit seams (B10 + R5 + R9 + R10):** unit tests proving Leg B rejects a wrong `model_type`
+  (e.g. 999) even when headline codes exist; Leg A **fails when only one balance period exists**
+  (two required); the raw-oracle helper **fails a truncated oracle** (page-1 declares 3 pages, page-2
+  premature-empty) rather than certifying a partial, **rejects a duplicate code / out-of-order page /
+  over-`totalPages` page**, and detects a **one-VND** value mismatch (exact `Decimal`, never `float`
+  both sides). Live: `scripts/probe_corporate_itemcodes.py` LEG A/B/C all PASS post-fix (pre-fix LEG A
+  PASS, LEG B/C FAIL by design).
 - Run focused tests, full offline suite, and warning-token / docs / public-surface gates on the merged
   tree (not per-branch).
 

@@ -16,11 +16,14 @@ pagination). THREE independent legs, each stating exactly what it proves:
   (BALANCE routes to modelType 2, INCOME to modelType 1). Asserting the tuple
   (not just code presence) blocks a false PASS from a report tagged 999/998.
 
-  LEG C — PAGINATION completeness ORACLE: raw-fetches every page needed to close
-  VIC's newest annual balance fiscal-date group, builds the complete
-  ``itemCode -> value`` set for that date, then requires the adapter's newest
-  report to reproduce that date and set EXACTLY. No magic 142 threshold, so a
-  142-of-N partial cannot pass.
+  LEG C — PAGINATION completeness ORACLE: builds a FINITE, VALIDATED, fail-closed
+  raw oracle of VIC's newest annual balance fiscal-date group (caps at page-1
+  ``totalPages``, validates ``currentPage`` identity, rejects a premature-empty /
+  malformed / duplicate-code / out-of-order page, and certifies completeness only
+  once a lower date is seen or a validated final page is exhausted), then requires
+  the adapter to reproduce that date and its ``itemCode -> value`` set EXACTLY
+  (``Decimal``, never lossy ``float``). No magic 142 threshold; a truncated raw
+  oracle fails rather than certifying a partial as complete.
 
 Every leg's assertions affect the exit code, and every ticker is evaluated even
 after an earlier failure (no short-circuit).
@@ -42,6 +45,7 @@ import os
 import sys
 import urllib.parse
 import urllib.request
+from decimal import Decimal
 
 _TICKERS = ("FPT", "VIC", "HPG", "VNM")
 _BASE = "https://api-finfo.vndirect.com.vn/v4/financial_statements"
@@ -77,11 +81,18 @@ def _raw_fetch(sym, model, *, size=300, page=None):
     url = _BASE + "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers=_UA)
     with urllib.request.urlopen(req, timeout=25) as resp:  # noqa: S310 (trusted host)
-        return json.load(resp)
+        # parse_float=Decimal keeps VND values EXACT (some exceed float's 2**53
+        # integer-exact range; a 1-VND diff must never compare equal — reviewer R9).
+        return json.loads(resp.read().decode("utf-8"), parse_float=Decimal)
+
+
+def _is_raw_int(x):
+    """Raw, non-bool int (JSON currentPage/totalPages arrive as int)."""
+    return isinstance(x, int) and not isinstance(x, bool)
 
 
 def _bucket(env, fd):
-    """{itemCode(str): int VND} for one fiscalDate in a raw envelope."""
+    """{itemCode(str): Decimal VND} for one fiscalDate in a raw envelope (exact)."""
     out = {}
     for row in env.get("data") or []:
         if row.get("fiscalDate") != fd:
@@ -89,7 +100,7 @@ def _bucket(env, fd):
         code, val = row.get("itemCode"), row.get("numericValue")
         if code is None or val is None:
             continue
-        out[str(int(code))] = int(val) if float(val).is_integer() else val
+        out[str(int(code))] = val if isinstance(val, Decimal) else Decimal(str(val))
     return out
 
 
@@ -127,16 +138,25 @@ def _check_ids(bucket, ids, *, label):
 def leg_a_raw(sym):
     print(f"=== LEG A raw template-identity: {sym} ===")
     ok = True
-    # balance: newest + second-newest (FY2024) — 2 years per ticker
+    # balance: require EXACTLY two complete periods (reviewer R10) — the two
+    # newest distinct fiscalDates, reported by their actual dates (not hard-coded
+    # year labels). Fewer than two -> FAIL (cannot claim the 8-check evidence).
     bal_env = _raw_fetch(sym, 1)
-    bal_dates = _distinct_dates(bal_env)[:2]
-    for fd in bal_dates:
+    bal_dates = _distinct_dates(bal_env)
+    if len(bal_dates) < 2:
+        print(f"  LEG A FAIL: need 2 balance periods, saw {bal_dates}")
+        return False
+    for fd in bal_dates[:2]:
         print(f"  modelType 1 = BALANCE (fd={fd})")
         ok = _check_ids(_bucket(bal_env, fd), _BAL_IDS, label=fd) and ok
     # income + cashflow: newest only
     for model, name, ids in ((2, "INCOME", _INC_IDS), (3, "CASHFLOW", _CF_IDS)):
         env = _raw_fetch(sym, model)
-        fd = _distinct_dates(env)[0]
+        dates = _distinct_dates(env)
+        if not dates:
+            print(f"  LEG A FAIL: no {name} period")
+            return False
+        fd = dates[0]
         print(f"  modelType {model} = {name} (fd={fd})")
         ok = _check_ids(_bucket(env, fd), ids, label=fd) and ok
     return ok
@@ -168,31 +188,64 @@ def leg_b_adapter(src, sym, StatementType, Period):
     return ok
 
 
-def leg_c_pagination(src, StatementType, Period):
-    """Completeness ORACLE: raw-fetch every page needed to CLOSE VIC's newest
-    annual balance fiscal-date group, then require the adapter to reproduce that
-    date and its full itemCode->value set exactly."""
-    print("=== LEG C pagination completeness oracle (VIC balance) ===")
-    oracle, newest_fd, page = {}, None, 1
+def _raw_newest_group_oracle(sym, model, *, page_size=80):
+    """Finite, validated, fail-closed raw oracle of the NEWEST fiscalDate group
+    (reviewer R9). Returns (newest_fd, {code: Decimal}) or None on any defect:
+    premature-empty/malformed page, duplicate code, bad/undeclared totalPages,
+    currentPage!=page, or inconsistent date order. The group is 'complete' only
+    once a LOWER date is observed or a VALIDATED final page is exhausted."""
+    page, cached_tp, newest_fd, oracle, complete = 1, None, None, {}, False
     while True:
-        env = _raw_fetch("VIC", 1, size=80, page=page)
-        data = env.get("data") or []
-        if not data:
-            break
-        if newest_fd is None:
-            newest_fd = data[0]["fiscalDate"]
-        closed = False
+        env = _raw_fetch(sym, model, size=page_size, page=page)
+        data = env.get("data")
+        if not isinstance(data, list) or not data:
+            return None  # premature empty / malformed -> cannot certify completeness
+        cp = env.get("currentPage")
+        if not _is_raw_int(cp) or cp != page:
+            return None
+        if page == 1:
+            cached_tp = env.get("totalPages")
+            if not _is_raw_int(cached_tp) or cached_tp < 1:
+                return None
+        elif "totalPages" in env and env["totalPages"] != cached_tp:
+            return None
         for row in data:
-            if row.get("fiscalDate") != newest_fd:
-                closed = True
+            if not isinstance(row, dict):
+                return None
+            fd, code, val = row.get("fiscalDate"), row.get("itemCode"), row.get("numericValue")
+            if fd is None or code is None or val is None:
+                return None
+            if newest_fd is None:
+                newest_fd = fd
+            if fd != newest_fd:
+                complete = True  # a lower date proves the newest group closed
                 break
-            oracle[str(int(row["itemCode"]))] = row["numericValue"]
-        if closed:
+            c = str(int(code))
+            if c in oracle:
+                return None  # duplicate code within the group
+            oracle[c] = val if isinstance(val, Decimal) else Decimal(str(val))
+        if complete:
+            break
+        if cp >= cached_tp:
+            complete = True  # validated final page exhausted with no lower date
             break
         page += 1
-    p1 = _raw_fetch("VIC", 1, size=80, page=1)
-    print(f"  oracle: newest_fd={newest_fd} complete_group_size={len(oracle)} "
-          f"(raw page1 keys={sorted(k for k in p1 if k != 'data')}, page-1 totalPages={p1.get('totalPages')})")
+    if not complete or not oracle:
+        return None
+    return newest_fd, oracle
+
+
+def leg_c_pagination(src, StatementType, Period):
+    """Completeness ORACLE: build a finite validated raw oracle of VIC's newest
+    annual balance date group, then require the adapter to reproduce that date
+    and its full itemCode->value set EXACTLY (Decimal, not lossy float)."""
+    print("=== LEG C pagination completeness oracle (VIC balance) ===")
+    built = _raw_newest_group_oracle("VIC", 1)
+    if built is None:
+        print("  oracle: could not build a validated complete newest-date group -> FAIL")
+        return False
+    newest_fd, oracle = built
+    print(f"  oracle: newest_fd={newest_fd} complete_group_size={len(oracle)}")
     reports = src.get_financials("VIC", StatementType.BALANCE, Period.ANNUAL, is_bank=False, limit=1)
     if not reports:
         print("  adapter: NO REPORTS -> FAIL")
@@ -201,7 +254,8 @@ def leg_c_pagination(src, StatementType, Period):
     adapter = {li.item_code: li.value for li in r.items}
     date_ok = str(r.fiscal_date) == newest_fd
     codes_ok = set(adapter) == set(oracle)
-    values_ok = all(float(adapter[c]) == float(oracle[c]) for c in oracle if c in adapter)
+    # EXACT compare via Decimal(str(...)) — never float() both sides (R9).
+    values_ok = all(Decimal(str(adapter[c])) == oracle[c] for c in oracle if c in adapter)
     missing = sorted(set(oracle) - set(adapter))
     print(f"  adapter newest={r.fiscal_date} n_items={len(adapter)} date_ok={date_ok} "
           f"codes_ok={codes_ok} values_ok={values_ok} missing_from_adapter={missing[:8]}")
