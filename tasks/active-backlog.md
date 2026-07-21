@@ -103,8 +103,15 @@ _Last synced: 2026-07-20 +07_
 > + opt-in live post-fix 3-leg PASS; CHANGELOG/API/tutorial/AI-skill/mapping/provenance docs lockstep;
 > merged-tree diff/secrets/blacklist/package checks. Duplicate invariant covers every fetched row; NO
 > extra fetch for the dropped limit+1 boundary. No ROE/app-helpers/redistribution/unrelated-refactor.
-> **NO push/close until implementation-review APPROVE.** Impl in progress (data layer → pagination/AUTO
-> → docs), integrate on merged tree, route to reviewer.
+> **NO push/close until implementation-review APPROVE.**
+> **✅ IMPLEMENTATION COMPLETE + merged-tree-verified — CODE REVIEW REQUESTED.** Range
+> `2ec1421..f94f945` (P1 data `fd1f24e`+`f97e113`, P2 pagination/AUTO `133e8d7`, P3 docs `f94f945`).
+> Full offline suite **3907 passed**; warning-token/docs/public-surface/blacklist/no-secrets gates
+> green; public_api snapshot NOT regenerated. **Live post-fix probe 3-leg PASS** (routing + 142-item
+> complete pagination proven live). Handoff: `/tmp/.../scratchpad/198-impl-review-handoff.md`. Awaiting
+> reviewer APPROVE; then push to master (no PR — maintainer own-fix) + close #198 (reviewer owns the
+> watermark). Non-blocking follow-up: `docs/ai-usage.md:152` bank `model_type==102`→`101` pre-existing
+> typo.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
