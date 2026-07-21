@@ -88,8 +88,14 @@ _Last synced: 2026-07-20 +07_
 > detection (_dominant_model restricted to statement's valid {corp,bank} models; redirect-once;
 > restart validates exact tag; tag-less/101/contradictory/empty restart → InvalidData; seed page1
 > once; exact fetch-seq + mixed-warning pinned); R18 probe strict Decimal-aware _canonical_int
-> (modelType 1.9/True + itemCode 11000.9 no longer false-pass). Probe green (LEG A PASS, B/C pre-fix
-> FAIL, exit 2 offline). NO code/tests changed; do not build until GATE PASS.
+> (modelType 1.9/True + itemCode 11000.9 no longer false-pass). **Round-7 gate also BLOCKED**
+> (`gate-202607212207-issue198-regate-round7.md`, reviewer `091f237`, R19–R20). **Revised again →
+> `2805ec0`, RE-GATE (round 8):** R19 explicit `page1_envelope` seed re-validated identically +
+> fresh-state redirect + `_dominant_model` fails on out-of-VALID minority tag & corporate/bank tie;
+> R20 runtime `_require_item_code` reuses `canonical_provider_key` (no str(int)); evidence wording
+> fixed (LEG A + pre-fix B/C observed). Probe green (LEG A PASS, B/C pre-fix FAIL, exit 2 offline).
+> NO code/tests changed; do not build until GATE PASS. **7 gate rounds; mappings/evidence settled
+> since round 2 — deltas now micro-seams in pagination/AUTO/probe edge-handling.**
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
