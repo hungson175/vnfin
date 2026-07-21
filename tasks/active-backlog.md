@@ -120,6 +120,14 @@ _Last synced: 2026-07-20 +07_
 > (c3da29c 2 docs-contract tests RED → 6a1941a GREEN). Merged-tree: **3951 passed**, wheel builds,
 > gates green, vndirect change docstring-only. Handoff `/tmp/.../scratchpad/198-correction-handoff.md`.
 > No push/close pending APPROVE.
+> **Impl-review round 2 BLOCK** (`review-202607212346`, `9c54b3a`, R1–R3 residual pins, tests/prose
+> only). **Corrected → range `c45bf1d..accefb4`, RE-REVIEW REQUESTED:** R1 probe-seam (`leg_a_raw`
+> 2-period guard, code/reportType/modelType mismatch matrix, over-totalPages, real-adapter `_num()`
+> seam with `±(2**53+1)` alias); R2 cross-page dropped-boundary dup + runtime `Decimal("11000.9")`
+> itemCode + exact 23-table dict-equality (8+8+7, no extras); R3 neutralized 2 stale "currently
+> inverted" phrases. NO runtime files touched (tests + probe/evidence prose only). Merged tree:
+> **3959 passed**, docs/public/secrets gates green, diff --check clean, wheel builds. No live re-run
+> needed (prose/tests only). No push/close pending APPROVE.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
