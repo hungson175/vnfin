@@ -128,6 +128,12 @@ _Last synced: 2026-07-20 +07_
 > inverted" phrases. NO runtime files touched (tests + probe/evidence prose only). Merged tree:
 > **3959 passed**, docs/public/secrets gates green, diff --check clean, wheel builds. No live re-run
 > needed (prose/tests only). No push/close pending APPROVE.
+> **Impl-review round 3 BLOCK** (`review-202607220003`, `b6d11ae`, 2 R1 test-independence gaps).
+> **Corrected → range `34dbe61..d429cc9` (1 commit, tests-only), RE-REVIEW REQUESTED:** R1.1 leg_a
+> one-period fixture now fully identity-valid (False attributable ONLY to the 2-period guard;
+> mutation-resistant); R1.2 split into (a) real `_num()`/`LineItem` alias BOTH signs
+> (`±9007199254740993`→`±…992.0`) + (b) guard-short-circuit spy asserting 0 adapter calls. Merged
+> tree: **3960 passed**. No push/close pending APPROVE.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
