@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -686,17 +687,26 @@ def test_wide_period_reassembles_all_142_items_across_two_pages():
     assert {li.item_code for li in reports[0].items} == {str(c) for c in codes}
 
 
-def test_duplicate_on_dropped_limit_plus_one_boundary_raises():
-    # limit=1 retains A and DROPS the (limit+1)-th eligible date B. The loop still
-    # FETCHES the first rows of B; a duplicate (fd,code) INSIDE that dropped boundary
-    # period must raise InvalidData (STATE-1 validates every fetched row).
-    rows = [
-        _row("TESTCO", 11000, 1.0, A),
-        _row("TESTCO", 20000, 2.0, A),
-        _row("TESTCO", 11000, 3.0, B),
-        _row("TESTCO", 11000, 4.0, B),  # duplicate (B, 11000) on the dropped boundary
-    ]
-    pages = {2: {1: _env(rows, current_page=1, total_pages=1)}}
+def test_duplicate_on_dropped_limit_plus_one_boundary_cross_page_raises():
+    # limit=1 retains A and DROPS the (limit+1)-th eligible date B. The duplicate
+    # (B, 11000) is split ACROSS pages: an INELIGIBLE B row on page 1 (which does
+    # NOT advance the eligible boundary, so the loop still fetches page 2) and its
+    # ELIGIBLE duplicate on page 2 -> InvalidData. Proves seen_keys spans pages and
+    # the dup fires on the dropped boundary even when its two rows are cross-page.
+    page1 = _env(
+        [
+            _row("TESTCO", 11000, 1.0, A),                          # eligible A (retained)
+            _row("TESTCO", 11000, 9.0, B, report_type="QUARTER"),   # (B,11000) INELIGIBLE
+        ],
+        current_page=1,
+        total_pages=2,
+    )
+    page2 = _env(
+        [_row("TESTCO", 11000, 2.0, B)],                            # (B,11000) duplicate, eligible
+        current_page=2,
+        include_total_pages=False,
+    )
+    pages = {2: {1: page1, 2: page2}}
     with pytest.raises(InvalidData):
         _src_paged(pages).get_financials(
             "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False, limit=1
@@ -760,3 +770,22 @@ def test_runtime_fractional_item_code_raises_via_adapter(bad_code):
         _src_paged(pages).get_financials(
             "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
         )
+
+
+def test_runtime_decimal_fractional_item_code_raises_row_level():
+    # #198 R20: a runtime statement row whose itemCode is a FRACTIONAL Decimal
+    # (11000.9) must raise InvalidData through the exact per-row seam the pagination
+    # loop uses (_require_item_code -> canonical_provider_key). Synthetic-defensive:
+    # stdlib json yields a float at runtime, so a Decimal cannot arrive via the HTTP
+    # path — the assertion is the row-level InvalidData, byte-identical to the
+    # builder key.
+    row = {
+        "code": "TESTCO",
+        "itemCode": Decimal("11000.9"),
+        "reportType": "ANNUAL",
+        "modelType": 2,
+        "numericValue": 1.0,
+        "fiscalDate": A,
+    }
+    with pytest.raises(InvalidData):
+        VNDirectFundamentalSource._require_item_code(row)

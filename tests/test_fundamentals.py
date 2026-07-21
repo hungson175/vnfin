@@ -1065,6 +1065,14 @@ def test_198_corporate_name_map_independent_pin():
         for code, label in table.items():
             assert item_name(code, model_type=mt) == label
 
+    # EXACT dict-equality: the corporate tables contain ONLY these codes (8+8+7),
+    # so a 24th (extra/renamed) code would fail — not just "all 23 exist".
+    from vnfin.fundamentals import itemcodes
+
+    assert itemcodes._NAMES_BY_MODEL_TYPE[1] == expected[1]
+    assert itemcodes._NAMES_BY_MODEL_TYPE[2] == expected[2]
+    assert itemcodes._NAMES_BY_MODEL_TYPE[3] == expected[3]
+
     # aggregate-only current-asset sub-lines stay honest raw item_<code>
     for code in ("11200", "11300", "11400", "11500"):
         assert item_name(code, model_type=1) == f"item_{code}"
