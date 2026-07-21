@@ -232,14 +232,40 @@ def test_oracle_current_page_over_total_pages(probe, monkeypatch):
 # =========================================================================== #
 # leg_a_raw — needs TWO identity-bearing balance periods (R10).
 # =========================================================================== #
-def test_leg_a_raw_fails_with_only_one_balance_period(probe, monkeypatch):
-    # modelType 1 (balance) returns only ONE identity-bearing fiscalDate -> the
-    # "need 2 balance periods" guard makes leg_a_raw return False (income/cashflow
-    # are provided defensively but are not reached).
+# A FULLY identity-valid single period for each template. Every LEG A identity
+# holds exactly (residual 0), so the ONLY thing that can make leg_a_raw False is
+# the two-period balance guard. If that guard regressed away, this same fixture
+# would pass all identities and return True -> the test uniquely pins the guard.
+_BAL_FULL = {  # all 5 balance identities hold
+    12700: 1000, 13000: 700, 14000: 300,       # 13000+14000==12700
+    11000: 600, 12000: 400,                     # 11000+12000==12700
+    13100: 500, 13300: 200,                     # 13100+13300==13000
+    14100: 250, 14300: 50,                      # 14100+14300==14000
+    11100: 100, 11200: 200, 11300: 100, 11400: 100, 11500: 100,  # sum==11000
+}
+_INC_FULL = {  # 21001-22100==23100 ; 23800-22070==23003 ; 23000+23500==23003
+    21001: 1000, 22100: 600, 23100: 400,
+    23800: 500, 22070: 200, 23003: 300,
+    23000: 250, 23500: 50,
+}
+_CF_FULL = {  # 32000+33000+34000==35000 ; 35000+36000+36100==37000
+    32000: 350, 33000: -120, 34000: -80, 35000: 150,
+    36000: 460, 36100: -10, 37000: 600,
+}
+
+
+def test_leg_a_raw_fails_only_because_of_two_period_guard(probe, monkeypatch):
+    # The SINGLE balance period is FULLY identity-valid (all 5 balance identities),
+    # and the income + cash-flow fixtures are FULLY valid too. So leg_a_raw returns
+    # False ONLY because the two-period guard trips (one balance date < 2). Were that
+    # guard deleted, this identical fixture would pass every identity and return True,
+    # so the assertion uniquely pins the >=2-balance-period requirement (mutation-
+    # resistant — it does NOT lean on any missing/incomplete code).
+    tables = {1: _BAL_FULL, 2: _INC_FULL, 3: _CF_FULL}
+
     def _fake(sym, model, *, size=300, page=None):
-        if model == 1:
-            return _penv([_prow(_A, 12700, 100), _prow(_A, 13000, 50)], total_pages=1)
-        return _penv([_prow(_A, 21001, 100, model_type=model)], total_pages=1)
+        rows = [_prow(_A, code, val, model_type=model) for code, val in tables[model].items()]
+        return _penv(rows, total_pages=1)
 
     monkeypatch.setattr(probe, "_raw_fetch", _fake)
     assert probe.leg_a_raw("VIC") is False
@@ -372,25 +398,47 @@ def _vic_balance_env(total_assets_value):
     return {"data": rows, "currentPage": 1, "totalPages": 1, "size": len(rows)}
 
 
-@pytest.mark.parametrize("raw_value", [_ALIAS, -_ALIAS], ids=["pos", "neg"])
-def test_leg_c_real_adapter_fails_closed_on_adjacent_alias(probe, monkeypatch, raw_value):
+# --- (a) REAL numeric seam alias, BOTH signs: _num() -> LineItem.value ------- #
+@pytest.mark.parametrize(
+    "raw_value,expected",
+    [(_ALIAS, 9007199254740992.0), (-_ALIAS, -9007199254740992.0)],
+    ids=["pos", "neg"],
+)
+def test_real_adapter_line_value_aliases_both_signs(raw_value, expected):
+    # The exact false-equality the ±2**53 guard exists to prevent: the real adapter
+    # stores raw ±9007199254740993 as the aliased float ±9007199254740992.0 (a
+    # DISTINCT integer that collapses to the SAME float). numericValue may be
+    # negative for statement lines, so _num() accepts both signs.
     env = _vic_balance_env(raw_value)
-    # oracle via the REAL probe function reading a monkeypatched _raw_fetch
-    monkeypatch.setattr(
-        probe, "_raw_fetch", lambda sym, model, *, size=300, page=None: env
-    )
-    # adapter report via a REAL VNDirectFundamentalSource over a mocked HTTP layer
-    src = VNDirectFundamentalSource(http_get=lambda url, params, headers: json.dumps(env))
-    assert probe.leg_c_pagination(src, StatementType, Period) is False
-
-
-def test_real_adapter_line_value_aliases_at_two53_plus_one():
-    # Document the exact false-equality the ±2**53 guard prevents: the real adapter
-    # stores raw 9007199254740993 as the aliased float 9007199254740992.0.
-    env = _vic_balance_env(_ALIAS)
     src = VNDirectFundamentalSource(http_get=lambda url, params, headers: json.dumps(env))
     r = src.get_financials("VIC", StatementType.BALANCE, Period.ANNUAL, is_bank=False, limit=1)[0]
     val = next(li.value for li in r.items if li.item_code == "12700")
     assert isinstance(val, float)
-    assert val == 9007199254740992.0
-    assert val == float(_ALIAS)  # the alias: distinct int, identical float
+    assert val == expected
+    assert val == float(raw_value)     # distinct int, identical float
+    assert expected != raw_value       # the raw int and its alias are NOT equal
+
+
+# --- (b) GUARD short-circuits BEFORE the adapter, BOTH signs (0 HTTP calls) --- #
+@pytest.mark.parametrize("raw_value", [_ALIAS, -_ALIAS], ids=["pos", "neg"])
+def test_leg_c_guard_fails_closed_before_adapter(probe, monkeypatch, raw_value):
+    # leg_c_pagination fails closed on abs(oracle value) >= 2**53 BEFORE it ever
+    # calls src.get_financials. A REAL VNDirectFundamentalSource is supplied (its
+    # http would serve the env if reached), wrapped in a call-counter spy: the
+    # guarded path returns False AND makes ZERO adapter calls, proving the
+    # short-circuit rather than pretending Leg C traverses the skipped branch.
+    env = _vic_balance_env(raw_value)
+    monkeypatch.setattr(
+        probe, "_raw_fetch", lambda sym, model, *, size=300, page=None: env
+    )
+    real = VNDirectFundamentalSource(http_get=lambda url, params, headers: json.dumps(env))
+    calls = {"n": 0}
+    inner = real.get_financials
+
+    def _spy(*args, **kwargs):
+        calls["n"] += 1
+        return inner(*args, **kwargs)
+
+    real.get_financials = _spy  # instance attr shadows the bound method
+    assert probe.leg_c_pagination(real, StatementType, Period) is False
+    assert calls["n"] == 0  # guard short-circuited before any adapter HTTP call
