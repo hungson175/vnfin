@@ -1,66 +1,66 @@
 # Design/evidence note — #198 corporate fundamentals: inverted routing + broken catalog + pagination
 
-- Status: **DESIGN REQUIRED (reviewer triage `triage-202607202156-issue198-corporate-fundamentals.md`,
-  reviewer commit `d794c71`) — awaiting gate. No code changed.**
-- Date: 2026-07-20
+- Status: **DESIGN RE-GATE REQUESTED.** Revised against reviewer gate
+  `reviews/gate-202607202233-issue198-design-note.md` (reviewer commit `0345fcc`, BLOCK) —
+  every blocking revision B1–B10 addressed below. **No package runtime code or tests changed**
+  in this note (evidence + design only; two docs + one executable probe script updated).
+- Binding spec: `reviews/triage-202607202156-issue198-corporate-fundamentals.md` (reviewer `d794c71`).
+- Date: 2026-07-20 (revised 2026-07-21).
 - Related: `docs/design/bank-fundamentals-itemcodes.md` + `docs/design/bank-itemcodes-probe-20260620.md`
   (#157, the sibling bank fix this mirrors); `docs/design/corporate-itemcodes-probe-20260720.md`
-  (companion evidence artifact, live probe detail).
+  (companion evidence artifact — exact-VND values + official-filing cross-check per code).
 
 ## 1. Problem & root cause
 
-`vnfin/fundamentals/vndirect.py:55-59` (`_CORP_MODEL`) routes corporate `INCOME`→modelType `1` and
-`BALANCE`→modelType `2`. **This is inverted**: modelType `1` is the balance sheet, modelType `2` is
-the income statement (bank templates, `101/102/103`, are unaffected and correct). Independently
-worse: the corporate name/code catalogs (`itemcodes.py:_NAMES_BY_MODEL_TYPE[1]`/`[2]`,
-`metric_api.py`'s `corporate_code=` values) are not merely statement-swapped — **the numeric codes
-themselves do not exist in the real provider data for the concepts they claim**. E.g. the current
-catalog's `25000`/`30000`/`40000` ("total assets"/"total liabilities"/"equity") never appear anywhere
-in a live corporate balance-sheet response; the real total-assets/liabilities/equity codes are
-`12700`/`13000`/`14000` — the SAME numeric codes the bank templates already use (verified #157). The
-catalog was evidently authored without ever querying the live corporate endpoint. Net effect: every
-corporate `INCOME`/`BALANCE` metric currently either (a) resolves to `None` (the guessed code doesn't
-exist), or (b) — more dangerously — resolves to a REAL value under the WRONG statement/concept label
-(a plausible-looking number that is actually something else entirely), because a metric declared
-`statement=INCOME` is fetched from real-balance data (modelType 1) or vice versa.
+Three independent defects on the corporate (non-bank) path; bank templates `101/102/103` are correct
+and untouched throughout.
 
-Independently, the tall/long statement endpoint is paginated (`currentPage`/`size`/`totalElements`/
-`totalPages`) but the adapter (`vndirect.py:266-272,498-502`) requests one page sized `limit*80` and
-never follows `page`/`totalPages` — a fiscal period wider than that budget is silently truncated
-(reproduced live: VIC's newest annual balance period has 142 line items; the `limit=1` budget of 80
-drops 62 of them, including `14000`/owners' equity, with no warning).
+1. **Routing inverted.** `vnfin/fundamentals/vndirect.py:54-58` (`_CORP_MODEL`) maps
+   `INCOME→1, BALANCE→2`. Live probe proves modelType `1` is the **balance sheet** and `2` is the
+   **income statement** (§2). So a metric declared `statement=INCOME` is fetched from real-balance
+   rows and vice-versa.
+2. **Catalog codes wrong.** The corporate `MetricSourceCodes.corporate_code` values
+   (`metric_api.py:133-182`) and the `itemcodes.py:_NAMES_BY_MODEL_TYPE` corporate name maps do not
+   merely swap statements — the numeric codes do not exist for the concepts they claim. E.g. the
+   catalog's `25000`/`30000`/`40000` ("total assets/liabilities/equity") never appear in a live
+   corporate balance response; the real codes are `12700`/`13000`/`14000` (the same headline code
+   space the bank templates use, verified #157). Net effect: every corporate INCOME/BALANCE metric
+   currently resolves to `None`, or worse to a REAL value under the WRONG concept label — a
+   plausible-looking number that is actually something else.
+3. **Pagination truncates.** The tall/long statement endpoint is paginated but the adapter
+   (`vndirect.py:_fetch_statement_rows`) requests one page sized `_row_budget(limit)` and never
+   follows `page`/`totalPages`. A fiscal period wider than one page is silently truncated —
+   reproduced live: VIC's newest annual balance period has **142** line items; a `size=80` page drops
+   62 of them including `14000` (owners' equity), with no warning (§2, §8).
 
-## 2. Evidence (live-probed 2026-07-20; full detail in the companion probe doc)
+## 2. Evidence (live-probed 2026-07-20/21; exact-VND detail in the companion probe doc)
 
-Companion: `docs/design/corporate-itemcodes-probe-20260720.md`. Summary — **every accounting
-identity below holds to the exact VND**, on FPT/VIC/HPG/VNM (balance: 2 fiscal years each + 1
-quarterly cross-check; income: latest FY each):
+Companion `docs/design/corporate-itemcodes-probe-20260720.md` now records, for **FPT/VIC/HPG/VNM**:
+(a) the **exact-VND** value of every retained code; (b) each accounting identity with an **exact
+integer residual of `0`** (not a tolerance); (c) an **official-filing cross-check** naming each
+operand against the issuer's own audited consolidated statements (FPT FY2025 full matrix; VIC FY2024
+for the parent/NCI split and the reviewer's total-assets/equity anchor). Summary:
 
-- **Balance (modelType 1):** `13000` (liab) + `14000` (equity) == `12700` (total assets). Also
-  `11000` (current assets) + `12000` (non-current assets) == `12700`; `13100`+`13300`==`13000`;
-  `14100`+`14300`==`14000`; `11100`+`11200`+`11300`+`11400`+`11500`==`11000`.
-- **Income (modelType 2):** `21001` (net revenue) − `22100` (COGS) == `23100` (gross profit);
-  `23800` (PBT) − `22070` (tax expense) == `23003` (PAT, total consolidated); `23000` (PAT
-  attributable to parent) + `23500` (PAT attributable to non-controlling interests) == `23003`.
-- The last identity **independently corroborates** the reviewer's flagged-open `23000` candidate
-  (triage packet: "must be independently corroborated before shipping") — CONFIRMED: parent PAT.
-- **Cross-statement bonus find:** cashflow's `37000` (not the currently-mapped `35000`) exactly
-  matches balance-sheet `11100` (cash & equivalents) — proving the CURRENT `CASH_END_OF_PERIOD`
-  mapping (`35000`) is ALSO wrong, independent of the routing-inversion bug.
-- **Pagination:** live `size=80` against VIC's 142-item newest annual balance period silently drops
-  `14000` (owners' equity); `page=2` returns the remaining 62 rows of the SAME date before the next
-  date begins (confirms rows are grouped contiguously by `fiscalDate`, the load-bearing assumption
-  behind the reviewer's stop condition).
-- **Provider metadata quirk (new finding, not in the reviewer's original packet):** page 1's envelope
-  carries `totalElements`/`totalPages`; **page ≥2's envelope OMITS both fields** (only `currentPage`/
-  `size` remain). The pagination loop must cache `totalPages` from page 1 rather than re-reading it
-  every page.
-- Reproduced live via the adapter itself, not just raw queries: `scripts/probe_corporate_itemcodes.py`
-  (`VNFIN_LIVE=1`) — on current `master` it **fails by design** (BALANCE request hits real-income
-  modelType 2, INCOME request hits real-balance modelType 1 truncated to 80 rows), and must **PASS**
-  once #198 ships (this is the regression check).
+- **Balance (modelType 1):** `13000+14000==12700`; `11000+12000==12700`; `13100+13300==13000`;
+  `14100+14300==14000`; `11100+11200+11300+11400+11500==11000` — all **exact-0 on all 4 tickers**.
+- **Income (modelType 2):** `21001−22100==23100`; `23800−22070==23003`; `23000+23500==23003` — all
+  **exact-0 on all 4 tickers**. The last independently confirms `23000`=parent PAT, `23500`=NCI PAT.
+- **Cash flow (modelType 3):** `32000+33000+34000==35000` and `35000+36000+36100==37000` — both
+  **exact-0 on all 4 tickers** (the standard IAS-7 reconciliation: net-change + begin-cash + FX =
+  end-cash). `31000` does not exist in the probed periods.
+- **Pagination + metadata quirk (live-confirmed 2026-07-21):** VIC balance page 1 (`size=80`) returns
+  only date `2025-12-31` with `14000` **absent**; page-1 envelope carries
+  `currentPage/size/totalElements/totalPages` (`totalPages=33`); **page ≥2 omits `totalPages` and
+  `totalElements`** (only `currentPage`/`size` remain); dates are **contiguous and strictly
+  descending** across pages (`2025-12-31` spans pages 1–2, then `2024-12-31`), and `currentPage` is
+  present on every page.
 
-## 3. Proposed fix — routing (atomic swap, no aliasing)
+**Identity vs. naming (reviewer B1):** an equality proves the operands participate in a relationship;
+it does not by itself name which operand is "current assets" or "operating cash flow". Every retained
+code is therefore additionally cross-checked to an **official issuer filing** in the probe doc;
+unproven codes are left raw/unmapped (never guessed).
+
+## 3. Fix — routing (atomic swap, no aliasing)
 
 ```python
 _CORP_MODEL = {
@@ -69,161 +69,301 @@ _CORP_MODEL = {
     StatementType.CASHFLOW: 3,   # unchanged
 }
 ```
-`_BANK_MODEL` is untouched. No transition shim, no dual-read — per reviewer instruction ("do not add
-two aliases over the inverted routing"), this is a hard atomic swap gated entirely behind the
-TDD matrix (§6) and the reviewer's re-review, exactly mirroring the #157 bank hard-switch precedent.
+`_BANK_MODEL` untouched. Hard atomic swap, no transition shim (reviewer: "do not add two aliases"),
+gated entirely behind the TDD matrix (§11) and re-review — mirrors the #157 bank hard-switch.
 
-## 4. Proposed fix — corporate itemCode/metric catalog (mapping table)
+## 4. Fix — corporate itemCode/metric catalog (`metric_api.py`)
 
-Every corporate `MetricSourceCodes.corporate_code` and every `itemcodes.py` corporate name-map entry
-is replaced. Confidence follows the #157 bank-probe convention (HIGH = closed by an exact accounting
-identity across ≥3 tickers; unlisted = left **raw/unmapped**, never guessed).
+Every corporate `MetricSourceCodes.corporate_code` is replaced. **Proof** = exact identity (4 tickers)
+**and** an official-filing line cross-check (probe doc). Bank codes are byte-for-byte unchanged.
 
 ### Balance (modelType 1)
 
-| Concept | Old (wrong) code | **New code** | Proof | Confidence |
+| MetricId | Concept | Old code | **New code** | Confidence |
 |---|---|---|---|---|
-| Total assets | `25000` | **`12700`** | `13000+14000==12700` (4 tickers × 2 FYs + 1Q) | HIGH |
-| Total liabilities | `30000` | **`13000`** | same identity | HIGH |
-| Owners' equity | `40000` | **`14000`** | same identity | HIGH |
-| Current assets | `23000` | **`11000`** | `11100..11500` sum == `11000`; `11000+12000==12700` | HIGH |
-| Current liabilities | `30100` | **`13100`** | `13100+13300==13000` | HIGH |
-| Long-term liabilities | `30200` | **`13300`** | same | HIGH |
-| Cash and equivalents | `23100` (was labeled BALANCE, is actually income gross-profit) | **`11100`** | sums into `11000`; EXACT match to cashflow `37000` | HIGH |
+| `TOTAL_ASSETS` | Total assets | `25000` | **`12700`** | HIGH |
+| `TOTAL_LIABILITIES` | Total liabilities | `30000` | **`13000`** | HIGH |
+| `OWNERS_EQUITY` | Owners' equity | `40000` | **`14000`** | HIGH |
+| `CURRENT_ASSETS` | Current assets | `23000` | **`11000`** | HIGH |
+| `CURRENT_LIABILITIES` | Current liabilities | `30100` | **`13100`** | HIGH |
+| `LONG_TERM_LIABILITIES` | Long-term liabilities | `30200` | **`13300`** | HIGH |
+| `CASH_AND_EQUIVALENTS` | Cash & equivalents | `23100` | **`11100`** | HIGH |
 
-`12700`/`13000`/`14000` are **identical numeric codes to the already-verified bank codes** (#157) —
-corporate and bank share this headline code space; only the surrounding template (`modelType`)
-differs.
+`TOTAL_ASSETS`/`TOTAL_LIABILITIES`/`OWNERS_EQUITY` are `AppliesTo.BOTH`; only the `corporate_code`
+changes (bank `12700`/`13000`/`14000` unchanged — corporate and bank share this headline code space).
 
 ### Income (modelType 2)
 
-| Concept | Old (wrong) code | **New code** | Proof | Confidence |
+| MetricId | Concept | Old code | **New code** | Confidence |
 |---|---|---|---|---|
-| Net revenue | `11000` | **`21001`** | magnitude sanity + reviewer anchor; feeds gross-profit identity | HIGH |
-| Gross profit | `11200` | **`23100`** | `21001-22100==23100` (4/4 tickers exact) | HIGH |
-| Profit before tax | `20000` | **`23800`** | `23800-22070==23003` (4/4 exact); same code as bank | HIGH |
-| Net income (total, consolidated) | `21000` | **`23003`** | `23000+23500==23003` (4/4 exact) | HIGH |
-| Net income (parent-attributable) | `21100` | **`23000`** | same split identity | HIGH |
-| *(new, not previously in catalog)* | — | `23500` NCI/minority PAT | same split identity | HIGH (internal use only — not currently a public `MetricId`) |
-| Operating profit | `14000` | *(none — leave unmapped)* | no closing identity found in the probed code set | **UNPROVEN — do not ship a guess** |
+| `NET_REVENUE` | Net revenue | `11000` | **`21001`** | HIGH |
+| `GROSS_PROFIT` | Gross profit | `11200` | **`23100`** | HIGH |
+| `PROFIT_BEFORE_TAX` | Profit before tax | corp `20000` | **corp `23800`** | HIGH |
+| `NET_INCOME` | Net income (total consolidated PAT) | corp `21000` | **corp `23003`** | HIGH |
+| `NET_INCOME_PARENT` | Net income (parent-attributable PAT) | `21100` | **`23000`** | HIGH |
+| `OPERATING_PROFIT` | Operating profit | `14000` | **`None` → BLOCKED (§5)** | UNMAPPED |
 
-### Cash flow (modelType 3 — routing unchanged, out of P0 scope except one proven fix)
+`PROFIT_BEFORE_TAX`/`NET_INCOME` are `AppliesTo.BOTH`; bank codes (`23800`/`23000`) unchanged. Note
+`NET_INCOME` corp `23003` (total) ≠ `NET_INCOME_PARENT` corp `23000` (parent) — see Q2 (§12, ruling
+ACCEPT). `23500` (NCI PAT) is identity-proven but is **not** promoted to a public `MetricId` in #198.
 
-| Concept | Old code | **New code** | Proof | Confidence |
+### Cash flow (modelType 3) — full audit (reviewer B4, ruling reject-the-status-quo)
+
+| MetricId | Concept | Old code | **New code** | Confidence |
 |---|---|---|---|---|
-| Cash at end of period | `35000` | **`37000`** | EXACT match to balance-sheet `11100` | HIGH |
-| Operating/investing/financing/net-change CF | `31000`/`32000`/`33000`/`34000` | *(no change proposed)* | `32000`/`33000` are structurally plausible section headers but do not close an identity against `34000` in the probed code set | **UNVERIFIED — gate question, see §7 Q3** |
+| `OPERATING_CASH_FLOW` | Net CF from operating | `31000` | **`32000`** | HIGH |
+| `INVESTING_CASH_FLOW` | Net CF from investing | `32000` | **`33000`** | HIGH |
+| `FINANCING_CASH_FLOW` | Net CF from financing | `33000` | **`34000`** | HIGH |
+| `NET_CASH_FLOW` | Net change in cash | `34000` | **`35000`** | HIGH |
+| `CASH_END_OF_PERIOD` | Cash at end of period | `35000` | **`37000`** | HIGH |
+
+The old catalog shifted every section under the wrong metric (old `OPERATING_CASH_FLOW=31000` does not
+exist; old `INVESTING=32000` is actually **operating**, etc.). Both cash-flow identities close exact-0
+on all 4 tickers, and the individual operating/investing/financing section meanings are cross-checked
+against an official issuer cash-flow statement in the probe doc. If any single section fails the
+official cross-check, that metric is unmapped via the §5 BLOCKED contract instead — under no outcome
+does the old shifted mapping remain.
 
 ### Bank (`101/102/103`) — untouched, unaffected by this issue.
 
-## 5. Proposed pagination fix
+## 5. Unmapped-code contract — honest BLOCKED, never guess (reviewer B2, ruling ACCEPT Q1)
 
-Replace the single-page `size=limit*80` fetch with a bounded multi-page loop, reusing the EXISTING
-per-date pivot/validation logic in `_build_statement_reports` unchanged (the loop's only job is to
-gather the right SET of raw rows before handing them to that function):
+Today `_code_for` returns `None` for an unmapped corporate metric and `metric_api.py:498-503` folds
+that into `MISSING` with reason `missing line item None in income` — falsely describing an upstream
+absence. Split the branch:
+
+```python
+code = _code_for(defn, source, is_bank)          # None when this entity type has no verified code
+if code is None:
+    return _unavailable(defn, MetricAvailability.BLOCKED, fiscal_date,
+        REASON_METRIC_CODE_UNMAPPED.format(id=defn.id.value, source=source,
+                                           entity=("bank" if is_bank else "corporate")))
+line = _line_for(report, code)                   # search report.items for the code
+if line is None:                                 # code IS mapped but genuinely absent upstream
+    return _unavailable(defn, MetricAvailability.MISSING, fiscal_date,
+        REASON_MISSING_LINE_ITEM.format(code=code, statement=st_value))
+```
+
+- New reason constant:
+  `REASON_METRIC_CODE_UNMAPPED = "metric '{id}' has no verified code for source '{source}' and {entity} entities"`.
+- Availability = **`BLOCKED`** (the statement exists; the library lacks a verified mapping). **Not**
+  `UNSUPPORTED` (reserved for future valuation primitives) and **not** `MISSING` (which means the
+  provider omitted a mapped line).
+- `OPERATING_PROFIT` is the only #198 metric set to `corporate_code=None`. It feeds **no** derived
+  metric (there is no `OPERATING_MARGIN` in `_V1_CATALOG`), so real-world propagation is nil; the
+  existing input-BLOCKED→BLOCKED rule (`metric_api.py:546-556`) is nonetheless exercised by a
+  synthetic derived-propagation test so the mechanism is proven for the `None`-code case.
+
+## 6. `itemcodes.py` name map — only official-correlated labels (reviewer B5, ruling REJECT Q4)
+
+`LineItem.name` is public financial semantics. Only codes whose label is **individually** confirmed by
+an official filing get a name; every other code (including aggregate-only sub-lines) stays the honest
+raw `item_<code>`. The corporate blocks of `_NAMES_BY_MODEL_TYPE` are replaced in full with exactly:
+
+```python
+# ----- Corporate BALANCE sheet (modelType 1) -----
+1: {
+    "12700": "Tổng cộng tài sản",            # total assets
+    "13000": "Nợ phải trả",                  # total liabilities
+    "14000": "Vốn chủ sở hữu",               # owners' equity
+    "11000": "Tài sản ngắn hạn",             # current assets
+    "12000": "Tài sản dài hạn",              # non-current assets
+    "13100": "Nợ ngắn hạn",                  # current liabilities
+    "13300": "Nợ dài hạn",                   # long-term liabilities
+    "11100": "Tiền và các khoản tương đương tiền",  # cash & equivalents
+},
+# ----- Corporate INCOME statement (modelType 2) -----
+2: {
+    "21001": "Doanh thu thuần",              # net revenue
+    "22100": "Giá vốn hàng bán",             # cost of goods sold
+    "23100": "Lợi nhuận gộp",                # gross profit
+    "23800": "Tổng lợi nhuận kế toán trước thuế",   # profit before tax
+    "22070": "Chi phí thuế TNDN",            # income tax expense
+    "23003": "Lợi nhuận sau thuế TNDN",      # profit after tax (total consolidated)
+    "23000": "LNST của cổ đông công ty mẹ",  # PAT attributable to parent
+    "23500": "LNST của cổ đông không kiểm soát",    # PAT attributable to NCI
+},
+# ----- Corporate CASH FLOW (modelType 3) -----
+3: {
+    "32000": "Lưu chuyển tiền thuần từ HĐ kinh doanh",  # operating
+    "33000": "Lưu chuyển tiền thuần từ HĐ đầu tư",      # investing
+    "34000": "Lưu chuyển tiền thuần từ HĐ tài chính",   # financing
+    "35000": "Lưu chuyển tiền thuần trong kỳ",          # net change in cash
+    "36000": "Tiền và tương đương tiền đầu kỳ",         # cash at beginning of period
+    "36100": "Ảnh hưởng của thay đổi tỷ giá",           # FX effect
+    "37000": "Tiền và tương đương tiền cuối kỳ",        # cash at end of period
+},
+```
+
+The aggregate current-asset sub-lines `11200`/`11300`/`11400`/`11500` are **left raw** (`item_<code>`):
+their sum equals `11000` but the aggregate identity does not identify each component individually, and
+no official line was correlated to each in this pass. (A future non-blocking issue may add them if
+each is individually official-confirmed.) The exact final label strings are pinned by the official
+cross-check in the probe doc; any label the cross-check does not confirm is dropped to `item_<code>`.
+
+## 8. Pagination + row-stream + metadata guards (reviewer B6 + B7)
+
+Replace the single-page fetch in `_fetch_statement_rows` with a bounded, validated multi-page loop.
+The loop's only job is to gather the correct SET of raw rows, then hand them to the existing
+`_build_statement_reports` unchanged. All validation happens **before** any row affects the stop
+condition.
 
 ```
+PAGE_SIZE = _row_budget(limit)
 page = 1
-cached_total_pages = None      # captured from page 1 only (provider omits it on page >=2)
-order = []                     # distinct fiscalDates seen, in stream order (desc)
-all_rows = []                  # concatenated raw rows for the retained window
+cached_total_pages = None          # captured on page 1 only (provider omits it on page >= 2)
+order = []                         # distinct fiscalDates, stream order (must be strictly descending)
+closed = set()                     # dates whose contiguous group has ended
+seen_keys = set()                  # (fiscalDate, canonical itemCode) across ALL fetched rows
+last_fd = None
+all_rows = []
+
 while True:
-    resp = fetch(q=..., sort=fiscalDate:desc, size=PAGE_SIZE, page=page)
-    validate resp is a dict with a list `data`  # existing _rows() contract
+    resp = fetch(size=PAGE_SIZE, page=page)
+    data = _rows(resp)             # existing dict-envelope + list contract
+    # --- B8 empty-page semantics ---
+    if not data:                   # (existing _rows raises EmptyData on empty list)
+        # page 1 empty -> EmptyData (template miss, existing failover);
+        # page >= 2 empty after a non-empty page 1 -> InvalidData (schema failure, propagates through AUTO)
+        raise EmptyData(...) if page == 1 else raise InvalidData(...)
+    # --- B6 metadata identity (canonical, non-bool ints only) ---
+    current_page = require_canonical_int(resp, "currentPage")
     if page == 1:
-        cached_total_pages = require_int(resp, "totalPages")   # InvalidData if missing/non-int
-    current_page = require_int(resp, "currentPage")            # present on every page (verified)
-    for row in resp["data"]:
-        fd = row["fiscalDate"]
-        if fd not in order:
-            order.append(fd)
+        cached_total_pages = require_canonical_int(resp, "totalPages")   # >= 1 else InvalidData
+    elif "totalPages" present in resp:
+        if require_canonical_int(resp, "totalPages") != cached_total_pages: raise InvalidData   # omission OK
+    if current_page != page: raise InvalidData                # repeated/ahead header -> raise, never loop
+    if not (1 <= current_page <= cached_total_pages): raise InvalidData
+    # --- B7 row-stream validation BEFORE completeness proof ---
+    for row in data:
+        row = require_object(row)
+        fd  = require_canonical_iso_fiscal_date(row["fiscalDate"])       # ISO date; else InvalidData
+        code = canonical_item_code(row["itemCode"])                      # same normalization as the parser
+        if fd != last_fd:                                               # new date group
+            if fd in closed: raise InvalidData                          # reappearing closed date
+            if last_fd is not None:
+                if fd >= last_fd: raise InvalidData                     # must be strictly descending
+                closed.add(last_fd)                                     # previous group closes
+            if fd not in order: order.append(fd)
+            last_fd = fd
+        key = (fd, code)
+        if key in seen_keys: raise InvalidData                          # duplicate across ALL fetched rows
+        seen_keys.add(key)
         all_rows.append(row)
-    if len(order) > limit:
-        break     # first row of the (limit+1)-th distinct date observed -> prior `limit` dates complete
-    if current_page >= cached_total_pages:
-        break     # provider declares exhaustion -> whatever we have is everything there is
+    # --- stop conditions (use VALIDATED order) ---
+    if len(order) > limit: break                # first row of the (limit+1)-th date -> newest `limit` complete
+    if current_page >= cached_total_pages: break  # provider declares exhaustion
     page += 1
 
-if len(order) > limit:
-    boundary_fd = order[limit]                       # the (limit+1)-th date: INCOMPLETE, discard
-    all_rows = [r for r in all_rows if r["fiscalDate"] != boundary_fd]
-
-# hand `all_rows` to the existing _build_statement_reports(...) unchanged
+# retain ONLY the newest `limit` distinct dates (drops limit+1, limit+2, ... — one page may hold several)
+keep = set(order[:limit])
+all_rows = [r for r in all_rows if r["fiscalDate"] in keep]
+# hand `all_rows` to _build_statement_reports(...) unchanged
 ```
 
-- **Stop condition (reviewer invariant, verbatim):** the first row of fiscal date `limit+1` proves
-  the first `limit` dates are complete (rows are contiguously grouped by `fiscalDate` in the
-  `sort=fiscalDate:desc` stream — verified live, §2); OR the provider declares the final page.
-- **Duplicate `(fiscalDate, itemCode)` across pages:** NOT re-implemented in the fetch loop — the
-  existing `_build_statement_reports` duplicate-itemCode-within-a-date check (`vndirect.py:344-346`)
-  already fires on the concatenated row list unchanged, since duplicated raw rows land in the same
-  bucket regardless of which page they arrived on.
-- **Fail-closed on transport/schema failure mid-pagination:** no try/except wraps the loop — an
-  exception on any page (network, malformed envelope) propagates through the whole call, so a
-  half-fetched multi-page request can never surface as a successful partial report.
-- **Malformed pagination metadata:** a present-but-non-integer/missing `totalPages` on page 1, or a
-  present-but-non-integer/missing `currentPage` on any page, raises `InvalidData` rather than
-  looping forever or silently stopping early.
-- **`PAGE_SIZE`:** keep the existing `_row_budget(limit)` heuristic as the per-page size (reduces
-  round-trips for small `limit`); the fix is the multi-page LOOP, not a bigger single page (reviewer:
-  "merely raising the single-page size to 1000 is not sufficient" — a `limit` spanning many periods
-  can still exceed any fixed page size).
+- **Finite (B6):** every fetch requests the local `page`; termination is bounded by
+  `cached_total_pages` (page-1 `totalPages`), and a header that does not equal the requested page or
+  falls outside `[1, cached_total_pages]` raises immediately. A repeated page-1 header or an ahead/
+  out-of-range header can never masquerade as exhaustion.
+- **Row-stream validated before it counts (B7):** a malformed/non-object row, a non-ISO or
+  out-of-order or reappearing `fiscalDate`, or a duplicate `(fiscalDate, itemCode)` across any pages
+  raises **before** it can inflate `order` past `limit` and cause a partial success. Contiguous,
+  strictly-descending date groups are enforced across page boundaries.
+- **Correct retention (B7):** rows are filtered to the newest `limit` distinct dates, not merely by
+  dropping the single boundary date — so a page containing dates `limit+2` and older is handled.
+- **Fail-closed:** no `try/except` wraps the loop; any transport/schema error on any page propagates,
+  so a half-fetched multi-page request never surfaces as a successful partial report.
+- `PAGE_SIZE` keeps the `_row_budget(limit)` heuristic as the per-page size; the fix is the multi-page
+  LOOP, not a larger single page (a `limit` spanning many periods can exceed any fixed page size).
 
-## 6. TDD matrix (build phase — not run yet)
+## 9. Empty later page = schema failure, not source absence (reviewer B8)
 
-- RED-first: corporate `income→2, balance→1, cashflow→3` model-type routing (regression for the
-  inversion); bank `income→102, balance→101, cashflow→103` unchanged (regression).
-- Exact `(statement_type, model_type, is_bank)` tuple assertions, not membership-in-six-numbers.
-- Synthetic model-1 balance fixture: assets/liabilities/equity resolve via `12700`/`13000`/`14000`
-  and the identity holds.
-- Synthetic model-2 income fixture: net revenue/PBT/net income(parent)/net income(total)/net_margin
-  resolve via `21001`/`23800`/`23000`/`23003`.
-- Negative assertions: old `21000=net_income`/`25000=total_assets`/`20000=PBT`/etc. never resolve to
-  those (wrong) meanings again.
-- Pagination: `limit=1/2/8`; a fiscal date split across two pages (the VIC 80+62 case); exact-limit
-  page exhaustion (provider's last page ends exactly on the `limit`-th date); malformed page-1
-  metadata (`totalPages` missing/non-int) → `InvalidData`; malformed page≥2 `currentPage` →
-  `InvalidData`; duplicate `(fiscalDate, itemCode)` reintroduced across two pages → `InvalidData`
-  (reuses the existing per-date duplicate check); mid-pagination transport failure on page 2 →
-  exception propagates, no partial success.
-- End-to-end `metrics(..., source=injected_vndirect_source)` tests, not transformer-only fixtures.
-- `scripts/probe_corporate_itemcodes.py` (`VNFIN_LIVE=1`, opt-in, not CI) must flip FAIL→PASS.
-- Deterministic CI fixtures only (synthetic, no real provider rows bundled); run focused tests, full
-  offline suite, warning-token/docs/public-surface gates on the merged tree.
+`_rows()` raises `EmptyData` on an empty list, and the AUTO path (`_get_statements_auto`) treats
+`EmptyData` as "try the other template". That is valid only for **page 1**. An empty page ≥2 after a
+non-empty page 1 must raise **`InvalidData`** (§8), which — being distinct from `EmptyData` — is not
+caught by the AUTO `except EmptyData` handler and therefore propagates, so a partial fetch is never
+recast as a clean template miss / failover.
 
-## 7. Open questions for the reviewer gate
+## 10. Statement/entity/model tuple guard (reviewer B9)
 
-- **Q1 — Operating profit (§4 income table):** no closing identity found for the current
-  `OPERATING_PROFIT` metric's code. Recommend: ship v1 **unmapped** (drop `corporate_code`, metric
-  reports honest `MISSING` for corporates) rather than guess. Confirm/override?
-- **Q2 — `NET_INCOME` code asymmetry:** corporate `NET_INCOME` now maps to `23003` (total consolidated
-  PAT) while bank `NET_INCOME` maps to `23000` (bank's own PAT total) — same `MetricId`, intentionally
-  different numeric code per source, because corporate `23000` means something different (parent-only)
-  from bank `23000` (whole-entity PAT, no separately-broken-out NCI in the bank template). Confirm
-  this is acceptable (mirrors how `PROFIT_BEFORE_TAX`/`TOTAL_ASSETS`/etc. already carry independent
-  `corporate_code`/`bank_code` fields) — or should `NET_INCOME` for corporates instead resolve to
-  `23000` (parent) to match `NET_INCOME_PARENT`'s existing separate metric becoming redundant?
-  Design leans: keep `NET_INCOME`=total(`23003`)/`NET_INCOME_PARENT`=parent(`23000`) — distinct,
-  useful metrics, matches how `NET_INCOME_PARENT` already exists in the v1 catalog for exactly this
-  purpose.
-- **Q3 — Corporate cashflow headline codes (`31000`/`32000`/`33000`/`34000`):** routing (modelType 3)
-  is unaffected by this P0 bug and out of scope for #198's blocking fix. The current codes are
-  UNVERIFIED (not proven wrong, but not proven right either — `32000`/`33000` are structurally
-  plausible headers that don't close an identity against `34000` in the probed set). Recommend:
-  (a) leave `OPERATING_CASH_FLOW`/`INVESTING_CASH_FLOW`/`FINANCING_CASH_FLOW`/`NET_CASH_FLOW`
-  UNCHANGED (no active proof they're wrong, no active proof they're right) and file a NON-BLOCKING
-  follow-up for a dedicated cashflow-code identity audit (mirrors the #157 Q3 precedent: bank
-  cashflow shipped fully-raw in v1 for the same reason); (b) fix ONLY `CASH_END_OF_PERIOD`
-  (`35000`→`37000`, exact cross-statement proof) in this same change since it's cheap and
-  high-confidence. Confirm this split, or require the full cashflow audit before shipping #198?
-- **Q4 — `itemcodes.py` sub-line names below headline (`11200`/`11300`/`11400`/`11500` etc.):** these
-  are proven only via an AGGREGATE sum identity (their total equals `11000`), not individually
-  identity-proven per line (unlike bank's #157 approach of only mapping individually-verified codes).
-  Recommend: map them at MEDIUM confidence with an explicit code comment citing the aggregate proof
-  (matches typical VN statement line order: cash, ST investments, ST receivables, inventories, other
-  CA) since they're internal display-only `LineItem.name` strings, not `MetricId` codes consumed by
-  `metrics()`/formulas — or leave them raw pending individual proof? Design leans: map at MEDIUM
-  (display-only blast radius, not metric-correctness), documented as such.
+Replace the pure membership check in `client.py:_validate_fundamental_result`
+(`mt not in _CANONICAL_MODEL_TYPES`, six numbers) with **source-aware relational** validation. A
+report's `model_type` must match the `(statement, is_bank)` it claims:
 
-No code, tests, or docs changed in this note — evidence-gathering + proposal only, per the reviewer's
-"design/evidence gate first" instruction.
+```python
+_EXPECTED_MODEL_TYPE = {   # VNDirect statement templates
+    (StatementType.BALANCE,  False): 1,   (StatementType.BALANCE,  True): 101,
+    (StatementType.INCOME,   False): 2,   (StatementType.INCOME,   True): 102,
+    (StatementType.CASHFLOW, False): 3,   (StatementType.CASHFLOW, True): 103,
+}
+mt = report.model_type
+if mt is not None:                         # ratios + non-VNDirect (CafeF) carry None -> allowed
+    if isinstance(mt, bool) or not isinstance(mt, int) or mt not in _CANONICAL_MODEL_TYPES:
+        return "...malformed model_type..."
+    expected = _EXPECTED_MODEL_TYPE.get((statement, report.is_bank))
+    if mt != expected:
+        return (f"model_type {mt} does not match {statement.value} for "
+                f"{'bank' if report.is_bank else 'corporate'} (expected {expected})")
+```
+
+Valid tuples: `(BALANCE,False,1)`, `(INCOME,False,2)`, `(CASHFLOW,False,3)`, `(BALANCE,True,101)`,
+`(INCOME,True,102)`, `(CASHFLOW,True,103)`; `model_type=None` for ratios/non-VNDirect. Negative tests:
+each number canonical but wrong-paired (e.g. `(BALANCE,False,2)`, `(INCOME,True,101)`) → rejected.
+
+## 11. TDD matrix (build phase — not run yet)
+
+RED-first, then green; deterministic synthetic CI fixtures only (no real provider rows bundled);
+opt-in live probe (`scripts/probe_corporate_itemcodes.py`, `VNFIN_LIVE=1`) is not in CI.
+
+- **Routing:** corporate `BALANCE→1, INCOME→2, CASHFLOW→3` (regression for the inversion); bank
+  `BALANCE→101, INCOME→102, CASHFLOW→103` unchanged. Annual + quarterly.
+- **Catalog (positive):** model-1 balance fixture resolves `12700`/`13000`/`14000`/`11000`/`13100`/
+  `13300`/`11100` and the balance identity holds; model-2 income fixture resolves `21001`/`23100`/
+  `23800`/`23003`/`23000` and `net_margin`; model-3 cashflow fixture resolves `32000`/`33000`/`34000`/
+  `35000`/`37000` with **both** cash-flow identities.
+- **Catalog (negative):** old `21000=net_income` / `25000=total_assets` / `20000=PBT` / `31000=oper CF`
+  / `35000=cash_end` never resolve to those meanings again.
+- **BLOCKED contract (B2):** `OPERATING_PROFIT` (corp `code=None`) → `BLOCKED` with
+  `REASON_METRIC_CODE_UNMAPPED`, **not** `MISSING`/`missing line item None`; a code that IS mapped but
+  absent upstream still → `MISSING`; a synthetic derived metric consuming a `None`-code input → BLOCKED
+  naming it.
+- **Name map (B5):** each mapped label resolves; `11200`/`11300`/`11400`/`11500` and any other
+  unmapped code return `item_<code>`.
+- **Pagination (B6/B7):** `limit=1/2/8`; a fiscal date split across two pages (VIC 80+62); exact-limit
+  exhaustion; page-1 `totalPages` missing/non-int/`<1` → `InvalidData`; later-page `totalPages` present
+  but ≠ cached → `InvalidData`; later-page omitting `totalPages` → OK; `currentPage` missing/non-int →
+  `InvalidData`; repeated page-1 header and ahead/out-of-range `currentPage` → `InvalidData`; malformed/
+  non-object/non-ISO/out-of-order/reappearing `fiscalDate` → `InvalidData`; duplicate
+  `(fiscalDate, itemCode)` across pages (retained window **and** boundary date) → `InvalidData`; a page
+  containing dates older than `limit+1` retained correctly; mid-pagination transport failure on page 2
+  → exception propagates, no partial success.
+- **Empty-page (B8):** page-1 empty → `EmptyData` (failover) under explicit and AUTO calls; page-2
+  empty after non-empty page-1 → `InvalidData` under explicit **and** AUTO calls.
+- **Tuple guard (B9):** every valid `(statement, is_bank, model_type)` accepted; every canonical-but-
+  mismatched tuple rejected; `model_type=None` (ratios/CafeF) accepted.
+- **End-to-end:** `metrics(..., source=injected_vndirect_source)` tests, not transformer-only fixtures.
+- **Probe (B10):** `scripts/probe_corporate_itemcodes.py` LEG A/B/C all PASS post-fix (pre-fix LEG A
+  PASS, LEG B/C FAIL by design).
+- Run focused tests, full offline suite, and warning-token / docs / public-surface gates on the merged
+  tree (not per-branch).
+
+## 12. Gate questions — reviewer rulings applied
+
+- **Q1 (operating profit) — ACCEPT unmap.** `OPERATING_PROFIT` ships `corporate_code=None` and reports
+  honest `BLOCKED` via the §5 contract. Never guessed.
+- **Q2 (`NET_INCOME` asymmetry) — ACCEPT.** Corporate `NET_INCOME=23003` (total consolidated PAT),
+  `NET_INCOME_PARENT=23000` (parent-attributable). Distinct, non-redundant; keeps consolidated
+  revenue/net-margin coherent. Official VIC PAT/parent/NCI cross-check recorded in the probe doc.
+- **Q3 (cash flow) — REJECT status-quo; full audit inside #198.** Operating/investing/financing/
+  net-change/end-cash remapped per §4, both identities exact-0, section meanings official-cross-checked
+  (§2, probe doc). No code left under its old shifted mapping.
+- **Q4 (sub-line names) — REJECT medium-confidence labels.** Aggregate-only sub-lines stay
+  `item_<code>`; only individually official-correlated labels are mapped (§6).
+
+## Scope / legal
+
+Public signatures and result types preserved; this is a data-correctness repair (`model_type`,
+`LineItem.item_code`/`name`, metric values) documented in `CHANGELOG.md` in lockstep with the API /
+tutorial / AI-skill docs and the mapping tables. No first-class ROE (out of scope per the triage).
+Legal posture unchanged: bounded runtime fetch only, no bundled provider rows, no new source; the
+pagination loop makes only the bounded calls needed for the complete requested periods.
