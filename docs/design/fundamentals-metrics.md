@@ -1,10 +1,12 @@
 # Design — fundamentals metrics & coverage diagnostics (#157)
 
-**Status:** DESIGN (rev 2.6 — six review rounds resolved: …201230 (8), …201245 (7), …201300 (6),
+**Status:** SHIPPED (#157 metrics layer + #198 corporate re-point, both merged to master). rev 2.6 —
+six review rounds resolved: …201230 (8), …201245 (7), …201300 (6),
 …201310 (4), …201324 (label addendum, APPROVED), …201338 (role-source prose cleanup). Label-provenance
 contract: identity = requested statement + source namespace + item code (NEVER the human label); raw
 `MetricInput.name` + `input_names` provenance; labels provenance-only. All "succeeding source" prose
-now states the `StatementProvenance` role rule. Implementation-ready; APPROVE before code.
+now states the `StatementProvenance` role rule. The corporate code re-point below is LIVE (see the
+`#198 corporate re-point` note).
 **Scope:** an **additive, offline** canonical-metrics + coverage-diagnostics layer on top of the
 existing `vnfin.fundamentals` reports — fundamental **data primitives and diagnostics** for
 long-term investors, *not* an advice/ranking/screener layer.
@@ -484,13 +486,24 @@ If a future `metrics_batch(symbols)` helper is added, it returns per-symbol resu
 > **#198 corporate re-point (2026-07-20, shipped).** The original corporate codes below were
 > **wrong** — VNDirect corporate `modelType` was mis-documented as INCOME=1/BALANCE=2 when the live
 > template is **`1` = BALANCE, `2` = INCOME, `3` = CASHFLOW** — so every corporate INCOME/BALANCE
-> metric resolved to `None` or, worse, to a real value under the wrong concept. All 23 corporate
-> codes below are re-verified against official FPT FY2025 (PwC-audited) and VIC FY2024 (EY-audited)
-> filings and exact-VND accounting identities (`docs/design/corporate-itemcodes-probe-20260720.md`,
-> `tasks/198-design-note.md`). Bank codes (§ below) are **unchanged**. `operating_profit` has **no
-> verified corporate code** and is now honest `BLOCKED` (never a guessed value). Note
-> `net_income` (total consolidated PAT, `23003`) and `net_income_parent` (parent-attributable,
-> `23000`) are DISTINCT metrics.
+> metric resolved to `None` or, worse, to a real value under the wrong concept.
+>
+> **Two distinct counts — do not conflate them.** The **23** figure is the independently verified
+> public **name-map** (`itemcodes.py` `_NAMES_BY_MODEL_TYPE`: 8 balance + 8 income + 7 cashflow
+> provider codes, each cross-checked to an official filing). The **18-row metric-remap table below**
+> is a different set: the corporate `MetricSourceCodes.corporate_code` values, one per public
+> `MetricId` — and **one of them (`operating_profit`) is `None` → BLOCKED**, so 17 corporate metrics
+> resolve to a code and 1 is deliberately unmapped. The name-map (23) and the metric remap (18)
+> overlap but are not the same list: some named codes (e.g. `22100` COGS, `23500` NCI PAT,
+> `36000`/`36100` cash-flow reconciliation lines) carry an official label without being promoted to a
+> first-class metric.
+>
+> All 23 name-mapped corporate codes are re-verified against official FPT FY2025 (PwC-audited) and VIC
+> FY2024 (EY-audited) filings and exact-VND accounting identities
+> (`docs/design/corporate-itemcodes-probe-20260720.md`, `tasks/198-design-note.md`). Bank codes
+> (§ below) are **unchanged**. `operating_profit` has **no verified corporate code** and is now honest
+> `BLOCKED` (never a guessed value). Note `net_income` (total consolidated PAT, `23003`) and
+> `net_income_parent` (parent-attributable, `23000`) are DISTINCT metrics.
 
 | MetricId | code | was (WRONG) | category |
 |----------|------|-------------|----------|

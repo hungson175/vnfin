@@ -10,7 +10,8 @@ docs/research/2026-06-18-vn-fundamental-data-sources.md):
     Rows are LONG/tall: {code, itemCode(float), reportType, modelType(float),
     numericValue, fiscalDate, ...} — one row per (line-item, period). We pivot
     per fiscalDate into one FinancialReport. Units = RAW VND.
-    Corporate IS/BS/CF -> modelType 1/2/3. Banks -> 101/102/103.
+    Corporate modelType (live-probe-verified, #198): BALANCE=1, INCOME=2,
+    CASHFLOW=3. Banks add the 10x prefix: BALANCE=101, INCOME=102, CASHFLOW=103.
 
   RATIOS:
     https://api-finfo.vndirect.com.vn/v4/ratios?q=code:{T}&size={N}
@@ -469,9 +470,13 @@ class VNDirectFundamentalSource(HttpDataSource, FundamentalSource):
         the loop (the candidate/restarted page); it flows through the SAME page-1
         validation as a fetched page (no double-fetch, no un-validated shortcut).
         All state is LOCAL to this call, so a redirect's fresh invocation shares
-        NOTHING with the candidate's. Stops at the first row of the ``(limit+1)``-th
-        ELIGIBLE date, or when the provider declares exhaustion
-        (``currentPage >= totalPages``). Returns every fetched row unfiltered.
+        NOTHING with the candidate's. The loop fully consumes and validates each
+        FETCHED page (every row runs STATE-1 validation) before it evaluates the
+        stop condition; it stops AFTER the page on which the ``(limit+1)``-th
+        ELIGIBLE date first appears, or when the provider declares exhaustion
+        (``currentPage >= totalPages``). It never stops mid-page at a boundary
+        row. Returns every fetched row unfiltered; the builder's ``[:limit]`` cap
+        drops the partially-fetched ``(limit+1)``-th period.
         """
         page = 1
         cached_total_pages = None

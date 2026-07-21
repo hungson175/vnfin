@@ -149,7 +149,7 @@ for li in latest:                                    # iterate LineItem
 
 # strings accepted; force bank template; limit periods
 reports = get_financials("VCB", "balance", "quarter", is_bank=True, limit=4)
-print(reports[0].is_bank, reports[0].model_type)     # True 102
+print(reports[0].is_bank, reports[0].model_type)     # True 101  (bank BALANCE = 101)
 ```
 
 - **Result:** `tuple[FinancialReport]`; each is iterable over `LineItem(item_code, name, value,

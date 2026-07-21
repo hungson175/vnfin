@@ -81,7 +81,14 @@ applicability and gaps are expressed by `MetricValue.availability`, never by omi
 
 - `available` — resolved; `value` is set.
 - `missing` — the line item / statement is absent for this period (e.g. `"missing line item 21001 in income"`).
-- `blocked` — the succeeding source's namespace is not mapped in v1 (see below).
+- `blocked` — the statement is served, but the library has no verified code for this metric. Two sub-cases: (1) the succeeding source's **namespace** is not mapped in v1 (see below); (2) a metric has **no verified code** for this entity type even on the mapped VNDirect source — e.g. `operating_profit` for corporates ships with no corporate code and returns `blocked` (never a guessed value):
+
+```python
+op = rep.get("operating_profit")       # corporate symbol
+print(op.availability.value, op.reason)
+# blocked  metric 'operating_profit' has no verified code for source 'vndirect' and corporate entities
+```
+
 - `not_applicable` — the metric does not apply to this entity type (e.g. a bank-only metric on a corporate, or vice-versa: `"metric 'net_revenue' does not apply to bank entities"`).
 
 ```python
