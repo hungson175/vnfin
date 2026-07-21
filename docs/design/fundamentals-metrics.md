@@ -20,7 +20,7 @@ external source** (TradingView/Vietstock/annual-report PDFs are NOT approved by 
 `vnfin.fundamentals.get_financials()` already returns typed `FinancialReport`s (income/balance/
 cashflow/ratios) of `LineItem`s keyed by numeric VNDirect `item_code`, with `is_bank` /
 `model_type` taxonomy and per-line `value_unit`. But a caller still has to **know the raw item
-codes** (`revenue = report.get("11000")`), know **which codes apply to banks vs corporates**, and
+codes** (`net_revenue = report.get("21001")`), know **which codes apply to banks vs corporates**, and
 hand-roll **derived ratios** — exactly the friction #157 raises.
 
 > **The mapping already exists.** `itemcodes.py` carries the clean-room corporate (modelType 1/2/3)
@@ -222,9 +222,9 @@ CafeF. A single `MetricReport.source` is therefore **unsafe/ambiguous** and is *
 
 ### C3 — CafeF uses a DIFFERENT code namespace than VNDirect (B3)
 
-`itemcodes.py` and the spec's metric taxonomy are the **VNDirect numeric** namespace (`11000`,
-`21000`, …). **CafeF uses string codes** (`"DTTBHCCDV"`, and ratio codes `EPS`/`BV`/`PE`/`ROE`…).
-So `report.get("11000")` returns `None` for a CafeF-sourced report even though the data is present
+`itemcodes.py` and the spec's metric taxonomy are the **VNDirect numeric** namespace (`21001`,
+`12700`, …). **CafeF uses string codes** (`"DTTBHCCDV"`, and ratio codes `EPS`/`BV`/`PE`/`ROE`…).
+So `report.get("21001")` returns `None` for a CafeF-sourced report even though the data is present
 under a different code — a silent all-MISSING trap.
 
 - The metric code map is **source-namespaced**. **v1 maps the VNDirect namespace only.** For a
@@ -274,7 +274,7 @@ class MetricInput:                   # one source line a metric was built from (
     fiscal_date: date
     source: str
     name: str                        # raw LineItem.name PROVENANCE (e.g. "Doanh thu thuần" or
-                                     # "item_11000"); provenance-only — NEVER used for metric identity (§5)
+                                     # "item_21001"); provenance-only — NEVER used for metric identity (§5)
 
 @dataclass(frozen=True)
 class MetricDefinition:              # static catalog entry (no symbol)
@@ -481,26 +481,42 @@ If a future `metrics_batch(symbols)` helper is added, it returns per-symbol resu
 > (not `cash_end`). Bank `total_liabilities`/`owners_equity` reuse the same canonical ids via the
 > `bank_code` inside `codes_by_source["vndirect"]`.
 
-| MetricId | code | category |
-|----------|------|----------|
-| net_revenue | 11000 | size |
-| gross_profit | 11200 | profitability |
-| operating_profit | 14000 | profitability |
-| profit_before_tax | 20000 | profitability |
-| net_income | 21000 | profitability |
-| net_income_parent | 21100 | profitability |
-| cash_and_equivalents | 23100 | liquidity |
-| current_assets | 23000 | liquidity |
-| total_assets | 25000 | size |
-| total_liabilities | 30000 | leverage |
-| current_liabilities | 30100 | leverage |
-| long_term_liabilities | 30200 | leverage |
-| owners_equity | 40000 | size |
-| operating_cash_flow | 31000 | cashflow |
-| investing_cash_flow | 32000 | cashflow |
-| financing_cash_flow | 33000 | cashflow |
-| net_cash_flow | 34000 | cashflow |
-| cash_end_of_period | 35000 | cashflow |
+> **#198 corporate re-point (2026-07-20, shipped).** The original corporate codes below were
+> **wrong** — VNDirect corporate `modelType` was mis-documented as INCOME=1/BALANCE=2 when the live
+> template is **`1` = BALANCE, `2` = INCOME, `3` = CASHFLOW** — so every corporate INCOME/BALANCE
+> metric resolved to `None` or, worse, to a real value under the wrong concept. All 23 corporate
+> codes below are re-verified against official FPT FY2025 (PwC-audited) and VIC FY2024 (EY-audited)
+> filings and exact-VND accounting identities (`docs/design/corporate-itemcodes-probe-20260720.md`,
+> `tasks/198-design-note.md`). Bank codes (§ below) are **unchanged**. `operating_profit` has **no
+> verified corporate code** and is now honest `BLOCKED` (never a guessed value). Note
+> `net_income` (total consolidated PAT, `23003`) and `net_income_parent` (parent-attributable,
+> `23000`) are DISTINCT metrics.
+
+| MetricId | code | was (WRONG) | category |
+|----------|------|-------------|----------|
+| net_revenue | **21001** | 11000 | size |
+| gross_profit | **23100** | 11200 | profitability |
+| operating_profit | **None → BLOCKED** | 14000 | profitability |
+| profit_before_tax | **23800** | 20000 | profitability |
+| net_income | **23003** | 21000 | profitability |
+| net_income_parent | **23000** | 21100 | profitability |
+| cash_and_equivalents | **11100** | 23100 | liquidity |
+| current_assets | **11000** | 23000 | liquidity |
+| total_assets | **12700** | 25000 | size |
+| total_liabilities | **13000** | 30000 | leverage |
+| current_liabilities | **13100** | 30100 | leverage |
+| long_term_liabilities | **13300** | 30200 | leverage |
+| owners_equity | **14000** | 40000 | size |
+| operating_cash_flow | **32000** | 31000 | cashflow |
+| investing_cash_flow | **33000** | 32000 | cashflow |
+| financing_cash_flow | **34000** | 33000 | cashflow |
+| net_cash_flow | **35000** | 34000 | cashflow |
+| cash_end_of_period | **37000** | 35000 | cashflow |
+
+`operating_profit` ships `corporate_code=None` and reports honest `MetricAvailability.BLOCKED` with
+reason `metric 'operating_profit' has no verified code for source 'vndirect' and corporate entities`
+— **never** a guessed value and **never** a false `missing line item` (the statement exists; the
+library simply has no verified mapping).
 
 ### v1 — raw_mapped (bank) — RE-POINTED to #157-verified codes
 

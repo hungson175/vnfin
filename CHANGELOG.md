@@ -411,6 +411,31 @@ All notable changes to `vnfin` are documented here. The format follows
   deferred to v2 behind a committed test corpus. ([#163](https://github.com/hungson175/vnfin/issues/163))
 
 ### Fixed
+- **Corporate fundamentals: inverted statement routing, wrong itemCode catalog, and single-page
+  truncation** (#198) — three independent defects on the corporate (non-bank) `get_financials` /
+  `metrics` path are corrected; bank templates (`101/102/103`) are untouched. (1) **Routing was
+  inverted:** VNDirect corporate `modelType` was mapped INCOME=1 / BALANCE=2, but the live template is
+  **`1` = balance sheet, `2` = income statement, `3` = cashflow** — so a metric declared `INCOME` was
+  fetched from real balance-sheet rows and vice-versa. (2) **The itemCode catalog was wrong:** the
+  corporate codes did not merely swap statements — the numeric codes did not exist for the concepts
+  they claimed, so every corporate income/balance metric resolved to `None` or, worse, to a real value
+  under the **wrong** concept label (a plausible-but-wrong number). All 23 corporate codes are re-verified
+  against official **FPT FY2025** (PwC-audited) and **VIC FY2024** (Vingroup, EY-audited) consolidated
+  filings plus exact-VND accounting identities: net revenue `21001`, gross profit `23100`, profit
+  before tax `23800`, net income / total consolidated PAT `23003`, net income parent `23000`, total
+  assets `12700`, total liabilities `13000`, owners' equity `14000`, current assets `11000`, current
+  liabilities `13100`, long-term liabilities `13300`, cash & equivalents `11100`, operating/investing/
+  financing/net cashflow `32000`/`33000`/`34000`/`35000`, cash at end of period `37000`. `net_income`
+  (total, `23003`) and `net_income_parent` (parent-attributable, `23000`) are **distinct** metrics.
+  `operating_profit` has **no verified corporate code** and now reports honest `BLOCKED`
+  (`"metric 'operating_profit' has no verified code for source 'vndirect' and corporate entities"`) —
+  never a guessed value and never a false `missing line item`. (3) **Single-page truncation:** the
+  paginated statement endpoint was fetched as one page and never followed `page`/`totalPages`, so a
+  fiscal period wider than one page was silently truncated (e.g. VIC's 142-line annual balance dropped
+  owners' equity under a `size=80` page). Statement fetches now follow provider pages so a wide fiscal
+  period is returned **complete**. **No public API signature change** — a data-correctness repair; docs,
+  the maintainer skill, and the metric-catalog mapping are updated in lockstep.
+  ([#198](https://github.com/hungson175/vnfin/issues/198))
 - **Index-constituents diagnostic no longer advises treating membership as point-in-time** (#175,
   Tier-3) — `vnfin.diagnostics.explain_index_constituents(...)` and the static
   `source_capabilities()` entry previously suggested *"treat membership as point-in-time"*, the exact

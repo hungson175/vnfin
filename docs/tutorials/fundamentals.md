@@ -25,7 +25,7 @@ for item in latest.items[:10]:
     print(item.item_code, item.name, item.value, item.value_unit)
 
 # If you know a provider code, use .get(). Returns None when absent.
-print(latest.get("11000"))
+print(latest.get("21001"))   # corporate income: net revenue (raw VND)
 ```
 
 Money statement values are normalized to **raw VND**. CafeF raw values are scaled when necessary so
@@ -51,7 +51,7 @@ reports = vnfin.fundamentals.get_financials("VCB", "income", "annual", is_bank=T
 ## Canonical metrics & coverage
 
 `get_financials(...)` above returns the raw provider line items keyed by opaque provider codes
-(e.g. `"11000"`). For analysis you usually want **stable, named, cross-statement metrics** instead.
+(e.g. `"21001"`). For analysis you usually want **stable, named, cross-statement metrics** instead.
 `vnfin.fundamentals.metrics(...)` is an additive, OFFLINE transform on top of those reports: it
 fetches income + balance + cashflow once each, then maps the verified provider codes to a fixed
 **v1 catalog of 26 canonical metrics** — 21 raw-mapped line items plus 5 derived ratios — one
@@ -80,7 +80,7 @@ applicability and gaps are expressed by `MetricValue.availability`, never by omi
 `availability != "available"`, `value` is `None` and `reason` carries a stable diagnostic string:
 
 - `available` — resolved; `value` is set.
-- `missing` — the line item / statement is absent for this period (e.g. `"missing line item 11000 in income"`).
+- `missing` — the line item / statement is absent for this period (e.g. `"missing line item 21001 in income"`).
 - `blocked` — the succeeding source's namespace is not mapped in v1 (see below).
 - `not_applicable` — the metric does not apply to this entity type (e.g. a bank-only metric on a corporate, or vice-versa: `"metric 'net_revenue' does not apply to bank entities"`).
 

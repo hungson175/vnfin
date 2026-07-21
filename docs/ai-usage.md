@@ -74,7 +74,7 @@ print(h.symbol, h.source, h.currency, len(h.bars), h.bars[-1].close)
 # Annual income statement (raw VND) — failover VNDirect→CafeF
 from vnfin.fundamentals import get_financials, StatementType, Period
 reports = get_financials("FPT", StatementType.INCOME, Period.ANNUAL)
-print(reports[0].fiscal_date, reports[0].get("11000"))   # by provider itemCode
+print(reports[0].fiscal_date, reports[0].get("21001"))   # net revenue, by provider itemCode
 
 # FX (no key, spot) — VND per 1 USD
 print(vnfin.fx.get_rate("USD").rate)        # e.g. 26111.0
@@ -143,7 +143,7 @@ from vnfin.fundamentals import get_financials, StatementType, Period
 reports = get_financials("FPT", StatementType.INCOME, Period.ANNUAL)   # no key
 latest = reports[0]                                  # newest fiscal period
 print(latest.symbol, latest.fiscal_date, latest.source, latest.currency)
-revenue = latest.get("11000")                        # raw VND, by itemCode
+net_revenue = latest.get("21001")                    # raw VND, by itemCode (corporate income)
 for li in latest:                                    # iterate LineItem
     print(li.item_code, li.name, li.value, li.value_unit)
 

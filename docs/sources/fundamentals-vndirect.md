@@ -44,18 +44,33 @@ derivative material consulted, cited, or copied.
 
 ## Bank vs corporate template (modelType)
 
-- Corporate: income=1, balance=2, cashflow=3.
+- Corporate: **balance=1, income=2, cashflow=3** (corrected in #198 — the
+  previously-documented income=1/balance=2 was **inverted**; live probe proved
+  modelType `1` is the balance sheet and `2` the income statement).
 - Bank: income=102, balance=101, cashflow=103.
 - Caller selects via `is_bank=True`; the chosen `model_type` is recorded on each
   `FinancialReport` and `is_bank` exposed for downstream interpretation.
+- Corporate headline itemCodes (re-verified #198 against official FPT FY2025 /
+  VIC FY2024 audited filings): income — net revenue `21001`, gross profit `23100`,
+  PBT `23800`, PAT total `23003`, PAT parent `23000`; balance — total assets `12700`,
+  total liabilities `13000`, owners' equity `14000`, current assets `11000`,
+  current liabilities `13100`, long-term liabilities `13300`, cash `11100`;
+  cashflow — operating `32000`, investing `33000`, financing `34000`, net change
+  `35000`, end-of-period `37000`. Bank codes (`101/102/103` space) are unchanged.
 
 ## Coverage / history
 
 - HOSE confirmed (FPT corporate, VCB bank). Code-keyed with no exchange gating
   observed; HNX/UPCOM likely covered (unverified in this lane).
 - Deep history (FPT annual to ~2002). `size` is budgeted as `max(50, min(1000,
-  limit*80))` because statement rows are tall; callers wanting deeper history
-  can raise `limit` or subclass.
+  limit*80))` per page because statement rows are tall; callers wanting deeper
+  history can raise `limit` or subclass.
+- **Pagination follows provider pages (#198):** a fiscal period wider than one
+  page (e.g. VIC's 142-line annual balance vs a `size=80` page) is fully
+  assembled by following `page`/`totalPages`, so a wide period is returned
+  **complete** rather than silently truncated. Dates are contiguous and strictly
+  descending across pages; later pages may omit `totalPages`/`totalElements`
+  (cached from page 1). No public API signature change — a data-correctness repair.
 
 ## Redistribution / terms
 

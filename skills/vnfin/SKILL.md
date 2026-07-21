@@ -91,7 +91,7 @@ print(h.source, h.currency, len(h.bars), h.bars[-1].close)
 # Fundamentals (raw VND) — newest period first, line items by itemCode
 from vnfin.fundamentals import get_financials, StatementType, Period
 rep = get_financials("FPT", StatementType.INCOME, Period.ANNUAL)[0]
-print(rep.fiscal_date, rep.get("11000"))
+print(rep.fiscal_date, rep.get("21001"))          # corporate net revenue (raw VND)
 
 # Index value in POINTS (read value_unit!)
 idx = vnfin.indices.index_history("VNINDEX", date(2024, 1, 1), date(2024, 6, 30))

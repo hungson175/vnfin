@@ -95,7 +95,10 @@ Fields: `symbol`, `interval`, `adjustment_policy`, `source`, `bars` (`tuple[Pric
 
 Reports are pivoted from long/tall provider rows into one `FinancialReport` per fiscal
 period (newest first). Money values are **raw VND** (unscaled). Banks use VNDirect
-`modelType` 101/102/103; corporates use 1/2/3. `is_bank=AUTO` (default) auto-detects.
+`modelType` 101/102/103; corporates use **1 = balance, 2 = income, 3 = cashflow**
+(#198 corrected an inverted income=1/balance=2 routing). Multi-page fiscal periods are
+followed to completion (#198 — no silent single-page truncation). `is_bank=AUTO`
+(default) auto-detects.
 
 **Key contract enforcements (Phase 2 migration):**
 - `reportType` / `ReportType` validated via `canonical_enum_tag` (allowed: `{ANNUAL, QUARTER}` /

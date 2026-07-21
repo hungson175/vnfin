@@ -281,11 +281,14 @@ are deferred to v2) and per-statement failures are non-fatal.
 **`MetricValue.availability` statuses** (the per-value outcome):
 
 - `available` — resolved; `value` is set.
-- `missing` — line item / statement absent for this period (e.g. `"missing line item 11000 in income"`,
+- `missing` — line item / statement absent for this period (e.g. `"missing line item 21001 in income"`,
   `"missing statement cashflow for 2022-12-31"`, `"missing input metric net_revenue"`,
   `"denominator net_revenue is zero"`).
-- `blocked` — the succeeding source's namespace is not mapped in v1 (e.g. `"metric map not available
-  for source 'cafef'"`).
+- `blocked` — either the succeeding source's namespace is not mapped in v1 (e.g. `"metric map not
+  available for source 'cafef'"`), or the metric has **no verified provider code** for this entity
+  type (e.g. `operating_profit` on a corporate: `"metric 'operating_profit' has no verified code for
+  source 'vndirect' and corporate entities"`) — the statement exists but the library has no verified
+  mapping, so the value is `BLOCKED`, never a guess and never a false `missing line item`.
 - `not_applicable` — the metric does not apply to this entity type (e.g. `"metric 'net_revenue' does
   not apply to bank entities"`).
 - `unsupported` — reserved for v2 valuation metrics absent from the v1 catalog.
