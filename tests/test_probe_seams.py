@@ -12,12 +12,14 @@ Clean-room: synthetic fixtures only; no vnstock / no derivative material.
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
 from datetime import date
 from decimal import Decimal
 
 import pytest
 
+from vnfin.fundamentals import VNDirectFundamentalSource
 from vnfin.fundamentals.models import Period, StatementType
 
 
@@ -204,11 +206,43 @@ def test_oracle_malformed_calendar_date(probe, monkeypatch):
     assert probe._raw_newest_group_oracle("VIC", 1) is None
 
 
-def test_oracle_raw_identity_mismatch(probe, monkeypatch):
-    # Wrong model tag on the row -> identity mismatch -> fail closed.
-    pages = {1: _penv([_prow(_A, 12700, 100, model_type=999)], total_pages=1)}
+@pytest.mark.parametrize(
+    "mismatch",
+    [{"code": "HPG"}, {"report_type": "QUARTER"}, {"model_type": 999}],
+    ids=["code", "reportType", "modelType"],
+)
+def test_oracle_raw_identity_mismatch(probe, monkeypatch, mismatch):
+    # EACH of raw code / reportType / modelType mismatch independently fails closed.
+    pages = {1: _penv([_prow(_A, 12700, 100, **mismatch)], total_pages=1)}
     _patch_fetch(probe, monkeypatch, pages)
     assert probe._raw_newest_group_oracle("VIC", 1) is None
+
+
+def test_oracle_current_page_over_total_pages(probe, monkeypatch):
+    # page 1 declares 2 pages (loop continues); page 2 reports currentPage=3, which
+    # exceeds the cached page-1 totalPages=2 -> oracle returns None (fail closed).
+    pages = {
+        1: _penv([_prow(_A, 12700, 100)], current_page=1, total_pages=2),
+        2: _penv([_prow(_A, 13000, 50)], current_page=3, include_total_pages=False),
+    }
+    _patch_fetch(probe, monkeypatch, pages)
+    assert probe._raw_newest_group_oracle("VIC", 1) is None
+
+
+# =========================================================================== #
+# leg_a_raw — needs TWO identity-bearing balance periods (R10).
+# =========================================================================== #
+def test_leg_a_raw_fails_with_only_one_balance_period(probe, monkeypatch):
+    # modelType 1 (balance) returns only ONE identity-bearing fiscalDate -> the
+    # "need 2 balance periods" guard makes leg_a_raw return False (income/cashflow
+    # are provided defensively but are not reached).
+    def _fake(sym, model, *, size=300, page=None):
+        if model == 1:
+            return _penv([_prow(_A, 12700, 100), _prow(_A, 13000, 50)], total_pages=1)
+        return _penv([_prow(_A, 21001, 100, model_type=model)], total_pages=1)
+
+    monkeypatch.setattr(probe, "_raw_fetch", _fake)
+    assert probe.leg_a_raw("VIC") is False
 
 
 # =========================================================================== #
@@ -315,3 +349,48 @@ def test_leg_c_in_range_exact_match_passes(probe, monkeypatch):
     )
     src = _FakeBalanceSrc(report)
     assert probe.leg_c_pagination(src, StatementType, Period) is True
+
+
+# =========================================================================== #
+# leg_c through the REAL numeric seam — _num() -> LineItem.value float aliasing.
+# The oracle is built by the REAL _raw_newest_group_oracle (monkeypatched
+# _raw_fetch), and the adapter report by a REAL VNDirectFundamentalSource over a
+# mocked HTTP layer, so leg_c exercises the true numeric path. Adjacent-alias
+# case ±(2**53+1): the fail-closed abs(value)>=2**53 guard prevents a false
+# equality that the aliased float would otherwise produce.
+# =========================================================================== #
+_ALIAS = 2 ** 53 + 1  # 9007199254740993 -> aliases to the even float 9007199254740992.0
+
+
+def _vic_balance_env(total_assets_value):
+    """A single-page VIC ANNUAL balance envelope (modelType 1), float itemCodes."""
+    rows = [
+        _prow(_A, 12700.0, total_assets_value, model_type=1),
+        _prow(_A, 13000.0, 50, model_type=1),
+        _prow(_A, 14000.0, 50, model_type=1),
+    ]
+    return {"data": rows, "currentPage": 1, "totalPages": 1, "size": len(rows)}
+
+
+@pytest.mark.parametrize("raw_value", [_ALIAS, -_ALIAS], ids=["pos", "neg"])
+def test_leg_c_real_adapter_fails_closed_on_adjacent_alias(probe, monkeypatch, raw_value):
+    env = _vic_balance_env(raw_value)
+    # oracle via the REAL probe function reading a monkeypatched _raw_fetch
+    monkeypatch.setattr(
+        probe, "_raw_fetch", lambda sym, model, *, size=300, page=None: env
+    )
+    # adapter report via a REAL VNDirectFundamentalSource over a mocked HTTP layer
+    src = VNDirectFundamentalSource(http_get=lambda url, params, headers: json.dumps(env))
+    assert probe.leg_c_pagination(src, StatementType, Period) is False
+
+
+def test_real_adapter_line_value_aliases_at_two53_plus_one():
+    # Document the exact false-equality the ±2**53 guard prevents: the real adapter
+    # stores raw 9007199254740993 as the aliased float 9007199254740992.0.
+    env = _vic_balance_env(_ALIAS)
+    src = VNDirectFundamentalSource(http_get=lambda url, params, headers: json.dumps(env))
+    r = src.get_financials("VIC", StatementType.BALANCE, Period.ANNUAL, is_bank=False, limit=1)[0]
+    val = next(li.value for li in r.items if li.item_code == "12700")
+    assert isinstance(val, float)
+    assert val == 9007199254740992.0
+    assert val == float(_ALIAS)  # the alias: distinct int, identical float
