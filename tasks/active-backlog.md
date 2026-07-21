@@ -96,6 +96,15 @@ _Last synced: 2026-07-20 +07_
 > fixed (LEG A + pre-fix B/C observed). Probe green (LEG A PASS, B/C pre-fix FAIL, exit 2 offline).
 > NO code/tests changed; do not build until GATE PASS. **7 gate rounds; mappings/evidence settled
 > since round 2 — deltas now micro-seams in pagination/AUTO/probe edge-handling.**
+> **✅ DESIGN GATE PASS 2026-07-21 on `2805ec0`** (`gate-202607212217-issue198-design-pass.md`,
+> reviewer `cfec0ef`) — RED-first package implementation AUTHORIZED against the accumulated spec
+> `tasks/198-design-note.md`. Mandatory code-review inclusions: focused pagination/AUTO/tuple/catalog/
+> metric tests; full offline + warning-token/docs/public-surface gates; deterministic probe unit seams
+> + opt-in live post-fix 3-leg PASS; CHANGELOG/API/tutorial/AI-skill/mapping/provenance docs lockstep;
+> merged-tree diff/secrets/blacklist/package checks. Duplicate invariant covers every fetched row; NO
+> extra fetch for the dropped limit+1 boundary. No ROE/app-helpers/redistribution/unrelated-refactor.
+> **NO push/close until implementation-review APPROVE.** Impl in progress (data layer → pagination/AUTO
+> → docs), integrate on merged tree, route to reviewer.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
