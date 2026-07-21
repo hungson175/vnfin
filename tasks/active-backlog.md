@@ -110,8 +110,16 @@ _Last synced: 2026-07-20 +07_
 > green; public_api snapshot NOT regenerated. **Live post-fix probe 3-leg PASS** (routing + 142-item
 > complete pagination proven live). Handoff: `/tmp/.../scratchpad/198-impl-review-handoff.md`. Awaiting
 > reviewer APPROVE; then push to master (no PR — maintainer own-fix) + close #198 (reviewer owns the
-> watermark). Non-blocking follow-up: `docs/ai-usage.md:152` bank `model_type==102`→`101` pre-existing
-> typo.
+> watermark).
+> **Impl-review round 1 BLOCK** (`review-202607212322`, `753eaa4`, B1–B4: evidence/tests/docs
+> completeness — runtime ACCEPTED). **Corrected → range `c3c5677..f76c33a`, RE-REVIEW REQUESTED:**
+> B1 offline `tests/test_probe_seams.py` (35) + post-fix evidence wording + durable §5 live receipt
+> (`f76c33a`, SHA 466c11a, 3-leg PASS); B2 pagination/CF/23-name pins (80+62→142, dropped-boundary dup,
+> ineligible reappearance, 2nd CF identity 35000+36000+36100==37000, independent 23-name pin); B3 doc
+> lockstep incl ai-usage bank-balance 101 + BLOCKED tutorial + vndirect docstrings; B4 durable RED-first
+> (c3da29c 2 docs-contract tests RED → 6a1941a GREEN). Merged-tree: **3951 passed**, wheel builds,
+> gates green, vndirect change docstring-only. Handoff `/tmp/.../scratchpad/198-correction-handoff.md`.
+> No push/close pending APPROVE.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
