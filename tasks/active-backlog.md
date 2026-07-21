@@ -60,7 +60,14 @@ _Last synced: 2026-07-20 +07_
 > net-change=35000/end-cash=37000 (B4); enumerated name-map, sub-lines left raw (B5); finite
 > validated pagination loop (B6/B7); empty-page≥2→InvalidData through AUTO (B8); relational
 > (statement,is_bank,model_type) tuple guard (B9); 3-leg probe rewrite (B10). Q1–Q4 resolved per
-> reviewer rulings. NO code/tests changed; do not build until GATE PASS.
+> reviewer rulings. **Round-2 gate also BLOCKED** (`gate-202607212049-issue198-regate-round2.md`,
+> reviewer `bf60ecb`, R1–R7: executable failure paths). **Revised again → `20041cb`, RE-GATE
+> (round 3) requested:** R1 empty-page at the real `_rows()` EmptyData seam; R2 source-aware tuple
+> guard (VNDirect-stmt≠None, non-VNDirect=None); R3 defined pagination helpers + missing-key→
+> InvalidData; R4 23-code map incl `12000` + all-4 FY2024 balance (8 checks); R5 probe LEG B
+> tuple-assert + LEG C raw newest-date oracle (no 142 magic) + all-tickers; R6 five derived metrics
+> pinned; R7 FPT matrix re-read directly from the official PwC PDF. Probe green (LEG A PASS, B/C
+> pre-fix FAIL). NO code/tests changed; do not build until GATE PASS.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
