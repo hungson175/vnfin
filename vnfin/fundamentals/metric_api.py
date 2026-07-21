@@ -129,57 +129,63 @@ def _derived(
 
 _V1_CATALOG: tuple[MetricDefinition, ...] = (
     # ---- raw_mapped: corporate-only (CORPORATE) ------------------------- #
+    # Corporate codes hard-remapped to the live-probe-verified namespace (#198);
+    # every code is identity- + official-filing-cross-checked (see
+    # docs/design/corporate-itemcodes-probe-20260720.md). Bank codes unchanged.
     _raw(MetricId.NET_REVENUE, "Net revenue", MetricCategory.SIZE,
-         AppliesTo.CORPORATE, StatementType.INCOME, corporate_code="11000"),
+         AppliesTo.CORPORATE, StatementType.INCOME, corporate_code="21001"),
     _raw(MetricId.GROSS_PROFIT, "Gross profit", MetricCategory.PROFITABILITY,
-         AppliesTo.CORPORATE, StatementType.INCOME, corporate_code="11200"),
+         AppliesTo.CORPORATE, StatementType.INCOME, corporate_code="23100"),
+    # OPERATING_PROFIT has NO verified corporate code (#198 §5): ships
+    # corporate_code=None -> honest BLOCKED via the unmapped-code contract,
+    # never a guessed mapping.
     _raw(MetricId.OPERATING_PROFIT, "Operating profit",
          MetricCategory.PROFITABILITY, AppliesTo.CORPORATE,
-         StatementType.INCOME, corporate_code="14000"),
+         StatementType.INCOME, corporate_code=None),
     _raw(MetricId.NET_INCOME_PARENT, "Net income (parent)",
          MetricCategory.PROFITABILITY, AppliesTo.CORPORATE,
-         StatementType.INCOME, corporate_code="21100"),
+         StatementType.INCOME, corporate_code="23000"),
     _raw(MetricId.CASH_AND_EQUIVALENTS, "Cash and equivalents",
          MetricCategory.LIQUIDITY, AppliesTo.CORPORATE,
-         StatementType.BALANCE, corporate_code="23100"),
+         StatementType.BALANCE, corporate_code="11100"),
     _raw(MetricId.CURRENT_ASSETS, "Current assets", MetricCategory.LIQUIDITY,
-         AppliesTo.CORPORATE, StatementType.BALANCE, corporate_code="23000"),
+         AppliesTo.CORPORATE, StatementType.BALANCE, corporate_code="11000"),
     _raw(MetricId.CURRENT_LIABILITIES, "Current liabilities",
          MetricCategory.LEVERAGE, AppliesTo.CORPORATE,
-         StatementType.BALANCE, corporate_code="30100"),
+         StatementType.BALANCE, corporate_code="13100"),
     _raw(MetricId.LONG_TERM_LIABILITIES, "Long-term liabilities",
          MetricCategory.LEVERAGE, AppliesTo.CORPORATE,
-         StatementType.BALANCE, corporate_code="30200"),
+         StatementType.BALANCE, corporate_code="13300"),
     _raw(MetricId.OPERATING_CASH_FLOW, "Operating cash flow",
          MetricCategory.CASHFLOW, AppliesTo.CORPORATE,
-         StatementType.CASHFLOW, corporate_code="31000"),
+         StatementType.CASHFLOW, corporate_code="32000"),
     _raw(MetricId.INVESTING_CASH_FLOW, "Investing cash flow",
          MetricCategory.CASHFLOW, AppliesTo.CORPORATE,
-         StatementType.CASHFLOW, corporate_code="32000"),
+         StatementType.CASHFLOW, corporate_code="33000"),
     _raw(MetricId.FINANCING_CASH_FLOW, "Financing cash flow",
          MetricCategory.CASHFLOW, AppliesTo.CORPORATE,
-         StatementType.CASHFLOW, corporate_code="33000"),
+         StatementType.CASHFLOW, corporate_code="34000"),
     _raw(MetricId.NET_CASH_FLOW, "Net cash flow", MetricCategory.CASHFLOW,
-         AppliesTo.CORPORATE, StatementType.CASHFLOW, corporate_code="34000"),
+         AppliesTo.CORPORATE, StatementType.CASHFLOW, corporate_code="35000"),
     _raw(MetricId.CASH_END_OF_PERIOD, "Cash at end of period",
          MetricCategory.CASHFLOW, AppliesTo.CORPORATE,
-         StatementType.CASHFLOW, corporate_code="35000"),
+         StatementType.CASHFLOW, corporate_code="37000"),
     # ---- raw_mapped: shared (BOTH) — corporate_code + bank_code --------- #
     _raw(MetricId.PROFIT_BEFORE_TAX, "Profit before tax",
          MetricCategory.PROFITABILITY, AppliesTo.BOTH, StatementType.INCOME,
-         corporate_code="20000", bank_code="23800"),
+         corporate_code="23800", bank_code="23800"),
     _raw(MetricId.NET_INCOME, "Net income", MetricCategory.PROFITABILITY,
          AppliesTo.BOTH, StatementType.INCOME,
-         corporate_code="21000", bank_code="23000"),
+         corporate_code="23003", bank_code="23000"),
     _raw(MetricId.TOTAL_ASSETS, "Total assets", MetricCategory.SIZE,
          AppliesTo.BOTH, StatementType.BALANCE,
-         corporate_code="25000", bank_code="12700"),
+         corporate_code="12700", bank_code="12700"),
     _raw(MetricId.TOTAL_LIABILITIES, "Total liabilities",
          MetricCategory.LEVERAGE, AppliesTo.BOTH, StatementType.BALANCE,
-         corporate_code="30000", bank_code="13000"),
+         corporate_code="13000", bank_code="13000"),
     _raw(MetricId.OWNERS_EQUITY, "Owners' equity", MetricCategory.SIZE,
          AppliesTo.BOTH, StatementType.BALANCE,
-         corporate_code="40000", bank_code="14000"),
+         corporate_code="14000", bank_code="14000"),
     # ---- raw_mapped: bank-only (BANK) — bank_code only ----------------- #
     _raw(MetricId.NET_INTEREST_INCOME, "Net interest income",
          MetricCategory.PROFITABILITY, AppliesTo.BANK, StatementType.INCOME,
@@ -317,6 +323,9 @@ REASON_STATEMENT_NOT_SERVED = (
     "statement {statement} not served by source '{source}'"
 )
 REASON_MISSING_LINE_ITEM = "missing line item {code} in {statement}"
+REASON_METRIC_CODE_UNMAPPED = (
+    "metric '{id}' has no verified code for source '{source}' and {entity} entities"
+)
 REASON_NOT_APPLICABLE = (
     "metric '{id}' does not apply to {entity} entities"
 )
@@ -487,14 +496,27 @@ def _resolve_raw(
         )
     # 4. look the code up in the report's code -> LineItem index (B8 — from the
     #    full LineItem object, never via FinancialReport.get() which is float-only).
+    #    Split the two failure modes (#198 §5): no verified code for this entity
+    #    type is an honest BLOCKED (the statement exists; the library lacks a
+    #    mapping), NOT a false MISSING claiming the provider omitted a line.
     code = _code_for(defn, source, is_bank)
+    if code is None:
+        return _unavailable(
+            defn,
+            MetricAvailability.BLOCKED,
+            fiscal_date,
+            REASON_METRIC_CODE_UNMAPPED.format(
+                id=defn.id.value,
+                source=source,
+                entity=("bank" if is_bank else "corporate"),
+            ),
+        )
     line: Optional[LineItem] = None
-    if code is not None:
-        for li in report.items:
-            if li.item_code == code:
-                line = li
-                break
-    if code is None or line is None:
+    for li in report.items:
+        if li.item_code == code:
+            line = li
+            break
+    if line is None:  # code IS mapped but genuinely absent upstream
         return _unavailable(
             defn,
             MetricAvailability.MISSING,

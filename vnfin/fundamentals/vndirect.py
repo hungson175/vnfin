@@ -52,9 +52,11 @@ from .models import (
 )
 
 # Corporate (single-digit) modelType per statement; bank adds the 10x prefix.
+# Live-probe verified (#198): modelType 1 is the BALANCE sheet and 2 is the
+# INCOME statement (the prior INCOME:1/BALANCE:2 mapping was inverted).
 _CORP_MODEL = {
-    StatementType.INCOME: 1,
-    StatementType.BALANCE: 2,
+    StatementType.BALANCE: 1,
+    StatementType.INCOME: 2,
     StatementType.CASHFLOW: 3,
 }
 _BANK_MODEL = {

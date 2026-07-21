@@ -289,26 +289,27 @@ def test_metric_coverage_shape_frozen():
 # Each row: (metric_id, applies_to, category, kind, corporate_code, bank_code)
 # corporate_code / bank_code = the codes_by_source["vndirect"] codes.
 _EXPECTED_RAW_MAPPED = {
-    # corporate-only (applies_to=CORPORATE) -------------------------------- #
-    "net_revenue": ("corporate", "size", "raw_mapped", "11000", None),
-    "gross_profit": ("corporate", "profitability", "raw_mapped", "11200", None),
-    "operating_profit": ("corporate", "profitability", "raw_mapped", "14000", None),
-    "net_income_parent": ("corporate", "profitability", "raw_mapped", "21100", None),
-    "cash_and_equivalents": ("corporate", "liquidity", "raw_mapped", "23100", None),
-    "current_assets": ("corporate", "liquidity", "raw_mapped", "23000", None),
-    "current_liabilities": ("corporate", "leverage", "raw_mapped", "30100", None),
-    "long_term_liabilities": ("corporate", "leverage", "raw_mapped", "30200", None),
-    "operating_cash_flow": ("corporate", "cashflow", "raw_mapped", "31000", None),
-    "investing_cash_flow": ("corporate", "cashflow", "raw_mapped", "32000", None),
-    "financing_cash_flow": ("corporate", "cashflow", "raw_mapped", "33000", None),
-    "net_cash_flow": ("corporate", "cashflow", "raw_mapped", "34000", None),
-    "cash_end_of_period": ("corporate", "cashflow", "raw_mapped", "35000", None),
+    # corporate-only (applies_to=CORPORATE) — #198 verified corporate codes ---- #
+    "net_revenue": ("corporate", "size", "raw_mapped", "21001", None),
+    "gross_profit": ("corporate", "profitability", "raw_mapped", "23100", None),
+    # operating_profit has NO verified corporate code -> None -> BLOCKED (§5).
+    "operating_profit": ("corporate", "profitability", "raw_mapped", None, None),
+    "net_income_parent": ("corporate", "profitability", "raw_mapped", "23000", None),
+    "cash_and_equivalents": ("corporate", "liquidity", "raw_mapped", "11100", None),
+    "current_assets": ("corporate", "liquidity", "raw_mapped", "11000", None),
+    "current_liabilities": ("corporate", "leverage", "raw_mapped", "13100", None),
+    "long_term_liabilities": ("corporate", "leverage", "raw_mapped", "13300", None),
+    "operating_cash_flow": ("corporate", "cashflow", "raw_mapped", "32000", None),
+    "investing_cash_flow": ("corporate", "cashflow", "raw_mapped", "33000", None),
+    "financing_cash_flow": ("corporate", "cashflow", "raw_mapped", "34000", None),
+    "net_cash_flow": ("corporate", "cashflow", "raw_mapped", "35000", None),
+    "cash_end_of_period": ("corporate", "cashflow", "raw_mapped", "37000", None),
     # shared (applies_to=BOTH) -------------------------------------------- #
-    "profit_before_tax": ("both", "profitability", "raw_mapped", "20000", "23800"),
-    "net_income": ("both", "profitability", "raw_mapped", "21000", "23000"),
-    "total_assets": ("both", "size", "raw_mapped", "25000", "12700"),
-    "total_liabilities": ("both", "leverage", "raw_mapped", "30000", "13000"),
-    "owners_equity": ("both", "size", "raw_mapped", "40000", "14000"),
+    "profit_before_tax": ("both", "profitability", "raw_mapped", "23800", "23800"),
+    "net_income": ("both", "profitability", "raw_mapped", "23003", "23000"),
+    "total_assets": ("both", "size", "raw_mapped", "12700", "12700"),
+    "total_liabilities": ("both", "leverage", "raw_mapped", "13000", "13000"),
+    "owners_equity": ("both", "size", "raw_mapped", "14000", "14000"),
     # bank-only (applies_to=BANK) ----------------------------------------- #
     "net_interest_income": ("bank", "profitability", "raw_mapped", None, "421900"),
     "loans_to_customers": ("bank", "size", "raw_mapped", None, "412000"),
@@ -539,7 +540,7 @@ def test_explain_metric_by_enum():
     d = explain_metric(MetricId.NET_INCOME)
     assert isinstance(d, MetricDefinition)
     assert d.id is MetricId.NET_INCOME
-    assert d.codes_by_source["vndirect"].corporate_code == "21000"
+    assert d.codes_by_source["vndirect"].corporate_code == "23003"
     assert d.codes_by_source["vndirect"].bank_code == "23000"
 
 
@@ -603,13 +604,14 @@ def _ok(statement, reports, source="vndirect"):
 
 # A complete corporate income/balance/cashflow at D1 (round fabricated VND).
 def _corp_income(fiscal_date=D1, source="vndirect", **over):
+    # #198 verified corporate INCOME codes. operating_profit (no code) is BLOCKED,
+    # so it has no line here.
     base = {
-        "11000": 1000.0,   # net_revenue
-        "11200": 400.0,    # gross_profit
-        "14000": 300.0,    # operating_profit
-        "21100": 180.0,    # net_income_parent
-        "20000": 250.0,    # profit_before_tax
-        "21000": 200.0,    # net_income
+        "21001": 1000.0,   # net_revenue
+        "23100": 400.0,    # gross_profit
+        "23000": 180.0,    # net_income_parent (PAT to parent)
+        "23800": 250.0,    # profit_before_tax
+        "23003": 200.0,    # net_income (PAT total consolidated)
     }
     base.update(over)
     return _report("TESTCO", StatementType.INCOME, fiscal_date,
@@ -618,13 +620,13 @@ def _corp_income(fiscal_date=D1, source="vndirect", **over):
 
 def _corp_balance(fiscal_date=D1, source="vndirect", **over):
     base = {
-        "23100": 500.0,    # cash_and_equivalents
-        "23000": 800.0,    # current_assets
-        "30100": 300.0,    # current_liabilities
-        "30200": 200.0,    # long_term_liabilities
-        "25000": 2000.0,   # total_assets
-        "30000": 700.0,    # total_liabilities
-        "40000": 1300.0,   # owners_equity
+        "11100": 500.0,    # cash_and_equivalents
+        "11000": 800.0,    # current_assets
+        "13100": 300.0,    # current_liabilities
+        "13300": 200.0,    # long_term_liabilities
+        "12700": 2000.0,   # total_assets
+        "13000": 700.0,    # total_liabilities
+        "14000": 1300.0,   # owners_equity
     }
     base.update(over)
     return _report("TESTCO", StatementType.BALANCE, fiscal_date,
@@ -633,11 +635,11 @@ def _corp_balance(fiscal_date=D1, source="vndirect", **over):
 
 def _corp_cashflow(fiscal_date=D1, source="vndirect", **over):
     base = {
-        "31000": 350.0,    # operating_cash_flow
-        "32000": -120.0,   # investing_cash_flow
-        "33000": -80.0,    # financing_cash_flow
-        "34000": 150.0,    # net_cash_flow
-        "35000": 600.0,    # cash_end_of_period
+        "32000": 350.0,    # operating_cash_flow
+        "33000": -120.0,   # investing_cash_flow
+        "34000": -80.0,    # financing_cash_flow
+        "35000": 150.0,    # net_cash_flow
+        "37000": 600.0,    # cash_end_of_period
     }
     base.update(over)
     return _report("TESTCO", StatementType.CASHFLOW, fiscal_date,
@@ -825,7 +827,7 @@ def test_derived_correct_values():
 
 def test_derived_denominator_zero():
     results = (
-        _ok(StatementType.INCOME, [_corp_income(D1, **{"11000": 0.0})]),
+        _ok(StatementType.INCOME, [_corp_income(D1, **{"21001": 0.0})]),
         _ok(StatementType.BALANCE, [_corp_balance(D1)]),
         _ok(StatementType.CASHFLOW, [_corp_cashflow(D1)]),
     )
@@ -839,7 +841,7 @@ def test_derived_denominator_zero():
 
 def test_derived_denominator_negative():
     results = (
-        _ok(StatementType.INCOME, [_corp_income(D1, **{"11000": -50.0})]),
+        _ok(StatementType.INCOME, [_corp_income(D1, **{"21001": -50.0})]),
         _ok(StatementType.BALANCE, [_corp_balance(D1)]),
         _ok(StatementType.CASHFLOW, [_corp_cashflow(D1)]),
     )
@@ -853,7 +855,7 @@ def test_derived_denominator_negative():
 
 def test_derived_denominator_non_finite():
     results = (
-        _ok(StatementType.INCOME, [_corp_income(D1, **{"11000": float("nan")})]),
+        _ok(StatementType.INCOME, [_corp_income(D1, **{"21001": float("nan")})]),
         _ok(StatementType.BALANCE, [_corp_balance(D1)]),
         _ok(StatementType.CASHFLOW, [_corp_cashflow(D1)]),
     )
@@ -866,9 +868,10 @@ def test_derived_denominator_non_finite():
 
 
 def test_derived_input_missing():
-    # drop net_revenue line entirely -> input metric missing
+    # drop net_revenue line (21001) entirely, keep gross_profit (23100) so the
+    # FIRST missing derived input is net_revenue.
     income = _report("TESTCO", StatementType.INCOME, D1,
-                     [_li("11200", 400.0), _li("21000", 200.0)])
+                     [_li("23100", 400.0), _li("23003", 200.0)])
     results = (
         _ok(StatementType.INCOME, [income]),
         _ok(StatementType.BALANCE, [_corp_balance(D1)]),
@@ -903,7 +906,7 @@ def test_derived_input_blocked_propagates():
 def test_derived_never_inf_or_nan():
     # craft inputs that could divide to inf — guard must yield None, not inf
     results = (
-        _ok(StatementType.INCOME, [_corp_income(D1, **{"11000": 0.0})]),
+        _ok(StatementType.INCOME, [_corp_income(D1, **{"21001": 0.0})]),
         _ok(StatementType.BALANCE, [_corp_balance(D1)]),
         _ok(StatementType.CASHFLOW, [_corp_cashflow(D1)]),
     )
@@ -919,7 +922,7 @@ def test_derived_never_inf_or_nan():
 # --------------------------------------------------------------------------- #
 def test_raw_code_absent_missing():
     income = _report("TESTCO", StatementType.INCOME, D1,
-                     [_li("11200", 400.0)])  # net_revenue 11000 absent
+                     [_li("23100", 400.0)])  # net_revenue 21001 absent
     results = (
         _ok(StatementType.INCOME, [income]),
         _ok(StatementType.BALANCE, [_corp_balance(D1)]),
@@ -929,7 +932,7 @@ def test_raw_code_absent_missing():
         "TESTCO", Period.ANNUAL, False, results, limit=8)[0]
     nr = rep.get("net_revenue")
     assert nr.availability is MetricAvailability.MISSING
-    assert nr.reason == "missing line item 11000 in income"
+    assert nr.reason == "missing line item 21001 in income"
 
 
 # --------------------------------------------------------------------------- #
@@ -1016,11 +1019,12 @@ def test_per_period_missing_statement():
 # Label provenance & identity (REV2.5) — match by code, never by label.
 # --------------------------------------------------------------------------- #
 def test_label_provenance_identity_by_code():
-    # 11000 carries a generic label AND a semantically surprising one elsewhere
+    # 21001 (net_revenue) carries a generic label; 23100 (gross_profit) a
+    # semantically surprising one — identity is by CODE, never by label.
     income = _report("TESTCO", StatementType.INCOME, D1, [
-        _li("11000", 1000.0, name="item_11000"),     # generic label
-        _li("11200", 400.0, name="Totally Wrong Label"),  # surprising
-        _li("21000", 200.0),
+        _li("21001", 1000.0, name="item_21001"),     # generic label
+        _li("23100", 400.0, name="Totally Wrong Label"),  # surprising
+        _li("23003", 200.0),
     ])
     results = (
         _ok(StatementType.INCOME, [income]),
@@ -1033,7 +1037,7 @@ def test_label_provenance_identity_by_code():
     assert nr.availability is MetricAvailability.AVAILABLE
     assert nr.value == 1000.0
     # raw label preserved in lineage, never used for identity / no mismatch warning
-    assert nr.inputs[0].name == "item_11000"
+    assert nr.inputs[0].name == "item_21001"
     assert nr.warnings == ()
     gp = rep.get("gross_profit")
     assert gp.availability is MetricAvailability.AVAILABLE
@@ -1051,12 +1055,12 @@ def test_lineage_from_lineitem_not_via_get():
     mi = nr.inputs[0]
     assert isinstance(mi, MetricInput)
     assert mi.statement is StatementType.INCOME
-    assert mi.item_code == "11000"
+    assert mi.item_code == "21001"
     assert mi.value == 1000.0
     assert mi.value_unit == "VND"
     assert mi.fiscal_date == D1
     assert mi.source == "vndirect"
-    assert mi.name == "name_11000"
+    assert mi.name == "name_21001"
 
 
 # --------------------------------------------------------------------------- #
@@ -1142,9 +1146,9 @@ def test_metric_report_to_dataframe_columns_and_attrs():
     assert row["category"] == "size"
     assert row["applies_to"] == "corporate"
     assert row["fiscal_date"] == "2023-12-31"
-    assert row["input_codes"] == "11000"
+    assert row["input_codes"] == "21001"
     assert row["input_sources"] == "vndirect"
-    assert row["input_names"] == "name_11000"
+    assert row["input_names"] == "name_21001"
     assert row["reason"] is None or (isinstance(row["reason"], float) and math.isnan(row["reason"]))
     # df.attrs — exact keys, no "source"
     assert df.attrs["symbol"] == "TESTCO"
@@ -1338,34 +1342,33 @@ def _vnd_envelope(rows, total=None):
 
 
 # A VNDirect http_get that routes by the requested modelType in params["q"].
-# Corporate income=mt1, balance=mt2, cashflow=mt3. Returns one ANNUAL period.
+# #198 corporate routing: BALANCE=mt1, INCOME=mt2, CASHFLOW=mt3. One ANNUAL period.
 _FD = "2025-12-31"
 
 
 def _corp_vnd_http_get(*, record=None):
-    income = [
-        _vnd_row("TESTCO", 11000, 1000.0, _FD, "ANNUAL", 1),
-        _vnd_row("TESTCO", 11200, 400.0, _FD, "ANNUAL", 1),
-        _vnd_row("TESTCO", 14000, 300.0, _FD, "ANNUAL", 1),
-        _vnd_row("TESTCO", 21100, 180.0, _FD, "ANNUAL", 1),
-        _vnd_row("TESTCO", 20000, 250.0, _FD, "ANNUAL", 1),
-        _vnd_row("TESTCO", 21000, 200.0, _FD, "ANNUAL", 1),
+    income = [  # modelType 2 (#198 verified corporate INCOME codes)
+        _vnd_row("TESTCO", 21001, 1000.0, _FD, "ANNUAL", 2),  # net_revenue
+        _vnd_row("TESTCO", 23100, 400.0, _FD, "ANNUAL", 2),   # gross_profit
+        _vnd_row("TESTCO", 23000, 180.0, _FD, "ANNUAL", 2),   # net_income_parent
+        _vnd_row("TESTCO", 23800, 250.0, _FD, "ANNUAL", 2),   # profit_before_tax
+        _vnd_row("TESTCO", 23003, 200.0, _FD, "ANNUAL", 2),   # net_income (total)
     ]
-    balance = [
-        _vnd_row("TESTCO", 23100, 500.0, _FD, "ANNUAL", 2),
-        _vnd_row("TESTCO", 23000, 800.0, _FD, "ANNUAL", 2),
-        _vnd_row("TESTCO", 30100, 300.0, _FD, "ANNUAL", 2),
-        _vnd_row("TESTCO", 30200, 200.0, _FD, "ANNUAL", 2),
-        _vnd_row("TESTCO", 25000, 2000.0, _FD, "ANNUAL", 2),
-        _vnd_row("TESTCO", 30000, 700.0, _FD, "ANNUAL", 2),
-        _vnd_row("TESTCO", 40000, 1300.0, _FD, "ANNUAL", 2),
+    balance = [  # modelType 1
+        _vnd_row("TESTCO", 11100, 500.0, _FD, "ANNUAL", 1),   # cash_and_equivalents
+        _vnd_row("TESTCO", 11000, 800.0, _FD, "ANNUAL", 1),   # current_assets
+        _vnd_row("TESTCO", 13100, 300.0, _FD, "ANNUAL", 1),   # current_liabilities
+        _vnd_row("TESTCO", 13300, 200.0, _FD, "ANNUAL", 1),   # long_term_liabilities
+        _vnd_row("TESTCO", 12700, 2000.0, _FD, "ANNUAL", 1),  # total_assets
+        _vnd_row("TESTCO", 13000, 700.0, _FD, "ANNUAL", 1),   # total_liabilities
+        _vnd_row("TESTCO", 14000, 1300.0, _FD, "ANNUAL", 1),  # owners_equity
     ]
-    cashflow = [
-        _vnd_row("TESTCO", 31000, 350.0, _FD, "ANNUAL", 3),
-        _vnd_row("TESTCO", 32000, -120.0, _FD, "ANNUAL", 3),
-        _vnd_row("TESTCO", 33000, -80.0, _FD, "ANNUAL", 3),
-        _vnd_row("TESTCO", 34000, 150.0, _FD, "ANNUAL", 3),
-        _vnd_row("TESTCO", 35000, 600.0, _FD, "ANNUAL", 3),
+    cashflow = [  # modelType 3
+        _vnd_row("TESTCO", 32000, 350.0, _FD, "ANNUAL", 3),   # operating_cash_flow
+        _vnd_row("TESTCO", 33000, -120.0, _FD, "ANNUAL", 3),  # investing_cash_flow
+        _vnd_row("TESTCO", 34000, -80.0, _FD, "ANNUAL", 3),   # financing_cash_flow
+        _vnd_row("TESTCO", 35000, 150.0, _FD, "ANNUAL", 3),   # net_cash_flow
+        _vnd_row("TESTCO", 37000, 600.0, _FD, "ANNUAL", 3),   # cash_end_of_period
     ]
 
     def _g(url, params, headers):
@@ -1375,9 +1378,9 @@ def _corp_vnd_http_get(*, record=None):
         if "modelType:3" in q:
             return _vnd_envelope(cashflow)
         if "modelType:2" in q:
-            return _vnd_envelope(balance)
-        # default corporate income (modelType:1) — also the AUTO probe target
-        return _vnd_envelope(income)
+            return _vnd_envelope(income)
+        # corporate BALANCE (modelType:1) — also the corporate AUTO probe target
+        return _vnd_envelope(balance)
 
     return _g
 

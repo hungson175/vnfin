@@ -65,17 +65,17 @@ def _stmt_envelope(rows, total=None):
 
 
 def corp_income_two_periods():
-    """Corporate income statement (modelType 1), two fiscal years, tall rows.
+    """Corporate income statement (modelType 2), two fiscal years, tall rows.
 
-    itemCode 11000 = net revenue, 20000 = profit before tax (synthetic mapping
-    that overlaps the headline itemCode->name map we ship). Values are obviously
+    Under the #198 routing fix, corporate INCOME is modelType 2 (1 is balance).
+    itemCodes are arbitrary synthetic statement codes; values are obviously
     fabricated round raw-VND numbers, NOT real provider figures.
     """
     rows = [
-        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
-        _stmt_row("TESTCO", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
-        _stmt_row("TESTCO", 11000, 10_000_000_000_000.0, "2024-12-31", "ANNUAL", 1),
-        _stmt_row("TESTCO", 20000, 2_000_000_000_000.0, "2024-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
+        _stmt_row("TESTCO", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
+        _stmt_row("TESTCO", 11000, 10_000_000_000_000.0, "2024-12-31", "ANNUAL", 2),
+        _stmt_row("TESTCO", 20000, 2_000_000_000_000.0, "2024-12-31", "ANNUAL", 2),
     ]
     return _stmt_envelope(rows, total=400)
 
@@ -264,7 +264,7 @@ def test_corporate_uses_modelType_single_digit_in_params():
     with pytest.raises(InvalidData):
         src.get_financials("TESTCO", StatementType.BALANCE, Period.QUARTER)
     q = captured["params"]["q"]
-    assert "modelType:2" in q  # balance sheet corporate
+    assert "modelType:1" in q  # balance sheet corporate (#198: balance=1)
     assert "reportType:QUARTER" in q
 
 
@@ -297,12 +297,12 @@ def test_bank_reports_carry_bank_model_metadata():
 # the caller knowing. Explicit is_bank always overrides the auto-detection.
 # --------------------------------------------------------------------------- #
 def test_auto_detects_corporate_sample_as_corporate():
-    """A corporate response (modelType 1) is auto-detected as corporate."""
+    """A corporate income response (modelType 2) is auto-detected as corporate."""
     reports = _src(corp_income_two_periods()).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL  # no is_bank -> AUTO
     )
     assert reports[0].is_bank is False
-    assert reports[0].model_type == 1
+    assert reports[0].model_type == 2
 
 
 def test_auto_detects_bank_sample_as_bank():
@@ -336,16 +336,16 @@ def test_explicit_is_bank_false_overrides_auto_on_bank_rows():
     provider contract violation.
     """
     rows = [
-        _stmt_row("ZZBANK", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("ZZBANK", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
     ]
     src, captured = _capturing_src(_stmt_envelope(rows))
     reports = src.get_financials(
         "ZZBANK", StatementType.INCOME, Period.ANNUAL, is_bank=False
     )
-    assert "modelType:1" in captured["params"]["q"]
+    assert "modelType:2" in captured["params"]["q"]  # corporate INCOME = 2 (#198)
     assert "modelType:102" not in captured["params"]["q"]
     assert reports[0].is_bank is False
-    assert reports[0].model_type == 1
+    assert reports[0].model_type == 2
 
 
 def test_explicit_is_bank_true_overrides_auto_on_corporate_rows():
@@ -366,7 +366,7 @@ def test_auto_prefers_corporate_query_first_for_unknown_ticker():
     """An unrecognised ticker is probed as corporate first (modelType single-digit)."""
     src, captured = _capturing_src(corp_income_two_periods())
     src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)  # AUTO
-    assert "modelType:1" in captured["params"]["q"]
+    assert "modelType:2" in captured["params"]["q"]  # corporate INCOME = 2 (#198)
 
 
 def test_auto_prefers_bank_query_first_for_known_bank_ticker():
@@ -388,8 +388,8 @@ def test_auto_falls_back_to_other_template_when_first_is_empty():
         # Fallback corporate rows must carry the requested ticker so identity
         # validation accepts them.
         rows = [
-            _stmt_row("VCB", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
-            _stmt_row("VCB", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+            _stmt_row("VCB", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
+            _stmt_row("VCB", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
         ]
         return _stmt_envelope(rows, total=200)
 
@@ -403,7 +403,7 @@ def test_auto_falls_back_to_other_template_when_first_is_empty():
     src = VNDirectFundamentalSource(http_get=_g)
     reports = src.get_financials("VCB", StatementType.INCOME, Period.ANNUAL)  # AUTO
     assert any("modelType:102" in q for q in queries)  # bank probed first
-    assert any("modelType:1" in q for q in queries)  # then corporate
+    assert any("modelType:2" in q for q in queries)  # then corporate INCOME=2
     assert reports[0].is_bank is False  # detected corporate from the fallback rows
 
 
@@ -432,7 +432,8 @@ def test_vndirect_empty_list_data_raises_empty_not_invalid():
 
 
 def _row_with_model_type(mt):
-    row = _stmt_row("TESTCO", 11000, 1000.0, "2025-12-31", "ANNUAL", 1)
+    # Base is a corporate INCOME row (modelType 2 under the #198 routing fix).
+    row = _stmt_row("TESTCO", 11000, 1000.0, "2025-12-31", "ANNUAL", 2)
     row["modelType"] = mt  # override the floated default with the raw test value
     return row
 
@@ -455,9 +456,10 @@ def test_vndirect_malformed_model_type_raises_invalid(bad_mt):
         _src(text).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
 
 
-@pytest.mark.parametrize("good_mt", [1, 1.0, "1"])
+@pytest.mark.parametrize("good_mt", [2, 2.0, "2"])
 def test_vndirect_canonical_model_type_accepted(good_mt):
-    # int, integral float (provider sends 1.0), and canonical digit string are all accepted.
+    # int, integral float (provider sends 2.0), and canonical digit string are all
+    # accepted for a corporate INCOME request (modelType 2 under #198 routing).
     text = _stmt_envelope([_row_with_model_type(good_mt)])
     reports = _src(text).get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
     assert len(reports) == 1
@@ -475,8 +477,8 @@ def test_vndirect_rejects_wrong_report_type_rows():
     # Issue #44: rows whose reportType does not match the requested period are
     # provider contract violations and must be skipped (with a warning).
     rows = [
-        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
-        _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2025-09-30", "QUARTER", 1),
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
+        _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2025-09-30", "QUARTER", 2),
     ]
     reports = _src(_stmt_envelope(rows)).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL
@@ -491,7 +493,7 @@ def test_vndirect_rejects_wrong_model_type_rows():
     # Issue #44: rows whose modelType does not match the requested/corporate bank
     # template are provider contract violations and must be skipped.
     rows = [
-        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
         _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2024-12-31", "ANNUAL", 101),
     ]
     reports = _src(_stmt_envelope(rows)).get_financials(
@@ -507,8 +509,8 @@ def test_vndirect_duplicate_item_code_in_same_period_raises_invalid():
     # Issue #26: duplicate itemCode within one fiscal period is a contract
     # violation and must raise InvalidData.
     rows = [
-        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
-        _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
+        _stmt_row("TESTCO", 11000, 11_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
     ]
     with pytest.raises(InvalidData):
         _src(_stmt_envelope(rows)).get_financials(
@@ -866,22 +868,33 @@ def test_auto_is_the_none_sentinel():
 def test_item_name_maps_expanded_corporate_headlines():
     from vnfin.fundamentals.itemcodes import item_name
 
-    # net income / total assets / equity / operating cash flow now mapped.
-    # Corporate codes are keyed per statement model_type: income=1, balance=2,
-    # cashflow=3. Under the hard-switch a no-model_type call returns raw.
-    assert item_name("21000", model_type=1) == "Lợi nhuận sau thuế"  # net income (income)
-    assert item_name("25000", model_type=2) == "Tổng tài sản"  # total assets (balance)
-    assert item_name("40000", model_type=2) == "Vốn chủ sở hữu"  # equity (balance)
+    # #198 verified corporate map: BALANCE=1, INCOME=2, CASHFLOW=3.
+    # Balance (mt=1)
+    assert item_name("12700", model_type=1) == "Tổng cộng tài sản"  # total assets
+    assert item_name("14000", model_type=1) == "Vốn chủ sở hữu"  # owners' equity
+    assert item_name("11000", model_type=1) == "Tài sản ngắn hạn"  # current assets
     assert (
-        item_name("31000", model_type=3)
-        == "Lưu chuyển tiền từ hoạt động kinh doanh"
-    )  # operating CF (cashflow)
-    # newly added headline lines
-    assert item_name("23400", model_type=2) == "Hàng tồn kho"  # inventories (balance)
+        item_name("11100", model_type=1) == "Tiền và các khoản tương đương tiền"
+    )  # cash & equivalents
+    # Income (mt=2)
+    assert item_name("21001", model_type=2) == "Doanh thu thuần"  # net revenue
+    assert item_name("23100", model_type=2) == "Lợi nhuận gộp"  # gross profit
     assert (
-        item_name("40200", model_type=2)
-        == "Lợi nhuận sau thuế chưa phân phối"
-    )  # retained earnings (balance)
+        item_name("23003", model_type=2) == "Lợi nhuận sau thuế TNDN"
+    )  # PAT total consolidated
+    assert (
+        item_name("23000", model_type=2) == "LNST của cổ đông công ty mẹ"
+    )  # PAT to parent
+    # Cash flow (mt=3)
+    assert (
+        item_name("32000", model_type=3) == "Lưu chuyển tiền thuần từ HĐ kinh doanh"
+    )  # operating CF
+    assert (
+        item_name("37000", model_type=3) == "Tiền và tương đương tiền cuối kỳ"
+    )  # cash at end of period
+    # Aggregate-only current-asset sub-lines are NOT named -> honest raw.
+    for sub in ("11200", "11300", "11400", "11500"):
+        assert item_name(sub, model_type=1) == f"item_{sub}"
 
 
 def test_item_name_maps_expanded_bank_headlines():
@@ -908,13 +921,14 @@ def test_item_name_maps_expanded_bank_headlines():
 
 
 def test_item_name_model_type_mismatch_falls_back_to_raw():
-    # A bank-balance code looked up under the corporate-balance template (mt=2)
-    # must fall back to honest raw — never a cross-template guess.
+    # A code looked up under a template that does NOT contain it must fall back to
+    # honest raw — never a cross-template guess.
     from vnfin.fundamentals.itemcodes import item_name
 
-    assert item_name("12700", model_type=2) == "item_12700"  # bank-balance code, corp template
-    # 14000-corporate lives in income (mt=1); under balance (mt=2) it is raw.
-    assert item_name("14000", model_type=2) == "item_14000"
+    # 12700 is a BALANCE code (mt=1); under corporate INCOME (mt=2) it is raw.
+    assert item_name("12700", model_type=2) == "item_12700"
+    # 21001 is an INCOME code (mt=2); under corporate BALANCE (mt=1) it is raw.
+    assert item_name("21001", model_type=1) == "item_21001"
 
 
 def test_item_name_same_code_different_template_distinct_labels():
@@ -922,23 +936,26 @@ def test_item_name_same_code_different_template_distinct_labels():
     # DIFFERENT labels — proving model_type is the authoritative key.
     from vnfin.fundamentals.itemcodes import item_name
 
-    corp_14000 = item_name("14000", model_type=1)  # corporate income
-    bank_14000 = item_name("14000", model_type=101)  # bank balance
-    assert corp_14000 == "Lợi nhuận thuần từ hoạt động kinh doanh"
-    assert bank_14000 == "Vốn chủ sở hữu"
-    assert corp_14000 != bank_14000
-
-    corp_23000 = item_name("23000", model_type=2)  # corporate balance
+    # 23000: corporate INCOME = PAT-to-parent; bank INCOME = PAT.
+    corp_23000 = item_name("23000", model_type=2)  # corporate income
     bank_23000 = item_name("23000", model_type=102)  # bank income
-    assert corp_23000 == "Tài sản ngắn hạn"
+    assert corp_23000 == "LNST của cổ đông công ty mẹ"
     assert bank_23000 == "Lợi nhuận sau thuế"
     assert corp_23000 != bank_23000
 
-    corp_13000 = item_name("13000", model_type=1)  # corporate income
-    bank_13000 = item_name("13000", model_type=101)  # bank balance
-    assert corp_13000 == "Chi phí bán hàng"
-    assert bank_13000 == "Nợ phải trả"
-    assert corp_13000 != bank_13000
+    # 23800: corporate INCOME vs bank INCOME — different PBT wording.
+    corp_23800 = item_name("23800", model_type=2)  # corporate income
+    bank_23800 = item_name("23800", model_type=102)  # bank income
+    assert corp_23800 == "Tổng lợi nhuận kế toán trước thuế"
+    assert bank_23800 == "Lợi nhuận trước thuế"
+    assert corp_23800 != bank_23800
+
+    # 12700: corporate BALANCE vs bank BALANCE — different total-assets wording.
+    corp_12700 = item_name("12700", model_type=1)  # corporate balance
+    bank_12700 = item_name("12700", model_type=101)  # bank balance
+    assert corp_12700 == "Tổng cộng tài sản"
+    assert bank_12700 == "Tổng tài sản"
+    assert corp_12700 != bank_12700
 
 
 def test_item_name_partition_completeness():
@@ -977,8 +994,8 @@ def test_item_name_unknown_code_falls_back():
 # --------------------------------------------------------------------------- #
 def test_vndirect_statement_skips_row_with_mismatched_code():
     rows = [
-        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
-        _stmt_row("OTHER", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("TESTCO", 11000, 12_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
+        _stmt_row("OTHER", 20000, 3_000_000_000_000.0, "2025-12-31", "ANNUAL", 2),
     ]
     reports = _src(_stmt_envelope(rows)).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL
@@ -994,7 +1011,7 @@ def test_vndirect_statement_all_code_mismatch_raises_invalid():
     # contradicts the requested symbol, that is a wrong-identity payload and must
     # raise InvalidData, not return an empty (clean no-data) tuple.
     rows = [
-        _stmt_row("OTHER", 11000, 1.0, "2025-12-31", "ANNUAL", 1),
+        _stmt_row("OTHER", 11000, 1.0, "2025-12-31", "ANNUAL", 2),
     ]
     with pytest.raises(InvalidData, match="provider code"):
         _src(_stmt_envelope(rows)).get_financials(
@@ -1063,7 +1080,7 @@ def test_vndirect_statement_and_ratio_line_units_are_allowed():
 
 @pytest.mark.parametrize("bad_date", ["2024-1-1", "2024-01-1", "2024-1-01"])
 def test_vndirect_statement_rejects_non_zero_padded_fiscal_date(bad_date):
-    rows = [_stmt_row("TESTCO", 11000, 1.0, bad_date, "ANNUAL", 1)]
+    rows = [_stmt_row("TESTCO", 11000, 1.0, bad_date, "ANNUAL", 2)]
     with pytest.raises(InvalidData, match="bad date"):
         _src(_stmt_envelope(rows)).get_financials(
             "TESTCO", StatementType.INCOME, Period.ANNUAL
@@ -1096,7 +1113,8 @@ def test_vndirect_all_reporttype_skipped_raises_invalid():
 
 def test_vndirect_all_modeltype_skipped_raises_invalid():
     rows = [
-        _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "ANNUAL", 2),  # wrong modelType (2!=1)
+        # wrong modelType for a corporate INCOME(2) request (#198): 3 is cashflow.
+        _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "ANNUAL", 3),
     ]
     with pytest.raises(InvalidData, match="reportType/modelType"):
         _src(_stmt_envelope(rows)).get_financials(
@@ -1106,8 +1124,8 @@ def test_vndirect_all_modeltype_skipped_raises_invalid():
 
 def test_vndirect_mixed_valid_and_skipped_returns_valid_with_warning():
     rows = [
-        _stmt_row("TESTCO", 11000, 5.0, "2025-12-31", "ANNUAL", 1),    # valid
-        _stmt_row("TESTCO", 22000, 9.0, "2025-12-31", "QUARTER", 1),   # skipped (reportType)
+        _stmt_row("TESTCO", 11000, 5.0, "2025-12-31", "ANNUAL", 2),    # valid
+        _stmt_row("TESTCO", 22000, 9.0, "2025-12-31", "QUARTER", 2),   # skipped (reportType)
     ]
     reports = _src(_stmt_envelope(rows)).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
@@ -1132,8 +1150,8 @@ def test_vndirect_statement_present_falsey_code_does_not_bypass(bad_code):
 
 def test_vndirect_mixed_valid_and_falsey_code_returns_valid_with_warning():
     rows = [
-        _stmt_row("TESTCO", 11000, 5.0, "2025-12-31", "ANNUAL", 1),  # valid
-        _stmt_row(0, 22000, 9.0, "2025-12-31", "ANNUAL", 1),         # present falsey code -> dropped
+        _stmt_row("TESTCO", 11000, 5.0, "2025-12-31", "ANNUAL", 2),  # valid
+        _stmt_row(0, 22000, 9.0, "2025-12-31", "ANNUAL", 2),         # present falsey code -> dropped
     ]
     reports = _src(_stmt_envelope(rows)).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
@@ -1244,8 +1262,8 @@ def test_vndirect_mixed_valid_plus_unknown_reporttype_fails_closed(unknown):
 
 def test_vndirect_mixed_valid_plus_known_different_cadence_skips_with_warning():
     # #44: a present valid-but-different known cadence (QUARTER) is skipped, not fatal.
-    good = _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "ANNUAL", 1)
-    other = _stmt_row("TESTCO", 12000, 2.0, "2024-12-31", "QUARTER", 1)
+    good = _stmt_row("TESTCO", 11000, 1.0, "2025-12-31", "ANNUAL", 2)
+    other = _stmt_row("TESTCO", 12000, 2.0, "2024-12-31", "QUARTER", 2)
     reports = _src(_stmt_envelope([good, other])).get_financials(
         "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
     )

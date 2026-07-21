@@ -23,50 +23,45 @@ or derivative material was consulted.
 from __future__ import annotations
 
 # Per-statement-template maps keyed on ``model_type`` (the authoritative key).
-# Corporate: 1=income, 2=balance, 3=cashflow. Bank: 101=balance, 102=income,
-# 103=cashflow. A code is only ever looked up inside its own template; there is
+# Corporate: 1=balance, 2=income, 3=cashflow (#198 live-probe-verified). Bank:
+# 101=balance, 102=income, 103=cashflow. A code is only ever looked up inside
+# its own template; there is
 # no cross-template fallback (see ``item_name`` below).
 _NAMES_BY_MODEL_TYPE: dict[int, dict[str, str]] = {
-    # ----- Corporate income statement (modelType 1) ----------------------- #
+    # ----- Corporate BALANCE sheet (modelType 1) -------------------------- #
+    # Live-probe- + official-filing-verified (#198); only individually
+    # official-correlated labels are named. Aggregate-only sub-lines
+    # (11200/11300/11400/11500) stay raw ``item_<code>``.
     1: {
-        "11000": "Doanh thu thuần",  # net revenue
-        "11100": "Giá vốn hàng bán",  # cost of goods sold
-        "11200": "Lợi nhuận gộp",  # gross profit
-        "12000": "Doanh thu hoạt động tài chính",  # financial income
-        "12100": "Chi phí tài chính",  # financial expenses
-        "13000": "Chi phí bán hàng",  # selling expenses
-        "13100": "Chi phí quản lý doanh nghiệp",  # general & admin expenses
-        "14000": "Lợi nhuận thuần từ hoạt động kinh doanh",  # operating profit
-        "20000": "Lợi nhuận trước thuế",  # profit before tax
-        "21000": "Lợi nhuận sau thuế",  # profit after tax (net income)
-        "21100": "Lợi nhuận sau thuế của cổ đông công ty mẹ",  # NPAT to parent
-        "22000": "Lãi cơ bản trên cổ phiếu",  # basic earnings per share (EPS)
+        "12700": "Tổng cộng tài sản",  # total assets
+        "13000": "Nợ phải trả",  # total liabilities
+        "14000": "Vốn chủ sở hữu",  # owners' equity
+        "11000": "Tài sản ngắn hạn",  # current assets
+        "12000": "Tài sản dài hạn",  # non-current assets
+        "13100": "Nợ ngắn hạn",  # current liabilities
+        "13300": "Nợ dài hạn",  # long-term liabilities
+        "11100": "Tiền và các khoản tương đương tiền",  # cash & equivalents
     },
-    # ----- Corporate balance sheet (modelType 2) -------------------------- #
+    # ----- Corporate INCOME statement (modelType 2) ----------------------- #
     2: {
-        "23000": "Tài sản ngắn hạn",  # current assets
-        "23100": "Tiền và tương đương tiền",  # cash and cash equivalents
-        "23200": "Đầu tư tài chính ngắn hạn",  # short-term financial investments
-        "23300": "Các khoản phải thu ngắn hạn",  # short-term receivables
-        "23400": "Hàng tồn kho",  # inventories
-        "24000": "Tài sản dài hạn",  # long-term assets
-        "24100": "Tài sản cố định",  # fixed assets
-        "25000": "Tổng tài sản",  # total assets
-        "30000": "Nợ phải trả",  # total liabilities
-        "30100": "Nợ ngắn hạn",  # current liabilities
-        "30200": "Nợ dài hạn",  # long-term liabilities
-        "40000": "Vốn chủ sở hữu",  # owners' equity
-        "40100": "Vốn góp của chủ sở hữu",  # paid-in / contributed capital
-        "40200": "Lợi nhuận sau thuế chưa phân phối",  # retained earnings
-        "49000": "Tổng nguồn vốn",  # total resources (liabilities + equity)
+        "21001": "Doanh thu thuần",  # net revenue
+        "22100": "Giá vốn hàng bán",  # cost of goods sold
+        "23100": "Lợi nhuận gộp",  # gross profit
+        "23800": "Tổng lợi nhuận kế toán trước thuế",  # profit before tax
+        "22070": "Chi phí thuế TNDN",  # income tax expense
+        "23003": "Lợi nhuận sau thuế TNDN",  # profit after tax (total consolidated)
+        "23000": "LNST của cổ đông công ty mẹ",  # PAT attributable to parent
+        "23500": "LNST của cổ đông không kiểm soát",  # PAT attributable to NCI
     },
-    # ----- Corporate cash flow (modelType 3) ------------------------------ #
+    # ----- Corporate CASH FLOW (modelType 3) ------------------------------ #
     3: {
-        "31000": "Lưu chuyển tiền từ hoạt động kinh doanh",  # operating cash flow
-        "32000": "Lưu chuyển tiền từ hoạt động đầu tư",  # investing cash flow
-        "33000": "Lưu chuyển tiền từ hoạt động tài chính",  # financing cash flow
-        "34000": "Lưu chuyển tiền thuần trong kỳ",  # net change in cash
-        "35000": "Tiền và tương đương tiền cuối kỳ",  # cash at end of period
+        "32000": "Lưu chuyển tiền thuần từ HĐ kinh doanh",  # operating
+        "33000": "Lưu chuyển tiền thuần từ HĐ đầu tư",  # investing
+        "34000": "Lưu chuyển tiền thuần từ HĐ tài chính",  # financing
+        "35000": "Lưu chuyển tiền thuần trong kỳ",  # net change in cash
+        "36000": "Tiền và tương đương tiền đầu kỳ",  # cash at beginning of period
+        "36100": "Ảnh hưởng của thay đổi tỷ giá",  # FX effect
+        "37000": "Tiền và tương đương tiền cuối kỳ",  # cash at end of period
     },
     # ----- Bank balance sheet (modelType 101) — verified headline set ----- #
     101: {

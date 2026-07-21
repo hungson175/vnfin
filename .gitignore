@@ -23,3 +23,6 @@ bin/gh-maintainer
 bin/poll-and-nudge.sh
 state/
 .claude/
+
+# Playwright CLI session artifacts (private, never published)
+.playwright-cli/

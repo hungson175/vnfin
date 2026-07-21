@@ -40,8 +40,25 @@ from vnfin.fundamentals.base import FundamentalSource
 # --------------------------------------------------------------------------- #
 # Test doubles
 # --------------------------------------------------------------------------- #
-def _report(symbol, source, value, fiscal_date="2025-12-31", is_bank=False):
+_UNSET = object()
+
+
+def _default_income_model_type(source, is_bank):
+    """The §10 model_type a VALID INCOME report must carry for the given source.
+
+    Only ``vndirect`` statements carry a template id (corporate 2 / bank 102);
+    every other source (incl. None / malformed) must carry ``None``.
+    """
+    if source == "vndirect":
+        return 102 if is_bank else 2
+    return None
+
+
+def _report(symbol, source, value, fiscal_date="2025-12-31", is_bank=False,
+            model_type=_UNSET):
     fd = datetime.strptime(fiscal_date, "%Y-%m-%d").date()
+    if model_type is _UNSET:
+        model_type = _default_income_model_type(source, is_bank)
     return FinancialReport(
         symbol=symbol,
         statement_type=StatementType.INCOME,
@@ -51,6 +68,7 @@ def _report(symbol, source, value, fiscal_date="2025-12-31", is_bank=False):
         source=source,
         currency="VND",
         is_bank=is_bank,
+        model_type=model_type,
         fetched_at_utc=datetime.now(timezone.utc),
     )
 
@@ -357,6 +375,7 @@ def test_rejects_returned_currency_mismatch():
         items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
         source="vndirect",
         currency="USD",
+        model_type=2,
     )
     _assert_fundamental_rejected(lambda: bad, "currency mismatch")
 
@@ -370,6 +389,7 @@ def test_rejects_returned_line_item_unit_mismatch():
         items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="USD"),),
         source="vndirect",
         currency="VND",
+        model_type=2,
     )
     _assert_fundamental_rejected(lambda: bad, "value_unit mismatch")
 
@@ -392,6 +412,7 @@ def _report_with_items(items):
         items=tuple(items),
         source="vndirect",
         currency="VND",
+        model_type=2,
     )
 
 
@@ -620,6 +641,7 @@ def _report_with_fiscal_date(fiscal_date):
         items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
         source="vndirect",
         currency="VND",
+        model_type=2,
     )
 
 
@@ -679,6 +701,7 @@ def _report_with_ts(fetched_at_utc):
         items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
         source="vndirect",
         currency="VND",
+        model_type=2,
         fetched_at_utc=fetched_at_utc,
     )
 
@@ -708,6 +731,7 @@ def _report_with_warnings(warnings):
         items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
         source="vndirect",
         currency="VND",
+        model_type=2,
         warnings=warnings,
     )
 
@@ -728,14 +752,17 @@ def test_accepts_valid_fundamental_warnings():
 
 
 # --- Issue #130: returned report metadata (is_bank/model_type/provider_symbol) ---
-def _report_meta(*, is_bank=False, model_type=1, provider_symbol="TESTCO"):
+def _report_meta(*, is_bank=False, model_type=2, provider_symbol="TESTCO",
+                 statement=StatementType.INCOME, source="vndirect"):
+    # Default model_type 2 = the §10-correct value for a vndirect corporate
+    # INCOME report, so is_bank / provider_symbol tests are not blocked by §10.
     return FinancialReport(
         symbol="TESTCO",
-        statement_type=StatementType.INCOME,
+        statement_type=statement,
         period=Period.ANNUAL,
         fiscal_date=date(2025, 12, 31),
         items=(LineItem(item_code="11000", name="net revenue", value=1.0, value_unit="VND"),),
-        source="vndirect",
+        source=source,
         currency="VND",
         is_bank=is_bank,
         model_type=model_type,
@@ -759,12 +786,83 @@ def test_rejects_malformed_report_model_type(bad):
     _assert_fundamental_rejected(lambda: _report_meta(model_type=bad), "malformed model_type")
 
 
-@pytest.mark.parametrize("mt", [1, 2, 3, 101, 102, 103, None], ids=["c1", "c2", "c3", "b101", "b102", "b103", "none"])
-def test_accepts_canonical_report_model_type(mt):
-    primary = FakeSource("vndirect", result=(_report_meta(model_type=mt),))
+# --- Issue #198 §10: source-aware statement/entity/model tuple guard ---------
+# Every VALID (source, statement, is_bank) -> model_type tuple, exhaustively.
+_VALID_VNDIRECT_TUPLES = [
+    (StatementType.BALANCE, False, 1),
+    (StatementType.INCOME, False, 2),
+    (StatementType.CASHFLOW, False, 3),
+    (StatementType.BALANCE, True, 101),
+    (StatementType.INCOME, True, 102),
+    (StatementType.CASHFLOW, True, 103),
+]
+
+
+@pytest.mark.parametrize(
+    "statement,is_bank,mt", _VALID_VNDIRECT_TUPLES,
+    ids=["bal_c1", "inc_c2", "cf_c3", "bal_b101", "inc_b102", "cf_b103"],
+)
+def test_accepts_correct_paired_vndirect_model_type(statement, is_bank, mt):
+    """Every registered (statement, is_bank) -> model tuple is accepted."""
+    primary = FakeSource(
+        "vndirect",
+        result=(_report_meta(statement=statement, is_bank=is_bank, model_type=mt),),
+    )
+    client = FailoverFundamentalClient([primary])
+    out = client.get_financials("TESTCO", statement, Period.ANNUAL, is_bank=is_bank)[0]
+    assert out.model_type == mt
+
+
+@pytest.mark.parametrize("mt", [1, 3, 101, 102, 103, None], ids=["c1", "c3", "b101", "b102", "b103", "none"])
+def test_rejects_canonical_but_wrong_paired_vndirect_model_type(mt):
+    """A vndirect corporate INCOME report accepts ONLY model_type 2; every other
+    canonical id — and None — is a wrong (statement, entity) pairing -> rejected."""
+    _assert_fundamental_rejected(
+        lambda: _report_meta(statement=StatementType.INCOME, is_bank=False, model_type=mt),
+        "strict int model_type 2",
+    )
+
+
+def test_rejects_vndirect_statement_with_none_model_type():
+    """A vndirect statement report tagged model_type=None is rejected (§10 R2)."""
+    _assert_fundamental_rejected(
+        lambda: _report_meta(statement=StatementType.INCOME, is_bank=False, model_type=None),
+        "strict int model_type 2",
+    )
+
+
+@pytest.mark.parametrize("bad_mt", [2.0, "2", True], ids=["float2", "str2", "true"])
+def test_rejects_vndirect_model_type_non_strict_int(bad_mt):
+    """Even an otherwise-correct tuple with a non-strict-int model_type (2.0/'2'/
+    True — 2.0==2 and True==1 in Python) is rejected before the relational compare."""
+    _assert_fundamental_rejected(
+        lambda: _report_meta(statement=StatementType.INCOME, is_bank=False, model_type=bad_mt),
+        "model_type",
+    )
+
+
+@pytest.mark.parametrize("mt", [1, 2, 3, 101, 102, 103], ids=["c1", "c2", "c3", "b101", "b102", "b103"])
+def test_rejects_non_vndirect_report_carrying_canonical_model_type(mt):
+    """A non-VNDirect (e.g. cafef) statement report carrying a canonical VNDirect
+    model_type must carry None -> rejected (§10 R2)."""
+    bad = _report_meta(statement=StatementType.INCOME, is_bank=False,
+                       model_type=mt, source="cafef")
+    client = FailoverFundamentalClient([FakeSource("cafef", result=(bad,))])
+    with pytest.raises(AllSourcesFailed) as ei:
+        client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)
+    assert "must carry model_type None" in ei.value.attempts[0].reason
+
+
+def test_accepts_non_vndirect_statement_with_none_model_type():
+    """A non-VNDirect statement report with model_type None is accepted (§10)."""
+    primary = FakeSource(
+        "cafef",
+        result=(_report_meta(statement=StatementType.INCOME, is_bank=False,
+                             model_type=None, source="cafef"),),
+    )
     client = FailoverFundamentalClient([primary])
     out = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL)[0]
-    assert out.model_type == mt
+    assert out.source == "cafef" and out.model_type is None
 
 
 @pytest.mark.parametrize("bad", [[], {}, True, 123, "", "   "], ids=["list", "dict", "bool", "int", "blank", "whitespace"])
@@ -773,10 +871,12 @@ def test_rejects_malformed_report_provider_symbol(bad):
 
 
 def test_accepts_valid_report_metadata_incl_none_optionals():
-    primary = FakeSource("vndirect", result=(_report_meta(is_bank=True, model_type=None, provider_symbol=None),))
+    # §10: a bank INCOME report must carry model_type 102 (not None); provider
+    # symbol remains an optional None.
+    primary = FakeSource("vndirect", result=(_report_meta(is_bank=True, model_type=102, provider_symbol=None),))
     client = FailoverFundamentalClient([primary])
     out = client.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=True)[0]
-    assert out.is_bank is True and out.model_type is None and out.provider_symbol is None
+    assert out.is_bank is True and out.model_type == 102 and out.provider_symbol is None
 
 
 def test_malformed_report_metadata_falls_over_to_backup():
@@ -877,6 +977,7 @@ def test_monetary_statement_vnd_homogeneity_guard_unchanged():
         items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
         source="vndirect",
         currency=None,
+        model_type=2,
     )
     _assert_fundamental_rejected(lambda: bad, "currency mismatch")
 
@@ -884,6 +985,9 @@ def test_monetary_statement_vnd_homogeneity_guard_unchanged():
 @pytest.mark.parametrize("statement", [StatementType.BALANCE, StatementType.CASHFLOW])
 def test_monetary_statements_reject_none_currency(statement):
     """The VND homogeneity check is intact for every monetary statement type."""
+    # §10: a valid vndirect corporate report must carry the paired model_type
+    # (BALANCE->1, CASHFLOW->3) so the CURRENCY guard is what rejects, not §10.
+    mt = {StatementType.BALANCE: 1, StatementType.CASHFLOW: 3}[statement]
     bad = FinancialReport(
         symbol="TESTCO",
         statement_type=statement,
@@ -892,6 +996,7 @@ def test_monetary_statements_reject_none_currency(statement):
         items=(LineItem(item_code="11000", name="x", value=1.0, value_unit="VND"),),
         source="vndirect",
         currency=None,
+        model_type=mt,
     )
     client = FailoverFundamentalClient([FakeSource("vndirect", result=(bad,))])
     with pytest.raises(AllSourcesFailed) as ei:

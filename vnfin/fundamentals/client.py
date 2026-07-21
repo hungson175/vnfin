@@ -160,10 +160,27 @@ class FailoverFundamentalClient:
 _VND_CHAIN_ALLOWED_LINE_UNITS = frozenset({"VND", "vnd_per_share", "ratio", None})
 
 # Issue #130: canonical VNDirect statement modelType ids — corporate 1/2/3
-# (income/balance/cashflow) and bank 101/102/103. CafeF and ratios carry None.
+# (balance/income/cashflow) and bank 101/102/103. CafeF and ratios carry None.
 # A returned model_type must be None or one of these; arbitrary ints (-1/0/4/
-# 99/104/999) are not real templates and must be rejected.
+# 99/104/999) are not real templates and must be rejected. Kept as a coarse
+# prefilter subordinate to the source-aware relational contract below (#198 §10).
 _CANONICAL_MODEL_TYPES = frozenset({1, 2, 3, 101, 102, 103})
+
+# Issue #198 §10: source-aware statement/entity/model relational contract. A
+# VNDirect statement report MUST carry exactly the (statement, is_bank) -> model
+# tuple; every non-VNDirect report and every RATIOS report MUST carry None.
+_VNDIRECT = "vndirect"
+_EXPECTED_MODEL_TYPE = {  # VNDirect STATEMENT templates only (RATIOS has none)
+    (StatementType.BALANCE, False): 1,
+    (StatementType.INCOME, False): 2,
+    (StatementType.CASHFLOW, False): 3,
+    (StatementType.BALANCE, True): 101,
+    (StatementType.INCOME, True): 102,
+    (StatementType.CASHFLOW, True): 103,
+}
+_VNDIRECT_STATEMENT_TYPES = frozenset(
+    {StatementType.BALANCE, StatementType.INCOME, StatementType.CASHFLOW}
+)
 
 
 def _validate_fundamental_result(
@@ -245,6 +262,8 @@ def _validate_fundamental_result(
                 "expected a bool"
             )
         mt = report.model_type
+        # Coarse prefilter: a present model_type must be None or a canonical
+        # non-bool int template id (rejects arbitrary ints -1/0/4/99/104/999).
         if mt is not None and (
             isinstance(mt, bool)
             or not isinstance(mt, int)
@@ -253,6 +272,25 @@ def _validate_fundamental_result(
             return (
                 f"malformed model_type {mt!r} in report {report.fiscal_date}: "
                 f"expected None or a canonical template id {sorted(_CANONICAL_MODEL_TYPES)}"
+            )
+        # Issue #198 §10: source-aware relational contract, subordinate to the
+        # coarse prefilter above. A VNDirect statement report MUST carry exactly
+        # the registered (statement, is_bank) -> model tuple as a STRICT non-bool
+        # int (in Python 2.0 == 2 and True == 1, so the relational compare alone
+        # would accept an integral float / bool — reject those FIRST). RATIOS
+        # (any source) and every non-VNDirect report MUST carry None.
+        if report.source == _VNDIRECT and statement in _VNDIRECT_STATEMENT_TYPES:
+            expected = _EXPECTED_MODEL_TYPE[(statement, report.is_bank)]
+            if not isinstance(mt, int) or isinstance(mt, bool) or mt != expected:
+                return (
+                    f"vndirect {statement.value} report for a "
+                    f"{'bank' if report.is_bank else 'corporate'} entity must "
+                    f"carry a strict int model_type {expected}, got {mt!r}"
+                )
+        elif mt is not None:
+            return (
+                f"{report.source} {statement.value} report must carry "
+                f"model_type None, got {mt!r}"
             )
         ps = report.provider_symbol
         if ps is not None and (not isinstance(ps, str) or not ps.strip()):
