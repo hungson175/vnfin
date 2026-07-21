@@ -4,7 +4,7 @@ pagination). THREE independent legs, each stating exactly what it proves:
 
   LEG A — RAW template-identity (bypasses the adapter): queries VNDirect
   ``modelType`` 1/2/3 directly and checks provider-only accounting identities to
-  EXACT VND (integer residual == 0), on the two newest (identity-bearing) balance
+  EXACT VND (integer residual == 0), on two observed identity-bearing balance
   periods plus the newest income/cash-flow period. Proves *which template is which*
   and *which itemCodes participate in which identity* WITHOUT depending on the
   library's (currently inverted) routing. (Period COMPLETENESS is LEG C's job; LEG
@@ -35,13 +35,14 @@ collected by pytest.
 
     VNFIN_LIVE=1 ./.venv/bin/python scripts/probe_corporate_itemcodes.py
 
-Exit 0 only if every LEG A identity (both years) holds exact-VND, LEG B resolves
+Exit 0 only if every LEG A identity (two observed identity-bearing periods) holds exact-VND, LEG B resolves
 the correct tuple + headline codes for every ticker, and LEG C's adapter set
 equals the raw oracle set. Confirmed live 2026-07-20/2026-07-21 (FPT/VIC/HPG/VNM).
 """
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import sys
@@ -51,7 +52,29 @@ from datetime import datetime
 from decimal import Decimal
 
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_CANON_DIGITS = re.compile(r"[1-9]\d*|0")
 _TWO53 = 2 ** 53  # at/above this magnitude a float cannot hold an integer VND value exactly
+
+
+def _canonical_int(x):
+    """STRICT canonical non-negative integer key, mirroring the adapter's
+    ``canonical_provider_key`` / ``_parse_model_type`` contract but Decimal-aware
+    (the probe parses JSON numbers as ``Decimal``): a non-bool ``int``, an integral
+    finite ``float``/``Decimal`` (``11000.0`` ok, ``1.9`` / ``11000.9`` rejected),
+    or a canonical digit string (``"11000"``/``"0"``; no leading zero, sign, or
+    padding). Everything else (bool, fractional, NaN, negative, container, None)
+    -> ``None`` (reviewer R18)."""
+    if isinstance(x, bool):
+        return None
+    if isinstance(x, int):
+        return x if x >= 0 else None
+    if isinstance(x, float):
+        return int(x) if math.isfinite(x) and x >= 0 and x == int(x) else None
+    if isinstance(x, Decimal):
+        return int(x) if x.is_finite() and x >= 0 and x == x.to_integral_value() else None
+    if isinstance(x, str) and _CANON_DIGITS.fullmatch(x):
+        return int(x)
+    return None
 
 
 def _valid_iso(fd):
@@ -66,17 +89,16 @@ def _valid_iso(fd):
 
 
 def _row_identity_ok(row, sym, model):
-    """A raw row must carry the requested symbol / ANNUAL cadence / template before
-    it may certify semantics or enter the oracle (reviewer R16.3)."""
+    """A raw row must carry the requested symbol / ANNUAL cadence / EXACT template
+    before it may certify semantics or enter the oracle (reviewer R16.3 + R18).
+    Model uses the strict canonical parser — ``True`` / ``1.9`` / ``Decimal('1.9')``
+    are NOT model 1."""
     code = row.get("code")
     if not isinstance(code, str) or code.strip().upper() != sym:
         return False
     if row.get("reportType") != "ANNUAL":
         return False
-    try:
-        return int(row.get("modelType")) == model
-    except (TypeError, ValueError):
-        return False
+    return _canonical_int(row.get("modelType")) == model
 
 _TICKERS = ("FPT", "VIC", "HPG", "VNM")
 _BASE = "https://api-finfo.vndirect.com.vn/v4/financial_statements"
@@ -129,10 +151,10 @@ def _bucket(env, fd, *, sym, model):
     for row in env.get("data") or []:
         if row.get("fiscalDate") != fd or not _row_identity_ok(row, sym, model):
             continue
-        code, val = row.get("itemCode"), row.get("numericValue")
-        if code is None or val is None:
+        c, val = _canonical_int(row.get("itemCode")), row.get("numericValue")
+        if c is None or val is None:                       # strict itemCode: 11000.9 rejected (R18)
             continue
-        out[str(int(code))] = val if isinstance(val, Decimal) else Decimal(str(val))
+        out[str(c)] = val if isinstance(val, Decimal) else Decimal(str(val))
     return out
 
 
@@ -171,7 +193,7 @@ def _check_ids(bucket, ids, *, label):
 def leg_a_raw(sym):
     print(f"=== LEG A raw template-identity: {sym} ===")
     ok = True
-    # balance: require the two newest distinct fiscalDates and check the balance
+    # balance: require two observed identity-bearing distinct fiscalDates and check the balance
     # IDENTITY on each (reviewer R10 requires >=2 dates). NOTE (reviewer R13): this
     # proves the identity holds on two identity-BEARING periods (the headline codes
     # are present and consistent), NOT that every line of each period is complete —
@@ -257,9 +279,10 @@ def _raw_newest_group_oracle(sym, model, *, page_size=80):
         for row in data:
             if not isinstance(row, dict):
                 return None
-            fd, code, val = row.get("fiscalDate"), row.get("itemCode"), row.get("numericValue")
-            # R16.2: real calendar date (rejects 2025-99-99); R16.3: raw identity must match request.
-            if not _valid_iso(fd) or code is None or val is None:
+            fd, val = row.get("fiscalDate"), row.get("numericValue")
+            c = _canonical_int(row.get("itemCode"))        # strict: 11000.9 rejected (R18)
+            # R16.2: real calendar date (rejects 2025-99-99); R16.3 + R18: raw identity must match request.
+            if not _valid_iso(fd) or c is None or val is None:
                 return None
             if not _row_identity_ok(row, sym, model):
                 return None
@@ -274,10 +297,10 @@ def _raw_newest_group_oracle(sym, model, *, page_size=80):
                     closed.add(last_fd)             # previous date group closes
                 last_fd = fd
             if fd == newest_fd:
-                c = str(int(code))
-                if c in oracle:
+                key = str(c)
+                if key in oracle:
                     return None                     # duplicate code within the newest group
-                oracle[c] = val if isinstance(val, Decimal) else Decimal(str(val))
+                oracle[key] = val if isinstance(val, Decimal) else Decimal(str(val))
             # an older date does NOT break: keep scanning so a later newest_fd row
             # (a reappearance) is caught by the `fd in closed` check above.
         if newest_fd in closed:                     # a strictly-older date superseded the newest group
