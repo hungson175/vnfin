@@ -77,8 +77,14 @@ _Last synced: 2026-07-20 +07_
 > model (no candidate-relative erase of model-102 rows); R12 two-state validation (all-row vs
 > eligible-boundary) + structured `_row_disposition`, NO keep-filter (builder keeps skip-warning/
 > all-dropped InvalidData/cap); R13 oracle whole-stream date validation + raw-int totalPages +
-> Decimal/fail-closed >2^53, LEG A narrowed to identity-bearing. Probe green (LEG A PASS, B/C pre-fix
-> FAIL, exit 2 offline). NO code/tests changed; do not build until GATE PASS.
+> Decimal/fail-closed >2^53, LEG A narrowed to identity-bearing. **Round-5 gate also BLOCKED**
+> (`gate-202607212143-issue198-regate-round5.md`, reviewer `49d4e9b`, R14–R16). **Revised again →
+> `82ea1c7`, RE-GATE (round 6):** R14 AUTO ONE atomic query (restart page1 under detected model, ≤1
+> redirect, no cross-query stitch, call-sequence assertion); R15 SKIP_CODE bumps both skipped_rows+
+> code_mismatches (mixed warning + all-dropped precedence); R16 probe fail-closed on non-integral/
+> abs>=2^53 both signs + real-calendar parse (2025-99-99 reject) + raw identity match + fetched-prefix
+> claim. Probe green (LEG A PASS, B/C pre-fix FAIL, exit 2 offline). NO code/tests changed; do not
+> build until GATE PASS.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
