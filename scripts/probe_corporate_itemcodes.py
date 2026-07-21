@@ -4,10 +4,11 @@ pagination). THREE independent legs, each stating exactly what it proves:
 
   LEG A — RAW template-identity (bypasses the adapter): queries VNDirect
   ``modelType`` 1/2/3 directly and checks provider-only accounting identities to
-  EXACT VND (integer residual == 0), on the newest AND second-newest (FY2024)
-  balance period. Proves *which template is which* and *which itemCodes
-  participate in which identity* WITHOUT depending on the library's (currently
-  inverted) routing. Load-bearing evidence.
+  EXACT VND (integer residual == 0), on the two newest (identity-bearing) balance
+  periods plus the newest income/cash-flow period. Proves *which template is which*
+  and *which itemCodes participate in which identity* WITHOUT depending on the
+  library's (currently inverted) routing. (Period COMPLETENESS is LEG C's job; LEG
+  A asserts identity consistency, not that every line of a period is present.)
 
   LEG B — ADAPTER routing regression: calls the public
   ``VNDirectFundamentalSource`` and asserts the FULL provenance tuple
@@ -42,10 +43,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
 from decimal import Decimal
+
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_TWO53 = 2 ** 53  # above this, a float cannot hold an integer VND value exactly
 
 _TICKERS = ("FPT", "VIC", "HPG", "VNM")
 _BASE = "https://api-finfo.vndirect.com.vn/v4/financial_statements"
@@ -138,9 +143,12 @@ def _check_ids(bucket, ids, *, label):
 def leg_a_raw(sym):
     print(f"=== LEG A raw template-identity: {sym} ===")
     ok = True
-    # balance: require EXACTLY two complete periods (reviewer R10) — the two
-    # newest distinct fiscalDates, reported by their actual dates (not hard-coded
-    # year labels). Fewer than two -> FAIL (cannot claim the 8-check evidence).
+    # balance: require the two newest distinct fiscalDates and check the balance
+    # IDENTITY on each (reviewer R10 requires >=2 dates). NOTE (reviewer R13): this
+    # proves the identity holds on two identity-BEARING periods (the headline codes
+    # are present and consistent), NOT that every line of each period is complete —
+    # period COMPLETENESS is LEG C's oracle. Dates reported as observed, not
+    # hard-coded year labels.
     bal_env = _raw_fetch(sym, 1)
     bal_dates = _distinct_dates(bal_env)
     if len(bal_dates) < 2:
@@ -190,11 +198,16 @@ def leg_b_adapter(src, sym, StatementType, Period):
 
 def _raw_newest_group_oracle(sym, model, *, page_size=80):
     """Finite, validated, fail-closed raw oracle of the NEWEST fiscalDate group
-    (reviewer R9). Returns (newest_fd, {code: Decimal}) or None on any defect:
-    premature-empty/malformed page, duplicate code, bad/undeclared totalPages,
-    currentPage!=page, or inconsistent date order. The group is 'complete' only
-    once a LOWER date is observed or a VALIDATED final page is exhausted."""
-    page, cached_tp, newest_fd, oracle, complete = 1, None, None, {}, False
+    (reviewer R9 + R13). Returns (newest_fd, {code: Decimal}) or None on ANY defect.
+    Validates the WHOLE stream (not just the first date change): every row is a
+    canonical ISO date; dates are strictly descending and contiguous (a date, once
+    left, may never reappear — so a newest-date reappearance after the boundary
+    fails); `currentPage`/`totalPages` are raw non-bool ints (`2.0 != 2` fails);
+    duplicate newest-group codes fail. The newest group is 'complete' only once a
+    STRICTLY-OLDER date is observed (not merely 'different') or a validated final
+    page is exhausted. The full page is scanned after the boundary."""
+    page, cached_tp, newest_fd, last_fd = 1, None, None, None
+    closed, oracle, complete = set(), {}, False
     while True:
         env = _raw_fetch(sym, model, size=page_size, page=page)
         data = env.get("data")
@@ -207,27 +220,38 @@ def _raw_newest_group_oracle(sym, model, *, page_size=80):
             cached_tp = env.get("totalPages")
             if not _is_raw_int(cached_tp) or cached_tp < 1:
                 return None
-        elif "totalPages" in env and env["totalPages"] != cached_tp:
-            return None
+        elif "totalPages" in env:
+            tp = env["totalPages"]
+            if not _is_raw_int(tp) or tp != cached_tp:  # raw-int BEFORE equality (2.0 != 2)
+                return None
         for row in data:
             if not isinstance(row, dict):
                 return None
             fd, code, val = row.get("fiscalDate"), row.get("itemCode"), row.get("numericValue")
-            if fd is None or code is None or val is None:
+            if not isinstance(fd, str) or not _ISO_DATE.fullmatch(fd) or code is None or val is None:
                 return None
             if newest_fd is None:
                 newest_fd = fd
-            if fd != newest_fd:
-                complete = True  # a lower date proves the newest group closed
-                break
-            c = str(int(code))
-            if c in oracle:
-                return None  # duplicate code within the group
-            oracle[c] = val if isinstance(val, Decimal) else Decimal(str(val))
-        if complete:
+            if fd != last_fd:                       # date changed in the raw stream
+                if fd in closed:
+                    return None                     # reappearance of a closed date (incl. newest_fd)
+                if last_fd is not None:
+                    if fd >= last_fd:
+                        return None                 # not strictly descending -> higher/equal/malformed
+                    closed.add(last_fd)             # previous date group closes
+                last_fd = fd
+            if fd == newest_fd:
+                c = str(int(code))
+                if c in oracle:
+                    return None                     # duplicate code within the newest group
+                oracle[c] = val if isinstance(val, Decimal) else Decimal(str(val))
+            # an older date does NOT break: keep scanning so a later newest_fd row
+            # (a reappearance) is caught by the `fd in closed` check above.
+        if newest_fd in closed:                     # a strictly-older date superseded the newest group
+            complete = True
             break
-        if cp >= cached_tp:
-            complete = True  # validated final page exhausted with no lower date
+        if cp >= cached_tp:                         # validated final page exhausted, newest group only
+            complete = True
             break
         page += 1
     if not complete or not oracle:
@@ -246,6 +270,13 @@ def leg_c_pagination(src, StatementType, Period):
         return False
     newest_fd, oracle = built
     print(f"  oracle: newest_fd={newest_fd} complete_group_size={len(oracle)}")
+    # Fail closed if any exact VND value exceeds float's exact-integer range: the
+    # adapter stored LineItem.value as a float, so Decimal(str(value)) cannot then
+    # restore lost precision and a 1-VND mismatch could pass (reviewer R13).
+    if any(v > _TWO53 for v in oracle.values()):
+        big = sorted((c for c, v in oracle.items() if v > _TWO53))
+        print(f"  FAIL closed: oracle values exceed 2**53, unverifiable via float adapter: {big[:5]}")
+        return False
     reports = src.get_financials("VIC", StatementType.BALANCE, Period.ANNUAL, is_bank=False, limit=1)
     if not reports:
         print("  adapter: NO REPORTS -> FAIL")
@@ -254,7 +285,8 @@ def leg_c_pagination(src, StatementType, Period):
     adapter = {li.item_code: li.value for li in r.items}
     date_ok = str(r.fiscal_date) == newest_fd
     codes_ok = set(adapter) == set(oracle)
-    # EXACT compare via Decimal(str(...)) — never float() both sides (R9).
+    # EXACT compare via Decimal(str(...)) — never float() both sides (R9); guarded
+    # against precision loss by the 2**53 fail-closed check above (R13).
     values_ok = all(Decimal(str(adapter[c])) == oracle[c] for c in oracle if c in adapter)
     missing = sorted(set(oracle) - set(adapter))
     print(f"  adapter newest={r.fiscal_date} n_items={len(adapter)} date_ok={date_ok} "

@@ -1,12 +1,16 @@
 # Design/evidence note — #198 corporate fundamentals: inverted routing + broken catalog + pagination
 
-- Status: **DESIGN RE-GATE REQUESTED (round 4).** Revised against reviewer gates round-1
-  `gate-202607202233` (`0345fcc`, B1–B10), round-2 `gate-202607212049` (`bf60ecb`, R1–R7), and
-  round-3 `gate-202607212112-issue198-regate-round3.md` (`9e74f50`, R8–R10 + strict-int) — all
-  addressed (R8 shared `_row_eligible` pre-count so builder-skipped rows can't prove completeness;
-  R9 finite/validated/fail-closed raw oracle with exact `Decimal` compare; R10 Leg A requires two
-  balance periods; strict non-bool `int` prefilter before the relational tuple guard). **No package
-  runtime code or tests changed** (evidence + design only; two docs + one executable probe script).
+- Status: **DESIGN RE-GATE REQUESTED (round 5).** Revised against reviewer gates round-1
+  `gate-202607202233` (`0345fcc`, B1–B10), round-2 `gate-202607212049` (`bf60ecb`, R1–R7), round-3
+  `gate-202607212112` (`9e74f50`, R8–R10 + strict-int), and round-4
+  `gate-202607212126-issue198-regate-round4.md` (`f20f457`, R11–R13). Round-4 fixes: **R11** AUTO
+  detects the template from raw rows and paginates under the DETECTED model (candidate-relative
+  eligibility no longer erases the model-102 rows AUTO needs); **R12** two-state validation
+  (all-row raw checks vs eligible-boundary) with a structured `_row_disposition` and **no**
+  `keep`-filter, so the builder's skip-warning / all-dropped `InvalidData` / cap survive; **R13**
+  probe oracle validates the whole date stream (strictly-descending, no reappearance, full-page scan,
+  raw-int `totalPages`, `Decimal` + fail-closed above `2**53`) and LEG A's claim narrowed to
+  identity-bearing periods. **No package runtime code or tests changed** (evidence + design only).
 - Binding spec: `reviews/triage-202607202156-issue198-corporate-fundamentals.md` (reviewer `d794c71`).
 - Date: 2026-07-20 (revised 2026-07-21).
 - Related: `docs/design/bank-fundamentals-itemcodes.md` + `docs/design/bank-itemcodes-probe-20260620.md`
@@ -233,39 +237,45 @@ existing parser):**
 - `_require_item_code(row) -> str` — `row["itemCode"]` must be present; normalized with the **same**
   rule the row parser uses (`str(int(11200.0)) == "11200"`); an absent key or non-coercible value
   raises `InvalidData`.
-- `_row_eligible(row, *, psym, period, model_type) -> bool` (reviewer R8) — the **single shared
-  classifier** for "does this row belong to the requested statement contract?", extracted from the
-  three existing skip conditions in `_build_statement_reports`
-  (`vndirect.py:294-331`): (1) a **present** `reportType` tag that names a different cadence
-  (`canonical_enum_tag(...) != period.value`) → ineligible; (2) a **present** `modelType`
-  (`_parse_model_type`) `!= model_type` → ineligible; (3) a **present** `code` that is non-string /
-  blank / `!= psym` → ineligible. Absent keys keep the legacy "no-signal → eligible" behavior. Both
-  the pagination loop AND `_build_statement_reports` call this one function, so the completeness
-  contract and the skip contract cannot drift (structural `InvalidData` guards — malformed
-  `modelType` etc. — still fire inside the parser; `_row_eligible` only answers belongs-or-not).
+- `_row_disposition(row, *, psym, period, model_type) -> Disposition` (reviewer R8 + R12) — the
+  **single shared, structured classifier** returning `ELIGIBLE` / `SKIP_CADENCE` / `SKIP_MODEL` /
+  `SKIP_CODE`, extracted from the three existing skip conditions in `_build_statement_reports`
+  (`vndirect.py:294-331`): a **present** `reportType` tag naming a different cadence → `SKIP_CADENCE`;
+  a **present** `modelType` (`_parse_model_type`) `!= model_type` → `SKIP_MODEL`; a **present** `code`
+  that is non-string / blank / `!= psym` → `SKIP_CODE`; otherwise `ELIGIBLE` (absent keys keep the
+  legacy "no-signal → eligible" behavior). Both the pagination loop AND `_build_statement_reports`
+  call this ONE function, so the completeness contract and the skip contract cannot drift: pagination
+  treats only `ELIGIBLE` as eligible; the builder maps `SKIP_CODE → code_mismatches`,
+  `SKIP_CADENCE/SKIP_MODEL → skipped_rows`, preserving its two distinct all-dropped `InvalidData`
+  diagnostics (`vndirect.py:349-357` code-mismatch, `:365-370` cadence/model). Structural
+  `InvalidData` guards (malformed `modelType` etc.) still raise inside the parser; the classifier only
+  answers which contract bucket a **well-formed** row falls in.
+
+The loop keeps **two distinct states** (reviewer R12): (1) **raw-stream validation** runs on EVERY
+fetched row; (2) an **eligible-date boundary** (via `_row_disposition`) drives only the stop condition.
+It hands **all fetched rows** to `_build_statement_reports` — never a pre-filtered subset — so the
+builder's skip-warning, its two all-dropped `InvalidData` diagnostics, its duplicate-code guard, and
+its `[:limit]` cap all run exactly as today (`vndirect.py:341-392`).
 
 ```
+# _paginate(psym, statement, period, *, model_type, limit) — eligibility is gated on `model_type`,
+# which is the model the reports will be BUILT under (explicit: the resolved model; AUTO: the DETECTED
+# model — see the AUTO flow below). Returns ALL fetched rows in stream order (no eligibility filtering).
 PAGE_SIZE = _row_budget(limit)
-page = 1
-cached_total_pages = None          # captured on page 1 only (provider omits it on page >= 2)
-order = []                         # distinct canonical fiscalDate strings, stream order (strictly desc)
-closed = set()                     # dates whose contiguous group has ended
-seen_keys = set()                  # (fiscalDate, itemCode) across ALL fetched rows
-last_fd = None
-all_rows = []                      # (raw_row, canonical_fd) pairs
+page, cached_total_pages, last_fd = 1, None, None
+closed = set()                     # dates whose contiguous group has ended (raw-stream state)
+seen_keys = set()                  # (fiscalDate, itemCode) across ALL fetched rows (raw-stream state)
+eligible_order = []                # distinct ELIGIBLE fiscalDates, newest-first (boundary state ONLY)
+all_rows = []                      # every fetched raw row, unfiltered -> handed to the builder
 
 while True:
     resp = self._fetch_json(...page=page, size=PAGE_SIZE)
     # --- B8 empty-page semantics AT THE ACTUAL _rows() SEAM (reviewer R1) ---
-    # _rows() RAISES EmptyData on []; it never returns an empty list. So catch it
-    # exactly here and translate by page position (page-1 EmptyData is preserved
-    # for the existing AUTO failover; page>=2 becomes InvalidData, which AUTO does
-    # not catch and therefore cannot recast as a template miss).
     try:
-        data = self._rows(resp)                 # dict-envelope + list contract; raises EmptyData/[]
+        data = self._rows(resp)                 # dict-envelope + list contract; RAISES EmptyData on []
     except EmptyData:
         if page == 1:
-            raise                                # template miss -> existing failover
+            raise                                # template miss -> existing AUTO failover
         raise InvalidData(f"{self.name}: empty page {page} after a non-empty page 1")
     # --- B6 metadata identity (raw, canonical, non-bool ints only) ---
     current_page = _require_raw_int(resp, "currentPage")
@@ -273,65 +283,71 @@ while True:
         cached_total_pages = _require_raw_int(resp, "totalPages")
         if cached_total_pages < 1: raise InvalidData(...)          # page-1 totalPages >= 1
     elif "totalPages" in resp:                                     # later pages MAY omit it (verified)
-        if _require_raw_int(resp, "totalPages") != cached_total_pages: raise InvalidData(...)
+        if _require_raw_int(resp, "totalPages") != cached_total_pages: raise InvalidData(...)  # 2.0!=2
     if current_page != page: raise InvalidData(...)               # repeated/ahead header -> raise, never loop
     if not (1 <= current_page <= cached_total_pages): raise InvalidData(...)
-    # --- B7 row-stream validation BEFORE it can affect the stop condition ---
     for row in data:
-        row = require_object(row, ...)                            # non-object row -> InvalidData
-        fd  = _require_iso_fiscal_date(row)                       # present + exact YYYY-MM-DD; else InvalidData
+        # === STATE 1: raw-stream validation for EVERY row (eligible or not) ===
+        row  = require_object(row, ...)                           # non-object -> InvalidData
+        fd   = _require_iso_fiscal_date(row)                      # present + exact YYYY-MM-DD; else InvalidData
         code = _require_item_code(row)                            # present + canonical; else InvalidData
-        all_rows.append((row, fd))                               # keep ALL rows for the builder (mixed-row warning)
-        # --- R8: ELIGIBILITY gate — a row the builder will later SKIP (wrong
-        # requested symbol / cadence / modelType) must NOT close a date group,
-        # advance `order`, or prove `limit+1`. Use the SAME classifier the
-        # builder uses so the two contracts cannot drift.
-        if not _row_eligible(row, psym=psym, period=period, model_type=model_type):
-            continue                                              # ineligible -> no effect on stop condition
-        if fd != last_fd:                                         # new ELIGIBLE date group
-            if fd in closed: raise InvalidData(...)               # reappearing closed date
+        if fd != last_fd:                                        # date changed in the raw stream
+            if fd in closed: raise InvalidData(...)               # reappearance of a CLOSED date (any row)
             if last_fd is not None:
-                if fd >= last_fd: raise InvalidData(...)          # must be strictly descending
-                closed.add(last_fd)                               # previous group closes
-            if fd not in order: order.append(fd)
+                if fd >= last_fd: raise InvalidData(...)          # raw stream must be strictly descending
+                closed.add(last_fd)                               # previous date group closes
             last_fd = fd
-        if (fd, code) in seen_keys: raise InvalidData(...)        # duplicate eligible (fd,code) across ALL pages
+        if (fd, code) in seen_keys: raise InvalidData(...)        # duplicate (fd,code) across ALL fetched rows
         seen_keys.add((fd, code))
-    # --- stop conditions (use VALIDATED, ELIGIBLE-only order) ---
-    if len(order) > limit: break                # first row of the (limit+1)-th ELIGIBLE date -> newest `limit` complete
+        all_rows.append(row)                                      # hand EVERYTHING to the builder
+        # === STATE 2: eligible-date boundary ONLY (does not gate validation) ===
+        if _row_disposition(row, psym=psym, period=period, model_type=model_type) is ELIGIBLE:
+            if fd not in eligible_order: eligible_order.append(fd)
+    # --- stop conditions (eligible boundary; builder caps to `limit`) ---
+    if len(eligible_order) > limit: break         # (limit+1)-th ELIGIBLE date seen -> newest `limit` complete
     if current_page >= cached_total_pages: break  # provider declares exhaustion
     page += 1
 
-# retain ONLY the newest `limit` distinct dates (drops limit+1, limit+2, ... — one page may hold several),
-# filtering on the CANONICAL fd captured above (never a re-read raw string)
-keep = set(order[:limit])
-rows_out = [raw for (raw, fd) in all_rows if fd in keep]
-# hand `rows_out` to _build_statement_reports(...) unchanged
+return all_rows   # -> _build_statement_reports(..., rows=all_rows, limit=limit) UNCHANGED:
+                  #    it skips SKIP_* rows (warning), raises the all-dropped diagnostics, and caps [:limit].
 ```
 
+**Explicit vs. AUTO flows (reviewer R11) — the eligibility model must be the DETECTED template, never
+the initial candidate:**
+
+- **Explicit** (`is_bank` given): `model_type = model_type_for(statement, is_bank=resolved)`;
+  `_paginate(..., model_type=model_type)`; build under `resolved`.
+- **AUTO** (`_get_statements_auto`): for each candidate template (bank-first if `is_known_bank`, else
+  corporate-first):
+  1. Fetch **page 1** under the candidate's model filter. On `EmptyData`, record the miss and try the
+     other candidate (existing failover — in production a wrong `modelType` filter returns zero rows).
+  2. Run STATE-1 raw validation on page-1 rows, then **detect** the template from those raw rows
+     (`_detect_is_bank(page1_rows, default=candidate)`) — detection reads the rows' own `modelType`
+     tags, exactly as today (`vndirect.py:184-215`, `tests/test_fundamentals.py:293-328`), and is
+     **not** eligibility-filtered.
+  3. `_paginate` the whole request with `model_type = model_type_for(statement, is_bank=detected)` —
+     so the eligible-date boundary counts the DETECTED template's rows. (Page 1 is reused; subsequent
+     pages continue the same query, which in production already returns detected-template rows.)
+  4. Build under `detected`. Because eligibility now uses the detected model, an unknown bank whose
+     response is model 102 yields a complete bank report instead of `order=[]` → corporate fallback.
+
 - **Finite (B6):** every fetch requests the local `page`; termination is bounded by
-  `cached_total_pages` (page-1 `totalPages`), and a header that does not equal the requested page or
-  falls outside `[1, cached_total_pages]` raises immediately. A repeated page-1 header or an ahead/
-  out-of-range header can never masquerade as exhaustion.
-- **Row-stream validated before it counts (B7):** a malformed/non-object row, a non-ISO or
-  out-of-order or reappearing `fiscalDate`, or a duplicate `(fiscalDate, itemCode)` across any pages
-  raises **before** it can inflate `order` past `limit` and cause a partial success. Contiguous,
-  strictly-descending date groups are enforced across page boundaries.
-- **Eligibility pre-count (R8):** only rows that pass `_row_eligible` (right requested symbol /
-  cadence / model — the same classifier the builder skips on) advance `order` or count toward the
-  stop condition; an ineligible row can never close a valid date group or prove `limit+1`, so a
-  later builder-skip cannot silently drop a period that a completeness proof already "counted".
-  Ineligible rows are still handed to the builder (so the mixed-row warning fires) but are inert for
-  completeness.
-- **Correct retention (B7):** rows are filtered to the newest `limit` distinct **eligible** dates,
-  not merely by dropping the single boundary date — so a page containing dates `limit+2` and older is
-  handled.
-- **Fail-closed:** the only `try/except` is the narrow `EmptyData` seam above (page-1 re-raise /
-  page≥2→`InvalidData`); it catches nothing else, so any transport error or other schema failure on
-  any page propagates unchanged and a half-fetched multi-page request never surfaces as a successful
-  partial report.
+  `cached_total_pages`, and a header that does not equal the requested page or falls outside
+  `[1, cached_total_pages]` raises immediately.
+- **Two-state validation (B7 + R12):** STATE 1 (object / ISO date / itemCode presence, strictly-
+  descending contiguous date groups, no reappearance, no duplicate `(fd,code)`) runs on **every**
+  fetched row — an out-of-order/reappearing/duplicate row raises even when it is `SKIP_*` ineligible.
+  STATE 2 (`eligible_order`) only sets the stop boundary. The two are independent.
+- **No pre-filtering (R12):** the loop hands **all** fetched rows to the builder; the builder does the
+  skipping (with warning), the two all-dropped `InvalidData` diagnostics, the duplicate-code guard,
+  and the `[:limit]` cap — so mixed-row warnings and the all-wrong-`code` wrong-identity error survive
+  (they were being erased by the prior `keep`-filter). The `(limit+1)`-th eligible date may be fetched
+  partially; the builder's `[:limit]` cap drops it.
+- **Fail-closed:** the only `try/except` is the narrow `EmptyData` seam (page-1 re-raise /
+  page≥2→`InvalidData`); any transport or other schema error propagates, so a half-fetched multi-page
+  request never surfaces as a partial success.
 - `PAGE_SIZE` keeps the `_row_budget(limit)` heuristic as the per-page size; the fix is the multi-page
-  LOOP, not a larger single page (a `limit` spanning many periods can exceed any fixed page size).
+  LOOP, not a larger single page.
 
 ## 9. Empty later page = schema failure, not source absence (reviewer B8)
 
@@ -417,12 +433,21 @@ opt-in live probe (`scripts/probe_corporate_itemcodes.py`, `VNFIN_LIVE=1`) is no
   duplicate `(fiscalDate, itemCode)` across pages (retained window **and** boundary date) →
   `InvalidData`; a page containing dates older than `limit+1` retained correctly; mid-pagination
   transport failure on page 2 → exception propagates, no partial success.
-- **Row eligibility pre-count (reviewer R8):** for each of `reportType`, `modelType`, and provider
-  `code` mismatch, the exact three-date regression — valid annual 2025, **ineligible** 2024
-  (wrong-cadence / wrong-model / wrong-symbol), valid annual 2023, `limit=2` — must return
-  **2025 + 2023** (the ineligible 2024 never closes a group or proves `limit+1`), with the mixed-row
-  warning still surfaced. Assert the single shared `_row_eligible` classifier drives both the
-  pagination stop condition and the builder skip.
+- **Row eligibility pre-count (reviewer R8 + R12):** for each of `reportType`, `modelType`, and
+  provider `code` mismatch, the three-date regression — valid annual 2025, **ineligible** 2024, valid
+  annual 2023, `limit=2` — returns **2025 + 2023** (the ineligible 2024 never advances the eligible
+  boundary), **with the builder's skip-warning surfaced** (rows are handed unfiltered, so the builder
+  warns). Assert the shared `_row_disposition` drives both the pagination boundary and the builder
+  skip. Preserve: **all-wrong-`code`** rows → the existing wrong-identity `InvalidData`
+  (`vndirect.py:349-357`); **all-cadence/model-skipped** → the existing `:365-370` `InvalidData`.
+- **Two-state validation (reviewer R12):** a raw **out-of-order / reappearing / duplicate** row raises
+  `InvalidData` **even when that offending row is `SKIP_*` ineligible** (STATE-1 validates every row,
+  independent of the eligible boundary).
+- **AUTO detection under pagination (reviewer R11):** an unknown-bank response of model-102 rows (the
+  existing `tests/test_fundamentals.py:293-328` case) **plus multi-page pagination** must auto-detect
+  bank and return a **complete** bank report — never `order=[]` → corporate fallback. Explicit
+  `is_bank` still overrides. Cover both a corporate (model-1/2/3) and a bank (model-101/102/103)
+  AUTO+pagination path.
 - **Empty-page seam (B8 + R1):** page-1 empty → `EmptyData` (failover) under explicit and AUTO calls;
   page-2 empty after non-empty page-1 → `InvalidData` under explicit **and** AUTO calls — asserted at
   the actual `_rows()` `EmptyData`-raising seam (not a non-raising `if not data`), so the translation
