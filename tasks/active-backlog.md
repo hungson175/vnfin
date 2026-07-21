@@ -14,126 +14,19 @@ close issue → advance watermark → mark Done here.
 
 _Last synced: 2026-07-20 +07_
 
-> **🔵 NOW (active 2026-07-20): #198 corporate fundamentals P0 — inverted balance/income routing +
-> broken catalog + pagination truncation — DESIGN-NOTE-FIRST, no code yet.**
-> Reviewer-routed intake, external GitHub issue (not a PR, no reporter code run); reviewer **ACCEPT
-> P0** + upgraded scope from "2 missing codes" to a systemic-correctness repair
-> (`~/tools/vnfin-oss-reviewer/reviews/triage-202607202156-issue198-corporate-fundamentals.md`,
-> reviewer commit `d794c71`). Root cause: `vndirect.py:_CORP_MODEL` routes corporate
-> `INCOME→modelType 1`/`BALANCE→modelType 2` — **inverted** (1=balance, 2=income); AND the corporate
-> `itemcodes.py`/`metric_api.py` catalog codes (25000/30000/40000/20000/21000/etc.) **do not exist**
-> in real provider data at all — the catalog was never derived from a live query. Some current
-> "AVAILABLE" values are silently a DIFFERENT statement's number under the wrong label — more
-> dangerous than reported MISSING. Separately: single-page tall-row fetch (`size=limit*80`, no
-> `page`/`totalPages` follow) silently truncates a wide fiscal period (live-reproduced: VIC's 142-item
-> newest annual balance drops to 80, losing `14000`/owners' equity with no warning).
-> **Live-probed 2026-07-20 (FPT/VIC/HPG/VNM, clean-room, no VNStock) — every identity below holds to
-> the EXACT VND:** balance `13000+14000==12700` (6 ticker/period combos); income
-> `21001-22100==23100` (gross profit), `23800-22070==23003` (PBT-tax=PAT total),
-> `23000+23500==23003` (parent+NCI=total — **independently corroborates** the reviewer's
-> flagged-open `23000` candidate as CONFIRMED parent-PAT). Bonus find: cashflow `37000` (not the
-> catalog's `35000`) exactly matches balance `11100` (cash) — `CASH_END_OF_PERIOD` is ALSO
-> mismapped, a second independent defect. New pagination finding (not in reviewer's packet): page
-> ≥2's envelope OMITS `totalElements`/`totalPages` entirely (only page 1 carries them) — the fix must
-> cache page-1's `totalPages`, not re-read it every page. Reproduced live via the adapter itself:
-> `scripts/probe_corporate_itemcodes.py` (`VNFIN_LIVE=1`) FAILS on current `master` by design (proves
-> both bugs at once); must flip to PASS post-fix (regression check).
-> **Design/evidence note committed:** `tasks/198-design-note.md` + companion
-> `docs/design/corporate-itemcodes-probe-20260720.md` + probe script
-> `scripts/probe_corporate_itemcodes.py`. Proposes: atomic `_CORP_MODEL` swap (balance=1/income=2,
-> cashflow=3 unchanged, no aliasing); full corporate balance+income catalog replacement (HIGH-confidence
-> codes only — 12700/13000/14000/11000/13100/13300/11100 balance, 21001/23100/23800/23003/23000
-> income); `OPERATING_PROFIT` → unmapped (no closing identity found, never guess); bounded multi-page
-> pagination loop (stop on first row of fiscal-date `limit+1`, or provider-declared final page;
-> fail-closed on any transport/schema error mid-pagination; reuses existing per-date duplicate-itemCode
-> guard, no new dup-check needed). **4 open gate questions for the reviewer** (§7 of the design note):
-> Q1 operating-profit unmapped-vs-guess, Q2 `NET_INCOME`(total,23003) vs `NET_INCOME_PARENT`(23000)
-> asymmetry confirm, Q3 corporate cashflow headline codes (31000/32000/33000/34000) unverified —
-> descope to a non-blocking follow-up (mirrors #157 Q3 bank-cashflow-fully-raw precedent) except the
-> proven `CASH_END_OF_PERIOD` fix, Q4 sub-line display names (11200-11500) MEDIUM-confidence via
-> aggregate-sum proof only. **STATUS (2026-07-21):** first design gate BLOCKED
-> (`gate-202607202233-issue198-design-note.md`, reviewer `0345fcc`, revisions B1–B10). **Revised +
-> recommitted `aa17412`** (design/evidence only, no package code) and **RE-GATE requested**: exact-VND
-> matrix (integer residual 0) + official-filing cross-check per code (FPT FY2025 PwC full 22-code
-> matrix incl. cash-flow section labels; VIC FY2024 EY parent/NCI neg-split); BLOCKED-not-guess
-> unmapped contract (B2); full cash-flow audit operating=32000/investing=33000/financing=34000/
-> net-change=35000/end-cash=37000 (B4); enumerated name-map, sub-lines left raw (B5); finite
-> validated pagination loop (B6/B7); empty-page≥2→InvalidData through AUTO (B8); relational
-> (statement,is_bank,model_type) tuple guard (B9); 3-leg probe rewrite (B10). Q1–Q4 resolved per
-> reviewer rulings. **Round-2 gate also BLOCKED** (`gate-202607212049-issue198-regate-round2.md`,
-> reviewer `bf60ecb`, R1–R7: executable failure paths). **Revised again → `20041cb`, RE-GATE
-> (round 3) requested:** R1 empty-page at the real `_rows()` EmptyData seam; R2 source-aware tuple
-> guard (VNDirect-stmt≠None, non-VNDirect=None); R3 defined pagination helpers + missing-key→
-> InvalidData; R4 23-code map incl `12000` + all-4 FY2024 balance (8 checks); R5 probe LEG B
-> tuple-assert + LEG C raw newest-date oracle (no 142 magic) + all-tickers; R6 five derived metrics
-> pinned; R7 FPT matrix re-read directly from the official PwC PDF. **Round-3 gate also BLOCKED**
-> (`gate-202607212112-issue198-regate-round3.md`, reviewer `9e74f50`, R8–R10 + strict-int: 3
-> completeness-proof defects). **Revised again → `80808c9`, RE-GATE (round 4):** R8 shared
-> `_row_eligible` pre-count (builder-skipped rows can't prove completeness); R9 LEG C finite/validated/
-> fail-closed raw oracle w/ exact `Decimal` compare; R10 LEG A requires 2 balance periods; strict
-> non-bool int prefilter before the tuple guard. **Round-4 gate also BLOCKED**
-> (`gate-202607212126-issue198-regate-round4.md`, reviewer `f20f457`, R11–R13). **Revised again →
-> `b22f8a6`, RE-GATE (round 5):** R11 AUTO detects template from raw rows + paginates under DETECTED
-> model (no candidate-relative erase of model-102 rows); R12 two-state validation (all-row vs
-> eligible-boundary) + structured `_row_disposition`, NO keep-filter (builder keeps skip-warning/
-> all-dropped InvalidData/cap); R13 oracle whole-stream date validation + raw-int totalPages +
-> Decimal/fail-closed >2^53, LEG A narrowed to identity-bearing. **Round-5 gate also BLOCKED**
-> (`gate-202607212143-issue198-regate-round5.md`, reviewer `49d4e9b`, R14–R16). **Revised again →
-> `82ea1c7`, RE-GATE (round 6):** R14 AUTO ONE atomic query (restart page1 under detected model, ≤1
-> redirect, no cross-query stitch, call-sequence assertion); R15 SKIP_CODE bumps both skipped_rows+
-> code_mismatches (mixed warning + all-dropped precedence); R16 probe fail-closed on non-integral/
-> abs>=2^53 both signs + real-calendar parse (2025-99-99 reject) + raw identity match + fetched-prefix
-> claim. **Round-6 gate also BLOCKED** (`gate-202607212156-issue198-regate-round6.md`, reviewer
-> `c9855e3`, R17–R18). **Revised again → `65948e9`, RE-GATE (round 7):** R17 AUTO exact-model
-> detection (_dominant_model restricted to statement's valid {corp,bank} models; redirect-once;
-> restart validates exact tag; tag-less/101/contradictory/empty restart → InvalidData; seed page1
-> once; exact fetch-seq + mixed-warning pinned); R18 probe strict Decimal-aware _canonical_int
-> (modelType 1.9/True + itemCode 11000.9 no longer false-pass). **Round-7 gate also BLOCKED**
-> (`gate-202607212207-issue198-regate-round7.md`, reviewer `091f237`, R19–R20). **Revised again →
-> `2805ec0`, RE-GATE (round 8):** R19 explicit `page1_envelope` seed re-validated identically +
-> fresh-state redirect + `_dominant_model` fails on out-of-VALID minority tag & corporate/bank tie;
-> R20 runtime `_require_item_code` reuses `canonical_provider_key` (no str(int)); evidence wording
-> fixed (LEG A + pre-fix B/C observed). Probe green (LEG A PASS, B/C pre-fix FAIL, exit 2 offline).
-> NO code/tests changed; do not build until GATE PASS. **7 gate rounds; mappings/evidence settled
-> since round 2 — deltas now micro-seams in pagination/AUTO/probe edge-handling.**
-> **✅ DESIGN GATE PASS 2026-07-21 on `2805ec0`** (`gate-202607212217-issue198-design-pass.md`,
-> reviewer `cfec0ef`) — RED-first package implementation AUTHORIZED against the accumulated spec
-> `tasks/198-design-note.md`. Mandatory code-review inclusions: focused pagination/AUTO/tuple/catalog/
-> metric tests; full offline + warning-token/docs/public-surface gates; deterministic probe unit seams
-> + opt-in live post-fix 3-leg PASS; CHANGELOG/API/tutorial/AI-skill/mapping/provenance docs lockstep;
-> merged-tree diff/secrets/blacklist/package checks. Duplicate invariant covers every fetched row; NO
-> extra fetch for the dropped limit+1 boundary. No ROE/app-helpers/redistribution/unrelated-refactor.
-> **NO push/close until implementation-review APPROVE.**
-> **✅ IMPLEMENTATION COMPLETE + merged-tree-verified — CODE REVIEW REQUESTED.** Range
-> `2ec1421..f94f945` (P1 data `fd1f24e`+`f97e113`, P2 pagination/AUTO `133e8d7`, P3 docs `f94f945`).
-> Full offline suite **3907 passed**; warning-token/docs/public-surface/blacklist/no-secrets gates
-> green; public_api snapshot NOT regenerated. **Live post-fix probe 3-leg PASS** (routing + 142-item
-> complete pagination proven live). Handoff: `/tmp/.../scratchpad/198-impl-review-handoff.md`. Awaiting
-> reviewer APPROVE; then push to master (no PR — maintainer own-fix) + close #198 (reviewer owns the
-> watermark).
-> **Impl-review round 1 BLOCK** (`review-202607212322`, `753eaa4`, B1–B4: evidence/tests/docs
-> completeness — runtime ACCEPTED). **Corrected → range `c3c5677..f76c33a`, RE-REVIEW REQUESTED:**
-> B1 offline `tests/test_probe_seams.py` (35) + post-fix evidence wording + durable §5 live receipt
-> (`f76c33a`, SHA 466c11a, 3-leg PASS); B2 pagination/CF/23-name pins (80+62→142, dropped-boundary dup,
-> ineligible reappearance, 2nd CF identity 35000+36000+36100==37000, independent 23-name pin); B3 doc
-> lockstep incl ai-usage bank-balance 101 + BLOCKED tutorial + vndirect docstrings; B4 durable RED-first
-> (c3da29c 2 docs-contract tests RED → 6a1941a GREEN). Merged-tree: **3951 passed**, wheel builds,
-> gates green, vndirect change docstring-only. Handoff `/tmp/.../scratchpad/198-correction-handoff.md`.
-> No push/close pending APPROVE.
-> **Impl-review round 2 BLOCK** (`review-202607212346`, `9c54b3a`, R1–R3 residual pins, tests/prose
-> only). **Corrected → range `c45bf1d..accefb4`, RE-REVIEW REQUESTED:** R1 probe-seam (`leg_a_raw`
-> 2-period guard, code/reportType/modelType mismatch matrix, over-totalPages, real-adapter `_num()`
-> seam with `±(2**53+1)` alias); R2 cross-page dropped-boundary dup + runtime `Decimal("11000.9")`
-> itemCode + exact 23-table dict-equality (8+8+7, no extras); R3 neutralized 2 stale "currently
-> inverted" phrases. NO runtime files touched (tests + probe/evidence prose only). Merged tree:
-> **3959 passed**, docs/public/secrets gates green, diff --check clean, wheel builds. No live re-run
-> needed (prose/tests only). No push/close pending APPROVE.
-> **Impl-review round 3 BLOCK** (`review-202607220003`, `b6d11ae`, 2 R1 test-independence gaps).
-> **Corrected → range `34dbe61..d429cc9` (1 commit, tests-only), RE-REVIEW REQUESTED:** R1.1 leg_a
-> one-period fixture now fully identity-valid (False attributable ONLY to the 2-period guard;
-> mutation-resistant); R1.2 split into (a) real `_num()`/`LineItem` alias BOTH signs
-> (`±9007199254740993`→`±…992.0`) + (b) guard-short-circuit spy asserting 0 adapter calls. Merged
-> tree: **3960 passed**. No push/close pending APPROVE.
+> **✅ DONE 2026-07-22: #198 corporate fundamentals P0 — inverted routing + broken catalog + pagination — PUSHED + CLOSED.**
+> Reviewer-routed external issue (VIC missing net_income/equity). Root cause widened to a systemic repair: corporate
+> `modelType` routing was INVERTED (balance/income fetched under each other's template), the corporate itemCode/metric
+> catalog used non-existent codes, and the single-page tall-fetch silently truncated wide periods. Fix: routing
+> BALANCE=1/INCOME=2/CASHFLOW=3 (bank 101/102/103 unchanged); 18-metric catalog + 23-code name map re-verified against
+> official FPT FY2025 (PwC) + VIC FY2024 (EY) filings + exact-VND identities (FPT/VIC/HPG/VNM); honest BLOCKED for
+> unmapped `operating_profit`; source-aware tuple guard; completeness-safe multi-page pagination + exact-model AUTO.
+> **Process:** 8 design-gate rounds (`b658ae3`→`2805ec0`, DESIGN PASS `cfec0ef`) → 3-phase RED-first build → 1 impl-review
+> BLOCK + 3 correction rounds → **IMPLEMENTATION APPROVE** (`review-202607220012`, `afbac3b`). Pushed `499031a..0a48fee`
+> (contains `d429cc9`); full suite **3960 passed**; live post-fix probe 3-leg PASS (durable receipt `f76c33a`, VIC 142-item
+> complete); wheel builds; public snapshot unchanged. Resolution comment `#issuecomment-5036911114`; #198 CLOSED. Left
+> `state/` to the reviewer (owns watermark). No tag/release. Non-blocking follow-ups: none outstanding (ai-usage bank-balance
+> 101 fixed in-cycle).
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
