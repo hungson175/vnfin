@@ -13,7 +13,7 @@ evidence counts (23 named codes), and the full cash-flow audit. Binding spec
 
 - **Source (clean-room):** the project's own VNDirect api-finfo endpoint
   (`api-finfo.vndirect.com.vn/v4/financial_statements`) via **three legs** — a **raw** query leg
-  (LEG A: bypasses the adapter, proves template/code semantics independent of the currently-inverted
+  (LEG A: bypasses the adapter, proves template/code semantics independent of adapter
   routing), an **adapter routing** leg (LEG B: `VNDirectFundamentalSource`, asserts the full
   provenance tuple, proves the shipped path is fixed), and a **pagination completeness oracle** leg
   (LEG C: raw-fetches the full newest fiscal-date group and requires the adapter to reproduce it

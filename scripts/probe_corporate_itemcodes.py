@@ -6,8 +6,8 @@ pagination). THREE independent legs, each stating exactly what it proves:
   ``modelType`` 1/2/3 directly and checks provider-only accounting identities to
   EXACT VND (integer residual == 0), on two observed identity-bearing balance
   periods plus the newest income/cash-flow period. Proves *which template is which*
-  and *which itemCodes participate in which identity* WITHOUT depending on the
-  library's (currently inverted) routing. (Period COMPLETENESS is LEG C's job; LEG
+  and *which itemCodes participate in which identity* independent of adapter
+  routing. (Period COMPLETENESS is LEG C's job; LEG
   A asserts identity consistency, not that every line of a period is present.)
 
   LEG B — ADAPTER routing regression: calls the public
