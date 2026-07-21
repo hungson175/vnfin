@@ -291,6 +291,45 @@ def test_bank_reports_carry_bank_model_metadata():
 
 
 # --------------------------------------------------------------------------- #
+# #198 routing regression — corporate BALANCE=1 / INCOME=2 / CASHFLOW=3 (the
+# prior INCOME=1/BALANCE=2 was inverted); bank 101/102/103 unchanged. Annual +
+# quarterly. Asserts the exact modelType placed in the request query.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("period", [Period.ANNUAL, Period.QUARTER])
+@pytest.mark.parametrize(
+    "statement,expected_corp,expected_bank",
+    [
+        (StatementType.BALANCE, "modelType:1", "modelType:101"),
+        (StatementType.INCOME, "modelType:2", "modelType:102"),
+        (StatementType.CASHFLOW, "modelType:3", "modelType:103"),
+    ],
+)
+def test_198_routing_corporate_and_bank(period, statement, expected_corp, expected_bank):
+    from vnfin.fundamentals.vndirect import _BANK_MODEL, _CORP_MODEL
+
+    # Direct table regression (the source of truth for routing).
+    assert _CORP_MODEL[StatementType.BALANCE] == 1
+    assert _CORP_MODEL[StatementType.INCOME] == 2
+    assert _CORP_MODEL[StatementType.CASHFLOW] == 3
+    assert _BANK_MODEL[StatementType.BALANCE] == 101
+    assert _BANK_MODEL[StatementType.INCOME] == 102
+    assert _BANK_MODEL[StatementType.CASHFLOW] == 103
+
+    # Corporate query carries the single-digit model (rows all-skipped -> the
+    # query is still captured before InvalidData).
+    src, captured = _capturing_src(_stmt_envelope([], total=0))
+    with pytest.raises((InvalidData, EmptyData)):
+        src.get_financials("TESTCO", statement, period, is_bank=False)
+    assert expected_corp in captured["params"]["q"]
+
+    # Bank query carries the 10x model.
+    src_b, captured_b = _capturing_src(_stmt_envelope([], total=0))
+    with pytest.raises((InvalidData, EmptyData)):
+        src_b.get_financials("ZZBANK", statement, period, is_bank=True)
+    assert expected_bank in captured_b["params"]["q"]
+
+
+# --------------------------------------------------------------------------- #
 # Auto-detection of bank vs corporate (caller does NOT pass is_bank)
 # The response rows carry the provider's real modelType (corporate 1/2/3, bank
 # 101/102/103); the adapter must read that tag and classify the template without

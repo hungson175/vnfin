@@ -935,6 +935,176 @@ def test_raw_code_absent_missing():
     assert nr.reason == "missing line item 21001 in income"
 
 
+# =========================================================================== #
+# #198 — corporate catalog remap: positive resolution, negative (old codes),
+# and the honest-BLOCKED unmapped-code contract (§5).
+# =========================================================================== #
+def test_198_catalog_positive_corporate_codes_resolve():
+    """Every remapped corporate primitive resolves from a model-1/2/3 synthetic
+    report, and the headline accounting identities hold on the fixtures."""
+    rep = _metrics_from_statement_results(
+        "TESTCO", Period.ANNUAL, False, _corp_results(), limit=8)[0]
+
+    def _v(mid):
+        mv = rep.get(mid)
+        assert mv.availability is MetricAvailability.AVAILABLE, mid
+        return mv.value
+
+    # income (modelType 2): 21001/23100/23800/23003/23000
+    assert _v("net_revenue") == 1000.0            # 21001
+    assert _v("gross_profit") == 400.0            # 23100
+    assert _v("profit_before_tax") == 250.0       # 23800
+    assert _v("net_income") == 200.0              # 23003 (total consolidated)
+    assert _v("net_income_parent") == 180.0       # 23000 (parent)
+    # balance (modelType 1): 12700/13000/14000/11000/13100/13300/11100
+    assert _v("total_assets") == 2000.0           # 12700
+    assert _v("total_liabilities") == 700.0       # 13000
+    assert _v("owners_equity") == 1300.0          # 14000
+    assert _v("current_assets") == 800.0          # 11000
+    assert _v("current_liabilities") == 300.0     # 13100
+    assert _v("long_term_liabilities") == 200.0   # 13300
+    assert _v("cash_and_equivalents") == 500.0    # 11100
+    # cashflow (modelType 3): 32000/33000/34000/35000/37000 — both CF identities
+    ocf = _v("operating_cash_flow")               # 32000
+    inv = _v("investing_cash_flow")               # 33000
+    fin = _v("financing_cash_flow")               # 34000
+    net = _v("net_cash_flow")                      # 35000
+    end = _v("cash_end_of_period")                 # 37000
+    assert ocf == 350.0 and end == 600.0
+    assert ocf + inv + fin == net                  # sections sum to net change
+    # headline balance identity: total_liabilities + owners_equity == total_assets
+    assert _v("total_liabilities") + _v("owners_equity") == _v("total_assets")
+
+
+def test_198_catalog_negative_old_codes_do_not_resolve():
+    """The OLD corporate codes must NOT resolve to their former meanings: a report
+    carrying only the pre-#198 codes yields MISSING for the remapped primitives."""
+    old_income = _report("TESTCO", StatementType.INCOME, D1, [
+        _li("11000", 1000.0),  # was net_revenue; now 21001
+        _li("21000", 200.0),   # was net_income; now 23003
+        _li("20000", 250.0),   # was PBT corp; now 23800
+    ])
+    old_balance = _report("TESTCO", StatementType.BALANCE, D1, [
+        _li("25000", 2000.0),  # was total_assets; now 12700
+        _li("30000", 700.0),   # was total_liabilities; now 13000
+        _li("40000", 1300.0),  # was owners_equity; now 14000
+        _li("23000", 800.0),   # was current_assets; now 11000
+    ])
+    old_cash = _report("TESTCO", StatementType.CASHFLOW, D1, [
+        _li("31000", 350.0),   # was operating CF; now 32000
+        _li("35000", 600.0),   # was cash_end; now 37000
+    ])
+    results = (
+        _ok(StatementType.INCOME, [old_income]),
+        _ok(StatementType.BALANCE, [old_balance]),
+        _ok(StatementType.CASHFLOW, [old_cash]),
+    )
+    rep = _metrics_from_statement_results(
+        "TESTCO", Period.ANNUAL, False, results, limit=8)[0]
+    for mid in ("net_revenue", "net_income", "profit_before_tax", "total_assets",
+                "total_liabilities", "owners_equity", "current_assets",
+                "operating_cash_flow", "cash_end_of_period"):
+        mv = rep.get(mid)
+        assert mv.availability is MetricAvailability.MISSING, mid
+        assert mv.value is None, mid
+
+
+def test_198_operating_profit_blocked_not_missing():
+    """OPERATING_PROFIT (corporate_code=None) reports honest BLOCKED with
+    REASON_METRIC_CODE_UNMAPPED — never MISSING / 'missing line item None'."""
+    from vnfin.fundamentals.metric_api import REASON_METRIC_CODE_UNMAPPED
+
+    rep = _metrics_from_statement_results(
+        "TESTCO", Period.ANNUAL, False, _corp_results(), limit=8)[0]
+    op = rep.get("operating_profit")
+    assert op.availability is MetricAvailability.BLOCKED
+    assert op.value is None
+    assert op.reason == REASON_METRIC_CODE_UNMAPPED.format(
+        id="operating_profit", source="vndirect", entity="corporate")
+    # explicitly NOT the MISSING / None-line-item wording
+    assert "missing line item" not in op.reason
+    assert "None" not in op.reason
+
+
+def test_198_mapped_but_absent_code_is_still_missing():
+    """A metric whose code IS mapped but is absent upstream stays MISSING (the
+    BLOCKED split must not swallow a genuine upstream omission)."""
+    income = _report("TESTCO", StatementType.INCOME, D1, [
+        _li("23100", 400.0),  # gross_profit present; net_revenue 21001 absent
+    ])
+    results = (
+        _ok(StatementType.INCOME, [income]),
+        _ok(StatementType.BALANCE, [_corp_balance(D1)]),
+        _ok(StatementType.CASHFLOW, [_corp_cashflow(D1)]),
+    )
+    rep = _metrics_from_statement_results(
+        "TESTCO", Period.ANNUAL, False, results, limit=8)[0]
+    nr = rep.get("net_revenue")
+    assert nr.availability is MetricAvailability.MISSING
+    assert nr.reason == "missing line item 21001 in income"
+
+
+def test_198_derived_on_none_code_input_propagates_blocked():
+    """A derived metric consuming a None-code (BLOCKED) input propagates BLOCKED,
+    naming that input — proving the input-BLOCKED->BLOCKED mechanism for the
+    None-code case even though no v1 derived consumes OPERATING_PROFIT."""
+    from vnfin.fundamentals.metric_api import _resolve_derived, _resolve_raw
+    from vnfin.fundamentals.metric_models import (
+        MetricDefinition, MetricCategory, MetricKind,
+        StatementProvenance, StatementCoverageStatus as _SCS,
+    )
+
+    # Resolve OPERATING_PROFIT (corporate_code=None) as a raw -> BLOCKED.
+    income = _corp_income(D1)
+    prov = StatementProvenance(
+        statement=StatementType.INCOME, status=_SCS.OK, source="vndirect")
+    op_defn = explain_metric("operating_profit")
+    op_mv = _resolve_raw(op_defn, False, D1,
+                         _ok(StatementType.INCOME, [income]), income, prov)
+    assert op_mv.availability is MetricAvailability.BLOCKED
+
+    nr_defn = explain_metric("net_revenue")
+    nr_prov = prov
+    nr_mv = _resolve_raw(nr_defn, False, D1,
+                         _ok(StatementType.INCOME, [income]), income, nr_prov)
+    assert nr_mv.availability is MetricAvailability.AVAILABLE
+
+    # A synthetic derived metric consuming the None-code (BLOCKED) input.
+    synth = MetricDefinition(
+        id=MetricId.OPERATING_PROFIT,  # id reused only as a handle; kind=DERIVED
+        name="synthetic op-derived",
+        category=MetricCategory.PROFITABILITY,
+        kind=MetricKind.DERIVED,
+        applies_to=op_defn.applies_to,
+        value_unit="ratio",
+        formula="operating_profit / net_revenue",
+        inputs=(MetricId.OPERATING_PROFIT, MetricId.NET_REVENUE),
+    )
+    resolved = {"operating_profit": op_mv, "net_revenue": nr_mv}
+    dv = _resolve_derived(synth, False, D1, resolved)
+    assert dv.availability is MetricAvailability.BLOCKED
+    assert dv.value is None
+    assert "operating_profit" in dv.reason
+
+
+def test_198_derived_end_to_end_exact_values_via_injected_vndirect():
+    """All FIVE derived metrics consuming remapped primitives compute exact values
+    end-to-end through an injected VNDirect http_get (real adapter + failover)."""
+    rep = metrics("TESTCO", period="annual", http_get=_corp_vnd_http_get())[0]
+
+    def _d(mid):
+        mv = rep.get(mid)
+        assert mv.availability is MetricAvailability.AVAILABLE, mid
+        assert mv.value_unit == "ratio", mid
+        return mv.value
+
+    assert _d("gross_margin") == 400.0 / 1000.0                 # 23100 / 21001
+    assert _d("net_margin") == 200.0 / 1000.0                   # 23003 / 21001
+    assert _d("liabilities_to_equity") == 700.0 / 1300.0        # 13000 / 14000
+    assert _d("cash_to_assets") == 500.0 / 2000.0               # 11100 / 12700
+    assert _d("operating_cash_flow_margin") == 350.0 / 1000.0   # 32000 / 21001
+
+
 # --------------------------------------------------------------------------- #
 # Source-namespace gate (C3) — non-vndirect source -> BLOCKED, not MISSING.
 # --------------------------------------------------------------------------- #
