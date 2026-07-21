@@ -656,3 +656,107 @@ def test_explicit_is_bank_overrides_auto_under_pagination():
     reports = src.get_financials("TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False, limit=8)
     assert record == [(2, 1), (2, 2)]
     assert reports[0].is_bank is False
+
+
+# =========================================================================== #
+# #198 B2 — additional pagination/catalog pins (synthetic, mock HTTP).
+# =========================================================================== #
+def test_wide_period_reassembles_all_142_items_across_two_pages():
+    # A SINGLE fiscalDate whose 142 line items span two pages (80 + 62) must
+    # reassemble into ONE complete report of all 142 items — the VIC 80+62 case.
+    codes = list(range(11000, 11142))  # 142 distinct itemCodes
+    assert len(codes) == 142
+    page1 = _env(
+        [_row("TESTCO", c, float(c), A) for c in codes[:80]],
+        current_page=1,
+        total_pages=2,
+    )
+    page2 = _env(
+        [_row("TESTCO", c, float(c), A) for c in codes[80:]],
+        current_page=2,
+        include_total_pages=False,
+    )
+    pages = {2: {1: page1, 2: page2}}
+    reports = _src_paged(pages).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False, limit=1
+    )
+    assert len(reports) == 1
+    assert reports[0].fiscal_date == date(2025, 12, 31)
+    assert len(reports[0].items) == 142
+    assert {li.item_code for li in reports[0].items} == {str(c) for c in codes}
+
+
+def test_duplicate_on_dropped_limit_plus_one_boundary_raises():
+    # limit=1 retains A and DROPS the (limit+1)-th eligible date B. The loop still
+    # FETCHES the first rows of B; a duplicate (fd,code) INSIDE that dropped boundary
+    # period must raise InvalidData (STATE-1 validates every fetched row).
+    rows = [
+        _row("TESTCO", 11000, 1.0, A),
+        _row("TESTCO", 20000, 2.0, A),
+        _row("TESTCO", 11000, 3.0, B),
+        _row("TESTCO", 11000, 4.0, B),  # duplicate (B, 11000) on the dropped boundary
+    ]
+    pages = {2: {1: _env(rows, current_page=1, total_pages=1)}}
+    with pytest.raises(InvalidData):
+        _src_paged(pages).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False, limit=1
+        )
+
+
+def test_ineligible_row_reappearance_on_later_page_raises():
+    # A closed date reappearing on a later page as an INELIGIBLE (wrong-cadence) row
+    # still raises — STATE-1 validates every row, independent of eligibility.
+    page1 = _env(
+        [_row("TESTCO", 11000, 1.0, A), _row("TESTCO", 11000, 1.0, B)],
+        current_page=1,
+        total_pages=2,
+    )
+    page2 = _env(
+        [_row("TESTCO", 12000, 1.0, A, report_type="QUARTER")],  # A reappears, ineligible
+        current_page=2,
+        include_total_pages=False,
+    )
+    pages = {2: {1: page1, 2: page2}}
+    with pytest.raises(InvalidData):
+        _src_paged(pages).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False, limit=8
+        )
+
+
+def test_page_with_dates_older_than_limit_plus_one_retains_exact_newest_limit():
+    # A page carrying dates older than the (limit+1)-th eligible date is validated
+    # in full, but the builder caps to the newest `limit` periods EXACTLY.
+    D = "2022-12-31"
+    rows = [
+        _row("TESTCO", 11000, 100.0, A),
+        _row("TESTCO", 11000, 90.0, B),
+        _row("TESTCO", 11000, 80.0, C),   # (limit+1)-th eligible date (limit=2)
+        _row("TESTCO", 11000, 70.0, D),   # older still
+    ]
+    pages = {2: {1: _env(rows, current_page=1, total_pages=1)}}
+    reports = _src_paged(pages).get_financials(
+        "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False, limit=2
+    )
+    assert [r.fiscal_date for r in reports] == [date(2025, 12, 31), date(2024, 12, 31)]
+    assert reports[0].get("11000") == 100.0
+    assert reports[1].get("11000") == 90.0
+
+
+@pytest.mark.parametrize("bad_code", [11000.9, True], ids=["fractional", "bool"])
+def test_runtime_fractional_item_code_raises_via_adapter(bad_code):
+    # #198 R20: a runtime adapter row whose itemCode is fractional (11000.9) or a
+    # bool must raise InvalidData via _require_item_code — the ADAPTER path, not
+    # the probe.
+    row = {
+        "code": "TESTCO",
+        "itemCode": bad_code,
+        "reportType": "ANNUAL",
+        "modelType": 2.0,
+        "numericValue": 1.0,
+        "fiscalDate": A,
+    }
+    pages = {2: {1: _env([row], current_page=1, total_pages=1)}}
+    with pytest.raises(InvalidData):
+        _src_paged(pages).get_financials(
+            "TESTCO", StatementType.INCOME, Period.ANNUAL, is_bank=False
+        )

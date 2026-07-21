@@ -1019,6 +1019,57 @@ def test_item_name_partition_completeness():
                 assert item_name(code, model_type=other) == f"item_{code}"
 
 
+def test_198_corporate_name_map_independent_pin():
+    """#198 — pin ALL 23 corporate itemCode->name labels against an INDEPENDENT
+    expected dict literal (not the map compared to itself), and prove the aggregate
+    current-asset sub-lines 11200/11300/11400/11500 fall back to ``item_<code>``.
+    """
+    from vnfin.fundamentals.itemcodes import item_name
+
+    expected = {
+        # modelType 1 — BALANCE (8)
+        1: {
+            "12700": "Tổng cộng tài sản",
+            "13000": "Nợ phải trả",
+            "14000": "Vốn chủ sở hữu",
+            "11000": "Tài sản ngắn hạn",
+            "12000": "Tài sản dài hạn",
+            "13100": "Nợ ngắn hạn",
+            "13300": "Nợ dài hạn",
+            "11100": "Tiền và các khoản tương đương tiền",
+        },
+        # modelType 2 — INCOME (8)
+        2: {
+            "21001": "Doanh thu thuần",
+            "22100": "Giá vốn hàng bán",
+            "23100": "Lợi nhuận gộp",
+            "23800": "Tổng lợi nhuận kế toán trước thuế",
+            "22070": "Chi phí thuế TNDN",
+            "23003": "Lợi nhuận sau thuế TNDN",
+            "23000": "LNST của cổ đông công ty mẹ",
+            "23500": "LNST của cổ đông không kiểm soát",
+        },
+        # modelType 3 — CASH FLOW (7)
+        3: {
+            "32000": "Lưu chuyển tiền thuần từ HĐ kinh doanh",
+            "33000": "Lưu chuyển tiền thuần từ HĐ đầu tư",
+            "34000": "Lưu chuyển tiền thuần từ HĐ tài chính",
+            "35000": "Lưu chuyển tiền thuần trong kỳ",
+            "36000": "Tiền và tương đương tiền đầu kỳ",
+            "36100": "Ảnh hưởng của thay đổi tỷ giá",
+            "37000": "Tiền và tương đương tiền cuối kỳ",
+        },
+    }
+    assert sum(len(t) for t in expected.values()) == 23
+    for mt, table in expected.items():
+        for code, label in table.items():
+            assert item_name(code, model_type=mt) == label
+
+    # aggregate-only current-asset sub-lines stay honest raw item_<code>
+    for code in ("11200", "11300", "11400", "11500"):
+        assert item_name(code, model_type=1) == f"item_{code}"
+
+
 def test_item_name_unknown_code_falls_back():
     from vnfin.fundamentals.itemcodes import item_name
 

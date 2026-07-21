@@ -495,6 +495,30 @@ def test_gold_coverage_map_documented_and_cross_linked():
     assert "gold-world-reference.md#end-to-end-gold-coverage" in _read("docs/sources/cmo-gold-annual.md")
 
 
+# Issue #198 — corporate-fundamentals doc lockstep guards. These pin two facts the
+# implementation review flagged as silently rottable:
+#  (a) the bank BALANCE example must print model_type 101 (balance), NEVER 102 (income);
+#  (b) the tutorial's BLOCKED section must cover the new VERIFIED-CODE-UNMAPPED case
+#      (operating_profit for corporates -> BLOCKED with a "no verified code" reason),
+#      not only the unmapped-SOURCE-namespace case.
+def test_198_ai_usage_bank_balance_example_shows_model_type_101():
+    ai = _read("docs/ai-usage.md")
+    # the example fetches a bank BALANCE ("VCB", "balance", ..., is_bank=True)
+    assert 'get_financials("VCB", "balance"' in ai
+    # a BALANCE report is model_type 101 for a bank, never 102 (income)
+    assert "# True 101" in ai, "bank BALANCE example must print model_type 101"
+    assert "# True 102" not in ai, "bank BALANCE example must NOT print income model_type 102"
+
+
+def test_198_fundamentals_tutorial_documents_verified_code_unmapped_blocked():
+    tut = _read("docs/tutorials/fundamentals.md")
+    # the new #198 BLOCKED case: a metric with no verified corporate code
+    assert "operating_profit" in tut, "tutorial BLOCKED section must name the unmapped metric"
+    assert "no verified code" in tut, (
+        "tutorial BLOCKED section must document the verified-code-unmapped reason"
+    )
+
+
 def test_metrics_layer_documented_everywhere():
     """Public-API change ⇒ docs + skill + CHANGELOG in the SAME change. Each of the four
     documentation surfaces must document the new metrics entry points (so dropping any one

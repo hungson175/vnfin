@@ -638,8 +638,10 @@ def _corp_cashflow(fiscal_date=D1, source="vndirect", **over):
         "32000": 350.0,    # operating_cash_flow
         "33000": -120.0,   # investing_cash_flow
         "34000": -80.0,    # financing_cash_flow
-        "35000": 150.0,    # net_cash_flow
-        "37000": 600.0,    # cash_end_of_period
+        "35000": 150.0,    # net_cash_flow (32000+33000+34000)
+        "36000": 460.0,    # begin cash (raw name-mapped; not a metric)
+        "36100": -10.0,    # FX effect (raw name-mapped; not a metric)
+        "37000": 600.0,    # cash_end_of_period (35000+36000+36100)
     }
     base.update(over)
     return _report("TESTCO", StatementType.CASHFLOW, fiscal_date,
@@ -971,7 +973,15 @@ def test_198_catalog_positive_corporate_codes_resolve():
     net = _v("net_cash_flow")                      # 35000
     end = _v("cash_end_of_period")                 # 37000
     assert ocf == 350.0 and end == 600.0
-    assert ocf + inv + fin == net                  # sections sum to net change
+    # identity 1: sections sum to net change (32000+33000+34000==35000)
+    assert ocf + inv + fin == net
+    # identity 2: net change + begin cash + FX == end cash (35000+36000+36100==37000).
+    # begin (36000) and FX (36100) are raw name-mapped lines, not metrics, so read
+    # them from the underlying cashflow report.
+    cf = _corp_cashflow()
+    begin = next(li.value for li in cf.items if li.item_code == "36000")
+    fx = next(li.value for li in cf.items if li.item_code == "36100")
+    assert net + begin + fx == end
     # headline balance identity: total_liabilities + owners_equity == total_assets
     assert _v("total_liabilities") + _v("owners_equity") == _v("total_assets")
 
