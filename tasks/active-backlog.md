@@ -83,8 +83,13 @@ _Last synced: 2026-07-20 +07_
 > redirect, no cross-query stitch, call-sequence assertion); R15 SKIP_CODE bumps both skipped_rows+
 > code_mismatches (mixed warning + all-dropped precedence); R16 probe fail-closed on non-integral/
 > abs>=2^53 both signs + real-calendar parse (2025-99-99 reject) + raw identity match + fetched-prefix
-> claim. Probe green (LEG A PASS, B/C pre-fix FAIL, exit 2 offline). NO code/tests changed; do not
-> build until GATE PASS.
+> claim. **Round-6 gate also BLOCKED** (`gate-202607212156-issue198-regate-round6.md`, reviewer
+> `c9855e3`, R17–R18). **Revised again → `65948e9`, RE-GATE (round 7):** R17 AUTO exact-model
+> detection (_dominant_model restricted to statement's valid {corp,bank} models; redirect-once;
+> restart validates exact tag; tag-less/101/contradictory/empty restart → InvalidData; seed page1
+> once; exact fetch-seq + mixed-warning pinned); R18 probe strict Decimal-aware _canonical_int
+> (modelType 1.9/True + itemCode 11000.9 no longer false-pass). Probe green (LEG A PASS, B/C pre-fix
+> FAIL, exit 2 offline). NO code/tests changed; do not build until GATE PASS.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
