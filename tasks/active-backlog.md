@@ -71,8 +71,14 @@ _Last synced: 2026-07-20 +07_
 > completeness-proof defects). **Revised again → `80808c9`, RE-GATE (round 4):** R8 shared
 > `_row_eligible` pre-count (builder-skipped rows can't prove completeness); R9 LEG C finite/validated/
 > fail-closed raw oracle w/ exact `Decimal` compare; R10 LEG A requires 2 balance periods; strict
-> non-bool int prefilter before the tuple guard. Probe green (LEG A PASS, B/C pre-fix FAIL, exit 2
-> offline). NO code/tests changed; do not build until GATE PASS.
+> non-bool int prefilter before the tuple guard. **Round-4 gate also BLOCKED**
+> (`gate-202607212126-issue198-regate-round4.md`, reviewer `f20f457`, R11–R13). **Revised again →
+> `b22f8a6`, RE-GATE (round 5):** R11 AUTO detects template from raw rows + paginates under DETECTED
+> model (no candidate-relative erase of model-102 rows); R12 two-state validation (all-row vs
+> eligible-boundary) + structured `_row_disposition`, NO keep-filter (builder keeps skip-warning/
+> all-dropped InvalidData/cap); R13 oracle whole-stream date validation + raw-int totalPages +
+> Decimal/fail-closed >2^53, LEG A narrowed to identity-bearing. Probe green (LEG A PASS, B/C pre-fix
+> FAIL, exit 2 offline). NO code/tests changed; do not build until GATE PASS.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
