@@ -51,8 +51,16 @@ _Last synced: 2026-07-20 +07_
 > asymmetry confirm, Q3 corporate cashflow headline codes (31000/32000/33000/34000) unverified —
 > descope to a non-blocking follow-up (mirrors #157 Q3 bank-cashflow-fully-raw precedent) except the
 > proven `CASH_END_OF_PERIOD` fix, Q4 sub-line display names (11200-11500) MEDIUM-confidence via
-> aggregate-sum proof only. **STATUS:** design note routed to `vnfin-oss-reviewer` for the design gate;
-> NO code/tests/docs changed yet; do not build until GATE PASS.
+> aggregate-sum proof only. **STATUS (2026-07-21):** first design gate BLOCKED
+> (`gate-202607202233-issue198-design-note.md`, reviewer `0345fcc`, revisions B1–B10). **Revised +
+> recommitted `aa17412`** (design/evidence only, no package code) and **RE-GATE requested**: exact-VND
+> matrix (integer residual 0) + official-filing cross-check per code (FPT FY2025 PwC full 22-code
+> matrix incl. cash-flow section labels; VIC FY2024 EY parent/NCI neg-split); BLOCKED-not-guess
+> unmapped contract (B2); full cash-flow audit operating=32000/investing=33000/financing=34000/
+> net-change=35000/end-cash=37000 (B4); enumerated name-map, sub-lines left raw (B5); finite
+> validated pagination loop (B6/B7); empty-page≥2→InvalidData through AUTO (B8); relational
+> (statement,is_bank,model_type) tuple guard (B9); 3-leg probe rewrite (B10). Q1–Q4 resolved per
+> reviewer rulings. NO code/tests changed; do not build until GATE PASS.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
