@@ -66,8 +66,13 @@ _Last synced: 2026-07-20 +07_
 > guard (VNDirect-stmt≠None, non-VNDirect=None); R3 defined pagination helpers + missing-key→
 > InvalidData; R4 23-code map incl `12000` + all-4 FY2024 balance (8 checks); R5 probe LEG B
 > tuple-assert + LEG C raw newest-date oracle (no 142 magic) + all-tickers; R6 five derived metrics
-> pinned; R7 FPT matrix re-read directly from the official PwC PDF. Probe green (LEG A PASS, B/C
-> pre-fix FAIL). NO code/tests changed; do not build until GATE PASS.
+> pinned; R7 FPT matrix re-read directly from the official PwC PDF. **Round-3 gate also BLOCKED**
+> (`gate-202607212112-issue198-regate-round3.md`, reviewer `9e74f50`, R8–R10 + strict-int: 3
+> completeness-proof defects). **Revised again → `80808c9`, RE-GATE (round 4):** R8 shared
+> `_row_eligible` pre-count (builder-skipped rows can't prove completeness); R9 LEG C finite/validated/
+> fail-closed raw oracle w/ exact `Decimal` compare; R10 LEG A requires 2 balance periods; strict
+> non-bool int prefilter before the tuple guard. Probe green (LEG A PASS, B/C pre-fix FAIL, exit 2
+> offline). NO code/tests changed; do not build until GATE PASS.
 >
 > **✅ DONE 2026-07-02: #197 main CN/KR/HK world indices as loudly-labeled USD ETF proxies — PUSHED + CLOSED.**
 > Boss/reviewer-routed intake; design note `tasks/197-design-note.md` (`8b981bb`) GATE PASS
