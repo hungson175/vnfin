@@ -655,7 +655,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   reviewer commit `570016b`, 18:40): correctly constrained (no `vnfin/` change), CAN cases + exact WB
   request contract pass, Venture wording fixed — but 3 blockers: B1 date assertion only checked
   `d.month==1` (a Jan-2 regression would pass) not the full Jan-1 date; B2 `macro-worldbank.md`
-  "percent indicators to all three" overstated provider coverage (GDP/CPI are WB-only; CPI_YOY/
+  "percent indicators to all three" overstated provider coverage (GDP is WB-only after unit
+  filtering; CPI is World Bank primary with DBnomics backup; CPI_YOY/
   POLICY_RATE are DBnomics-only; annual rates are WB-only — only growth/inflation/unemployment are
   WB+IMF); B3 `macro-and-fx.md` "any ISO3 country" overpromised — availability is provider/indicator-
   dependent. Plus 1 correction: test comment's "VNM/USA-style happy paths" claim inaccurate (VNM=
@@ -665,6 +666,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   provider/indicator-dependent-availability wording in macro-and-fx.md; test comment reworded. Full
   offline suite 3965 passed, docs-contract + no-secrets green. **Re-review requested from reviewer
   with SHA `5970ac7`; do NOT push or close yet.**
+
+  **Reviewer FINAL IMPLEMENTATION RE-REVIEW → APPROVE_WITH_NOTES** (`review-202607251847-issues199-
+  200-implementation-final.md`, reviewer commit `fb5dec4`, 18:47): all 3 blockers + correction
+  verified closed on `5970ac7`. Approved push range `8b9e57f..5970ac7`. 2 non-blocking notes (not
+  actioned now): pre-existing internal comments in `vnfin/macro/indicators.py`/`client.py` still
+  overgeneralize percent-provider coverage (production code, out of this correction's scope — fix
+  opportunistically if those files are next touched); public resolution comments must state only
+  product result/source decision/reopen criteria, no internal review vocabulary. **Proceeding to
+  push + close per the authorized closure sequence.**
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
