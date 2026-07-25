@@ -601,6 +601,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
+  Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
+  S&P/TSX Composite/60/Venture) in reviewer repo; specs `tasks/199-bangladesh-main-indices-spec.md` /
+  `tasks/200-canada-indicators-spec.md` (reviewer repo, mirror here if design note references them).
+  Batched as ONE source/design gate (shared `vnfin.indices` native-points architecture question) but
+  Bangladesh/Canada source-legal evidence + commits stay SEPARATE per country; neither is a fallback for
+  the other. **CAN macro validated 2026-07-25:** existing `vnfin.macro.get_indicator("CAN", ...)` on
+  current master already serves GDP/CPI/UNEMPLOYMENT/GDP_GROWTH/INFLATION cleanly via World Bank
+  (66/66/35/65/66 points) — no new macro code needed, just discoverability/docs/regression coverage.
+  Equity-index halves (DSEX/DS30/DSES; TSX Composite/60/Venture) need source/legal vetting +
+  capability-routing design BEFORE any code. **No implementation before design PASS; no ETF/proxy or
+  cross-country substitution; do not push or close.** Next: commit one design note (additive API/
+  capability routing + separate BD/CAN source-legal evidence + RED-first matrix + docs + clean-room
+  proof), request design review with the exact SHA.
+
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
   APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 + #187 both ✅
