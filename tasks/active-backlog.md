@@ -612,9 +612,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   (66/66/35/65/66 points) — no new macro code needed, just discoverability/docs/regression coverage.
   Equity-index halves (DSEX/DS30/DSES; TSX Composite/60/Venture) need source/legal vetting +
   capability-routing design BEFORE any code. **No implementation before design PASS; no ETF/proxy or
-  cross-country substitution; do not push or close.** Next: commit one design note (additive API/
-  capability routing + separate BD/CAN source-legal evidence + RED-first matrix + docs + clean-room
-  proof), request design review with the exact SHA.
+  cross-country substitution; do not push or close.**
+  **Design note committed `bf9855b`** (`tasks/199-200-design-note.md`): both equity-index halves are
+  **source-blocked** (BD: dsebd.org 403/no bulk-history endpoint, every alternative fails coverage/ToS/
+  is an excluded mirror; CAN: TMX Datalinx is the only full-coverage source but its terms exclude
+  redistribution rights, AV/Twelve Data/FMP/Marketstack/BoC/StatCan all confirmed absent) →
+  recommend source-gap-documented close for both (#182/#175 precedent), no proxy substitution.
+  CAN macro already fully served by existing country-generic World Bank adapter (live-probed 5/5
+  indicators). Only proposed change = RED-first CAN regression test + docs example (zero production
+  code, zero public-API/snapshot change) — gated same as any code. **Design gate requested from
+  reviewer with SHA `bf9855b`; awaiting verdict.**
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
