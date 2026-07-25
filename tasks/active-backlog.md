@@ -676,6 +676,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   product result/source decision/reopen criteria, no internal review vocabulary. **Proceeding to
   push + close per the authorized closure sequence.**
 
+  **✅ DONE 2026-07-25: #199 + #200 — PUSHED + CLOSED.** Pushed `8b9e57f..a7e6bbb` to `origin/master`
+  (verified: `5970ac7` + both `docs/research/2026-07-25-*.md` reports confirmed present on remote).
+  **#199 CLOSED** (source-gap-documented; comment `issuecomment-5078375795`). **#200 CLOSED**
+  (5-indicator CAN macro delivered via existing country-generic World Bank API + docs; equity-index
+  portion source-gap-documented with StatCan/TMX/Venture reopen criteria; comment
+  `issuecomment-5078376296`). Both independently re-read as `CLOSED` after posting. No production
+  code changed in this batch (`vnfin/` untouched); no public-API/snapshot change. `state/` left to
+  reviewer (do not advance watermark). Non-blocking follow-up (NOT actioned, tracked only):
+  `vnfin/macro/indicators.py`/`client.py` internal comments still overgeneralize percent-provider
+  coverage — fix opportunistically if those files are next touched (reviewer note, final-review
+  `fb5dec4`).
+
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
   APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 + #187 both ✅
