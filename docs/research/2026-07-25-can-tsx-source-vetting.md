@@ -165,35 +165,87 @@ Two distinct government sources, evidenced separately.
 - **Category: confirmed absent.**
 
 ### 3b. Statistics Canada — Table 10-10-0125-01 "Toronto Stock Exchange statistics"
-**New finding not identified in the prior pass.**
-- **Ownership/operator:** Statistics Canada (federal statistical agency), sourced from "Financial
-  market statistics from the Toronto Stock Exchange."
+**New finding not identified in the prior pass. REVISED 2026-07-25 (round-3) — a design-gate
+reviewer independently replayed this candidate (report `gate-202607251810-issues199-200-design-
+round2.md`, R2-B1/R2-B2) and found the round-2 version of this section overstated both the licence
+and the currency status. Corrected below with additional first-hand verification.**
+
+- **Ownership/operator:** Statistics Canada (federal statistical agency). **Not Statistics
+  Canada's own primary data** — table metadata footnote 1 states verbatim: *"As of January 2017,
+  this data is obtained from the Toronto Stock Exchange eReview, TMX Group Inc."* (footnote 3: prior
+  to Jan 2017 the source was the Bank of Canada). This is third-party-sourced data republished by
+  StatCan, confirmed via `getCubeMetadata` (`productId=10100125`, fetched 2026-07-25).
+- **Program/survey record:** StatCan's own program page for survey **5268** (Toronto Stock Exchange
+  Statistics), `https://www23.statcan.gc.ca/imdb-bmdi/pub/5268-eng.htm`, is StatCan's authoritative
+  program-status record for this series family — I could not directly render its content in this
+  pass (returned an empty/JS-shell response to a plain fetch); the design-gate reviewer's report
+  cites it directly for the program's inactive/discontinued status. Treat that program-status claim
+  as reviewer-sourced, not independently re-confirmed by me at the program-page level — but see the
+  cube-metadata footnote below, which I did verify directly and corroborates discontinuation.
 - **URL/endpoint:** Table page `https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1010012501`;
   programmatic retrieval via the StatCan Web Data Service (WDS) REST API:
   `https://www150.statcan.gc.ca/t1/wds/rest/getFullTableDownloadCSV/10100125/en` → returns
-  `{"status":"SUCCESS","object":"https://www150.statcan.gc.ca/n1/tbl/csv/10100125-eng.zip"}`.
-- **Auth requirements:** **None** — free, public, no API key, documented REST endpoint.
-- **Dated reachability (2026-07-25):** WDS call returned **HTTP 200**; the CSV ZIP downloaded
-  successfully (96,998 bytes) and was parsed directly.
-- **Historical span/frequency:** **Monthly**, 1956-01 through **2023-09** (last release 2023-11-01, per
-  metadata). No newer release found as of 2026-07-25 — the table has been effectively **stale for
-  ~2 years 9 months**; not marked formally "terminated" in the metadata `TERMINATED` column, but not
-  updating either.
-- **Identity coverage (verified directly by parsing the CSV's 25 distinct series names):**
+  `{"status":"SUCCESS","object":"https://www150.statcan.gc.ca/n1/tbl/csv/10100125-eng.zip"}`
+  (**independently re-verified 2026-07-25, HTTP 200**). Per-series metadata via
+  `getCubeMetadata`/`getSeriesInfoFromVector` (POST, JSON body) — **independently re-verified
+  2026-07-25**.
+- **Auth requirements:** **None** — free, public, no API key, documented REST endpoints.
+- **Dated reachability (2026-07-25, independently re-verified):** `getFullTableDownloadCSV` → HTTP
+  200; `getCubeMetadata` → HTTP 200, `cubeStartDate=1956-01-01`, `cubeEndDate=2023-09-01`,
+  `nbSeriesCube=25`, `nbDatapointsCube=11428`, `releaseTime=2023-11-01T08:30`. **Footnote 4 on the
+  cube (verbatim, confirmed):** *"Please note that this table is no longer being updated as of
+  November 1, 2023."* This is StatCan's own explicit discontinuation statement — stronger than
+  "effectively stale," and independent corroboration of the reviewer's "Inactive" program-status
+  finding even though I could not directly re-render the program-status page itself.
+- **Historical span/frequency — per-series, not table-wide (R2-B2 correction: the round-2 version
+  wrongly generalized the cube's overall 1956–2023-09 span to every series).** Verified directly via
+  `getSeriesInfoFromVector` (2026-07-25):
+
+  | Series | Vector | Unit | Confirmed by |
+  |---|---|---|---|
+  | Composite, close | `v122620` | `Index, 2000=1000` | direct `getSeriesInfoFromVector` call, 2026-07-25 |
+  | Composite, high | `v122618` | `Index, 2000=1000` | direct `getSeriesInfoFromVector` call, 2026-07-25 |
+  | Composite, low | `v122619` | `Index, 2000=1000` | direct `getSeriesInfoFromVector` call, 2026-07-25 |
+  | TSX 60 | `v19457778` | `Index` | reviewer-verified; vector ID independently confirmed present in my own metadata pull |
+
+  Exact per-vector start/end dates were not re-pulled point-by-point in this pass (would require a
+  full `getDataFromVectorsAndLatestNPeriods`/CSV date-column parse); the design-gate reviewer's
+  report states them from a direct CSV replay: Composite close 1956-01–2023-09, Composite
+  high/low 1976-01–2023-09, TSX 60 1982-01–2023-09 — cited here as reviewer-verified, not
+  independently re-derived by me at the per-date level. All series share the **2023-09 stale-since
+  cutoff** (~2.75 years as of 2026-07-25) confirmed by the cube-level `cubeEndDate` above.
+- **Download shape / service limits:** full-table CSV download, no pagination (11,428 rows across
+  25 series in one file per the cube metadata above). WDS-documented rate limits (25 req/sec/IP, 50
+  server-wide, `409` during maintenance windows) per the reviewer's report — not independently
+  re-verified by me (would require load-testing, out of scope for a vetting pass).
+- **Identity coverage (verified directly by parsing the CSV's 25 distinct series names + the vector
+  table above):**
   - **"Standard and Poor's/Toronto Stock Exchange Composite Index"** (close/high/low variants) —
     **present**, data through 2023-09.
   - **"Standard and Poor's/Toronto Stock Exchange 60 Index"** — **present**, data through 2023-09.
   - **S&P/TSX Venture Composite** — **absent**. No series with "Venture" in its name exists anywhere
     in the 25-series table.
-- **Redistribution/licensing posture:** Statistics Canada data is published under the Government of
-  Canada's **Open Government Licence – Canada**, which (per its well-established standard terms)
-  permits copying, modifying, publishing, and distributing the data, including for commercial use,
-  subject to attribution. (Note: this pass did not re-fetch the OGL text itself verbatim this round —
-  flagging as a known, standard, publicly documented licence rather than a freshly quoted clause.)
-- **Category: this is a genuine partial pass, not one of the 4 standard labels** —
-  **"confirmed present"** for S&P/TSX Composite + S&P/TSX 60 (monthly, native index points, free,
-  keyless, openly licensed, but **stale** since 2023-09 and monthly-only — not daily); **"confirmed
-  absent"** for S&P/TSX Venture Composite.
+- **Redistribution/licensing posture — CORRECTED (R2-B1, the decisive finding).** Round-2 wrongly
+  called this the "Open Government Licence" with unqualified "openly licensed"/"lawful" language.
+  The applicable instrument is the **Statistics Canada Open Licence**
+  (`https://www.statcan.gc.ca/en/terms-conditions/open-licence`), a distinct instrument from the
+  government-wide OGL. Its own FAQ
+  (`https://www.statcan.gc.ca/en/terms-conditions/open-licence-faq`, fetched directly 2026-07-25)
+  states verbatim: *"information for which third parties own intellectual property rights is
+  excluded from the Statistics Canada Open Licence. For such materials, you will need to contact
+  the owner to obtain guidelines on use of their information."* Given this table's own footnote 1
+  names TMX Group Inc. (and, pre-2017, the Bank of Canada) as the data's actual source, and nothing
+  in the committed record establishes that StatCan's agreement with TMX/S&P grants StatCan (and
+  thus StatCan's licensees) the right to sub-license/redistribute the underlying index values, the
+  correct classification is: **reuse rights for the TMX/S&P-sourced index values are unresolved**,
+  not "openly licensed." Runtime-only retrieval by an end user reduces redistribution exposure
+  somewhat but does not cure an unresolved third-party rights question for a library that would
+  routinely re-serve the values to its own callers.
+- **Category: technical identity/API confirmed; reuse rights inconclusive (not one of the 4
+  standard labels, and not "confirmed present" as round-2 wrongly called it).** Composite + TSX 60:
+  real, keyless, technically-reachable, monthly, **stale since 2023-09**, but **licence-unresolved**
+  for the third-party index values. Venture Composite: **confirmed absent** (no series exists,
+  independent of the licence question).
 
 ---
 
@@ -267,9 +319,14 @@ Two distinct government sources, evidenced separately.
 | `TSXV` | `{"data":[],"status":"ok"}` — zero matches |
 | `S%26P%2FTSX` (URL-encoded `S&P/TSX`) | 24+ matches, **all ETFs** (`XIC` iShares Core S&P/TSX Capped Composite Index ETF, `ZCN` BMO S&P/TSX Capped Composite Index ETF, `XSPC`, `HXF`, sector-capped ETFs, leveraged BetaPro ETFs, etc.) — zero results with `instrument_type` other than ETF/Mutual Fund |
 
-- **Category: confirmed absent** — no permutation returned a native index instrument; every non-empty
-  result was an ETF or an index-*linked* structured note, i.e. exactly the proxy category the task
-  excludes.
+- **Category: inconclusive/unresolved — downgraded from round-2's "confirmed absent" (R2-B3.1).**
+  Six relevance-ranked `symbol_search` queries returning no native index instrument (only ETFs/
+  structured notes) shows the search endpoint doesn't surface one under those specific query
+  strings — it does not enumerate Twelve Data's complete index catalog, so it cannot support a
+  "confirmed absent" claim the way the Alpha Vantage `INDEX_CATALOG` full-catalog pull does. Every
+  probed permutation is, however, consistent with absence and with the proxy-only pattern the task
+  excludes; a definitive answer would require Twelve Data's own complete index-catalog endpoint
+  (not found/tested in this pass).
 
 ---
 
@@ -317,11 +374,13 @@ all three headline S&P/TSX indices** — but this pass surfaces one genuine **pa
 pass missed, and meaningfully softens (without reversing) the TMX conclusion:
 
 1. **No candidate in this pass provides all 3 target indices, daily, free, and self-serve.**
-2. **Statistics Canada (Table 10-10-0125-01, free WDS API, no key, Open Government Licence) is a
-   confirmed, directly-verified, lawful source for S&P/TSX Composite and S&P/TSX 60 as native index
-   points** — but only monthly, and stale since 2023-09 (no update in ~2.75 years as of 2026-07-25). It
-   does **not** carry Venture Composite at all. This is real, usable data today for 2 of 3 indices,
-   with the caveat that it cannot serve a "current" use case.
+2. **Statistics Canada (Table 10-10-0125-01, free WDS API, no key) is technically reachable and
+   directly verified to carry S&P/TSX Composite and S&P/TSX 60 as native index points** — but
+   monthly, stale since 2023-09 (no update in ~2.75 years as of 2026-07-25), AND with **unresolved
+   third-party reuse rights** (round-3 correction, R2-B1: the table's own footnotes name TMX Group/
+   Bank of Canada as the actual data source, and the Statistics Canada Open Licence FAQ excludes
+   third-party-owned IP — this is not "openly licensed," it is licence-unresolved). It does **not**
+   carry Venture Composite at all regardless of the licence question.
 3. **TMX Datalinx is the only entity with a documented, automatable, token-authenticated REST+SFTP API
    for all 3 indices at daily/tick granularity** — the prior pass's "legally impossible" conclusion is
    corrected to **"paid and EULA-unverified but architecturally plausible."** A real self-serve
@@ -331,19 +390,24 @@ pass missed, and meaningfully softens (without reversing) the TMX conclusion:
    governing whether an individual's own automated script is a permitted use is sign-in-gated and could
    not be read this round. **Category: inconclusive/unresolved**, not "not exposed through a lawful
    API."
-4. **S&P DJI direct**, **Alpha Vantage**, and **Twelve Data** are cleanly resolved as **not usable**:
-   S&P DJI = institutional-subscriber-only as evidenced (bounded by 403s); Alpha Vantage and Twelve
-   Data = **confirmed absent** via direct, reproducible endpoint evidence.
+4. **S&P DJI direct and Alpha Vantage are cleanly resolved as not usable**: S&P DJI =
+   institutional-subscriber-only as evidenced (bounded by 403s); Alpha Vantage = **confirmed absent**
+   via direct, reproducible full-catalog endpoint evidence.
+4b. **Twelve Data is downgraded to inconclusive/unresolved (round-3 correction, R2-B3.1)** — 6
+   relevance-ranked `symbol_search` queries found no native instrument, but that does not enumerate
+   Twelve Data's complete index catalog, so "confirmed absent" overstated the evidence.
 5. **Stooq, FMP, and Marketstack remain genuinely unresolved**, each for a different, explicitly
    evidenced reason (Stooq: site-wide bot-challenge blocking direct verification despite a plausible
    cached-title identity signal for Composite only; FMP/Marketstack: demo-key rejection + gated docs).
 
-**Recommendation for vnfin:** do not build a native-index-point adapter for these 3 indices from any
-free/keyless source at daily frequency today. If monthly-and-historical-only is acceptable for a
-research/backtesting use case, StatCan can serve Composite + TSX 60 (not Venture) today, license-clean,
-no key. A production daily adapter would require either (a) a TMX Datalinx paid BYOK integration —
-pending the reopen criteria below — or (b) Boss-approved escalation to a different data category
-(explicitly out of scope for this pass, which was index-points-only).
+**Recommendation for vnfin (round-3 correction):** do not build a native-index-point adapter for
+these 3 indices from any source today — not because no technical/keyless path exists (StatCan's
+does), but because StatCan's reuse rights for the third-party TMX/S&P index values are unresolved,
+not license-clean as round-2 wrongly stated. A future build requires one of: (a) written
+confirmation from Statistics Canada that Table 10-10-0125-01's TMX/S&P-sourced series are covered
+for reuse/redistribution under the Open Licence, or an equivalent grant from TMX/S&P directly; (b) a
+TMX Datalinx paid BYOK integration once the sign-in-gated EULA is read and confirms per-user
+automated-retrieval is permitted use.
 
 ## What changed from the prior pass
 
@@ -362,13 +426,26 @@ pending the reopen criteria below — or (b) Boss-approved escalation to a diffe
    (e) the real, evidenced friction is a **recurring cost floor (≈C$163.53/mo)** plus a
    **sign-in-gated, unread EULA** whose exact permitted-use language could not be confirmed. TMX is
    downgraded from "legally blocked" to "inconclusive/unresolved."
-3. **New finding: Statistics Canada Table 10-10-0125-01**, not identified in the prior pass — a free,
-   keyless, openly-licensed, directly-verified source for S&P/TSX Composite + S&P/TSX 60 (monthly,
-   1956–2023-09, stale, no Venture Composite).
+3. **New finding: Statistics Canada Table 10-10-0125-01**, not identified in the round-1 pass — a
+   free, keyless, technically-reachable source for S&P/TSX Composite + S&P/TSX 60 (monthly,
+   stale since 2023-09, no Venture Composite). **Round-3 correction (this section):** its licence
+   status was overstated in round-2 as "Open Government Licence"/"openly licensed"/"lawful." A
+   design-gate reviewer replay (`gate-202607251810-issues199-200-design-round2.md`) plus my own
+   direct fetch of the Statistics Canada Open Licence FAQ and the table's own third-party-source
+   footnotes established this is the distinct **Statistics Canada Open Licence**, which explicitly
+   excludes third-party-owned IP — and the table's own footnotes name TMX Group (post-2017) / Bank
+   of Canada (pre-2017) as the actual data source. Reuse rights for the index values are therefore
+   **unresolved**, not license-clean. Per-vector coverage was also corrected from a single
+   cube-wide 1956–2023-09 span to the reviewer-verified per-series spans (Composite close 1956-01–
+   2023-09; Composite high/low 1976-01–2023-09; TSX 60 1982-01–2023-09), and the table's status is
+   recorded as no-longer-updated-since-2023-11-01 per its own footnote 4 (independently
+   re-verified), not merely "effectively stale."
 4. **Stooq, Twelve Data, FMP, and Marketstack vetted with exact, reproducible evidence** per the
    reviewer's instructions (exact Twelve Data permutation table; Stooq bot-challenge documented with a
    working-control comparison against `^SPX`; FMP/Marketstack explicitly bounded as unresolved rather
-   than silently treated as absent).
+   than silently treated as absent). **Round-3 correction:** Twelve Data's verdict was itself
+   downgraded from "confirmed absent" to "inconclusive/unresolved" (R2-B3.1) — 6 relevance-ranked
+   queries don't enumerate a full catalog.
 5. **Bank of Canada Valet confirmed absent via a full programmatic sweep** of all 15,906 series and
    2,524 groups (not a spot-check), finding only incidental chart-annotation series, not a real S&P/TSX
    index series.
@@ -388,9 +465,14 @@ following becomes true:
    decision, not a legal blocker.
 2. **S&P DJI direct:** a documented individually-licensable (even paid) self-serve API signup path is
    found beyond the institutional-subscriber-oriented brochure currently on file.
-3. **Statistics Canada:** already usable today for Composite + TSX 60 at monthly frequency under the
-   Open Government Licence — reopens fully to "resolved" once (a) a successor/updated table is found
-   replacing the stale 2023-09 cutoff, and (b) a distinct lawful source is found for Venture Composite.
+3. **Statistics Canada (round-3 correction — NOT already usable today, licence-unresolved):**
+   reopens once Statistics Canada confirms in writing that Table 10-10-0125-01's TMX/S&P-sourced
+   Composite and TSX 60 series are covered for reuse/redistribution under the Statistics Canada
+   Open Licence (or TMX/S&P supplies an equivalent grant directly). Even once reuse rights are
+   confirmed, this stays an explicitly historical/archival series (frozen 2023-09, monthly) unless a
+   successor/updated table is later found — it must never be presented as a current quote. A
+   distinct lawful source would still be needed for Venture Composite regardless of the licence
+   outcome for Composite/TSX 60.
 4. **Stooq:** reopens once direct reachability succeeds past today's bot-challenge and the exact symbol
    set (especially S&P/TSX 60 and Venture Composite, currently unconfirmed) and stated terms of use are
    read directly rather than inferred from cached search-index titles.

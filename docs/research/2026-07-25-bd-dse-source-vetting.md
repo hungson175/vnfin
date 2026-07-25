@@ -339,10 +339,14 @@ SPY/QQQ chain via Stooq `^SPX`), so this candidate matters for architectural con
   would require a data-licensing agreement, standard for CEIC-class aggregators.
 - **Identity coverage:** DSEX and DS30 pages exist on CEIC (confirmed via CEIC's own site titles in
   search results); DSES **unknown/not checked**.
-- **Category:** **Not exposed through a lawful API** — a public API exists in principle but only under
-  paid/negotiated commercial licensing, which is out of scope for an OSS clean-room library without a
-  paid contract; and the visible frequency (monthly) is coarser than the native index's actual (daily)
-  publication cadence.
+- **Category: unresolved (round-3 correction, R2-B3.2) — not "not exposed through a lawful API."**
+  Being paid/negotiated does not by itself make CEIC's API unlawful for an OSS library to use — many
+  commercial data providers are lawfully usable under a paid contract. What's actually unresolved:
+  exact per-user access terms, whether a self-serve (even paid) individual key exists vs.
+  enterprise-only, DSES identity coverage, and the specific redistribution clause. Would need a
+  direct read of CEIC's own subscription terms to classify definitively; not attempted in this pass.
+  Independent of that, the visible frequency (monthly) is coarser than the native index's actual
+  (daily) publication cadence, which would limit its usefulness regardless of licensing.
 
 ---
 
@@ -386,9 +390,11 @@ technical functionality.
 - **Result (2026-07-25):** no evidence found of a BSEC or Bangladesh Bank open-data API exposing
   exchange index levels — both are regulatory/macro institutions, not index-data publishers; index
   publication is DSE's own function (Section 1), not the regulator's or central bank's.
-- **Category:** **Confirmed absent** — no such API/data product was found to exist at either
-  institution for these specific index identities (regulators publish oversight/macro data, not
-  proprietary exchange index series).
+- **Category: no source found in the bounded search (round-3 correction, R2-B3.3) — not "confirmed
+  absent."** A targeted web search finding no hit is not authoritative-catalog proof of absence the
+  way the Alpha Vantage `INDEX_CATALOG` full-catalog pull is for that provider; this is a lower-
+  confidence negative-evidence finding, honestly labeled as such rather than upgraded to a
+  confirmed-absent claim.
 
 ---
 
@@ -397,18 +403,20 @@ technical functionality.
 No candidate examined in this pass yields a lawful, technically adequate, native-index-point feed for
 DSEX/DS30/DSES suitable for an OSS redistributable library:
 
-- **Confirmed absent:** Alpha Vantage (`INDEX_CATALOG`, verified endpoint), BSEC/Bangladesh Bank.
+- **Confirmed absent:** Alpha Vantage (`INDEX_CATALOG`, verified full-catalog endpoint).
 - **Not exposed through a lawful API** (data exists but redistribution/automated-use is explicitly
-  forbidden or requires a commercial license not available to an OSS project): DSE official
-  (copyright.htm/termsacond.htm forbid redistribution and storage in any other retrieval system),
-  TradingView (ToS forbids building products on its content / no API commercial use), CEIC (paid
-  subscription only, and only monthly granularity even if licensed), unofficial mirrors (inherit DSE's
-  own restriction).
-- **Inconclusive/unresolved** (genuinely blocked by sandbox/tooling limits, not by a confirmed absence
-  or confirmed prohibition): Stooq (anti-bot JS wall + `robots.txt: Disallow: /` for generic agents —
-  could not verify symbol existence at all), FMP (demo key rejected, no real key available, docs page
-  text silent on Bangladesh), Marketstack (JS-rendered docs didn't expose content, no key available),
-  Mendeley/Kaggle (not freshly searched with dated verification).
+  forbidden): DSE official (copyright.htm/termsacond.htm forbid redistribution and storage in any
+  other retrieval system), TradingView (ToS forbids building products on its content / no API
+  commercial use), unofficial mirrors (inherit DSE's own restriction).
+- **Inconclusive/unresolved** (genuinely blocked by sandbox/tooling limits or bounded search depth,
+  not by a confirmed absence or confirmed prohibition — round-3 correction, R2-B3.2/B3.3, moves CEIC
+  and BSEC/Bangladesh Bank into this bucket): Stooq (anti-bot JS wall + `robots.txt: Disallow: /`
+  for generic agents — could not verify symbol existence at all), FMP (demo key rejected, no real
+  key available, docs page text silent on Bangladesh), Marketstack (JS-rendered docs didn't expose
+  content, no key available), Mendeley/Kaggle (not freshly searched with dated verification), CEIC
+  (paid, but paid ≠ unlawful — exact per-user terms/self-serve availability/DSES coverage not
+  established), BSEC/Bangladesh Bank (no hit in a bounded search, not an authoritative-catalog
+  absence proof).
 - **Temporarily unreachable:** Investing.com's ToS pages (network egress from this sandbox to
   investing.com/its CDN failed on every attempt) — structurally it is very likely in the same
   "not exposed through a lawful API" bucket as TradingView/DSE based on the second-hand ToS language
@@ -457,5 +465,21 @@ further scraping.
    `copyright.htm`/`termsacond.htm` text verbatim, which is new evidence not present in the prior pass
    and is the strongest, most direct basis for the "not exposed through a lawful API" verdict on the
    official source.
-6. **BSEC/Bangladesh Bank explicitly checked** (not addressed at all in the prior pass) — confirmed
-   absent as index-data providers; that function belongs to DSE itself.
+6. **BSEC/Bangladesh Bank explicitly checked** (not addressed at all in the prior pass) — no
+   evidence of coverage found; that function belongs to DSE itself.
+
+## Round-3 correction (design-gate finding R2-B3, `gate-202607251810-issues199-200-design-round2.md`)
+
+A design-gate reviewer found two categories in this report overstated the evidence beyond what a
+bounded search/negative result can support. Both corrected in place above (Sections 8 and 11):
+
+1. **CEIC** moved from "not exposed through a lawful API" to **unresolved** — being a paid platform
+   does not itself make an API unlawful; what's actually unresolved is exact per-user access terms,
+   whether any self-serve (even paid) tier exists, and DSES coverage.
+2. **BSEC/Bangladesh Bank** moved from "confirmed absent" to **no source found in the bounded
+   search** — a targeted search returning no hit is not the same as an authoritative-catalog
+   absence proof (unlike Alpha Vantage's full-catalog `INDEX_CATALOG` pull, which does support
+   "confirmed absent").
+
+These corrections narrow the evidentiary claims; they do not change the overall source-blocked
+conclusion for DSEX/DS30/DSES (§ Executive verdict).
