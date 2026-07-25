@@ -613,15 +613,25 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   Equity-index halves (DSEX/DS30/DSES; TSX Composite/60/Venture) need source/legal vetting +
   capability-routing design BEFORE any code. **No implementation before design PASS; no ETF/proxy or
   cross-country substitution; do not push or close.**
-  **Design note committed `bf9855b`** (`tasks/199-200-design-note.md`): both equity-index halves are
-  **source-blocked** (BD: dsebd.org 403/no bulk-history endpoint, every alternative fails coverage/ToS/
-  is an excluded mirror; CAN: TMX Datalinx is the only full-coverage source but its terms exclude
-  redistribution rights, AV/Twelve Data/FMP/Marketstack/BoC/StatCan all confirmed absent) →
-  recommend source-gap-documented close for both (#182/#175 precedent), no proxy substitution.
-  CAN macro already fully served by existing country-generic World Bank adapter (live-probed 5/5
-  indicators). Only proposed change = RED-first CAN regression test + docs example (zero production
-  code, zero public-API/snapshot change) — gated same as any code. **Design gate requested from
-  reviewer with SHA `bf9855b`; awaiting verdict.**
+  **Round-1 design note `bf9855b` → reviewer DESIGN GATE BLOCK** (`review-202607251743-issues199-200-
+  design-note.md`, reviewer commit `51c5ba3`, 17:45): 6 findings (B1 wrong AV `LISTING_STATUS` evidence;
+  B2 overbroad TMX legal inference; B3 evidence only in `/tmp` scratch paths, not durable; B4 incomplete
+  Stooq/FMP/Marketstack vetting; B5 mislabeled "RED-first"/wrong fixture-convention claim in CAN macro
+  test plan; B6 mislabeled code reference). No implementation/close/push attempted — correctly gated.
+  **Round-2 design note committed `ad8775a`**, all 6 findings corrected, durable evidence committed to
+  `docs/research/2026-07-25-{bd-dse,can-tsx}-source-vetting.md`. #199 Bangladesh unchanged conclusion
+  (source-blocked, close-with-reopen) on corrected evidence (AV `INDEX_CATALOG` not `LISTING_STATUS`;
+  DSE's own copyright.htm/termsacond.htm now the decisive block, not a 403 — the round-1 403 turned out
+  to be a local sandbox TLS-trust gap, site is actually reachable). **#200 NEW FINDING changes the
+  picture:** StatCan Table 10-10-0125-01 (free/keyless/Open Government Licence) directly verified to
+  carry S&P/TSX Composite + S&P/TSX 60 as native points (monthly, 1956–2023-09, stale ~2.75yr, no
+  Venture) → #200 equity-index half is now 3-way, not one verdict: Venture=source-blocked/close;
+  Composite+60=real source found, needs an explicit reviewer/Boss **scope call** (stale-monthly
+  acceptable as v1? doesn't fit `indices.world()`'s daily shape) before build-or-close; TMX
+  downgraded legally-blocked→inconclusive/unresolved (real REST+SFTP API exists, EULA unread/
+  sign-in-gated). CAN macro unaffected, still fully served, only proposed change = a relabeled
+  characterization/regression test (not RED-first) + 3-part docs fix. **Re-gate requested from
+  reviewer with SHA `ad8775a`; awaiting verdict.**
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
