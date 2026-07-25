@@ -618,20 +618,25 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   B2 overbroad TMX legal inference; B3 evidence only in `/tmp` scratch paths, not durable; B4 incomplete
   Stooq/FMP/Marketstack vetting; B5 mislabeled "RED-first"/wrong fixture-convention claim in CAN macro
   test plan; B6 mislabeled code reference). No implementation/close/push attempted — correctly gated.
-  **Round-2 design note committed `ad8775a`**, all 6 findings corrected, durable evidence committed to
-  `docs/research/2026-07-25-{bd-dse,can-tsx}-source-vetting.md`. #199 Bangladesh unchanged conclusion
-  (source-blocked, close-with-reopen) on corrected evidence (AV `INDEX_CATALOG` not `LISTING_STATUS`;
-  DSE's own copyright.htm/termsacond.htm now the decisive block, not a 403 — the round-1 403 turned out
-  to be a local sandbox TLS-trust gap, site is actually reachable). **#200 NEW FINDING changes the
-  picture:** StatCan Table 10-10-0125-01 (free/keyless/Open Government Licence) directly verified to
-  carry S&P/TSX Composite + S&P/TSX 60 as native points (monthly, 1956–2023-09, stale ~2.75yr, no
-  Venture) → #200 equity-index half is now 3-way, not one verdict: Venture=source-blocked/close;
-  Composite+60=real source found, needs an explicit reviewer/Boss **scope call** (stale-monthly
-  acceptable as v1? doesn't fit `indices.world()`'s daily shape) before build-or-close; TMX
-  downgraded legally-blocked→inconclusive/unresolved (real REST+SFTP API exists, EULA unread/
-  sign-in-gated). CAN macro unaffected, still fully served, only proposed change = a relabeled
-  characterization/regression test (not RED-first) + 3-part docs fix. **Re-gate requested from
-  reviewer with SHA `ad8775a`; awaiting verdict.**
+  **Round-2 design note `ad8775a` → reviewer DESIGN GATE BLOCK #2** (`gate-202607251810-issues199-200-
+  design-round2.md`, reviewer commit `87acdc4`, 18:12): round-2 correctly fixed gate-1's B1/B2/B3/B4/B6,
+  but the decisive new problem was StatCan's licence: R2-B1 — the table's TMX/Bank-of-Canada-sourced
+  index values are NOT established as reusable under the Statistics Canada Open Licence (its FAQ
+  excludes third-party IP) — round-2 wrongly called this "openly licensed"/"lawful". R2-B2 wrong
+  per-series spans/status (generalized cube-wide span, missed "inactive since 2023-11-01"). R2-B3
+  4 more overclaimed categories (Twelve Data/CEIC/BSEC-BB/DSE-redistribution). R2-B4 internally
+  contradictory CAN fixture plan (real CAN request + fabricated countryiso3code can't coexist — adapter's
+  mismatch guard would reject it). R2-B5 docs/line-range gaps. **Reviewer's PO disposition resolved the
+  scope question directly** (not punted further): #200's equity-index portion closes as documented
+  source gap alongside #199 — archival-only StatCan history is PRE-APPROVED in-scope IF reuse rights are
+  later proven (mandatory frequency/last-observation/provenance/end-gap disclosure, never `PriceHistory`).
+  **Round-3 design note committed `0d3521f`**, all 5 R2 findings corrected (StatCan reclassified
+  "technical identity/API confirmed; reuse rights inconclusive"; exact per-vector spans; Twelve
+  Data/CEIC/BSEC-BB downgraded to inconclusive/bounded-search-negative; CAN fixture fixed to real
+  CAN+WDI-code identifiers + fabricated display/dates/values, single public seam; docs/line-range
+  fixed). Both issues now close symmetrically (source-gap-documented + reopen criteria); CAN macro
+  proceeds to implementation separately post-PASS. **Final re-gate requested from reviewer with SHA
+  `0d3521f`; awaiting verdict.**
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
