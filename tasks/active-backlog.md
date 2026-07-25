@@ -630,13 +630,26 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   scope question directly** (not punted further): #200's equity-index portion closes as documented
   source gap alongside #199 — archival-only StatCan history is PRE-APPROVED in-scope IF reuse rights are
   later proven (mandatory frequency/last-observation/provenance/end-gap disclosure, never `PriceHistory`).
-  **Round-3 design note committed `0d3521f`**, all 5 R2 findings corrected (StatCan reclassified
-  "technical identity/API confirmed; reuse rights inconclusive"; exact per-vector spans; Twelve
-  Data/CEIC/BSEC-BB downgraded to inconclusive/bounded-search-negative; CAN fixture fixed to real
-  CAN+WDI-code identifiers + fabricated display/dates/values, single public seam; docs/line-range
-  fixed). Both issues now close symmetrically (source-gap-documented + reopen criteria); CAN macro
-  proceeds to implementation separately post-PASS. **Final re-gate requested from reviewer with SHA
-  `0d3521f`; awaiting verdict.**
+  **Round-3 design note `0d3521f` → reviewer FINAL DESIGN GATE APPROVE_WITH_NOTES**
+  (`gate-202607251826-issues199-200-design-final.md`, reviewer commit `eddbf22`, 18:26). All R2
+  findings closed. Approved disposition: #199 = documented source gap, close after evidence pushed;
+  #200 macro = implement 5-indicator CAN regression + 3 docs corrections; #200 equity = documented
+  source gap (StatCan technical/rights-inconclusive, Venture no adequate source, TMX EULA-
+  inconclusive), close after macro deliverable is implementation-reviewed+pushed+verified; future
+  StatCan = in-scope IF rights proven, archival-only (never `PriceHistory`). 5 mandatory notes: fix
+  overbroad Venture wording, update test-module fixture-policy docstring (real CAN/WDI identity OK,
+  fabricate display/dates/values), assert exactly 1 WB call + exact params, full lifecycle sequence
+  (implement→impl-review→push→verify remote→resolution comments→close→re-verify CLOSED), no internal
+  review vocabulary in public comments.
+  **Implementation committed `7d1ce52`**: `test_can_public_path_five_indicators` (5 parametrized
+  cases, public `vnfin.macro.get_indicator("CAN",...)` seam, real CAN+WDI-code identity + fabricated
+  display/dates/values, asserts exactly 1 HTTP call + exact params `{"format":"json","per_page":20000}`
+  + full identity/unit/currency/frequency/ordering); test-module docstring updated; both Venture
+  wording spots fixed; `docs/tutorials/macro-and-fx.md` broadened + 5-indicator CAN example;
+  `docs/sources/macro-worldbank.md` CPI-routing + currency="USD" claims fixed. No production code
+  touched, no public-API/snapshot change. Full suite green (exit0), docs-contract green, no-secrets
+  green. **Implementation review requested from reviewer with SHA `7d1ce52`; do NOT push or close
+  yet.**
 
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
