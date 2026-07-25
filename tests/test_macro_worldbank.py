@@ -24,6 +24,7 @@ World Bank response shapes covered:
 - null obs value: an obs whose "value" is null (missing year) -> skipped, not InvalidData
 """
 import json
+from datetime import date
 
 import pytest
 
@@ -911,11 +912,14 @@ def test_wb_distinct_observation_dates_accepted():
 # Issue #199/#200 batch — CAN public-path regression.
 #
 # Proves the country-generic World Bank macro path actually serves a SECOND
-# real country end-to-end through the PUBLIC seam, not just VNM/USA-style
-# happy paths. Uses real contract identifiers (CAN + the real WDI code per
-# indicator) because identity/routing validation is the behavior under test
-# (see the module docstring); display name/dates/values stay fabricated.
-# Offline/mocked only — proves the code path, not live provider availability.
+# real country end-to-end through the PUBLIC seam — a second successful public
+# happy path, not just format-validation cases (existing VNM uses are
+# validation/fake-source paths; USA appears only in a country-mismatch test,
+# never a successful public World Bank path). Uses real contract identifiers
+# (CAN + the real WDI code per indicator) because identity/routing validation
+# is the behavior under test (see the module docstring); display name/dates/
+# values stay fabricated. Offline/mocked only — proves the code path, not
+# live provider availability.
 # ---------------------------------------------------------------------------
 
 _CAN_INDICATOR_CASES = [
@@ -963,6 +967,7 @@ def test_can_public_path_five_indicators(indicator, wdi_code, unit, currency):
     assert result.currency == currency
     assert result.frequency == Frequency.ANNUAL
     dates = [d for d, _ in result.points]
-    assert dates == sorted(dates)  # ascending despite newest-first fixture order
-    assert [d.month for d in dates] == [1, 1]  # annual observations stamp Jan-1
+    # Exact ordered dates: covers day (Jan-1, not merely "January"), year, and
+    # ascending order together, despite the fixture being fed newest-first.
+    assert dates == [date(2021, 1, 1), date(2022, 1, 1)]
     assert len(result.points) == 2

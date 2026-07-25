@@ -1,8 +1,11 @@
 # Tutorial: macro and FX
 
-Use this guide for macro indicators (any ISO3 country — the World Bank source is country-generic)
-and VND FX reference rates. Vietnam (`VNM`) is the running example below; the "Cross-country
-example" section shows a second country end-to-end.
+Use this guide for macro indicators and VND FX reference rates. `get_indicator` accepts any
+ISO3-shaped country code and is not restricted to a hardcoded list — but actual series
+**availability is provider- and indicator-dependent** (see the routing table in
+[World Bank source notes](../sources/macro-worldbank.md#default-no-key-chain--unit-safety)); a
+well-formed ISO3 code is not itself a coverage guarantee. Vietnam (`VNM`) is the running example
+below; the "Cross-country example" section shows a second country end-to-end.
 
 ## FX rates
 
@@ -42,8 +45,10 @@ The no-key macro chain is World Bank → IMF DataMapper → DBnomics. Indicator 
 
 ### Cross-country example (Canada)
 
-`get_indicator` takes any ISO3 country code — there is no per-country branching in the client.
-Canada (`CAN`) serves all five annual World Bank indicators shown so far:
+`get_indicator` accepts a supported ISO3 country code — there is no per-country branching in the
+client, but series availability still depends on whether the underlying provider(s) actually
+publish that country. Canada (`CAN`) is verified to serve all five annual World Bank indicators
+shown so far:
 
 ```python
 canada_gdp = vnfin.macro.get_indicator("CAN", MacroIndicator.GDP)             # current US$

@@ -55,10 +55,21 @@ Each observation object: `indicator{id,value}`, `country{id,value}`, `countryiso
 SAME canonical `MacroIndicator` across providers. Before the generic failover engine
 is built, sources are **pre-filtered by unit** so only sources emitting the exact
 canonical unit for the indicator survive (`vnfin/macro/indicators.py:eligible_sources`).
-This is why GDP resolves to World Bank (`current US$`), CPI-index to **World Bank**
-(`FP.CPI.TOTL`, first-capable in chain order — not DBnomics), and the
-percent indicators to all three — without ever tripping `UnitMismatchError`. See
-`docs/design/macro-no-key-byok.md` for the full semantic contract.
+Provider coverage per indicator is **not uniform across all three** — each provider only maps the
+indicators it actually supports, in the canonical unit:
+
+| Indicator | World Bank | IMF DataMapper | DBnomics |
+|---|---|---|---|
+| `GDP` (current US$) | ✅ | — (IMF's `NGDPD` is `USD bn`, unit-filtered out) | — (national currency, unit-filtered out) |
+| `CPI` (index) | ✅ (`FP.CPI.TOTL`, first-capable — not DBnomics) | — | ✅ (backup only) |
+| `GDP_GROWTH`, `INFLATION`, `UNEMPLOYMENT` (%) | ✅ | ✅ | — (not mapped) |
+| `CPI_YOY`, `POLICY_RATE` (monthly) | — (not mapped) | — (not mapped) | ✅ (sole source) |
+| `LENDING_RATE`, `DEPOSIT_RATE`, `REAL_INTEREST_RATE` (% p.a., #152) | ✅ (sole source) | — | — |
+
+This is why GDP and CPI resolve to World Bank specifically (not "any of three"), the percent
+growth/inflation/unemployment trio has a genuine 2-source WB→IMF failover, and CPI_YOY/POLICY_RATE/
+the annual rate indicators each reduce to a single-source chain — all without ever tripping
+`UnitMismatchError`. See `docs/design/macro-no-key-byok.md` for the full semantic contract.
 
 ## Annual fixed-income rate indicators (#152)
 
