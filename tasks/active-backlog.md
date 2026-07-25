@@ -651,6 +651,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   green. **Implementation review requested from reviewer with SHA `7d1ce52`; do NOT push or close
   yet.**
 
+  **Reviewer IMPLEMENTATION REVIEW → BLOCK** (`review-202607251840-issues199-200-implementation.md`,
+  reviewer commit `570016b`, 18:40): correctly constrained (no `vnfin/` change), CAN cases + exact WB
+  request contract pass, Venture wording fixed — but 3 blockers: B1 date assertion only checked
+  `d.month==1` (a Jan-2 regression would pass) not the full Jan-1 date; B2 `macro-worldbank.md`
+  "percent indicators to all three" overstated provider coverage (GDP/CPI are WB-only; CPI_YOY/
+  POLICY_RATE are DBnomics-only; annual rates are WB-only — only growth/inflation/unemployment are
+  WB+IMF); B3 `macro-and-fx.md` "any ISO3 country" overpromised — availability is provider/indicator-
+  dependent. Plus 1 correction: test comment's "VNM/USA-style happy paths" claim inaccurate (VNM=
+  validation paths, USA=mismatch-test only, neither is a successful public happy path).
+  **Corrections committed `5970ac7`**: exact ordered date assertion `[date(2021,1,1),date(2022,1,1)]`;
+  per-indicator provider-routing table in macro-worldbank.md; "supported ISO3 code" + explicit
+  provider/indicator-dependent-availability wording in macro-and-fx.md; test comment reworded. Full
+  offline suite 3965 passed, docs-contract + no-secrets green. **Re-review requested from reviewer
+  with SHA `5970ac7`; do NOT push or close yet.**
+
 - **DOCS BATCH (reviewer-routed 07:23) — ✅ FULLY DONE + PUSHED + CLOSED** (#166/#171 + #180 all on
   master, all closed). **#167 (VN equity universe) — ✅ DONE + PUSHED + CLOSED** (Codex×2
   APPROVE_WITH_NOTES; pushed `d35b712..e9d0c42`, #167 closed). Active WIP: **#181 + #187 both ✅
