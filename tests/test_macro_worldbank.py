@@ -1,11 +1,20 @@
 """Tests for vnfin.macro World Bank adapter — SYNTHETIC fixtures only.
 
 Shapes are hand-crafted to match the World Bank Indicators API v2 envelope but
-contain NO real provider rows. Per the synthetic-fixture policy (P0.4) the country
-code is OBVIOUSLY FAKE (``ZZZ`` / ``FAKELAND``), the indicator code/name are
-fabricated (``FK.TEST.IND.ZG``), and every observation value is invented — no real
-country, indicator code, name, inflation %, or GDP figure from the research docs is
+contain NO real provider rows. Per the synthetic-fixture policy (P0.4), display
+metadata (country/indicator NAME) and every observation value are invented — no
+real inflation %, GDP figure, or descriptive text from the research docs is
 reused. Only the JSON envelope SHAPE and validation cases mirror the real provider.
+
+Most tests use an OBVIOUSLY FAKE country/indicator IDENTITY (``ZZZ``/``FAKELAND``,
+``FK.TEST.IND.ZG``) throughout, including the identity fields. A small number of
+tests (issue #199/#200 batch) instead exercise **real contract identifiers** — a
+real ISO3 country code and a real WDI indicator code — because identity
+validation/routing (e.g. does ``CAN`` actually reach ``/country/CAN/...``, does the
+result carry the canonical unit for that WDI code) is the behavior under test and
+cannot be proven with a fabricated identity. Those tests still fabricate every
+DISPLAY field (country/indicator display name) and every date/value — no real
+provider row (name, date, or number) is ever committed as a fixture.
 
 World Bank response shapes covered:
 - success:        [meta, [obs, ...]]
@@ -20,7 +29,7 @@ import pytest
 
 from vnfin.exceptions import EmptyData, InvalidData, SourceUnavailable
 from vnfin.macro import IndicatorSeries, WorldBankMacroSource
-from vnfin.macro.indicators import MacroIndicator
+from vnfin.macro.indicators import Frequency, MacroIndicator
 
 
 # ---------------------------------------------------------------------------
@@ -896,3 +905,64 @@ def test_wb_rejects_duplicate_observation_date():
 def test_wb_distinct_observation_dates_accepted():
     res = _src(wb_success()).get_indicator(COUNTRY, INDICATOR, 2021, 2023)
     assert len(res.points) == 3
+
+
+# ---------------------------------------------------------------------------
+# Issue #199/#200 batch — CAN public-path regression.
+#
+# Proves the country-generic World Bank macro path actually serves a SECOND
+# real country end-to-end through the PUBLIC seam, not just VNM/USA-style
+# happy paths. Uses real contract identifiers (CAN + the real WDI code per
+# indicator) because identity/routing validation is the behavior under test
+# (see the module docstring); display name/dates/values stay fabricated.
+# Offline/mocked only — proves the code path, not live provider availability.
+# ---------------------------------------------------------------------------
+
+_CAN_INDICATOR_CASES = [
+    (MacroIndicator.GDP, "NY.GDP.MKTP.CD", "current US$", "USD"),
+    (MacroIndicator.GDP_GROWTH, "NY.GDP.MKTP.KD.ZG", "%", None),
+    (MacroIndicator.CPI, "FP.CPI.TOTL", "index", None),
+    (MacroIndicator.INFLATION, "FP.CPI.TOTL.ZG", "%", None),
+    (MacroIndicator.UNEMPLOYMENT, "SL.UEM.TOTL.ZS", "%", None),
+]
+
+
+@pytest.mark.parametrize("indicator, wdi_code, unit, currency", _CAN_INDICATOR_CASES)
+def test_can_public_path_five_indicators(indicator, wdi_code, unit, currency):
+    from vnfin.macro import get_indicator as public_get_indicator
+
+    fake_name = "Fabricated display name for test — not a real WDI indicator label"
+    # Newest-first, like the real provider, so ascending-sort is actually exercised.
+    rows = [
+        _obs("CA", "CAN", 2022, 22.0, name=fake_name, code=wdi_code, unit=unit),
+        _obs("CA", "CAN", 2021, 11.0, name=fake_name, code=wdi_code, unit=unit),
+    ]
+    rows_text = json.dumps([_meta(2), rows])
+
+    calls = []
+
+    def _g(url, params, headers):
+        calls.append((url, params, headers))
+        return rows_text
+
+    result = public_get_indicator("CAN", indicator, http_get=_g)
+
+    # Exactly one HTTP call: World Bank (first in chain order) served it, so no
+    # IMF DataMapper / DBnomics fallback call was ever made.
+    assert len(calls) == 1
+    url, params, headers = calls[0]
+    assert url == f"https://api.worldbank.org/v2/country/CAN/indicator/{wdi_code}"
+    assert params == {"format": "json", "per_page": 20000}
+
+    assert result.country == "CAN"
+    assert result.indicator_code == wdi_code
+    assert result.indicator_name == fake_name
+    assert result.source == "worldbank"
+    assert result.unit == unit
+    assert result.value_unit == unit
+    assert result.currency == currency
+    assert result.frequency == Frequency.ANNUAL
+    dates = [d for d, _ in result.points]
+    assert dates == sorted(dates)  # ascending despite newest-first fixture order
+    assert [d.month for d in dates] == [1, 1]  # annual observations stamp Jan-1
+    assert len(result.points) == 2

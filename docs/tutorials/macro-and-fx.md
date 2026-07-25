@@ -1,6 +1,8 @@
 # Tutorial: macro and FX
 
-Use this guide for Vietnam macro indicators and VND FX reference rates.
+Use this guide for macro indicators (any ISO3 country — the World Bank source is country-generic)
+and VND FX reference rates. Vietnam (`VNM`) is the running example below; the "Cross-country
+example" section shows a second country end-to-end.
 
 ## FX rates
 
@@ -37,6 +39,22 @@ print(cpi.unit, cpi.latest())
 
 The no-key macro chain is World Bank → IMF DataMapper → DBnomics. Indicator units differ; read
 `series.unit` and `series.currency`.
+
+### Cross-country example (Canada)
+
+`get_indicator` takes any ISO3 country code — there is no per-country branching in the client.
+Canada (`CAN`) serves all five annual World Bank indicators shown so far:
+
+```python
+canada_gdp = vnfin.macro.get_indicator("CAN", MacroIndicator.GDP)             # current US$
+canada_cpi = vnfin.macro.get_indicator("CAN", MacroIndicator.CPI)             # index level
+canada_unemployment = vnfin.macro.get_indicator("CAN", MacroIndicator.UNEMPLOYMENT)  # %
+canada_gdp_growth = vnfin.macro.get_indicator("CAN", MacroIndicator.GDP_GROWTH)      # % YoY
+canada_inflation = vnfin.macro.get_indicator("CAN", MacroIndicator.INFLATION) # % YoY — NOT the same as CPI
+```
+
+`CPI` is an index **level** (2010=100-class, no currency); `INFLATION` is a **%** YoY rate — read
+`series.unit`/`series.currency` rather than assuming, since the two are easy to conflate.
 
 ### Monthly inflation (CPI YoY) and the policy rate
 

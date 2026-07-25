@@ -38,12 +38,13 @@ Each observation object: `indicator{id,value}`, `country{id,value}`, `countryiso
 
 ## Result model
 
-`IndicatorSeries(country, indicator_code, indicator_name, points: tuple[(date, float), ...], source, unit, currency="USD", country_name, fetched_at_utc, warnings)` — frozen, ascending-by-date, `len()`/iter/`latest()`/`to_dataframe()`.
+`IndicatorSeries(country, indicator_code, indicator_name, points: tuple[(date, float), ...], source, unit, currency, country_name, fetched_at_utc, warnings)` — frozen, ascending-by-date, `len()`/iter/`latest()`/`to_dataframe()`. `currency` is `"USD"` **only for money-denominated level indicators (GDP)**; every percent/index indicator (`CPI`, `INFLATION`, `UNEMPLOYMENT`, `GDP_GROWTH`, ...) carries `currency=None` so a non-money series is never stamped with a misleading currency (`vnfin/macro/indicators.py:CANONICAL_CURRENCY`).
 
 ## Related macro sources
 
 - `docs/sources/macro-imf.md` — IMF DataMapper (no-key backup, WEO + projections).
-- `docs/sources/macro-dbnomics.md` — DBnomics IMF/IFS (no-key backup, CPI index).
+- `docs/sources/macro-dbnomics.md` — DBnomics IMF/IFS (no-key backup; sole default source for
+  `CPI_YOY`/`POLICY_RATE`; CPI *index* now resolves via World Bank first, see below).
 - `docs/sources/macro-fred.md` — FRED official JSON API, optional **BYOK**
   (`FRED_API_KEY`). No key → the source is **not capable** and is skipped without a
   network call (never `NotImplementedError`). `fredgraph.csv` scraping is disallowed.
@@ -54,7 +55,8 @@ Each observation object: `indicator{id,value}`, `country{id,value}`, `countryiso
 SAME canonical `MacroIndicator` across providers. Before the generic failover engine
 is built, sources are **pre-filtered by unit** so only sources emitting the exact
 canonical unit for the indicator survive (`vnfin/macro/indicators.py:eligible_sources`).
-This is why GDP resolves to World Bank (`current US$`), CPI-index to DBnomics, and the
+This is why GDP resolves to World Bank (`current US$`), CPI-index to **World Bank**
+(`FP.CPI.TOTL`, first-capable in chain order — not DBnomics), and the
 percent indicators to all three — without ever tripping `UnitMismatchError`. See
 `docs/design/macro-no-key-byok.md` for the full semantic contract.
 

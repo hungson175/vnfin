@@ -19,7 +19,10 @@ real but its reuse rights are NOT established, so it is not buildable now either
 reviewer/PO has **resolved the scope question directly** (round-2 gate, "PO disposition" section)
 rather than leaving it for a further round-trip:
 
-- **S&P/TSX Venture Composite:** source-blocked, no candidate at all. Close-with-reopen for this
+- **S&P/TSX Venture Composite:** no currently vetted, rights-confirmed, technically adequate
+  source (wording corrected per final-gate note 1 — TMX names Venture in its product catalog but
+  its EULA is unresolved, and Stooq/FMP/Marketstack remain inconclusive, so "no candidate at all"
+  overstated it). Close-with-reopen for this
   identifier only (§2.3(i), unchanged).
 - **S&P/TSX Composite + S&P/TSX 60 — NOT buildable now.** Statistics Canada Table 10-10-0125-01 is
   technically real, keyless, and directly verified to carry both series as native points, but its
@@ -171,7 +174,10 @@ The reviewer/PO resolved the scope question directly in the round-2 gate rather 
 for a further round-trip — #200's equity-index portion now closes, same as #199, with reopen
 criteria:
 
-**(i) S&P/TSX Venture Composite — source-blocked, clean, unchanged.** No candidate anywhere.
+**(i) S&P/TSX Venture Composite — source-blocked (wording corrected per final-gate note 1).** No
+currently vetted, rights-confirmed, technically adequate source — not "no candidate at all": TMX
+names Venture in its product catalog (§2.2 row 4) but its EULA is unresolved, and Stooq/FMP/
+Marketstack remain inconclusive rather than confirmed-absent for Venture specifically.
 Close-with-reopen for this identifier specifically:
 
 > Reopen if a source appears with native Venture Composite index points, lawfully retrievable
