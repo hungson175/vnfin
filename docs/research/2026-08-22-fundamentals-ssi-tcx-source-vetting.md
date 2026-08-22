@@ -340,12 +340,18 @@ algorithm. The atomic canonical role allow-list is exactly
 2. For a single direct `source=`, invoke the original object only when its canonical role serves
    the requested statement. A direct allowed-role completion returning `()` is the reachable
    `MISSING` outcome; a custom or incapable role returns `NOT_SERVED` with zero physical calls.
-3. If `sources=[]` is supplied, both public wrappers raise `VnfinError` with the exact message
-   `sources must contain at least one source` before any physical call. This is a deliberate
-   public behavior change from the current empty-coverage/failed-chain split; the implementation
-   release must update `docs/api.md`, `docs/design/fundamentals-metrics.md`,
-   `docs/tutorials/fundamentals.md`, public docstrings/API snapshots, and `CHANGELOG.md`, with the
-   migration instruction to omit `sources` for the default chain or pass a non-empty allowed-role
+3. Select the effective source chain before capability filtering, preserving source-wins
+   precedence exactly: if `source is not None`, the effective chain is the one direct source and
+   `sources` is ignored, even when it is `[]`; otherwise, an explicitly supplied `sources` tuple
+   is used, or the default chain is used when `sources is None`. Raise
+   `VnfinError("sources must contain at least one source")` before any physical call **only** when
+   `source is None` and the effective chain is empty. The two wrapper cases are mandatory RED
+   tests: `source=None, sources=[]` raises that exact error with zero physical calls, while
+   `source=allowed_role_stub, sources=[]` calls the direct source and asserts its direct-source
+   outcome rather than the empty-chain error. The implementation release must update
+   `docs/api.md`, `docs/design/fundamentals-metrics.md`, `docs/tutorials/fundamentals.md`, public
+   docstrings/API snapshots, and `CHANGELOG.md` to document this exact precedence and error
+   contract; callers should omit `sources` for the default chain or pass a non-empty allowed-role
    chain. No top-level `get_financials` empty-chain behavior is changed by this packet.
 4. For an explicit `sources=` chain **and the default chain**, resolve every member, then filter
    out every incapable role before constructing/running per-statement failover. Only the original
@@ -354,8 +360,13 @@ algorithm. The atomic canonical role allow-list is exactly
    candidates therefore contain `vndirect` only; a failed VNDirect cashflow never invokes CafeF.
 5. A non-empty accepted result must have every returned report's `source` exactly equal to the
    resolved canonical role of the object that produced it. A mismatch is rejected/fail-closed as
-   sanitized `SOURCE_ERROR`; it is never silently relabeled. `OK` provenance and `MetricInput`
-   lineage use that same matching atomic role.
+   sanitized `SOURCE_ERROR`; it is never silently relabeled. Test mismatches carrying a URL/query
+   token, a 1,000-character value, `None`, a list, and a dict. For every case, public
+   `StatementFetchResult`/`StatementProvenance` source fields are `None`, status is
+   `SOURCE_ERROR`, detail is exactly `recoverable source error`, and the same bounded values flow
+   to `MetricValue.reason` and DataFrame attrs; reprs and raised messages contain none of the raw
+   value or exception text. `OK` provenance and `MetricInput` lineage use that same matching
+   atomic role.
 6. For `NOT_SERVED`, encode the responsible roles as a deduplicated, configured-order comma join
    of atomic roles, with no whitespace and an exact maximum of 21 ASCII characters
    (`vndirect,cafef,custom`). This bounded composite is the only multi-role public source value;
@@ -365,6 +376,28 @@ algorithm. The atomic canonical role allow-list is exactly
 
 No name sanitization may truncate or echo arbitrary text. A future custom adapter must explicitly
 register a bounded canonical role before it can serve a statement.
+
+The role resolver has one parameterized RED matrix, not a best-effort string sanitizer:
+
+| Case | Synthetic `source.name` fixture |
+|---|---|
+| missing attribute | object with no `name` attribute |
+| raising property | `name` property raises `RuntimeError("secret-name")` |
+| `None` | `None` |
+| non-string scalar | `7` |
+| unhashable list | `["secret-name"]` |
+| unhashable dict | `{"token": "secret-name"}` |
+| empty | `""` |
+| whitespace | `" \t\n"` |
+| case mismatch | `"VNDirect"` and `"CafeF"` |
+| unknown | `"other-role"` |
+| URL/query token | `"https://example.invalid/path?token=secret-name"` |
+| overlong | `"x" * 1000` |
+
+Every row resolves to exactly `custom`, makes zero physical source/HTTP calls, and is asserted
+not to leak its raw value or raised exception into statement-fetch fields, public provenance or
+`MetricValue` fields/reprs, DataFrame attrs, or any raised `metrics()` message. The list/dict rows also
+prove that unhashable values cannot escape role resolution or trigger an incidental public error.
 
 For every unavailable metric whose statement outcome is `SOURCE_ERROR`, the public
 `MetricValue.reason` is exactly `statement {statement} unavailable: recoverable source error`,
@@ -444,9 +477,11 @@ fixtures for both symbols. No live provider row may be committed.
 - RED source-error cases inject URL/query-token, JSON/body, and long-sentinel exception text;
   none may appear in aggregate or per-period provenance, metric reasons, DataFrame attrs, or the
   raised all-empty message;
-- RED source-role cases inject an unregistered `source.name` containing a URL/query token plus a
-  1,000-character sentinel; assert zero physical calls, only the bounded `custom` role in every
-  public source field/detail and DataFrame attr, and no token/sentinel leakage;
+- Parameterize the complete source-role RED matrix above: missing `name`, a property raising
+  secret text, `None`, non-string scalar, list/dict unhashable values, empty, whitespace, case
+  mismatch, unknown, URL/query token, and overlong name. Every row must resolve to `custom`, make
+  zero physical calls, and leak neither raw values nor exception text into statement fetches,
+  provenance/metric reprs, DataFrame attrs, or a raised `metrics()` message;
 - allowed-role duck-typed/injected sources named exactly `vndirect` or `cafef` remain callable;
   an exact-role direct source returning `()` reaches aggregate `MISSING` rather than being skipped;
 - a mixed chain `[failing vndirect, malicious custom]` filters `custom` before failover, makes no
@@ -455,10 +490,15 @@ fixtures for both symbols. No live provider row may be committed.
 - a default-chain VNDirect cashflow failure makes exactly the VNDirect attempt and never invokes
   CafeF's source method or HTTP path; default and explicit chains share the same per-statement
   incapable-role filter;
-- both `metrics(..., sources=[])` and `explain_metric_coverage(..., sources=[])` raise
-  `VnfinError("sources must contain at least one source")` with zero physical calls;
-- a non-empty report whose `source` differs from the producing canonical role is rejected/fails
-  closed rather than silently relabeled;
+- both wrappers with `source=None, sources=[]` raise
+  `VnfinError("sources must contain at least one source")` with zero physical calls, while both
+  wrappers with an allowed direct `source=` plus `sources=[]` call the direct source and preserve
+  its direct-source outcome without raising the empty-chain error;
+- parameterize a non-empty report whose `source` mismatches the producing role with a URL/query
+  token, 1,000-character value, `None`, list, and dict. Each case fails closed as sanitized
+  `SOURCE_ERROR`; assert exact `source=None` and `detail="recoverable source error"` on public
+  statement/provenance outcomes, the exact templated `MetricValue.reason`, deterministic attrs,
+  and no raw value/exception text in every public repr or raised message;
 - for each source-error metric, bind the exact reason
   `statement {statement} unavailable: recoverable source error`, not the bare detail string;
 - exact normalized symbol/cadence strings, status values, detail values, note, repr/equality,
