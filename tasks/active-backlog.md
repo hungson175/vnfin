@@ -612,6 +612,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   discovery chain empty, remove speculative public/bulk API and changed `max_fetch` semantics, and
   make transport/identity/outcome/logical-vs-physical gaps conjunctive reopen evidence. No code,
   push, or close.
+  **Corrected re-review BLOCK at `2291eee`** (`reviews/review-202608221634-issue203-source-gap-correction-rereview.md`,
+  reviewer `0d9c705`): one docs-only wording round remains. Scope NO_SOURCE/NO_RUNTIME/empty-chain
+  claims to new C1-C3; remove the residual 250ms/25s/one-retry policy; call probe ceilings bounded
+  observations; state no working new reliable C1-C3 implementation. No code, push, or close.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
