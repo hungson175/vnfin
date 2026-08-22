@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-07-20 +07_
+_Last synced: 2026-08-22 +07_
 
 > **✅ DONE 2026-07-22: #198 corporate fundamentals P0 — inverted routing + broken catalog + pagination — PUSHED + CLOSED.**
 > Reviewer-routed external issue (VIC missing net_income/equity). Root cause widened to a systemic repair: corporate
@@ -600,6 +600,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 - **#140 — "financial news" enhancement** — parked (product/scope, not a bug).
 
 ## Now (WIP)
+
+- **#201 — Vietnamese equity foreign-investor daily flow (ACCEPTED, source-gated, 2026-08-22).**
+  Reviewer tech-lead packet `tasks/201-vn-equity-foreign-flow-spec.md` at reviewer commit
+  `62e1e32`; public triage `issuecomment-5378368603`. Research lawful no-auth daily sources for
+  HOSE/HNX/UPCoM, record source/legal/coverage evidence and exact single-symbol + bulk API design,
+  then request reviewer design gate. **No production code, push, or close before PASS.**
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
