@@ -1,8 +1,8 @@
 # #201 design note — Vietnamese equity foreign-investor daily flow
 
-**Status:** `BLOCKED — source-gap closure; no source enabled; final consistency round pending re-review`
-**Reviewer gate:** final design BLOCK at reviewer commit `1fadc58`; report
-`reviews/review-202608221438-issue201-final-design-review.md`
+**Status:** `BLOCKED — source-gap closure; no source enabled; closure precision round pending re-review`
+**Reviewer gate:** closure review BLOCK at reviewer commit `ab9167c`; report
+`reviews/review-202608221506-issue201-closure-review.md`
 **Issue:** #201; public triage `issuecomment-5378368603`
 **Research evidence:** `docs/research/2026-08-22-vn-foreign-flow-source-vetting.md`
 **Clean-room:** primary official exchange/regulator pages and first-party UI/Swagger inspection only; the mandatory repository blacklist was applied to every search and no excluded material was opened or used.
@@ -703,16 +703,25 @@ it is already present, neither semantic value is duplicated. Thus a directly con
 `IndexConstituents(as_of=None)` cannot produce a bulk result that omits the invariant warning, no
 upstream description is rewritten, and no new date is inferred.
 
-The normalization is deliberately executable rather than a name-based cast of the live model:
+The normalization is deliberately executable rather than a name-based cast of the live model. The
+runtime warning container must remain the shipped `tuple[str, ...]` shape:
 
 ```python
 def normalize_membership_warnings(
     constituents: IndexConstituents,
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[ForeignFlowWarning, ...]]:
-    raw = tuple(constituents.warnings)  # IndexConstituents.warnings: tuple[str, ...]
-    if any(not isinstance(warning, str) or not warning.strip() for warning in raw):
+    raw_value = constituents.warnings  # IndexConstituents.warnings: tuple[str, ...]
+    if not isinstance(raw_value, tuple) or any(
+        not isinstance(warning, str) for warning in raw_value
+    ):
+        raise InvalidData("membership warnings must be tuple[str, ...]")
+    if any(not warning.strip() for warning in raw_value):
         raise InvalidData("membership warning must be a non-empty string")
-    prefixes = list(dict.fromkeys(warning.split(":", 1)[0].strip() for warning in raw))
+    raw_prefixes = [warning.split(":", 1)[0].strip() for warning in raw_value]
+    if any(not prefix for prefix in raw_prefixes):
+        raise InvalidData("membership warning prefix must be non-empty")
+    raw = tuple(raw_value)
+    prefixes = list(dict.fromkeys(raw_prefixes))
     flow: list[ForeignFlowWarning] = []
     if "current_snapshot_only" in prefixes:
         flow.append("current_snapshot_only")
@@ -998,11 +1007,11 @@ provider rows or bundled datasets are permitted. Live endpoint tests are opt-in 
 | Coverage | executable full/partial-known/partial-unknown field invariants, sorted unique missing/internal-gap dates and subset/count relations, reason ordering, confirmed/unresolved publication lag and cutoff, calendar unknown, pre-listing, stale end, matching partial warning, `require_full`, no synthesized dates |
 | Failover | partial continues to compatible source, full outranks partial, exact `coverage_rank()` tuple/tie-break, deterministic `exchange_unavailable`/`coverage_gap`/`all_sources_failed`, immutable error attempts, no stitching, capability-incompatible sources omitted, identity/unit/schema attempts retained |
 | Attempts | lowercase status/reason invariant, bounded success reasons, capability skips omitted with zero budget, source attempts versus per-page retry ledger, global request accounting, dimension-specific budget codes, caught-exception set, redacted diagnostics |
-| Bulk input | iterable materialization, typed `IndexConstituents` context, exact upstream warning preservation, colon-prefix projection, missing-token append/no duplication, separate bounded flow warnings, `current_snapshot_only`, `as_of=None`, mixed-board `(exchange,symbol)`, duplicate/empty/string rejection |
+| Bulk input | iterable materialization, typed `IndexConstituents` context, exact upstream warning preservation, runtime tuple-of-strings validation, bare string/bytes/container rejection, empty warning/derived-prefix rejection, colon-prefix projection, missing-token append/no duplication, separate bounded flow warnings, `current_snapshot_only`, `as_of=None`, mixed-board `(exchange,symbol)`, duplicate/empty/string rejection |
 | Bulk budget | atomic ledger passed to sources, strict sequential scheduler, one source/page reservation versus per-page physical requests/retries, 100 default/200 hard-cap source attempts, 5,000-page/6,000-request boundaries, dimension-specific queued failures, no silent drop |
 | Bulk result | XOR item invariant (both-null/both-present reject), stable order, bounded failure codes, full `TimeSeriesResult` mixin fields/index/attrs |
 | Dataframe | exact row/summary columns, origin columns, attrs, units/source/coverage, duplicate-index backstop |
-| Probe reproducibility | official-host-only opt-in command, `set -euo pipefail` with explicit curl-failure capture, exact 200/effective-URL/redirect/body gates, payload observations gated on accepted transport/body, syntactic-only date markers, sanitized aggregate embedded in manifest, nonzero aggregation/manifest failures, raw output untracked |
+| Probe reproducibility | official-host-only opt-in command, `set -euo pipefail` with explicit curl-failure capture, exact 200/effective-URL/redirect/body gates, exact normalized MIME (media type before `;`), route-specific HNX/UPCoM report table/heading shape, generic maintenance HTML and `text/htmlx`/`application/jsonp` negative mocks, payload observations gated on accepted transport/body, syntactic-only date markers, sanitized aggregate embedded in manifest, nonzero aggregation/manifest failures, raw output untracked |
 | Public/release | docs contract, API snapshot, source/API/architecture docs, AI guidance, skill, changelog, build/wheel/archive inspection, clean-install import smoke |
 
 A future implementation must run focused tests RED-first, then the full merged offline suite before
@@ -1013,10 +1022,10 @@ clean-install smoke. No such implementation or test claim is made by this correc
 ## 7. Re-review request
 
 This correction round is deliberately source-gap closure, not a proposal to choose between HOSE
-and HNX. Please review this note and the research report against B1–B4 in
-`reviews/review-202608221438-issue201-final-design-review.md`. At handoff, the reviewer should spawn
-three parallel sub-agents: source/legal/reopen evidence, API/identity/coverage semantics, and
-bulk/budget/verification adversarial review.
+and HNX. Please review this note and the research report against B1–B2 in
+`reviews/review-202608221506-issue201-closure-review.md`. At handoff, the reviewer should spawn
+parallel sub-agents for route/body/MIME fail-closed checks and runtime warning-container/prefix
+validation.
 
 The required decision is whether the packet now precisely documents the gap and conjunctive reopen
 criteria. No parser, adapter, public model, facade, source chain, production code, push, or issue

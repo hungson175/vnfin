@@ -470,6 +470,12 @@ date-bound computation status, and syntactic versus authoritative date-marker st
 sanitized aggregate is embedded in `manifest.txt` between explicit delimiters. It contains no
 raw-response hash; raw output remains ignored and private.
 
+For HNX and UPCoM, body acceptance is route-specific: after exact MIME normalization to the lower-
+case media type before any `;` parameters, the HTML must contain a table and at least one data row plus all six
+bounded report identifiers (`Security code`, `ISIN code`, `Buy volume`, `Buy value`, `Sell volume`,
+`Sell value`). A generic document, maintenance page, or MIME such as `text/htmlx` is rejected and
+produces no payload observations.
+
 ```bash
 set -euo pipefail
 out=/tmp/vnfin-201-probes/$(date +%Y%m%d-%H%M%S)
@@ -545,7 +551,14 @@ record_status() {
   if [ -f "$out/$output_file" ]; then
     body_bytes=$(wc -c < "$out/$output_file")
   fi
-  content_type=$(awk -F: 'BEGIN{IGNORECASE=1} /^content-type:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}' "$out/$name.headers")
+  content_type=$(awk -F: 'BEGIN{IGNORECASE=1} /^content-type:/ {
+    value=$2
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+    split(value, parts, ";")
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", parts[1])
+    print tolower(parts[1])
+    exit
+  }' "$out/$name.headers")
   redirect_rejected=false
   case "$http_status" in 3??) redirect_rejected=true ;; esac
   if [ "$effective_url" != "$requested_url" ]; then redirect_rejected=true; fi
@@ -560,7 +573,7 @@ record_status() {
   body_accepted=false
   if [ "$transport_accepted" = true ] \
      && [ "$body_bytes" -gt 0 ] \
-     && [[ "$content_type" == "$expected_content_type"* ]]; then
+     && [ "$content_type" = "$expected_content_type" ]; then
     case "$name" in
       hose)
         if python -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p.get("success") is True and isinstance((p.get("data") or {}).get("list"), list)' "$out/$output_file"; then
@@ -574,16 +587,39 @@ import pathlib
 import sys
 
 class ShapeParser(HTMLParser):
-    route_tags = 0
+    def __init__(self):
+        super().__init__()
+        self.report_tables = 0
+        self.report_rows = 0
+        self.data_cells = 0
+        self.text_parts = []
 
     def handle_starttag(self, tag, _attrs):
-        if tag.lower() in {"html", "body", "table", "tr"}:
-            self.route_tags += 1
+        if tag.lower() == "table":
+            self.report_tables += 1
+        elif tag.lower() == "tr":
+            self.report_rows += 1
+        elif tag.lower() == "td":
+            self.data_cells += 1
+
+    def handle_data(self, data):
+        self.text_parts.append(" ".join(data.split()).lower())
 
 parser = ShapeParser()
 parser.feed(pathlib.Path(sys.argv[1]).read_text(errors="replace"))
 parser.close()
-raise SystemExit(0 if parser.route_tags else 1)
+required = (
+    "security code",
+    "isin code",
+    "buy volume",
+    "buy value",
+    "sell volume",
+    "sell value",
+)
+body_text = " ".join(parser.text_parts)
+shape_ok = parser.report_tables > 0 and parser.report_rows > 1 and parser.data_cells > 0
+fields_ok = all(field in body_text for field in required)
+raise SystemExit(0 if shape_ok and fields_ok else 1)
 PY
         then
           body_accepted=true
@@ -775,3 +811,9 @@ contract. A transport/body-accepted response is recorded as reachability and sha
 2xx status other than the exact required `200` (including an empty `204`) is transport-rejected, and
 a rejected transport or body produces no payload observations. Neither outcome promotes a
 candidate, authorizes reuse, or establishes unit/date/identity semantics.
+
+The offline mock gate includes a generic HNX/UPCoM maintenance body such as
+`<html><body>Maintenance</body></html>` and wrong media types `text/htmlx` and
+`application/jsonp`; each must retain `transport_accepted=true` only when its HTTP envelope is
+otherwise valid, but set `body_accepted=false`, `accepted=false`, and emit no report-field
+observations. A valid report-shaped table is the only HTML body accepted by this probe sketch.
