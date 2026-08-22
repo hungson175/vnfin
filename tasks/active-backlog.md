@@ -601,50 +601,6 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#201 — Vietnamese equity foreign-investor daily flow (ACCEPTED, source-gated, 2026-08-22).**
-  Reviewer tech-lead packet `tasks/201-vn-equity-foreign-flow-spec.md` at reviewer commit
-  `62e1e32`; public triage `issuecomment-5378368603`. Research lawful no-auth daily sources for
-  HOSE/HNX/UPCoM, record source/legal/coverage evidence and exact single-symbol + bulk API design,
-  then request reviewer design gate. **No production code, push, or close before PASS.** Reviewer
-  design BLOCK at `e5ed626` (`reviews/review-202608221350-issue201-design-gate.md`): correction round
-  must become source-gap closure unless written owner permission exists; remove the response-unidentified
-  HOSE fallback, downgrade HNX response-date identity, label API future/non-authoritative, and correct
-  status axes, signed-net, coverage, VN30 context, request budget, and verification/reopen contracts.
-  Correction re-gate BLOCK at `8136dcf` (`reviews/review-202608221418-issue201-design-regate.md`):
-  preserve the empty chain and closure disposition, but complete one docs-only precision round for
-  strict HNX TLS-chain failure and real contact paths; unresolved `reportDate` semantics; executable
-  coverage/attempt/error/warning/exact-integer contracts; atomic deterministic budget reservations;
-  probe sample/empty-identity/redirect/date/manifest claims; and the VN30 warning invariant. **No code
-  is authorized; request final re-review before any implementation, push, or close.**
-  Final design review BLOCK at `1fadc58` (`reviews/review-202608221438-issue201-final-design-review.md`):
-  one more docs-only correction is required for live `IndexConstituents` warning-prefix compatibility,
-  coverage and attempt/error typing, a shared per-page retry ledger with deterministic scheduling, and
-  fail-closed probe/manifest semantics. **Production code, push, and close remain paused.** Closure
-  review BLOCK at reviewer `ab9167c` (`reviews/review-202608221506-issue201-closure-review.md`):
-  `e365b14` resolves the substantive contracts, but one minimal docs-only correction remains for
-  route-specific HNX/UPCoM report-shape plus exact normalized MIME rejection, and runtime tuple-of-
-  strings warning input with empty derived-prefix rejection. **No code, push, or close.**
-  Exact closure BLOCK at reviewer `4d91560` (`reviews/review-202608221518-issue201-exact-closure-review.md`):
-  two minimal docs-only fixes remain—bind all six exact headings plus a distinct data row to one
-  report table, and parse the complete `Content-Type` value after its first colon so colon-suffixed
-  MIME values fail closed. **Keep the empty chain and no-code/no-push/no-close gate.**
-  Data-row closure BLOCK at reviewer `87d7dd3`
-  (`reviews/review-202608221531-issue201-data-row-closure-review.md`): MIME and same-table binding
-  pass, but one minimal docs edge remains—map required heading columns and require a distinct
-  populated non-heading `td` row at those positions, rejecting blank/whitespace and repeated-heading
-  rows; nested valid report tables must not be blanket-rejected. **No code, push, or close.**
-  Final exact-SHA heading-permutation BLOCK at reviewer `f158e0d`
-  (`reviews/review-202608221540-issue201-heading-permutation-review.md`): one predicate remains—reject
-  any mapped data value that belongs to `REQUIRED_HEADINGS`, regardless of column, and add a
-  cyclic/permuted heading-only negative. All other B1, MIME, source/legal/API/bulk, and empty-chain
-  gates pass. **No code, push, or close; return the exact SHA after the docs-only correction.**
-  Final closure PASS/APPROVE at reviewer `9d4ac23`
-  (`reviews/review-202608221547-issue201-final-closure-pass.md`): approved exact docs/source-gap
-  range `fd675cf76d3ce860c148bf9cfd013349659b6722..cfb9ebebdf2f035874b41c48cab13dc8252044d4`.
-  Rerun merged gates, push, verify remote exact SHA/paths, post the disabled-source plus conjunctive
-  reopen-criteria resolution, close #201, and re-read CLOSED. No production foreign-flow claim;
-  #203 remains separate.
-
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
   S&P/TSX Composite/60/Venture) in reviewer repo; specs `tasks/199-bangladesh-main-indices-spec.md` /
@@ -1050,6 +1006,12 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Done today (trim periodically)
 
+- **#201 — DONE/CLOSED (2026-08-22), documentation-only source-gap closure.** Published exact
+  approved range `fd675cf76d3ce860c148bf9cfd013349659b6722..cfb9ebebdf2f035874b41c48cab13dc8252044d4`
+  to `origin/master`; remote HEAD and changed paths verified. Resolution comment
+  `issuecomment-5379407089` records the empty disabled-source chain and conjunctive source-owner
+  reopen criteria; issue state re-read as `CLOSED`/`COMPLETED`. No production foreign-flow claim;
+  #203 remains separate.
 - **#168 price/index namespace guard — DONE/CLOSED** (review-202606201424; fixes `53519ff`/`f7ab8f9`/
   `f4655ba`). Fail-loud asymmetric guard (prices deny-list known indices incl. HNX/UPCOMINDEX aliases;
   index_history allow-list; liquidity inherits) via private `_contracts/index_registry.py`. Snapshot
