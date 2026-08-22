@@ -226,7 +226,9 @@ backfill, interpolation, or signal helper is authorized. A successful future res
 would have exactly one producing source, `symbol="VNFIN"`, the exact provider symbol,
 `Interval.D1`, `AdjustmentPolicy.RAW`, `value_unit=currency="points"`, VN-local
 timezone-aware bars, and ordered source attempts. It would carry vendor provenance,
-not an official/reconstructed label.
+not an official/reconstructed label. The explicit stitched wrapper remains a separate
+compatibility path with its existing multi-source provenance grammar; the strict
+VNFIN bare-token grammar below must not erase or silently rewrite those warnings.
 
 The private registry and source-capability design is deliberately narrow:
 
@@ -257,7 +259,7 @@ The private registry and source-capability design is deliberately narrow:
    The history must then pass the same identity, coverage, points/RAW, and volume
    validator. Metadata transport/HTTP/schema/identity failure records one failed SSI
    adapter attempt and makes no history call; history transport/HTTP/schema/quality
-   failure records that attempt as failed. The pair has a maximum of two physical
+   failure records that attempt as failed. The pair has at most two physical
    calls, no retry, no hidden parallel call, and no cookie/session retention or reuse.
    Injected HTTP stubs count each route invocation as one physical call while retaining
    their existing string-returning arity.
@@ -278,26 +280,46 @@ The private registry and source-capability design is deliberately narrow:
    series. A genuinely present provider integer zero remains `0`. The current shared
    absent/null-to-zero shortcut must not be reused for VNFIN.
 
-Public diagnostics are mechanically bounded rather than copied from provider data.
-`SourceAttempt.reason` and each `PriceHistory.warnings` entry must be one ASCII token
-matching `^[a-z][a-z0-9_]{0,31}$` (maximum 32 characters) from a finite implementation
-allow-list that is exactly `ok`, `transport_error`, `invalid_data`, `empty_data`,
-`identity_mismatch`, `metadata_mismatch`, `coverage_gap`, `coverage_partial`,
-`calendar_horizon`, `volume_missing`, `volume_invalid`, `duplicate_conflict`,
-`unsupported_source`, `budget_exhausted`, `body_invalid`, `conflicts_many`,
-`gaps_many`, `source_failures_many`, or `diagnostics_truncated`; no colon suffix,
-date, URL, query string, body, cookie, credential, raw exception, or provider/source
-free text is permitted. Public `SourceAttempt.name` is also one of the finite role
-tokens `vps_index`, `ssi_index`, `vndirect_index`, or `custom`; an oversized injected
-name maps to `custom`. A result exposes at most 8 attempts and 16 warning tokens in
-deterministic order. Internal date/conflict/gap
-counts are count-only and capped at `9999`; a larger count emits the corresponding
-`*_many` token instead of a number or sample. If more than 15 warnings or 8 attempts
-would be produced, retain the deterministic prefix and append one
-`diagnostics_truncated` token/record within the cap. Oversized injected source names
-are never copied. RED tests must submit oversized source text and large conflict/gap
-sets and assert the caps and complete removal of URL, exception, body, cookie, and
-credential text.
+Public diagnostics are mechanically bounded, with separate contracts for the strict
+adapter/failover path and the pre-existing explicit stitched wrapper. On the strict
+path, `SourceAttempt.reason` and each strict `PriceHistory.warnings` entry must be an
+ASCII token matching `^[a-z][a-z0-9_]{0,31}$` (maximum 32 characters) from the exact
+allow-list `ok`, `transport_error`, `invalid_data`, `empty_data`, `identity_mismatch`,
+`metadata_mismatch`, `coverage_gap`, `coverage_partial`, `calendar_horizon`,
+`volume_missing`, `volume_invalid`, `duplicate_conflict`, `unsupported_source`,
+`budget_exhausted`, `body_invalid`, `conflicts_many`, `gaps_many`,
+`source_failures_many`, and `diagnostics_truncated`. No colon suffix, URL, query
+string, body, cookie, credential, raw exception, date sample, or provider/source free
+text is permitted. Public strict `SourceAttempt.name` is one of the finite role tokens
+`vps_index`, `ssi_index`, `vndirect_index`, or `custom`; an oversized injected name
+maps to `custom`, and that same token is used for `PriceHistory.source` after
+provenance validation. The strict final producer source is never a raw injected name.
+
+The explicit `index_history_stitched()` compatibility path is not silently forced into
+the bare-token grammar. It preserves exactly `stitched_multi_source`, plus one segment
+warning per calendar segment matching
+`^stitched_segment: [0-9]{4} (vps_index|ssi_index|vndirect_index|custom) \((0|[1-9][0-9]{0,5}|many) bars\)$`.
+The year is the segment year, the role is the canonical producer token, and the bar
+count is decimal through `999999` or `many`; raw source names, URLs, exception/body
+text, cookies, credentials, and other prose are rejected. Its final
+`PriceHistory.source` is exactly `stitched_index_history`. Future VNFIN stitched use
+is capped at 128 calendar segments and fails before publishing if that cap is exceeded;
+it never drops segment provenance or substitutes a truncation warning. The existing
+non-VNFIN stitched API is not changed by this packet.
+
+The scheduler has a real attempt ceiling independent of warning truncation:
+`effective_attempt_limit = min(max_attempts, 8)`. It makes at most eight actual capable
+adapter calls, and every exposed `SourceAttempt` is one actual call with a canonical
+role and complete token reason. Skipped or unattempted sources never produce a record.
+If the limit is reached while capable sources remain, an accepted result may receive
+one `diagnostics_truncated` warning token only; it is never a `SourceAttempt`, does not
+consume `max_attempts`, and never enters `AllSourcesFailed.attempts`. Keep the
+deterministic first 15 strict warnings and append the sentinel as the 16th when warning
+or attempt scheduling truncation occurs. `max_attempts > 8` therefore still makes at
+most eight calls, and nine capable injected sources must expose at most eight real
+attempts. RED tests must cover those cases, canonical producer identity, oversized
+source text, and large conflict/gap sets with complete URL/exception/body/cookie/
+credential sanitization.
 
 ## 6. Reopen and review decision
 
@@ -337,7 +359,7 @@ source winner, not a cross-provider qualification matrix:
    the entire adapter attempt, while a present integer zero remains zero. Missing or
    null volume never becomes a published zero or a shortened result.
 6. The request and per-source capability guards, strict whole-window failover, SSI
-   two-call physical budget, exact adapter-attempt budget, warning/attempt token caps,
+   at-most-two physical-call budget, exact adapter-attempt budget, warning/attempt token caps,
    public snapshots, offline synthetic tests, docs, and build gates pass on the merged
    tree. Capability skips must be zero-call and absent from `SourceAttempt` records.
 

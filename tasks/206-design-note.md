@@ -31,7 +31,8 @@ HOSE Financials sector index. This batch does not implement VNFIN-minus-VN30,
 VN30F/session logic, constituents, weights, signals, backtests, intraday history,
 other sector indices, or a new public API. `index_history_stitched()` is not a silent
 substitute: it remains an explicit D1-only opt-in with its existing multi-source
-provenance.
+provenance and a separate warning grammar; the strict VNFIN adapter token grammar below
+does not silently replace or erase that legacy stitched provenance.
 
 The current public behavior is preserved until a later gate passes:
 
@@ -124,7 +125,7 @@ capable source to receive the **same** requested range. The first accepted resul
 the whole series. There is no per-date merge, retry storm, stitching, forward-fill,
 backfill, interpolation, or hidden fallback to `index_history_stitched()`.
 
-The SSI adapter's one attempt has an independent physical-call budget of exactly two:
+The SSI adapter's one attempt has an independent physical-call budget of **at most two**:
 it first calls `/statistics/charts/symbol?symbol=VNFIN`, then calls the history route
 only after metadata succeeds. Metadata must match `code=SUCCESS`, `status=ok`,
 `symbol=ticker=name=VNFIN`, `exchange=listed_exchange=HOSE`, `type=Chỉ số`,
@@ -138,7 +139,15 @@ physical subrequests.
 
 Every accepted result must satisfy:
 
-- `symbol == "VNFIN"`, exact `provider_symbol`, and `source` equal to the producer;
+- `symbol == "VNFIN"`, exact `provider_symbol`, and a canonical producer identity.
+  Strict adapter producer tokens are exactly `vps_index`, `ssi_index`, `vndirect_index`,
+  and `custom`; `PriceHistory.source` must be one of those tokens and must equal the
+  source role token stamped before the call. Built-in roles retain their named token;
+  an explicitly allowed injected producer is stamped `custom`, while an injected role
+  that cannot make that promise is incapable for VNFIN. A returned raw name, URL,
+  non-string value, or other mismatch fails provenance validation rather than being
+  copied or implicitly trusted. The separate stitched wrapper uses only the canonical
+  producer token `stitched_index_history` for its final `PriceHistory.source`;
 - `interval is Interval.D1`, `AdjustmentPolicy.RAW`, `value_unit == currency ==
   "points"`, `proxy_for is None`;
 - non-empty, ascending, unique VN-local dates with timezone-aware `PriceBar.time`;
@@ -161,24 +170,49 @@ dates are preserved and an unexplained missing date is a diagnostic/source failu
 never a synthetic bar. The fixed observation, arbitrary ranges, and stitched segments
 must never be presented as one coverage claim.
 
-Public diagnostic fields are mechanically bounded. `SourceAttempt.reason` and each
-`warnings` entry must be an ASCII token matching
-`^[a-z][a-z0-9_]{0,31}$` (maximum 32 characters) from the exact allow-list
-`ok`, `transport_error`, `invalid_data`, `empty_data`, `identity_mismatch`,
-`metadata_mismatch`, `coverage_gap`, `coverage_partial`, `calendar_horizon`,
-`volume_missing`, `volume_invalid`, `duplicate_conflict`, `unsupported_source`,
-`budget_exhausted`, `body_invalid`, `conflicts_many`, `gaps_many`,
-`source_failures_many`, and `diagnostics_truncated`. No colon suffix, URL, query
-string, response body, cookie, credential, raw exception, date sample, or
-provider/source free text may be copied. Public `SourceAttempt.name` is one of the
-finite role tokens `vps_index`, `ssi_index`, `vndirect_index`, or `custom`; an
-oversized injected name maps to `custom`. Keep at most 8 attempts and 16
-warning tokens in deterministic order. Internal conflict/gap counts are count-only
-and capped at `9999`; above that threshold emit a corresponding `*_many` token rather
-than a number or sample. If more than 15 warnings or 8 attempts would be emitted,
-retain the deterministic prefix and append `diagnostics_truncated` within the cap.
-Large conflict/gap sets and oversized source text must have RED coverage for caps and
-complete text sanitization.
+Public diagnostic fields are mechanically bounded, with separate contracts for the
+strict adapter/failover path and the pre-existing explicit stitched wrapper. On the
+strict path, `SourceAttempt.reason` and each strict `PriceHistory.warnings` entry must
+be an ASCII token matching `^[a-z][a-z0-9_]{0,31}$` (maximum 32 characters) from the
+exact allow-list `ok`, `transport_error`, `invalid_data`, `empty_data`,
+`identity_mismatch`, `metadata_mismatch`, `coverage_gap`, `coverage_partial`,
+`calendar_horizon`, `volume_missing`, `volume_invalid`, `duplicate_conflict`,
+`unsupported_source`, `budget_exhausted`, `body_invalid`, `conflicts_many`,
+`gaps_many`, `source_failures_many`, and `diagnostics_truncated`. No colon suffix,
+URL, query string, response body, cookie, credential, raw exception, date sample, or
+provider/source free text may be copied. Public strict `SourceAttempt.name` is one of
+the finite role tokens `vps_index`, `ssi_index`, `vndirect_index`, or `custom`; an
+oversized injected name maps to `custom` and the same token is used for
+`PriceHistory.source` after provenance validation.
+
+The explicit `index_history_stitched()` compatibility path is not silently forced into
+that bare-token grammar. It preserves its existing two warning surfaces under this
+separate bounded grammar: exactly `stitched_multi_source`, plus one segment warning per
+calendar segment matching
+`^stitched_segment: [0-9]{4} (vps_index|ssi_index|vndirect_index|custom) \((0|[1-9][0-9]{0,5}|many) bars\)$`.
+The year is the four-digit segment year, the role is the canonical producer token, and
+the bar count is decimal through `999999` or the literal `many`; no raw source name,
+URL, exception, body, cookie, credential, or other prose is allowed. The final
+stitched `PriceHistory.source` is exactly `stitched_index_history`, and a segment with
+an uncanonical producer identity fails rather than leaking it. This future VNFIN
+stitched mode is capped at 128 calendar segments and fails before publishing if the
+range would exceed that cap; it never drops segment provenance or substitutes a
+truncation warning. The existing non-VNFIN stitched API is not changed by this packet.
+
+The scheduler has a real attempt ceiling independent of warning truncation:
+`effective_attempt_limit = min(max_attempts, 8)`. It makes at most eight actual capable
+adapter calls, and every exposed `SourceAttempt` is one of those actual calls with a
+canonical role and complete token reason; skipped or unattempted sources never produce
+a record. If the limit is reached while capable sources remain, an accepted result
+may receive one `diagnostics_truncated` **warning token only**. It is never a
+`SourceAttempt`, does not consume `max_attempts`, and is never inserted into
+`AllSourcesFailed.attempts`; an all-source failure exposes only the actual attempted
+records. For strict warnings, retain the deterministic first 15 tokens and append the
+sentinel as the 16th (deduplicated) when either warning-list or attempt-scheduler
+truncation occurs. `max_attempts > 8` therefore still makes at most eight calls, and a
+nine-capable-source fixture must expose at most eight real attempts and no synthetic
+truncation record. Large conflict/gap sets and oversized source text must have RED
+coverage for caps and complete text sanitization.
 
 ## 5. Volume contract
 
@@ -243,7 +277,7 @@ Reopen to TDD only when all gates below are evidenced in a new review packet:
 5. That same `P` route pair returns aligned non-null volume on every successful
    response under the total fail-loud contract above; a violation fails the whole
    attempt and a present integer zero is preserved.
-6. The request/per-source registry guards, strict failover, SSI two-call physical
+6. The request/per-source registry guards, strict failover, SSI at-most-two physical-call
    budget, adapter-attempt budget, warning/attempt sanitization caps, public
    compatibility, offline synthetic fixtures, docs, and full merged-tree gates pass.
 
@@ -258,14 +292,14 @@ gate passes, the first code commit must begin with synthetic RED tests for:
 4. direct-success only for a synthetic source whose **same-provider route unit** has
    passed the written-permission, response-identity, coverage/quality, points/RAW,
    and total-volume gates. The SSI success fixture must perform metadata then history
-   in that order and stay within two physical calls. The observed VPS duplicate/
+   in that order and stay within at most two physical calls. The observed VPS duplicate/
    quality fixture remains fail-closed; it is not a direct-success fixture merely
    because its transport returned HTTP 200;
 5. default and injected per-source capability skips for VNDirect/other incapable roles,
    proving zero physical calls, no attempt-budget consumption, and no fabricated
    `SourceAttempt`;
 6. SSI metadata mismatch/transport failure with zero history call, history failure after
-   metadata, exact two-call ceiling, no retry, no cookie/session reuse, and preserved
+   metadata, exact at-most-two physical-call ceiling, no retry, no cookie/session reuse, and preserved
    injected string-stub arity;
 7. primary success, primary recoverable failure then SSI fallback, all-source failure,
    exact bounded ordered adapter attempts, separate SSI physical-call accounting, and
@@ -281,10 +315,12 @@ gate passes, the first code commit must begin with synthetic RED tests for:
 10. fixed-window endpoint and internal-gap checks separately from arbitrary caller
     ranges, weekend/holiday boundaries, calendar-horizon diagnostics, and stitched
     calendar-year seams; no fill/reconstruction and strict versus stitched separation;
-11. warning/attempt token grammar, 8-attempt/16-warning caps, `9999` count cap and
-    `*_many` overflow token, deterministic truncation, oversized source text, and
-    large conflict/gap sets with complete URL/body/cookie/credential/exception
-    sanitization; and
+11. strict token versus stitched-warning grammars, canonical `PriceHistory.source`,
+    canonical stitched segment roles, 128-segment fail-closed cap, real-attempt
+    ceiling for `max_attempts > 8`, nine-capable-source behavior with no synthetic
+    `SourceAttempt`, 16-warning/`9999` count caps, `*_many` overflow token,
+    deterministic truncation, oversized source text, and large conflict/gap sets with
+    complete URL/body/cookie/credential/exception sanitization; and
 12. API/docs/build/blacklist/secret/diff gates on the merged tree.
 
 This document itself requests only source/design review. It does not authorize TDD,
