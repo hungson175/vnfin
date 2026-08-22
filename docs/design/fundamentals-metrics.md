@@ -135,10 +135,10 @@ class StatementFetchResult:
     statement: StatementType
     reports: tuple[FinancialReport, ...]      # () when the fetch failed / not served
     status: StatementCoverageStatus           # OK | MISSING | SOURCE_ERROR | NOT_SERVED
-    # B2: role depends on status — OK: succeeding source; NOT_SERVED: the responsible source
-    # (e.g. "cafef" for cashflow); SOURCE_ERROR/MISSING: None (no single responsible source).
+    # B2: role depends on status — OK: succeeding canonical source; NOT_SERVED: bounded
+    # responsible source/composite (e.g. "cafef" for cashflow); SOURCE_ERROR/MISSING: None.
     source: Optional[str]
-    detail: Optional[str] = None              # error message/class on failure
+    detail: Optional[str] = None              # bounded detail; SOURCE_ERROR is trail-free
 
 # Private PURE transformers (B1/B3/B4) — NO network. Synthetic tests build StatementFetchResults
 # (success AND failure) and call these directly, so unit tests need no fake HTTP plumbing. `limit`
@@ -165,7 +165,8 @@ source chain for the statement (`source` wins over `sources`, matching `get_fina
   `"cafef"`; comma-joined if several), exact reason `statement {statement} not served by source '{source}'`.
 - **≥1 source in `C` can serve it but the fetch still failed** — a direct/single-source `SourceError`
   **or** a chain-level `AllSourcesFailed` (which is NOT a `SourceError`, so caught explicitly) →
-  `status=SOURCE_ERROR, source=None, detail=<exc class/msg>`.
+  `status=SOURCE_ERROR, source=None, detail="recoverable source error"`; exception text and
+  failed-attempt trails are never public.
 - success → `status=OK, source=<succeeding source>`.
 
 The classification uses the static capability set, **not** `AllSourcesFailed.attempts`; if an
@@ -366,6 +367,7 @@ class MetricCoverage:               # offline-friendly diagnosis for a symbol ov
     period: Period
     periods: tuple[PeriodCoverage, ...]     # B1: one entry per fiscal_date (newest first)
     notes: tuple[str, ...] = ()
+    statement_fetches: tuple[StatementProvenance, ...] = ()  # aggregate income/balance/cashflow
 ```
 
 `MetricReport` reuses the same `to_dataframe()` convention (metadata in `df.attrs`). It does **not**
@@ -455,6 +457,35 @@ universe catching nothing and get a per-symbol, per-period `MetricCoverage`.
 `explain_metric_coverage()` fetch only income+balance+cashflow and make **zero** ratio calls;
 `PeriodCoverage.ratio_status` is the constant `"not_requested"`. Ratio fetching is added only when a
 provider-native metric (EPS/BV) actually ships (v2).
+
+### Issue #204 fail-loud diagnostics and routing
+
+The wrappers canonicalize the symbol once before any source call and always execute the three
+logical statement slots in fixed `(income, balance, cashflow)` order; `ratios` is never fetched.
+If at least one statement yields a usable fiscal date, `metrics()` remains partially tolerant. If
+the union is empty, it raises:
+
+```text
+no usable {cadence} fiscal periods for symbol '{SYMBOL}'; call explain_metric_coverage()
+```
+
+where `{cadence}` is lowercase normalized cadence and `{SYMBOL}` is the normalized symbol. The
+coverage wrapper remains non-fatal and returns `periods == ()`,
+`notes == ("no_fiscal_periods",)`, and exactly three aggregate `statement_fetches` outcomes in
+income/balance/cashflow order. The appended defaulted field preserves old positional and keyword
+constructors, and `to_dataframe().attrs["statement_fetches"]` contains deterministic
+`(statement, status, source, detail)` tuples.
+
+Source selection preserves `source=` precedence over `sources=`, including `sources=[]`. The
+exact `VnfinError("sources must contain at least one source")` is raised before any physical call
+only when `source is None` and the effective chain is empty. Default and explicit chains apply the
+same per-statement capability filter before failover, so a failed VNDirect cashflow call never
+invokes CafeF. Source-role resolution is total and bounded: only exact `vndirect`/`cafef` names
+retain those roles; all malformed names map to zero-call `custom`. Public `SOURCE_ERROR` detail is
+always `recoverable source error`; raw response text, URLs, exception text, and attempt trails do
+not enter statement results, provenance, metric reasons, DataFrame attrs, reprs, or raised
+messages. A returned report whose source does not match an allowed producing role fails closed as
+that same sanitized `SOURCE_ERROR`.
 
 ### Batch (non-fatal, no ranking)
 

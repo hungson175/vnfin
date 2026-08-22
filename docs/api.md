@@ -238,7 +238,9 @@ the caller (a deliberate, separate design). See
 chain, then maps the verified VNDirect provider codes to a fixed **v1 catalog of 26 canonical
 metrics** — 21 raw-mapped line items + 5 derived ratios — returning one `MetricReport` per fiscal
 period (newest first). It **never fetches the `ratios` statement** (provider-native valuation ratios
-are deferred to v2) and per-statement failures are non-fatal.
+are deferred to v2). Partial failures remain non-fatal when at least one usable date exists; if
+none exists, `metrics()` raises the exact bounded `EmptyData("no usable {cadence} fiscal periods
+for symbol '{SYMBOL}'; call explain_metric_coverage()")`.
 
 - `vnfin.fundamentals.metrics(symbol, period="annual", *, is_bank=None, limit=8, source=None,
   sources=None, max_attempts=3, http_get=None, timeout=25.0) -> tuple[MetricReport, ...]` — newest
@@ -246,9 +248,10 @@ are deferred to v2) and per-statement failures are non-fatal.
   auto-detects bank vs corporate from the first OK report.
 - `vnfin.fundamentals.explain_metric_coverage(symbol, period="annual", *, is_bank=None, limit=8,
   source=None, sources=None, max_attempts=3, http_get=None, timeout=25.0) -> MetricCoverage` — same
-  3-statement fetch, but **never raises** on a per-statement failure; one `PeriodCoverage` per fiscal
-  date with per-statement provenance, per-metric availability + reasons, named/generic item counts,
-  and unmapped codes. Designed for a batch loop over a universe.
+  3-statement fetch, but **never raises** on a recoverable per-statement failure; one
+  `PeriodCoverage` per fiscal date plus exactly three aggregate `statement_fetches` outcomes in
+  income/balance/cashflow order, even when there are no periods. Designed for a batch loop over a
+  universe.
 - `vnfin.fundamentals.metric_catalog(applies_to=None) -> tuple[MetricDefinition, ...]` — pure, no
   network. `None` → all 26; `"bank"`/`AppliesTo.BANK` → `BANK`+`BOTH`; `"corporate"`/`"non_bank"`/
   `AppliesTo.CORPORATE` → `CORPORATE`+`BOTH`. Any other string raises `VnfinError`.
@@ -269,10 +272,22 @@ are deferred to v2) and per-statement failures are non-fatal.
   value_unit, fiscal_date, source, name)`).
 - `MetricDefinition(id, name, category, kind, applies_to, value_unit, statement, codes_by_source,
   formula, inputs)` — a static catalog entry. v1 maps only the `"vndirect"` namespace.
-- `MetricCoverage(symbol, period, periods: tuple[PeriodCoverage, ...], notes)` and
+- `MetricCoverage(symbol, period, periods: tuple[PeriodCoverage, ...], notes,
+  statement_fetches: tuple[StatementProvenance, ...] = ())` and
   `PeriodCoverage(fiscal_date, is_bank, statement_provenance, per_metric, named_item_count,
   generic_item_count, unmapped_codes, ratio_status)` — `ratio_status` is always `not_requested` in
   v1.
+
+**Diagnostics and source routing:** symbols are normalized once at the wrapper boundary. Existing
+precedence is preserved: `source=` wins over `sources=`, including `sources=[]`; the exact
+`VnfinError("sources must contain at least one source")` is raised before any call only when
+`source is None` and the effective chain is empty. Default and explicit chains filter incapable
+roles per statement before failover (cashflow never falls through to CafeF). Only exact source
+roles `vndirect` and `cafef` are accepted; malformed names become bounded `custom` and are
+zero-call. Public `SOURCE_ERROR` detail is always `recoverable source error`, with no response,
+URL, exception, or attempt-trail text. A no-period coverage result has
+`notes == ("no_fiscal_periods",)` and three aggregate `statement_fetches`; `to_dataframe()`
+serializes them in `df.attrs["statement_fetches"]`.
 
 **Enums** (`.value` strings): `MetricKind` = `raw_mapped` / `provider_native` / `derived`;
 `AppliesTo` = `corporate` / `bank` / `both`; `MetricCategory` = `profitability` / `liquidity` /

@@ -268,16 +268,31 @@ def test_partial_source_error_keeps_dates_and_sanitizes_every_public_surface():
         ),
         ("overlong", lambda: _Source("x" * 1000, {}), "x" * 1000),
     ],
-    ids=lambda row: row[0] if isinstance(row, tuple) else None,
+    ids=[
+        "missing",
+        "raising",
+        "none",
+        "scalar",
+        "list",
+        "dict",
+        "empty",
+        "whitespace",
+        "case",
+        "unknown",
+        "url",
+        "overlong",
+    ],
 )
 def test_malicious_source_names_are_custom_zero_call_and_bounded(
     label, source_factory, raw_text
 ):
     source = source_factory()
-    reports = metrics("TESTCO", period="annual", source=source)
+    with pytest.raises(EmptyData, match=r"^no usable annual fiscal periods") as caught:
+        metrics("TESTCO", period="annual", source=source)
+    assert str(caught.value) == _EMPTY_METRICS_MESSAGE
+    assert raw_text not in str(caught.value)
     coverage = explain_metric_coverage("TESTCO", period="annual", source=source)
 
-    assert reports == ()
     assert coverage.periods == ()
     assert len(coverage.statement_fetches) == 3
     assert all(o.status is StatementCoverageStatus.NOT_SERVED for o in coverage.statement_fetches)
@@ -293,7 +308,7 @@ def test_malicious_source_names_are_custom_zero_call_and_bounded(
         ("balance", "not_served", "custom", "statement balance not served by source 'custom'"),
         ("cashflow", "not_served", "custom", "statement cashflow not served by source 'custom'"),
     )
-    public = repr(reports) + repr(coverage) + repr(attrs)
+    public = repr(coverage) + repr(attrs)
     assert raw_text not in public, label
 
 
@@ -333,12 +348,63 @@ def test_default_cashflow_failure_never_invokes_cafef(monkeypatch):
     assert cafef.calls == []
 
 
+def test_incapable_custom_fallback_is_filtered_before_a_failed_allowed_source():
+    def _boom(symbol, period, is_bank, limit):
+        raise EmptyData("upstream-secret")
+
+    vndirect = _Source(
+        "vndirect",
+        {
+            StatementType.INCOME: _boom,
+            StatementType.BALANCE: _boom,
+            StatementType.CASHFLOW: _boom,
+        },
+    )
+    custom = _MissingNameSource()
+    with pytest.raises(EmptyData, match=r"^no usable annual fiscal periods"):
+        metrics("TESTCO", period="annual", sources=[vndirect, custom])
+    coverage = explain_metric_coverage(
+        "TESTCO", period="annual", sources=[vndirect, custom]
+    )
+    assert all(
+        outcome.status is StatementCoverageStatus.SOURCE_ERROR
+        for outcome in coverage.statement_fetches
+    )
+    assert custom.calls == []
+
+
+def test_cafef_custom_cashflow_is_not_served_with_bounded_composite():
+    cafef = _Source(
+        "cafef",
+        {
+            StatementType.INCOME: (_report(StatementType.INCOME, "cafef"),),
+            StatementType.BALANCE: (_report(StatementType.BALANCE, "cafef"),),
+        },
+    )
+    custom = _MissingNameSource()
+    coverage = explain_metric_coverage(
+        "TESTCO", period="annual", sources=[cafef, custom]
+    )
+    outcomes = _status_by_statement(coverage.statement_fetches)
+    cashflow = outcomes[StatementType.CASHFLOW]
+    assert cashflow.status is StatementCoverageStatus.NOT_SERVED
+    assert cashflow.source == "cafef,custom"
+    assert cashflow.detail == (
+        "statement cashflow not served by source 'cafef,custom'"
+    )
+    assert [statement for _, statement in cafef.calls] == [
+        StatementType.INCOME,
+        StatementType.BALANCE,
+    ]
+    assert custom.calls == []
+
+
 @pytest.mark.parametrize(
     "bad_source,raw_text",
     [
         ("https://example.invalid/?token=provenance-secret", "provenance-secret"),
         ("x" * 1000, "x" * 1000),
-        (None, "None"),
+        (None, None),
         (["non-string-secret"], "non-string-secret"),
         ({"token": "dict-provenance-secret"}, "dict-provenance-secret"),
     ],
@@ -369,8 +435,9 @@ def test_mismatched_report_provenance_is_sanitized(
         None,
         "recoverable source error",
     )
-    assert raw_text not in repr(report)
-    assert raw_text not in repr(attrs)
+    if raw_text is not None:
+        assert raw_text not in repr(report)
+        assert raw_text not in repr(attrs)
 
 
 @pytest.mark.parametrize(

@@ -280,6 +280,7 @@ def test_metric_coverage_shape_frozen():
         "period",
         "periods",
         "notes",
+        "statement_fetches",
     ]
 
 
@@ -1151,7 +1152,7 @@ def test_statement_source_error_metrics_missing():
         "TESTCO", Period.ANNUAL, False, results, limit=8)[0]
     nr = rep.get("net_revenue")
     assert nr.availability is MetricAvailability.MISSING
-    assert nr.reason == "statement income unavailable: EmptyData: no rows"
+    assert nr.reason == "statement income unavailable: recoverable source error"
     # balance metric still resolves
     assert rep.get("total_assets").availability is MetricAvailability.AVAILABLE
 
@@ -1752,7 +1753,7 @@ def test_metrics_all_sources_failed_detail_is_trail_free():
     # AllSourcesFailed.__str__ enumerates "name:reason" for every attempted
     # source; surfacing it would contradict C1 (no attempt trail in v1) and the
     # StatementProvenance docstring. The chain-level branch must reduce detail to
-    # a trail-free string. (Single-source SourceError detail stays verbatim.)
+    # a trail-free string. All public source-error detail is allow-listed.
     def _mk(name, token):
         per = _stub_corp_for(name)
 
@@ -1769,10 +1770,10 @@ def test_metrics_all_sources_failed_detail_is_trail_free():
     )[0]
     inc = {s.statement: s for s in rep.statement_sources}[StatementType.INCOME]
     assert inc.status is StatementCoverageStatus.SOURCE_ERROR
-    assert inc.detail == "AllSourcesFailed: upstream sources failed"
+    assert inc.detail == "recoverable source error"
     reason = rep.get("net_revenue").reason
     assert reason == (
-        "statement income unavailable: AllSourcesFailed: upstream sources failed"
+        "statement income unavailable: recoverable source error"
     )
     for leak in ("TOKENA", "TOKENB", "vndirect:", "cafef:", "all sources failed for"):
         assert leak not in (inc.detail or "")

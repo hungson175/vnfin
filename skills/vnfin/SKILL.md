@@ -93,6 +93,12 @@ from vnfin.fundamentals import get_financials, StatementType, Period
 rep = get_financials("FPT", StatementType.INCOME, Period.ANNUAL)[0]
 print(rep.fiscal_date, rep.get("21001"))          # corporate net revenue (raw VND)
 
+# Canonical fundamentals metrics — three statements, never ratios
+cov = vnfin.fundamentals.explain_metric_coverage("FPT", period="annual")
+print(cov.statement_fetches)                       # income/balance/cashflow aggregate outcomes
+# An all-empty coverage has notes=("no_fiscal_periods",); metrics() then raises
+# the bounded EmptyData message directing callers to explain_metric_coverage().
+
 # Index value in POINTS (read value_unit!)
 idx = vnfin.indices.index_history("VNINDEX", date(2024, 1, 1), date(2024, 6, 30))
 print(idx.value_unit, idx.bars[-1].close)         # 'points' ...

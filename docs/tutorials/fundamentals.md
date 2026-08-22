@@ -159,7 +159,8 @@ For a per-symbol audit that never raises (ideal for a loop over a universe), use
 `explain_metric_coverage(...)`. It runs the same 3-statement fetch but catches every per-statement
 failure and returns a `MetricCoverage` with one `PeriodCoverage` per fiscal date — each carrying
 per-statement provenance, per-metric availability + reasons, named-vs-generic item counts, and
-unmapped provider codes.
+unmapped provider codes. It also always retains exactly three aggregate outcomes in
+`coverage.statement_fetches`, in income/balance/cashflow order.
 
 ```python
 cov = vnfin.fundamentals.explain_metric_coverage("FPT", period="annual")
@@ -167,6 +168,23 @@ for pc in cov.periods:
     print(pc.fiscal_date, pc.named_item_count, pc.generic_item_count, pc.unmapped_codes)
 df = cov.to_dataframe()   # one row per (fiscal_date, metric)
 ```
+
+If all three logical statements have no usable fiscal date, `cov.periods == ()`,
+`cov.notes == ("no_fiscal_periods",)`, and the aggregate outcomes explain whether each slot was
+`missing`, `source_error`, or `not_served`. This is an indeterminate acquisition result, not proof
+that the symbol has no history. In the same all-empty situation, `metrics()` fails loudly with:
+
+```text
+no usable annual fiscal periods for symbol 'FPT'; call explain_metric_coverage()
+```
+
+Source precedence remains `source=` over `sources=` (even `sources=[]`). The exact empty-chain
+`VnfinError("sources must contain at least one source")` occurs only when `source is None` and the
+effective chain is empty. Default and explicit chains filter incapable roles before failover, so a
+cashflow failure never invokes CafeF. Only exact `vndirect`/`cafef` names retain those roles;
+malformed names become zero-call `custom`. Public source errors are sanitized to
+`recoverable source error`; provider bodies, URLs, exception text, and failed-source trails are
+not exposed in reports, coverage, reasons, DataFrame attrs, reprs, or raised messages.
 
 ## Related reference
 

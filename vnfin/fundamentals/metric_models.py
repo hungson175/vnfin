@@ -203,8 +203,9 @@ class StatementProvenance:
 
     ``source`` follows the role rule (B2): OK -> the succeeding source;
     NOT_SERVED -> the responsible (non-serving) source (e.g. "cafef" for
-    cashflow); SOURCE_ERROR/MISSING -> ``None``. There is NO failed-attempt
-    trail in v1 (C1).
+    cashflow); SOURCE_ERROR/MISSING -> ``None``. ``detail`` is either the
+    exact bounded ``recoverable source error`` or the bounded not-served/
+    missing detail; there is NO failed-attempt trail in v1 (C1).
     """
 
     statement: StatementType
@@ -371,17 +372,24 @@ class PeriodCoverage:
 @dataclass(frozen=True)
 class MetricCoverage:
     """Offline-friendly, non-fatal diagnosis for a symbol over the fetched
-    periods (newest first)."""
+    periods (newest first).
+
+    ``statement_fetches`` is the append-only aggregate outcome for the logical
+    income, balance, and cashflow fetches.  It remains populated even when no
+    fiscal period can be constructed, so an empty ``periods`` tuple is never a
+    silent absence signal.
+    """
 
     symbol: str
     period: Period
     periods: tuple[PeriodCoverage, ...]
     notes: tuple[str, ...] = ()
+    statement_fetches: tuple[StatementProvenance, ...] = ()
 
     def to_dataframe(self) -> "pd.DataFrame":
         """One row per (fiscal_period, metric); enum cols serialize ``.value``;
-        ``fiscal_date`` is ``isoformat``. ``symbol``/``period``/``notes`` live in
-        ``df.attrs``."""
+        ``fiscal_date`` is ``isoformat``. ``symbol``/``period``/``notes`` and
+        deterministic aggregate ``statement_fetches`` live in ``df.attrs``."""
         import pandas as pd
 
         rows = []
@@ -403,5 +411,9 @@ class MetricCoverage:
             symbol=self.symbol,
             period=self.period.value,
             notes=tuple(self.notes),
+            statement_fetches=tuple(
+                (sp.statement.value, sp.status.value, sp.source, sp.detail)
+                for sp in self.statement_fetches
+            ),
         )
         return df

@@ -2,12 +2,13 @@
 
 STAGE A surface: the immutable v1 metric catalog, the static ``serves(...)``
 capability predicate, and the two fully-offline query functions
-``metric_catalog`` / ``explain_metric``. The network wrappers (``metrics`` /
-``explain_metric_coverage``) and the pure transformers ship in later stages.
+``metric_catalog`` / ``explain_metric``. The metrics wrappers and pure
+transformers use the same typed fundamentals reports and remain source-gap
+bounded: no new provider capability is implied by this module.
 
-Module is ``metric_api`` (NOT ``metrics``) so the future ``fundamentals.metrics``
-function attribute is not shadowed by a submodule (B5). Clean-room: built only on
-the existing ``vnfin.fundamentals`` codes — no VNStock, no new source.
+Module is ``metric_api`` (NOT ``metrics``) so the ``fundamentals.metrics``
+function attribute is not shadowed by a submodule (B5). It is built only on
+the existing fundamentals codes and does not add a provider source.
 """
 from __future__ import annotations
 
@@ -16,7 +17,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional
 
-from ..exceptions import AllSourcesFailed, SourceError, VnfinError
+from .._contracts import canonical_security_symbol
+from ..exceptions import AllSourcesFailed, EmptyData, SourceError, VnfinError
 from .base import AUTO, is_known_bank
 from .models import (
     FinancialReport,
@@ -73,6 +75,8 @@ def serves(source_name: str, statement) -> bool:
     string value. An unknown source serves nothing (``False``).
     """
     st = _coerce_statement(statement)
+    if not isinstance(source_name, str):
+        return False
     return st in _SERVES.get(source_name, frozenset())
 
 
@@ -285,7 +289,7 @@ def explain_metric(metric_id: "MetricId | str") -> MetricDefinition:
 # =========================================================================== #
 # STAGE B — the pure HTTP-free core.
 #
-# ``StatementFetchResult`` is the typed seam the (future) network wrappers
+# ``StatementFetchResult`` is the typed seam the network wrappers
 # produce per statement; the two pure transformers consume a tuple of them and
 # emit ``MetricReport``s / ``MetricCoverage`` with NO network. All reason strings
 # are EXACT, stable constants (the design §5 reason table; tests bind verbatim).
@@ -295,11 +299,13 @@ class StatementFetchResult:
     """One per-statement fetch outcome (B1/B2).
 
     ``reports`` is empty (``()``) when the fetch failed / was not served. The
-    ``source`` role follows the design rule: OK -> the succeeding source;
-    NOT_SERVED -> the responsible (non-serving) source (e.g. "cafef" for
-    cashflow); SOURCE_ERROR/MISSING -> ``None``. ``detail`` carries the error
-    class/message on failure. This carries SUCCESS and FAILURE so the pure
-    transformers can encode both without any hidden wrapper logic.
+    ``source`` role follows the bounded design rule: OK -> the succeeding
+    canonical source; NOT_SERVED -> the responsible canonical source/composite
+    (e.g. ``"cafef"`` for cashflow); SOURCE_ERROR/MISSING -> ``None``.
+    ``detail`` is bounded: SOURCE_ERROR uses the trail-free public constant and
+    direct MISSING uses the normalized cadence detail. This carries SUCCESS and
+    FAILURE so the pure transformers can encode both without hidden wrapper
+    logic.
     """
 
     statement: StatementType
@@ -343,6 +349,16 @@ _METRIC_STATEMENTS = (
     StatementType.INCOME,
     StatementType.BALANCE,
     StatementType.CASHFLOW,
+)
+
+# Public diagnostics are deliberately allow-listed.  Provider exception text,
+# response bodies, URLs, and failed-attempt trails never cross this boundary.
+_PUBLIC_SOURCE_ERROR_DETAIL = "recoverable source error"
+_CUSTOM_ROLE = "custom"
+_CANONICAL_ROLES = frozenset({"vndirect", "cafef", _CUSTOM_ROLE})
+_EMPTY_METRICS_MESSAGE = (
+    "no usable {cadence} fiscal periods for symbol '{symbol}'; "
+    "call explain_metric_coverage()"
 )
 
 
@@ -394,10 +410,18 @@ def _provenance_for_date(
     if result.status is StatementCoverageStatus.OK:
         for rep in result.reports:
             if rep.fiscal_date == fiscal_date:
+                source = _safe_atomic_role(_safe_report_source(rep))
+                if source is None:
+                    return StatementProvenance(
+                        statement=st,
+                        status=StatementCoverageStatus.SOURCE_ERROR,
+                        source=None,
+                        detail=_PUBLIC_SOURCE_ERROR_DETAIL,
+                    )
                 return StatementProvenance(
                     statement=st,
                     status=StatementCoverageStatus.OK,
-                    source=rep.source,
+                    source=source,
                 )
         return StatementProvenance(
             statement=st, status=StatementCoverageStatus.MISSING, source=None
@@ -407,21 +431,28 @@ def _provenance_for_date(
             statement=st,
             status=StatementCoverageStatus.SOURCE_ERROR,
             source=None,
-            detail=result.detail,
+            detail=_PUBLIC_SOURCE_ERROR_DETAIL,
         )
     if result.status is StatementCoverageStatus.NOT_SERVED:
+        source = _safe_not_served_source(result.source)
         return StatementProvenance(
             statement=st,
             status=StatementCoverageStatus.NOT_SERVED,
-            source=result.source,
-            detail=result.detail,
+            source=source,
+            detail=f"statement {st.value} not served by source '{source}'",
         )
     # A bare MISSING result (no reports) — treat as missing this date.
     return StatementProvenance(
         statement=st,
         status=StatementCoverageStatus.MISSING,
         source=None,
-        detail=result.detail,
+        detail=(
+            result.detail
+            if isinstance(result.detail, str)
+            and result.detail.startswith("no usable ")
+            and result.detail.endswith(" fiscal periods")
+            else None
+        ),
     )
 
 
@@ -486,7 +517,7 @@ def _resolve_raw(
             ),
         )
     # 3. source-namespace gate (C3): the succeeding source must be mapped.
-    source = report.source
+    source = prov.source
     if source != _MAPPED_SOURCE or defn.codes_by_source.get(source) is None:
         return _unavailable(
             defn,
@@ -820,7 +851,30 @@ def _coverage_from_statement_results(
     periods = tuple(
         _build_period_coverage(is_bank, rep, results) for rep in reports
     )
-    return MetricCoverage(symbol=symbol, period=period, periods=periods)
+    by_statement = {result.statement: result for result in results}
+    statement_fetches = tuple(
+        _aggregate_statement_provenance(
+            by_statement.get(
+                statement,
+                StatementFetchResult(
+                    statement=statement,
+                    reports=(),
+                    status=StatementCoverageStatus.MISSING,
+                    source=None,
+                ),
+            ),
+            period,
+        )
+        for statement in _METRIC_STATEMENTS
+    )
+    notes = ("no_fiscal_periods",) if not periods else ()
+    return MetricCoverage(
+        symbol=symbol,
+        period=period,
+        periods=periods,
+        notes=notes,
+        statement_fetches=statement_fetches,
+    )
 
 
 # =========================================================================== #
@@ -831,20 +885,109 @@ def _coverage_from_statement_results(
 # turn each outcome into a typed ``StatementFetchResult`` (success OR recoverable
 # failure — a per-statement error must NEVER raise out), resolve the concrete
 # ``is_bank`` template, then hand the 3 results to the PURE Stage-B transformers.
-# A statement no resolved source can serve (CafeF cashflow) is gated OUT before
-# any fetch via the static ``serves(...)`` predicate (deterministic, not
-# exception-text classification).
+# A statement no resolved source can serve is gated OUT before any fetch via the
+# static ``serves(...)`` predicate (deterministic, not exception-text
+# classification).  Source names and returned provenance are normalized at this
+# seam so malformed objects cannot leak into public diagnostics.
 # =========================================================================== #
-def _resolve_chain_names(source, sources) -> tuple[str, ...]:
-    """Resolved source-chain NAMES for the serves-gate (no fetch needed).
+def _safe_source_role(source) -> str:
+    """Return one bounded canonical role without reading arbitrary source text."""
+    try:
+        name = getattr(source, "name")
+    except BaseException:
+        return _CUSTOM_ROLE
+    return _safe_atomic_role(name) or _CUSTOM_ROLE
 
-    ``source`` wins over ``sources`` (matching ``get_financials``); neither -> the
-    default failover chain names ``("vndirect", "cafef")``.
-    """
+
+def _safe_atomic_role(value) -> Optional[str]:
+    """Return an allow-listed atomic role, never arbitrary caller text."""
+    try:
+        if type(value) is str and value in ("vndirect", "cafef"):
+            return value
+    except BaseException:
+        pass
+    return None
+
+
+def _role_composite(roles) -> str:
+    """Deduplicate canonical roles in configured order for NOT_SERVED."""
+    ordered: list[str] = []
+    for role in roles:
+        if role not in _CANONICAL_ROLES:
+            role = _CUSTOM_ROLE
+        if role not in ordered:
+            ordered.append(role)
+    return ",".join(ordered) or _CUSTOM_ROLE
+
+
+def _safe_not_served_source(value) -> str:
+    """Keep a public NOT_SERVED source value inside the canonical role set."""
+    if type(value) is not str:
+        return _CUSTOM_ROLE
+    parts = tuple(value.split(","))
+    if not parts or any(part not in _CANONICAL_ROLES for part in parts):
+        return _CUSTOM_ROLE
+    return _role_composite(parts)
+
+
+def _safe_report_source(report):
+    """Read a returned provenance value without propagating hostile properties."""
+    try:
+        return getattr(report, "source")
+    except BaseException:
+        return None
+
+
+def _reports_match_roles(reports, allowed_roles: tuple[str, ...]) -> bool:
+    """Require one consistent producing canonical role for all reports."""
+    observed: list[str] = []
+    for report in reports:
+        source_name = _safe_atomic_role(_safe_report_source(report))
+        if source_name is None or source_name not in allowed_roles:
+            return False
+        if source_name not in observed:
+            observed.append(source_name)
+    return len(observed) == 1
+
+
+def _source_error_result(statement: StatementType) -> StatementFetchResult:
+    return StatementFetchResult(
+        statement=statement,
+        reports=(),
+        status=StatementCoverageStatus.SOURCE_ERROR,
+        source=None,
+        detail=_PUBLIC_SOURCE_ERROR_DETAIL,
+    )
+
+
+def _missing_detail(period: Period) -> str:
+    return f"no usable {period.value.lower()} fiscal periods"
+
+
+def _effective_sources(source, sources, *, http_get, timeout):
+    """Materialize the effective chain while preserving direct-source precedence."""
     if source is not None:
-        return (source.name,)
+        return (source,), True
     if sources is not None:
-        return tuple(s.name for s in sources)
+        effective = tuple(sources)
+    else:
+        # Lazy import avoids the metric_api <-> fundamentals.__init__ cycle.
+        from . import default_fundamental_sources
+
+        effective = tuple(
+            default_fundamental_sources(http_get=http_get, timeout=timeout)
+        )
+    if not effective:
+        raise VnfinError("sources must contain at least one source")
+    return effective, False
+
+
+def _resolve_chain_names(source, sources) -> tuple[str, ...]:
+    """Return bounded role names for compatibility with the old internal seam."""
+    if source is not None:
+        return (_safe_source_role(source),)
+    if sources is not None:
+        return tuple(_safe_source_role(s) for s in tuple(sources))
     return ("vndirect", "cafef")
 
 
@@ -852,76 +995,132 @@ def _fetch_statement_result(
     symbol: str,
     statement: StatementType,
     period: Period,
-    names: tuple[str, ...],
+    effective_sources: tuple,
     *,
+    direct_source: bool,
     is_bank,
     limit: int,
-    source,
-    sources,
     max_attempts: int,
     http_get,
     timeout: float,
 ) -> StatementFetchResult:
-    """Fetch ONE statement and classify it into a typed result (never raises).
-
-    serves-gate first (capability-based): if NO resolved source can serve the
-    statement -> ``NOT_SERVED`` with the responsible source(s). Otherwise call
-    ``get_financials`` and map success -> ``OK`` / a recoverable ``SourceError``
-    or chain-level ``AllSourcesFailed`` -> ``SOURCE_ERROR`` (never exposing the
-    attempt trail — C1).
-    """
-    if not any(serves(n, statement) for n in names):
-        joined = ",".join(names)
+    """Fetch one statement and classify it into a bounded typed result."""
+    pairs = tuple((source, _safe_source_role(source)) for source in effective_sources)
+    roles = tuple(role for _, role in pairs)
+    capable = tuple((source, role) for source, role in pairs if serves(role, statement))
+    if not capable:
+        joined = _role_composite(roles)
         return StatementFetchResult(
             statement=statement,
             reports=(),
             status=StatementCoverageStatus.NOT_SERVED,
             source=joined,
-            detail=(
-                f"statement {statement.value} not served by source '{joined}'"
-            ),
+            detail=f"statement {statement.value} not served by source '{joined}'",
         )
+
     # Lazy import avoids the metric_api <-> fundamentals.__init__ circular import.
     from . import get_financials
 
+    capable_sources = tuple(source for source, _ in capable)
+    allowed_roles = tuple(role for _, role in capable)
     try:
-        reports = get_financials(
-            symbol,
-            statement,
-            period,
-            is_bank=is_bank,
-            limit=limit,
-            source=source,
-            sources=sources,
-            max_attempts=max_attempts,
-            http_get=http_get,
-            timeout=timeout,
-        )
-    except (SourceError, AllSourcesFailed) as exc:
-        # C1: the public ``detail`` (-> StatementProvenance.detail and the
-        # MetricValue.reason "statement {s} unavailable: {detail}") must carry NO
-        # per-source failed-attempt trail. AllSourcesFailed.__str__ enumerates
-        # every attempted source + its reason, so on the chain-level branch we
-        # reduce to a trail-free string. A single-source SourceError carries no
-        # trail (it is the same text get_financials itself raises), so keep it.
-        if isinstance(exc, AllSourcesFailed):
-            detail = f"{type(exc).__name__}: upstream sources failed"
+        if direct_source:
+            reports = get_financials(
+                symbol,
+                statement,
+                period,
+                is_bank=is_bank,
+                limit=limit,
+                source=capable_sources[0],
+                sources=None,
+                max_attempts=max_attempts,
+                http_get=http_get,
+                timeout=timeout,
+            )
         else:
-            detail = f"{type(exc).__name__}: {exc}"
-        return StatementFetchResult(
-            statement=statement,
-            reports=(),
-            status=StatementCoverageStatus.SOURCE_ERROR,
-            source=None,
-            detail=detail,
-        )
-    reports = tuple(reports)
-    succeeding = reports[0].source if reports else None
+            reports = get_financials(
+                symbol,
+                statement,
+                period,
+                is_bank=is_bank,
+                limit=limit,
+                source=None,
+                sources=capable_sources,
+                max_attempts=max_attempts,
+                http_get=http_get,
+                timeout=timeout,
+            )
+    except (SourceError, AllSourcesFailed):
+        return _source_error_result(statement)
+
+    try:
+        reports = tuple(reports)
+    except Exception:
+        return _source_error_result(statement)
+
+    if not reports:
+        if direct_source:
+            return StatementFetchResult(
+                statement=statement,
+                reports=(),
+                status=StatementCoverageStatus.MISSING,
+                source=None,
+                detail=_missing_detail(period),
+            )
+        return _source_error_result(statement)
+
+    if not _reports_match_roles(reports, allowed_roles):
+        return _source_error_result(statement)
+
+    succeeding = _safe_atomic_role(_safe_report_source(reports[0]))
+    if succeeding is None:
+        return _source_error_result(statement)
     return StatementFetchResult(
         statement=statement,
         reports=reports,
         status=StatementCoverageStatus.OK,
         source=succeeding,
+    )
+
+
+def _aggregate_statement_provenance(
+    result: StatementFetchResult, period: Period
+) -> StatementProvenance:
+    """Map one logical result to its bounded aggregate public outcome."""
+    if result.status is StatementCoverageStatus.SOURCE_ERROR:
+        return StatementProvenance(
+            statement=result.statement,
+            status=StatementCoverageStatus.SOURCE_ERROR,
+            source=None,
+            detail=_PUBLIC_SOURCE_ERROR_DETAIL,
+        )
+    if result.status is StatementCoverageStatus.NOT_SERVED:
+        source = _safe_not_served_source(result.source)
+        return StatementProvenance(
+            statement=result.statement,
+            status=StatementCoverageStatus.NOT_SERVED,
+            source=source,
+            detail=f"statement {result.statement.value} not served by source '{source}'",
+        )
+    if result.status is StatementCoverageStatus.MISSING or not result.reports:
+        return StatementProvenance(
+            statement=result.statement,
+            status=StatementCoverageStatus.MISSING,
+            source=None,
+            detail=_missing_detail(period),
+        )
+    source = _safe_atomic_role(result.source)
+    if source is None or not _reports_match_roles(result.reports, (source,)):
+        return StatementProvenance(
+            statement=result.statement,
+            status=StatementCoverageStatus.SOURCE_ERROR,
+            source=None,
+            detail=_PUBLIC_SOURCE_ERROR_DETAIL,
+        )
+    return StatementProvenance(
+        statement=result.statement,
+        status=StatementCoverageStatus.OK,
+        source=source,
     )
 
 
@@ -937,24 +1136,19 @@ def _fetch_all_statements(
     http_get,
     timeout: float,
 ) -> tuple[tuple[StatementFetchResult, ...], bool]:
-    """Fan out the 3 metric statements and resolve the concrete ``is_bank``.
-
-    Makes EXACTLY THREE ``get_financials`` calls (one per income/balance/
-    cashflow), ZERO ratio calls. Returns the per-statement results plus the
-    resolved ``is_bank`` template: the explicit arg if given, else the first OK
-    report's ``.is_bank``, else the known-bank heuristic on the symbol.
-    """
-    names = _resolve_chain_names(source, sources)
+    """Fan out exactly three logical statements with per-statement filtering."""
+    effective_sources, direct_source = _effective_sources(
+        source, sources, http_get=http_get, timeout=timeout
+    )
     results = tuple(
         _fetch_statement_result(
             symbol,
             st,
             period,
-            names,
+            effective_sources,
+            direct_source=direct_source,
             is_bank=is_bank,
             limit=limit,
-            source=source,
-            sources=sources,
             max_attempts=max_attempts,
             http_get=http_get,
             timeout=timeout,
@@ -1003,9 +1197,19 @@ def metrics(
     statement (CafeF does not serve cashflow), so provenance is PER STATEMENT
     (``MetricReport.statement_sources``) — there is no single report ``source``.
 
+    If the three logical statements yield no usable fiscal date, raises the
+    exact bounded :class:`EmptyData` message ``no usable {cadence} fiscal
+    periods for symbol '{SYMBOL}'; call explain_metric_coverage()``. Source
+    precedence is ``source=`` over ``sources=`` (including ``sources=[]``);
+    only an empty effective chain with ``source is None`` raises the exact
+    empty-chain :class:`VnfinError`. Incapable source roles are filtered before
+    failover, malformed roles are zero-call ``custom``, and public source
+    errors are sanitized to ``recoverable source error``.
+
     Mirrors :func:`get_financials`' injection knobs (``is_bank``/``limit``/
     ``source``/``sources``/``http_get``/``timeout``/``max_attempts``).
     """
+    symbol = canonical_security_symbol(symbol, "symbol")
     pd = _coerce_period(period)
     results, resolved_is_bank = _fetch_all_statements(
         symbol,
@@ -1018,9 +1222,16 @@ def metrics(
         http_get=http_get,
         timeout=timeout,
     )
-    return _metrics_from_statement_results(
+    reports = _metrics_from_statement_results(
         symbol, pd, resolved_is_bank, results, limit
     )
+    if not reports:
+        raise EmptyData(
+            _EMPTY_METRICS_MESSAGE.format(
+                cadence=pd.value.lower(), symbol=symbol
+            )
+        )
+    return reports
 
 
 def explain_metric_coverage(
@@ -1045,7 +1256,13 @@ def explain_metric_coverage(
     per-statement provenance, named-vs-generic item counts, unmapped codes, and
     every metric's availability + stable reason. Designed for a batch loop over a
     universe that catches nothing and still gets a per-symbol diagnostic.
+    The returned object always carries exactly three aggregate
+    ``statement_fetches`` in income/balance/cashflow order, including an empty
+    ``periods`` result, with ``notes == ("no_fiscal_periods",)`` in that case.
+    Source errors expose only the bounded ``recoverable source error`` detail;
+    response text, URLs, exception text, and attempt trails are not public.
     """
+    symbol = canonical_security_symbol(symbol, "symbol")
     pd = _coerce_period(period)
     results, resolved_is_bank = _fetch_all_statements(
         symbol,
