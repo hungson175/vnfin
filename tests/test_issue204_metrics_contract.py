@@ -6,11 +6,13 @@ source doubles.
 """
 from __future__ import annotations
 
-from datetime import date
+from dataclasses import replace
+from datetime import date, datetime
+import math
 
 import pytest
 
-from vnfin.exceptions import EmptyData, SourceError, VnfinError
+from vnfin.exceptions import EmptyData, InvalidData, SourceError, VnfinError
 from vnfin.fundamentals import (
     FinancialReport,
     LineItem,
@@ -22,6 +24,7 @@ from vnfin.fundamentals import (
     explain_metric_coverage,
     metrics,
 )
+from vnfin.fundamentals.metric_api import _role_composite
 
 
 _DATE = date(2025, 12, 31)
@@ -52,6 +55,24 @@ def _report(statement: StatementType, source, *, symbol="TESTCO"):
         currency="VND",
         is_bank=False,
         model_type=model_type if source == "vndirect" else None,
+    )
+
+
+def _income_payload(mutator):
+    """Build one synthetic income result for direct/chain parity tests."""
+    base = _report(StatementType.INCOME, "vndirect")
+    payload = mutator(base)
+    return payload if isinstance(payload, tuple) else (payload,)
+
+
+def _source_with_income_payload(payload):
+    return _Source(
+        "vndirect",
+        {
+            StatementType.INCOME: payload,
+            StatementType.BALANCE: (_report(StatementType.BALANCE, "vndirect"),),
+            StatementType.CASHFLOW: (_report(StatementType.CASHFLOW, "vndirect"),),
+        },
     )
 
 
@@ -245,6 +266,211 @@ def test_partial_source_error_keeps_dates_and_sanitizes_every_public_surface():
 
 
 @pytest.mark.parametrize(
+    "label,mutator",
+    [
+        (
+            "cross_symbol",
+            lambda report: replace(report, symbol="OTHER"),
+        ),
+        (
+            "wrong_statement",
+            lambda report: replace(report, statement_type=StatementType.BALANCE),
+        ),
+        (
+            "wrong_period",
+            lambda report: replace(report, period=Period.QUARTER),
+        ),
+        (
+            "malformed_date",
+            lambda report: replace(report, fiscal_date=datetime(2025, 12, 31)),
+        ),
+        (
+            "foreign_model_type_89",
+            lambda report: replace(
+                report,
+                model_type=89,
+                items=(LineItem("23003", "net_income", 100.0, "VND"),),
+            ),
+        ),
+        (
+            "foreign_model_type_90",
+            lambda report: replace(
+                report,
+                model_type=90,
+                items=(LineItem("23003", "net_income", 100.0, "VND"),),
+            ),
+        ),
+        (
+            "foreign_model_type_91",
+            lambda report: replace(
+                report,
+                model_type=91,
+                items=(LineItem("23003", "net_income", 100.0, "VND"),),
+            ),
+        ),
+        (
+            "mixed_model_types",
+            lambda report: (
+                replace(report, model_type=89),
+                replace(
+                    report,
+                    fiscal_date=date(2024, 12, 31),
+                    model_type=2,
+                ),
+            ),
+        ),
+        (
+            "entity_model_mismatch",
+            lambda report: replace(report, is_bank=True, model_type=2),
+        ),
+        (
+            "wrong_currency",
+            lambda report: replace(report, currency="USD"),
+        ),
+        (
+            "wrong_unit_or_scale",
+            lambda report: replace(
+                report,
+                items=(LineItem("21001", "net_revenue", 100.0, "VND/1000"),),
+            ),
+        ),
+        (
+            "nonfinite_value",
+            lambda report: replace(
+                report,
+                items=(LineItem("21001", "net_revenue", math.inf, "VND"),),
+            ),
+        ),
+        (
+            "duplicate_item_codes",
+            lambda report: replace(
+                report,
+                items=(
+                    LineItem("21001", "net_revenue", 100.0, "VND"),
+                    LineItem("21001", "net_revenue_again", 101.0, "VND"),
+                ),
+            ),
+        ),
+        (
+            "duplicate_fiscal_dates",
+            lambda report: (
+                report,
+                replace(
+                    report,
+                    items=(LineItem("21002", "other_revenue", 101.0, "VND"),),
+                ),
+            ),
+        ),
+        ("malformed_report", lambda report: object()),
+    ],
+    ids=[
+        "cross_symbol",
+        "wrong_statement",
+        "wrong_period",
+        "malformed_date",
+        "foreign_model_type_89",
+        "foreign_model_type_90",
+        "foreign_model_type_91",
+        "mixed_model_types",
+        "entity_model_mismatch",
+        "wrong_currency",
+        "wrong_unit_or_scale",
+        "nonfinite_value",
+        "duplicate_item_codes",
+        "duplicate_fiscal_dates",
+        "malformed_report",
+    ],
+)
+def test_direct_and_explicit_chain_validate_the_same_complete_report_contract(
+    label, mutator
+):
+    payload = _income_payload(mutator)
+    for selection in ("direct", "chain"):
+        source = _source_with_income_payload(payload)
+        kwargs = {"source": source} if selection == "direct" else {"sources": [source]}
+        reports = metrics("TESTCO", period="annual", **kwargs)
+        assert len(reports) == 1, (label, selection)
+        report = reports[0]
+        income = _status_by_statement(report.statement_sources)[StatementType.INCOME]
+        assert income.status is StatementCoverageStatus.SOURCE_ERROR, (label, selection)
+        assert income.source is None
+        assert income.detail == "recoverable source error"
+        assert report.get("net_revenue").availability is MetricAvailability.MISSING
+        assert report.get("net_income").availability is MetricAvailability.MISSING
+
+        coverage = explain_metric_coverage("TESTCO", period="annual", **kwargs)
+        aggregate_income = _status_by_statement(coverage.statement_fetches)[
+            StatementType.INCOME
+        ]
+        assert aggregate_income.status is StatementCoverageStatus.SOURCE_ERROR
+        assert aggregate_income.source is None
+        assert aggregate_income.detail == "recoverable source error"
+
+
+def test_heading_contract_rejects_every_noncanonical_89_90_91_template_for_ssi_and_tcx():
+    for symbol in ("SSI", "TCX"):
+        for model_type in (89, 90, 91):
+            bad = replace(
+                _report(StatementType.INCOME, "vndirect", symbol=symbol),
+                model_type=model_type,
+                items=(LineItem("23003", "net_income", 100.0, "VND"),),
+            )
+            for selection in ("direct", "chain"):
+                source = _Source(
+                    "vndirect",
+                    {
+                        StatementType.INCOME: (bad,),
+                        StatementType.BALANCE: (),
+                        StatementType.CASHFLOW: (),
+                    },
+                )
+                kwargs = (
+                    {"source": source}
+                    if selection == "direct"
+                    else {"sources": [source]}
+                )
+                with pytest.raises(EmptyData, match=r"^no usable annual fiscal periods"):
+                    metrics(symbol, period="annual", **kwargs)
+                coverage = explain_metric_coverage(symbol, period="annual", **kwargs)
+                income = _status_by_statement(coverage.statement_fetches)[
+                    StatementType.INCOME
+                ]
+                assert income.status is StatementCoverageStatus.SOURCE_ERROR
+                assert income.detail == "recoverable source error"
+                assert coverage.periods == ()
+
+
+@pytest.mark.parametrize("symbol", [" ssi ", "tcx"], ids=["ssi", "tcx"])
+def test_ssi_tcx_empty_chain_diagnostics_are_normalized_and_fail_loud_metrics(symbol):
+    source = _empty_source("vndirect")
+    coverage = explain_metric_coverage(symbol, period="annual", source=source)
+    assert coverage.symbol == symbol.strip().upper()
+    assert coverage.periods == ()
+    assert coverage.notes == ("no_fiscal_periods",)
+    assert len(coverage.statement_fetches) == 3
+    assert all(
+        outcome.status is StatementCoverageStatus.MISSING
+        for outcome in coverage.statement_fetches
+    )
+    with pytest.raises(EmptyData, match=r"^no usable annual fiscal periods"):
+        metrics(symbol, period="annual", source=source)
+
+
+@pytest.mark.parametrize("wrapper", [metrics, explain_metric_coverage], ids=["metrics", "coverage"])
+def test_malformed_symbol_is_rejected_before_any_source_call(wrapper):
+    source = _all_success_source("vndirect")
+    with pytest.raises(InvalidData):
+        wrapper("BAD SYMBOL", period="annual", source=source)
+    assert source.calls == []
+
+
+def test_not_served_composite_is_canonical_and_at_the_exact_bounded_maximum():
+    composite = _role_composite(("vndirect", "cafef", "custom", "vndirect"))
+    assert composite == "vndirect,cafef,custom"
+    assert len(composite) == 21
+
+
+@pytest.mark.parametrize(
     "label,source_factory,raw_text",
     [
         ("missing", _MissingNameSource, "missing-name-secret"),
@@ -260,6 +486,7 @@ def test_partial_source_error_keeps_dates_and_sanitizes_every_public_surface():
         ("empty", lambda: _Source("", {}), "''"),
         ("whitespace", lambda: _Source(" \t\n", {}), "\\t"),
         ("case", lambda: _Source("VNDirect", {}), "VNDirect"),
+        ("case_cafef", lambda: _Source("CafeF", {}), "CafeF"),
         ("unknown", lambda: _Source("unknown-role", {}), "unknown-role"),
         (
             "url",
@@ -278,6 +505,7 @@ def test_partial_source_error_keeps_dates_and_sanitizes_every_public_surface():
         "empty",
         "whitespace",
         "case",
+        "case_cafef",
         "unknown",
         "url",
         "overlong",
@@ -438,6 +666,24 @@ def test_mismatched_report_provenance_is_sanitized(
     if raw_text is not None:
         assert raw_text not in repr(report)
         assert raw_text not in repr(attrs)
+
+    coverage = explain_metric_coverage("TESTCO", period="annual", source=source)
+    aggregate_income = _status_by_statement(coverage.statement_fetches)[
+        StatementType.INCOME
+    ]
+    assert aggregate_income.status is StatementCoverageStatus.SOURCE_ERROR
+    assert aggregate_income.source is None
+    assert aggregate_income.detail == "recoverable source error"
+    coverage_attrs = coverage.to_dataframe().attrs
+    assert coverage_attrs["statement_fetches"][0] == (
+        "income",
+        "source_error",
+        None,
+        "recoverable source error",
+    )
+    if raw_text is not None:
+        public = repr(coverage) + repr(coverage_attrs)
+        assert raw_text not in public
 
 
 @pytest.mark.parametrize(
