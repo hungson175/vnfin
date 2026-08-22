@@ -3,7 +3,7 @@
 **Date:** 22/08/2026 (Vietnam time, UTC+7)
 **Owner:** `vnfin-oss`
 **Issue:** #203 — corporate-action seed discovery
-**Status:** research only; no source is enabled and no production code is authorized
+**Status:** research only; no new C1-C3 source is enabled; legacy C4 remains active and no production code is authorized
 
 ## Clean-room and evidence boundary
 
@@ -28,15 +28,28 @@ seed discovery:
    a related-rights listing route; and
 3. an announcement page carries a second response-backed identity check.
 
-The strongest technical candidate is the issuer-detail → rights-list route (`C2` below), not a blind
-numeric-ID scan. It is still **not enabled**. The inspected official pages expose no public machine-
-readable data licence or redistribution grant, the related-list routes are only observed from
-first-party JavaScript, and provider rate/concurrency/retention terms were not disclosed. The lawful
-engineering disposition is therefore:
+The strongest *new* technical candidate is the issuer-detail → rights-list route (`C2` below), not a
+blind numeric-ID scan. C1-C3 are **not enabled**. The merged runtime still performs the legacy C4
+numeric scan when no explicit seed is supplied; that scan is bounded and non-authoritative and is
+preserved for compatibility. The inspected official pages expose no public machine-readable data
+licence or redistribution grant, the related-list routes are only observed from first-party
+JavaScript, and provider rate/concurrency/retention terms were not disclosed. The lawful engineering
+disposition is therefore:
 
 > **`NO_SOURCE_ENABLED / SOURCE_GAP_LEGAL_AND_CONTRACT`** — preserve the existing explicit-seed
-> adapter path, record bounded discovery as a future design, and require written VSDC owner clearance
-> plus a new design gate before any runtime discovery request or public claim.
+> adapter path and legacy C4 behavior, keep the new C1-C3 chain empty, record bounded discovery as
+> source-gap evidence only, and require written VSDC owner clearance plus a new design gate before
+> any new runtime discovery request or public claim.
+
+### Current merged-runtime truth
+
+The shipped no-seed adapter path is not empty: with no `seed_id`, it scans downward from `latest_id`
+over `min(max_fetch, DEFAULT_MAX_FETCH)` numeric announcement IDs, then runs the existing
+same-organisation BFS when a seed is found. `max_fetch` remains the caller's existing positive-int
+parameter; this report does not redefine its range or physical-request meaning. The result retains
+the existing `corp_action_source_partial`, `corp_action_seed_not_found`,
+`coverage_truncated_at_max_fetch`, and bounded-count `corp_action_fetch_incomplete` behavior. This
+research does not authorize changing that runtime contract.
 
 ## 1. Official owner and route inventory
 
@@ -52,7 +65,7 @@ host, not an open-data or redistribution licence.
 | C1 | `GET https://vsd.vn/vi/search?text={encoded_symbol}&type=4&obj=0&buss=11021&fdate={from}&tdate={to}`; page 1 is HTML. Subsequent pages use `POST` to the same URL with `Content-Type: application/json;charset=utf-8` and `{"SearchKey":4,"CurrentPage":N}` after the page's ephemeral `__VPToken` is acquired. | Search results are hints only. The result title or fuzzy text is not sufficient; each `/vi/ad/{id}` must be checked against the announcement's ticker, issuer, ISIN, and required fields. | A current rights-filter probe returned 20 links and a server count. Page 2 was returned by the JSON POST, not by a GET `page=` query. Empty and fuzzy results are valid HTML but do not prove issuer coverage or absence. | **Technically promising, non-authoritative, fuzzy.** Blank text must be rejected because it produces a broad global list. | No public automation, caching, or redistribution grant found; written permission required. |
 | C2 | `GET https://vsd.vn/vi/search?text={encoded_symbol}&type=5...` to locate security details, then `GET https://vsd.vn/vi/s-detail/{numeric_id}`. The detail page's first-party script posts `{"SearchKey":"{numeric_id}","CurrentPage":N,"RecordOnPage":10}` to `https://vsd.vn/isuisser-thq/search`. | The detail page returns the registered organisation, security name, exact ticker, ISIN when available, security type, and trading venue. The related-rights rows are accepted only after this exact identity anchor. | The FPT example exposed related-rights page controls and seven observed pages. The route is HTML, page-numbered, and must be traversed only to the server-declared bound. Missing or malformed controls are schema drift. | **Strongest technical candidate; observed first-party route only.** | No public route contract or reuse grant found; written permission and owner confirmation required. |
 | C3 | Same issuer detail anchor, then the observed first-party `POST https://vsd.vn/isuisser-tcdk/search` with the same JSON paging shape. | The issuer detail identity is usable; each news row still needs announcement-level identity validation. | Broader issuer-news results are noisier than the rights list; page bounds and route shape must be validated independently. | **Fallback candidate only; not a substitute for rights coverage.** | Same unresolved permission and contract posture as C2. |
-| C4 | Existing bounded recent numeric-ID scan against `GET https://vsd.vn/vi/ad/{id}`. | An ID alone is not issuer identity. Each response would need the announcement identity check. | A numeric window has no proof that IDs are contiguous, that all relevant announcements are present, or that the requested date range is covered. | **Not a no-seed discovery source.** Preserve only the existing explicit-seed compatibility and source-gap behavior. | No licence or permission evidence; not enabled. |
+| C4 | Existing bounded recent numeric-ID scan against `GET https://vsd.vn/vi/ad/{id}`. | An ID alone is not issuer identity. Each response would need the announcement identity check. | A numeric window has no proof that IDs are contiguous, that all relevant announcements are present, or that the requested date range is covered. | **Active legacy fallback, non-authoritative.** Preserve it; do not present it as reliable new discovery. | No licence or permission evidence; no new C4 capability is enabled. |
 
 `type=4` is the observed search-page value for news and `buss=11021` is the observed value for
 rights execution. `type=5` is the observed security-code search value. These values come from the

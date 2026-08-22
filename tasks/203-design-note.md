@@ -1,554 +1,282 @@
 # #203 design/source note — VSDC corporate-action seed discovery
 
-**Status:** `BLOCKED — source/legal/operational gate; no no-seed source enabled; design only`
+**Status:** `BLOCKED — docs-only source-gap closure correction; no new source enabled`
 **Issue:** #203
 **Reviewer packet:** `tasks/203-corp-action-seed-discovery-spec.md` at reviewer `c75a86e`
+**Blocked review:** `reviews/review-202608221623-issue203-design-source-gate.md` at reviewer `f2e9e51`, reviewed SHA `fa8a05a74c6791ad2921937bf5fa5689777c912f`
 **Research:** [`docs/research/2026-08-22-vsdc-corp-action-seed-discovery.md`](../docs/research/2026-08-22-vsdc-corp-action-seed-discovery.md)
 **Clean-room:** official VSDC-owned pages and first-party HTML/JavaScript observations only; the mandatory repository blacklist was applied to every search and no excluded material was opened or used.
-**Authorization boundary:** this note authorizes no production code, parser, default source-chain entry, runtime request, cache, bundled index, redistribution, push, or issue close.
+**Authorization boundary:** this correction authorizes no production code, parser, new source-chain entry, runtime request, cache, bundled index, redistribution, push, or issue close.
 
-## 0. Decision and preserved compatibility
+## 0. Corrected decision
 
-The current no-seed source chain remains **empty**. No candidate meets all of the accepted legal,
-identity, coverage, contract, and operational gates. The correct disposition is:
+The source/legal conclusion remains unchanged: none of the newly observed VSDC candidates has both a
+reliable owner-backed route contract and resolved runtime/caching/redistribution permission.
+Therefore:
 
 ```text
-source_disposition = NO_SOURCE_ENABLED
-source_gap = LEGAL_AND_NON_AUTHORITATIVE_ROUTE_CONTRACT
-runtime_discovery = DISABLED
+new_candidate_chain_C1_C2_C3 = EMPTY_AND_DISABLED
+legacy_C4_numeric_scan = ACTIVE_IN_MERGED_RUNTIME_BUT_NON_AUTHORITATIVE
+source_gap = OPEN_UNTIL_CONJUNCTIVE_REOPEN_EVIDENCE
 production_code = NOT_AUTHORIZED
 ```
 
-This is a design/source closure, not a claim that VSDC has no corporate-action data. The observed
-routes are promising technical evidence only. A future implementation requires a new design PASS
-after the reopen criteria in §9 are evidenced.
+This note is a source-gap closure, not an implementation design. The observations in the research
+report document why C1-C3 are worth a later source-gate review; they do not authorize treating those
+HTML/JavaScript routes as an executable API or claiming complete corporate-action coverage.
 
-The existing #163 compatibility boundary is unchanged:
+## 1. Current merged-runtime truth and compatibility boundary
 
-- keep `vnfin.corp_actions.dividends(symbol, start=None, end=None, http_get=None, timeout=25.0,
-  seed_id=None, latest_id=None, max_fetch=None)` unchanged;
-- preserve explicit `seed_id` behavior and its existing bounded same-issuer crawl;
-- preserve the existing warnings `corp_action_source_partial`, `corp_action_seed_not_found`,
-  `coverage_truncated_at_max_fetch`, and `corp_action_fetch_incomplete` for existing callers;
-- do not register a no-seed VSDC candidate, change the public facade, alter the API snapshot, or
-  add a new source to the runtime chain in this commit; and
-- do not turn a missing seed or an empty list into a confirmed “no dividend” result.
+The accepted packet follows the existing #163 implementation. This correction must describe it
+truthfully and must not silently remove or redefine it.
 
-## 1. Candidate source gate
+### 1.1 Existing facade and explicit-seed path
 
-All candidates are first-party routes on the official `vsd.vn` host. The search/detail/list routes
-were observed in server HTML or first-party JavaScript, not in a versioned public API specification.
-The exact observations and legal findings are in the linked research report.
-
-| Candidate | Exact observed route | Identity / coverage gate | Current disposition |
-|---|---|---|---|
-| C1 official search/list | `GET /vi/search?text={symbol}&type=4&obj=0&buss=11021&fdate={from}&tdate={to}`; page `POST` to the same URL with `{"SearchKey":4,"CurrentPage":N}` and the page token | Search text and title are fuzzy hints. Every `/vi/ad/{id}` must pass announcement identity. Empty search is not coverage proof. | `DISABLED`; technically useful candidate, legal and route contract unresolved |
-| C1a search suggestion | Observed `POST /search-suggest` with `{"text":"{symbol}","type":"5"}`; JSON suggestions point to security-detail links but provide no page total | Hint only: `success: 0` can accompany data, and no-match has no proof. Exact detail identity is still mandatory. | `DISABLED`; optional resolver evidence only, never an absence source |
-| C2 issuer/security detail → rights list | `GET /vi/search?text={symbol}&type=5...` → `GET /vi/s-detail/{id}` → observed `POST /isuisser-thq/search` with `{"SearchKey":"{id}","CurrentPage":N,"RecordOnPage":10}` | Detail response must prove exact ticker, issuer, security type, and available ISIN/venue. Rights rows still require announcement identity. | `DISABLED`; strongest technical candidate, no public contract/licence |
-| C3 issuer news fallback | Same exact detail identity, then observed `POST /isuisser-tcdk/search` with the same paging body | Broader issuer news is not equivalent to rights coverage. Every seed requires the same announcement proof. | `DISABLED`; fallback candidate only |
-| C4 recent numeric-ID scan | Existing `GET /vi/ad/{id}` bounded scan | Numeric adjacency proves neither issuer identity nor date coverage; `/ad/{id}` redirects and is rejected. | `DISABLED`; no-seed fallback not authorized; explicit-seed compatibility preserved |
-
-**Future source order if, and only if, a later gate enables it:** C1 → C2 → C3. C4 remains
-unavailable unless a later owner-backed evidence round proves deterministic coverage without abusive
-requests. The order does not permit a weaker candidate to override a stronger identity or coverage
-failure.
-
-Other observed first-party facilities (`/vi/lich-giao-dich?tab=LICH_THQ` with `/lich-thq/search`,
-`/vi/id/{issuer_id}` with `/danh-sach-ck/search`, and broad `/vi/alo/ISSUER`/`/vi/alc/6` lists) are
-recorded in the research report. They are conditional hints or issuer corroboration, not part of the
-future default chain: the rights-calendar probe mixed `FPT`, `CFPT`, `FOX`, `FTS`, and `FRT`, while
-the broad lists have no symbol/date-scoped completeness proof.
-
-## 2. Exact future route contract (non-authoritative)
-
-The following is a future implementation contract, not an API addition in this commit.
-
-### 2.1 Common transport allow-list
-
-Every request must satisfy all of the following before it is sent:
-
-1. scheme is `https`;
-2. host is exactly `vsd.vn`, port is 443/default, and the path is one of the allow-listed routes
-   below;
-3. certificate validation succeeds with the standard trust store; no `--insecure`, `-k`, browser
-   trust override, or proxy is permitted;
-4. redirects are disabled; any 3xx is a `redirect_rejected` attempt, including a same-host locale
-   redirect;
-5. the response has exactly one `Content-Type` header; after the first header colon, trim outer
-   ASCII whitespace, lowercase ASCII for comparison, and require the complete value to equal exactly
-   `text/html; charset=utf-8`; POST request bodies separately use the exact JSON content type shown
-   in their route contract; and
-6. a 200 response is not accepted until the route-specific HTML shape and identity predicates pass.
-
-A value such as `text/html; charset=utf-8:unexpected`, a duplicate header, missing header, generic
-maintenance HTML, login HTML, or a body with only a matching title fails closed. The parser must not
-accept a media-type prefix while ignoring a colon-suffixed or extra parameter value.
-
-The allow-list is:
+The shipped public facade remains:
 
 ```text
-GET  /vi/search
-POST /search-suggest              # optional C1a hint; never an absence proof
-GET  /vi/s-detail/<decimal-id>
-POST /isuisser-thq/search
-POST /isuisser-tcdk/search
-GET  /vi/ad/<decimal-id>
+vnfin.corp_actions.dividends(
+    symbol,
+    start=None,
+    end=None,
+    http_get=None,
+    timeout=25.0,
+    seed_id=None,
+    latest_id=None,
+    max_fetch=None,
+)
 ```
 
-The rights-calendar and broad issuer/category facilities in the research report are deliberately
-outside this allow-list. They are not enabled candidates in this design round.
+The actual facade forwards an optional `seed_id`, `latest_id`, and positive `max_fetch` to
+`VsdcCashDividendSource`. Explicit `seed_id` remains supported. Its bounded same-organisation BFS,
+visited-ID cycle guard, deduplication, FIFO queue order, parse behavior, and current injected
+`http_get` compatibility are preserved.
 
-Relative `/ad/<decimal-id>` links returned by a list are parsed only for their decimal ID and are
-canonicalized to `/vi/ad/<id>`. The client never follows the relative route as a redirect and never
-accepts a host, scheme, path, or query supplied by an HTML link.
+No new C1-C3 source is registered. The current adapter's existing VSDC announcement-page path is
+not replaced by this note.
 
-### 2.2 Search routes
+### 1.2 Existing no-seed behavior is legacy C4 and remains active
 
-The symbol is trimmed and uppercased once. Empty, whitespace-only, non-canonical, or overlong input
-fails before budget reservation and before network. A non-empty symbol is URL-encoded exactly once.
+When `seed_id` is omitted, the merged implementation still performs the legacy C4 operation:
 
-C1 page 1 uses:
+1. `_find_seed()` scans numeric announcement IDs downward from `latest_id`;
+2. its scan window is `min(max_fetch, DEFAULT_MAX_FETCH)` and each scanned page is attempted until a
+   matching ticker is found or the window is exhausted;
+3. after a seed is found, `_crawl()` runs the existing same-organisation BFS; and
+4. the seed page may be fetched again by the BFS, as in the shipped implementation.
 
-```text
-GET https://vsd.vn/vi/search
-    ?text={encoded_symbol}
-    &type=4
-    &obj=0
-    &buss=11021
-    &fdate={encoded_start_or_empty}
-    &tdate={encoded_end_or_empty}
-```
+C4 is bounded and useful only as a non-authoritative legacy fallback. Numeric adjacency does not
+prove issuer identity, complete announcement coverage, or requested-date coverage. It is therefore
+not promoted to a reliable new discovery source, but it remains active for compatibility.
 
-C1 pages after page 1 use the exact same URL and:
+The existing `max_fetch` contract is preserved exactly; this note does **not** impose a new hard
+upper bound, change its type/range, or redefine its unit:
 
-```text
-Content-Type: application/json;charset=utf-8
-__VPToken: <ephemeral token from the page>
-{"SearchKey":4,"CurrentPage":N}
-```
+- the public adapter accepts a positive integer `max_fetch`;
+- the legacy no-seed scan uses `min(max_fetch, DEFAULT_MAX_FETCH)` as its numeric window;
+- the BFS stops after its existing `max_fetch` page-fetch counter while the queue has a frontier;
+- each visited ID is fetched at most once by the BFS; and
+- no new physical-request, retry, or bulk interpretation is introduced here.
 
-C2's security-code search uses the same official search page with `type=5` and the same non-empty
-symbol preflight. It is a candidate locator, not identity proof. A page is valid only when its
-route-specific section (`Tin tức` for C1 or `Mã CK` for C2), list shape, and link shape are present.
-A route-declared empty list may be recorded as `bounded_seed_discovery_exhausted`; it never proves
-that the requested issuer has no relevant event.
-
-The scheduler requests page 1 first, reads the server-declared end page, and requests only ascending
-pages `2..min(end_page, configured_page_cap)`. A missing, non-integer, contradictory, or out-of-range
-end-page value is `schema_or_identity_drift`; it is never repaired by guessing page 2. GET query
-pagination is not accepted for these AJAX pages.
-
-C1a is a single optional hint request using the same fresh anonymous cookie/token pair. Its JSON
-shape must be an object whose `data`, when present, is a list of objects with a non-empty `href`
-and content field. `success: 0` is not a Boolean success assertion; it may accompany `data`. The
-route has no total or pagination and therefore can only supply bounded detail candidates. A no-match
-response never establishes an issuer or an empty event set.
-
-### 2.3 Issuer/security identity
-
-Every candidate detail ID is a hint. At most five candidates are inspected in deterministic search
-order. A detail response proves identity only if all required predicates pass:
-
-```text
-requested_symbol == normalized(response["Mã chứng khoán"])
-issuer_name = non-empty response["Tên Tổ chức đăng ký chứng khoán"]
-security_type = an allowed share/security value, not an untyped derivative result
-issuer_anchor = canonical issuer link/id when present, otherwise a non-ambiguous exact issuer name
-```
-
-The response may additionally provide ISIN and trading venue. When present, they become part of the
-identity tuple and must agree with later announcement responses. A missing required field, conflicting
-ISIN/name/code, derivative-like result, or two candidates with conflicting identity is respectively
-`identity_missing`, `identity_mismatch`, or `identity_ambiguous`; it is never treated as “issuer not
-found” and never used to accept a seed.
-
-The identity proof carried forward is the immutable tuple:
-
-```text
-(symbol, issuer_anchor, issuer_name, security_type, isin_or_none, venue_or_none)
-```
-
-A later response must echo the exact symbol and issuer anchor/name. If the later response omits a
-field that was available in the identity anchor, the proof is not silently downgraded: it is
-`schema_or_identity_drift` unless a future owner contract explicitly marks that field optional.
-
-### 2.4 Rights/news list routes
-
-After an exact C2 identity anchor, the future client may use the observed first-party route:
-
-```text
-POST https://vsd.vn/isuisser-thq/search
-Content-Type: application/json;charset=utf-8
-__VPToken: <ephemeral token acquired by the preceding detail GET>
-{"SearchKey":"<decimal-detail-id>","CurrentPage":N,"RecordOnPage":10}
-```
-
-C3 uses `/isuisser-tcdk/search` with the same body shape. Page 1 is requested as `CurrentPage: 1`;
-there is no GET fallback. The route-specific response must contain the exact observed rights/news
-table headings and row/link shape. For the rights route, the required heading set is:
-
-```text
-STT
-Ngày đăng ký cuối cùng
-Tên quyền
-```
-
-The three required rights columns and the already-proven issuer identity are bound to one table. A
-row is usable only when the mapped values occur at the mapped heading columns, the row is a distinct
-non-heading `td` row, and the relevant cell is populated after trimming. A repeated heading row,
-blank/whitespace row, generic maintenance table, or a row from a different table is rejected. A
-nested valid report table is not rejected merely because it is nested; it must independently satisfy
-this same binding.
-
-The response's page metadata controls traversal. At most seven rights pages and 22 issuer-news pages
-are attempted in the default discovery plan; the latter is the largest observed VIC sample, not an
-owner-backed coverage promise. A future owner-confirmed larger bound requires a new gate. If a page
-is valid and declares no rows, that is bounded exhaustion, not confirmed empty.
-If page metadata is absent or malformed, stop with `schema_or_identity_drift` and do not request the
-next page.
-
-### 2.5 Announcement/seed validation
-
-A seed is accepted only for canonical `GET https://vsd.vn/vi/ad/<decimal-id>` with:
-
-- verified HTTPS and HTTP 200, no redirect;
-- exact normalized MIME from §2.1;
-- route-specific announcement shape;
-- non-empty registered organisation and security fields;
-- exact response ticker equal to the requested symbol;
-- issuer anchor/name consistent with the detail identity;
-- ISIN consistent when both responses provide it; and
-- required corporate-action/right fields, including the explicitly labelled record-date field.
-
-A title, sidebar link, ID sequence, or search phrase is never enough. The future adapter must parse
-only response-labelled dates. `Ngày đăng ký cuối cùng` is a record-date field; it is not silently
-renamed to announcement date, payment date, UTC time, or a market session. Search `fdate`/`tdate`
-parameters and page order do not establish event-date coverage.
-
-HTTP 200 is not semantic success: an invalid numeric announcement ID can return an official empty or
-removed-article page. Missing title/identity/right fields therefore fails as route-shape or identity
-drift, never as a valid non-event and never as confirmed empty. Likewise, a missing or mismatched
-anonymous cookie/`__VPToken` pair can produce HTTP 400 with an empty body; that is a token/transport
-failure, not an empty list. A future implementation may refresh the anonymous page only under a
-source-owner-approved contract; this note does not authorize a hidden retry loop.
-
-## 3. No-false-absence outcome and diagnostic contract
-
-The future result carries independent axes. They must be finite typed values, not provider strings:
-
-```text
-SourceStatus   = DISABLED | AVAILABLE | UNAVAILABLE | REDIRECT_OR_TLS | TRANSPORT_FAILED
-IdentityStatus = NOT_ATTEMPTED | PROVEN | NOT_PROVEN | MISMATCH | AMBIGUOUS | DRIFT
-CoverageStatus = NOT_ATTEMPTED | BOUNDED_UNKNOWN | PAGE_COMPLETE | PROVEN | EMPTY_PROVEN
-CrawlStatus    = NOT_STARTED | NO_SEED | COMPLETE | PARTIAL | TRUNCATED
-BudgetStatus   = NOT_STARTED | AVAILABLE | EXHAUSTED
-```
-
-The stable top-level outcome is exactly one of:
-
-```text
-confirmed_event_rows
-bounded_seed_discovery_exhausted
-source_unavailable
-schema_or_identity_drift
-seed_obtained_crawl_partial
-crawl_truncated
-confirmed_empty
-```
-
-The outcome mapping is binding:
-
-- `confirmed_event_rows`: at least one response-backed event row passed identity and schema checks;
-- `bounded_seed_discovery_exhausted`: all permitted discovery work completed or a valid empty list
-  was reached, but no seed was proven; this is **not** confirmed absence;
-- `source_unavailable`: every usable candidate was disabled, unreachable, redirected, or failed
-  strict transport before a valid response;
-- `schema_or_identity_drift`: a required route shape, MIME, page contract, or response identity
-  failed and no other candidate produced a valid result;
-- `seed_obtained_crawl_partial`: a valid seed produced some rows but the crawl could not establish
-  complete traversal for a non-budget reason;
-- `crawl_truncated`: a valid seed was obtained but the crawl request budget was exhausted; and
-- `confirmed_empty`: only when an owner-backed coverage contract proves the response covers the
-  complete requested symbol/date scope, all pages were consumed without drift/transport failure,
-  exact identity passed, and no eligible event row exists.
-
-An unmatched ticker, an empty search list, an empty rights table, a seed validation miss, a recent-ID
-window with no hit, a page cap, a redirect, a timeout, or an unverified date window can never produce
-`confirmed_empty`. Until owner coverage proof exists, the only permitted no-seed result is
-`bounded_seed_discovery_exhausted` (or a more specific unavailable/drift outcome).
-
-### 3.1 Attempt, error, warning, and coverage typing
-
-Future diagnostics are immutable tuples with no raw provider body, token, cookie, URL query, or
-unbounded provider message:
-
-```text
-AttemptStatus = SUCCEEDED | TRANSPORT_FAILED | HTTP_REJECTED | REDIRECT_REJECTED |
-                MIME_REJECTED | SHAPE_REJECTED | IDENTITY_REJECTED | BUDGET_EXHAUSTED
-AttemptStage  = SEARCH | IDENTITY | RELATED_RIGHTS | RELATED_NEWS | SEED | CRAWL
-
-ErrorCode = PREFLIGHT_INVALID_SYMBOL | SOURCE_DISABLED | TLS_ERROR | TRANSPORT_ERROR |
-            REDIRECT_REJECTED | HTTP_4XX | HTTP_5XX | MIME_MISMATCH | ROUTE_SHAPE_MISMATCH |
-            PAGE_METADATA_INVALID | IDENTITY_MISSING | IDENTITY_MISMATCH | IDENTITY_AMBIGUOUS |
-            COVERAGE_UNPROVEN | BUDGET_EXHAUSTED
-```
-
-The future warning vocabulary preserves the existing #163 tokens and adds only design-approved
-stable tokens:
+The current result/warning behavior is also preserved:
 
 ```text
 corp_action_source_partial
 corp_action_seed_not_found
 coverage_truncated_at_max_fetch
-corp_action_fetch_incomplete
-corp_action_source_unavailable
-corp_action_schema_or_identity_drift
-corp_action_discovery_budget_exhausted
-corp_action_confirmed_empty
+corp_action_fetch_incomplete: <bounded count and explanation>
 ```
 
-`Attempt` fields are executable-contract fields:
+`corp_action_seed_not_found` discloses that the active legacy scan found no matching page in its
+bounded window; it is not a confirmed never-paid result. `corp_action_fetch_incomplete` may carry the
+existing bounded count suffix and must not be collapsed to a finite token without a future additive
+compatibility decision.
 
-```text
-ordinal: positive integer, unique and contiguous in send order
-stage: AttemptStage
-route: one of the five allow-listed route names
-status: AttemptStatus
-http_status: None or integer 100..599
-mime: None or the exact normalized MIME value
-physical_attempts: integer 0..2
-identity_proven: boolean
-page: None or positive integer
-```
+## 2. New candidate chain: empty and disabled
 
-`errors` and `warnings` are sorted/deduplicated tuples of the finite codes above. Provider text may
-be retained only as redacted local debug data outside the result contract; it is not returned,
-serialized, cached, or redistributed. `coverage` must include:
+The newly researched candidates are recorded as conditional source evidence only:
 
-```text
-status: CoverageStatus
-requested_start: date or None
-requested_end: date or None
-pages_seen: non-negative integer
-pages_expected: None or positive integer
-rows_seen: non-negative integer
-proof: tuple of finite proof labels, empty unless status is PROVEN/EMPTY_PROVEN
-```
+| Candidate | Observed official facility | Current status | Reopen issue |
+|---|---|---|---|
+| C1 | Global search/list: `GET /vi/search?...type=4...`; later pages observed through `POST` to the same route with JSON page state | `DISABLED`; not in the runtime chain | route/method/response envelope, pagination, identity, coverage, legal/runtime terms |
+| C1a | Search suggestion: observed `POST /search-suggest` with JSON hints | `DISABLED`; hint only, not an absence source | JSON response semantics, no pagination/total, identity and transport seam |
+| C2 | Security detail `GET /vi/s-detail/{id}` plus observed `POST /isuisser-thq/search` | `DISABLED`; strongest technical candidate | persistent session metadata, exact route schema, identity/row binding, coverage, legal terms |
+| C3 | Observed `POST /isuisser-tcdk/search` after the same detail identity | `DISABLED`; noisy fallback only | route-specific headings, bounded all-candidate evaluation, coverage, legal terms |
+| C4 | Existing bounded numeric-ID scan and announcement-page fetch | `ACTIVE_LEGACY_ONLY`; not reliable new discovery | preserve current behavior; no claim of complete or lawful reusable coverage |
 
-Invariants:
+No C1-C3 response is used by the merged runtime. C4 is not silently disabled. The official rights
+calendar, issuer-detail, and broad category lists remain research observations outside the new chain;
+they are not fallbacks or source registrations.
 
-1. `ordinal` order is the scheduler's actual physical-send order;
-2. `physical_attempts` counts retries, not just logical URLs;
-3. `confirmed_empty` requires `CoverageStatus.EMPTY_PROVEN` and a non-empty proof tuple;
-4. `BUDGET_EXHAUSTED` is never rewritten as transport failure or empty data;
-5. `identity_proven` is true only for the exact response-backed tuple in §2.3; and
-6. no diagnostic can include a token, cookie, raw HTML, unbounded URL, or provider-supplied warning.
+## 3. What the research proves, and what it does not
 
-## 4. Deterministic discovery/crawl/retry budgets
+The [official VSDC search page](https://vsd.vn/vi/search), [security detail example](https://vsd.vn/vi/s-detail/166),
+and [announcement example](https://vsd.vn/vi/ad/195957) establish sampled first-party reachability
+and useful response fields. The [official contact navigation](https://vsd.vn/vi/) and the contact
+information recorded in the research report provide an owner path for permission questions.
 
-No provider request limit was published. The following are conservative future library limits, not
-claims about VSDC. In the current blocked state, no no-seed request is made and all these counters
-remain zero.
+The samples do **not** establish:
 
-### 4.1 Single-symbol discovery ledger
+- a published API or stable route contract;
+- a response/status/header/effective-URL/session seam compatible with the shipped adapter;
+- a persistent anonymous cookie plus `__VPToken` GET-to-POST session in the injected runtime path;
+- complete issuer/date coverage, page-bound semantics, or the meaning of an empty list;
+- an exact identity proof for every C1, C2, or C3 candidate;
+- a legal grant for automated fetching, caching, derived rows, attribution, or redistribution; or
+- provider-approved rate, concurrency, retry, retention, or operational limits.
 
-The invocation owns one shared ledger. It is not copied per route, candidate, page, or retry.
+The current shared transport returns body text through the preserved injected seam: three positional
+arguments for GET and four for POST. The default transport creates a fresh client per request and
+does not expose response status, headers, redirect history, effective URL, or a persistent cookie jar
+through that seam. This is an explicit reopen blocker, not a license to change the seam in a docs-only
+commit.
 
-| Counter | Default and hard limit | Meaning |
-|---|---:|---|
-| `max_c1_search_pages` | 2 | C1 page 1 plus at most one server-declared next page |
-| `max_c1a_suggestion_requests` | 1 | optional C1a hint request; no pagination |
-| `max_c2_search_pages` | 2 | C2 page 1 plus at most one server-declared next page |
-| `max_identity_candidates` | 5 | detail pages inspected in search/link order |
-| `max_thq_pages` | 7 | observed FPT rights-page bound; no guessed extra page |
-| `max_tcdk_pages` | 22 | observed VIC issuer-news bound; no guessed extra page |
-| `max_seed_validations` | 3 | total across C1/C2/C3, not per route |
-| `max_discovery_requests` | 84 physical attempts | hard shared discovery cap, including retries |
-| `max_transport_retries` | 1 per logical request | only timeout, connection, 429, and 5xx |
-| inter-request delay | 250 ms minimum | sequential policy, not provider promise |
-| per-request timeout | 25 s | future default, not a live probe claim |
+## 4. Candidate-specific response and identity gaps
 
-The maximum logical discovery calls are `2 + 1 + 2 + 5 + 7 + 22 + 3 = 42`; with one retry per call,
-`42 * 2 = 84` physical attempts. Therefore the hard ledger cap is executable and exact. A lower
-caller-supplied cap may exhaust earlier; no caller may raise a cap above these hard limits.
+These are reopen requirements, not implementation claims.
 
-The scheduler order is deterministic: input symbol order, C1 global-search pages, optional C1a hint,
-C2 search pages and candidate order, C2 rights pages, C3 pages, then seed validation in first-seen
-numeric-ID order; duplicate IDs are removed before reservation. A retry immediately follows its
-failed logical request and consumes a new reservation. A 4xx, redirect, MIME failure, shape failure,
-identity failure, token-pair failure, or malformed page is not retried.
+### 4.1 Transport and route metadata
 
-### 4.2 Atomic reservation rule
+A future approved implementation would need an additive, metadata-bearing session/response seam that
+can observe, without breaking the existing three/four-argument `http_get` callers:
 
-`reserve(kind)` is the only operation allowed to send a request. Under the invocation ledger lock (or
-equivalent atomic compare-and-swap when concurrency is introduced), it:
+- request method, canonical URL, exact query/body serialization, and request headers;
+- HTTP status, response headers, complete `Content-Type`, effective URL, and redirect history;
+- persistent cookie state and the ephemeral `__VPToken` required by the observed AJAX flow; and
+- route-specific HTML versus JSON bodies without treating body text alone as a successful response.
 
-1. checks both the kind-specific remaining limit and the total discovery limit;
-2. if either is exhausted, records `BUDGET_EXHAUSTED` and returns no reservation;
-3. otherwise increments the charged physical-attempt counter and assigns the next contiguous ordinal;
+For each C1-C3 route, the owner-approved contract must bind the exact method, path, parameters/body,
+request MIME, response MIME, session/token acquisition, page serialization, redirect policy, TLS
+requirements, and semantic error/empty shape. C1 must bind both its page-1 GET and later-page POST;
+C1a must bind JSON separately from HTML; C2/C3 must bind their exact POST bodies and headings. A
+future design must list every route/method pair explicitly; an allow-list containing only `GET
+/vi/search` cannot authorize the observed `POST /vi/search` pagination.
+
+No redirect, generic maintenance page, login page, missing metadata, wrong MIME, or certificate
+failure may be interpreted as empty corporate-action data.
+
+### 4.2 Response-backed identity and seed binding
+
+A later implementation must fail closed on identity, but this closure does not pretend that the
+predicate is executable through the current body-only seam. Reopen evidence must prove all of the
+following for every enabled candidate path:
+
+1. the requested symbol is canonicalized once and compared exactly with a structured response ticker;
+2. issuer name/anchor, security type, and available ISIN/venue are captured from the same identity
+   response and cannot conflict across responses;
+3. all bounded exact-symbol candidates are evaluated in deterministic order before a conflicting
+   candidate is selected or rejected;
+4. the rights/news table has unique normalized heading positions, with duplicate, permuted, shifted,
+   and heading-only negatives;
+5. the accepted announcement link is bound to the mapped `Tên quyền`/event cell in that same table,
+   not merely found elsewhere in the page or in another table;
+6. `/ad/{id}` is canonicalized to `/vi/ad/{id}` without following a redirect;
+7. the announcement response independently echoes the exact ticker and consistent issuer identity;
    and
-4. only after the increment returns a reservation does the scheduler call the HTTP seam.
+8. an HTTP 200 empty/removed-article page, non-target page, ambiguous identity, or missing required
+   field is a rejected response, never a seed and never a confirmed absence.
 
-There is no “check then send” split, no private retry counter, no automatic fallback after a failed
-reservation, and no request after exhaustion. The reservation is charged before transmission, so a
-timeout or connection failure still consumes the attempt. The ledger snapshot must expose
-`limit`, `charged`, `remaining`, `logical_requests`, `retry_requests`, and `exhausted` for discovery
-and crawl separately.
+C1 hints without a prior detail identity need a complete, source-specific proof path before they can
+be used. C2/C3 need bounded exhaustive/deduplicated candidate handling; a single matching string is
+not sufficient.
 
-### 4.3 Crawl ledger and explicit-seed behavior
+### 4.3 Coverage, outcome, and no-false-absence gaps
 
-Discovery and crawl have distinct ledgers. Once a seed is proven, the existing explicit-seed BFS may
-use `max_fetch` with these corrected semantics:
+The current public result has the existing warning contract, not the speculative typed outcome enum in
+the previous note. A future additive design must first define a total, mutually exclusive result
+constructor/XOR matrix that covers at least:
 
-- `max_fetch` defaults to 300 and has a hard allowed range of `1..300`;
-- it counts physical HTTP attempts, including retries, not IDs inspected or rows returned;
-- every unique canonical `/vi/ad/{id}` request reserves from the crawl ledger before transmission;
-- duplicate IDs are deduplicated before reservation; and
-- exhaustion before the queue is empty yields `crawl_truncated`,
-  `coverage_truncated_at_max_fetch`, and the existing incomplete-source diagnostic rather than an
-  empty or complete result.
+- no seed found by the active legacy C4 window;
+- a proven seed with no qualifying rows while requested coverage remains unknown;
+- proven rows with later partial or truncated crawl, including deterministic precedence between
+  `rows_present` and `partial/truncated`;
+- all C1-C3 candidates exhausted without a seed;
+- source unavailable, redirect/TLS/transport failure; and
+- schema/identity drift.
 
-A seed discovery budget cannot be borrowed by crawl, and a crawl budget cannot be borrowed by
-another symbol. The current note does not alter the existing explicit-seed implementation; these
-are the future correction contracts that code and tests would have to implement after approval.
+Only an owner-backed complete response/date-coverage proof may introduce a future confirmed-empty
+state. An empty search/list, a valid empty page, a numeric scan miss, a bounded page cap, a failed
+transport, or a non-target 200 can never become a confirmed “no dividend” claim. The future result
+must make candidate exhaustion conjunctive: every permitted candidate/page bound must complete with
+valid route shape, identity, and coverage semantics before absence is even considered.
 
-### 4.4 One-symbol and 30-symbol diagnostic cost
+No public or bulk result model, facade, warning token, serialization contract, or API snapshot is
+introduced by this correction.
 
-A future bulk diagnostic is discovery-only by default. It is not a historical event crawl and cannot
-claim absence. Its exact future shape is:
+## 5. Legal and operational gate
 
-```python
-def discover_seeds_bulk(
-    symbols: Sequence[str],
-    *,
-    start: date | None = None,
-    end: date | None = None,
-    max_symbols: Literal[30] = 30,
-    max_total_discovery_requests: Literal[2520] = 2520,
-    max_concurrency: Literal[1] = 1,
-    http_get=None,                 # synthetic-fixture seam only
-    timeout: float = 25.0,
-) -> SeedDiscoveryBulk: ...
+The legal posture remains unresolved:
+
+```text
+official_host_ownership = sampled_pass
+no_login_reachability = sampled_pass
+route_contract = unresolved_non_authoritative
+identity = sampled_only
+coverage_and_empty_semantics = unresolved
+rate_concurrency_retry_retention = unresolved
+runtime_permission = unresolved_permission_required
+redistribution = not_granted
+new_source_disposition = disabled
 ```
 
-The single-symbol future shape is the same contract with one symbol and
-`max_discovery_requests=84`. Both shapes are **non-authoritative sketches**, not public APIs in
-this commit. The bulk scheduler rejects more than 30 symbols, duplicate canonical symbols, and
-parallelism above one before network. Each symbol owns an 84-attempt sub-ledger; the bulk ledger is
-`30 * 84 = 2520` physical discovery attempts. It processes symbols FIFO and never lets one symbol
-borrow another's reserved budget.
+The [official VSDC legal/rules section](https://vsd.vn/vi/lel) did not provide a public API licence or
+redistribution grant in the inspected material. The [official robots path](https://vsd.vn/robots.txt)
+did not provide a usable crawl policy. These observations are not permission or legal advice.
+Written VSDC owner permission must cover runtime no-login fetching, session/token handling, caching,
+derived normalized event rows, attribution, redistribution, rate/concurrency, and retention.
 
-Request-count examples, excluding server latency:
+Conservative probe ceilings in the research report are evidence bounds only. They do not change
+`max_fetch`, add retry behavior, or authorize a bulk API. A reopened design must separately define
+logical candidate/page limits and physical request/retry limits, but this closure deliberately does
+not choose or publish those runtime values.
 
-| Scenario | One symbol | 30-symbol discovery diagnostic |
-|---|---:|---:|
-| C1 page 1 + three seed validations, no retries | 4 | 120 |
-| C1 page 1 + C2 detail/rights path + three validations, no retries | 7 | 210 |
-| Full permitted discovery path with every logical call retried once | 84 | 2,520 hard maximum |
-| Explicit-seed crawl, separate from discovery | up to 300 | not part of the default discovery diagnostic |
+## 6. Conjunctive reopen evidence
 
-A separately requested full 30-symbol crawl would need an independently approved total crawl cap of
-`30 * 300 = 9,000` physical attempts and a combined hard cap of `2,520 + 9,000 = 11,520`; it is
-not the default #203 diagnostic and is not authorized by this note. The counts are budgets, not a
-coverage promise.
+A new design/implementation gate may reopen C1-C3 only when **every** condition below is evidenced;
+any one unresolved axis keeps the chain empty:
 
-## 5. Source/legal/coverage status axes
+1. **Owner/legal:** written VSDC permission covers the exact routes, automated runtime fetches,
+   anonymous session/token mechanism, cache duration, derived outputs, attribution, redistribution,
+   rate, concurrency, and retention.
+2. **Transport/session:** an additive response/session seam preserves existing `http_get` arity while
+   exposing method/body, status, headers, effective URL, redirects, TLS result, cookie state, and
+   token lifecycle; exact per-route MIME and redirect rules are testable.
+3. **Route/schema:** C1 GET/POST, C1a JSON, C2 detail/THQ, and C3 TCDK methods, bodies, page bounds,
+   date serialization, empty/error shapes, and route-specific headings are each fixed by evidence;
+   generic HTML cannot pass as a route response.
+4. **Identity/seed:** unique heading-column mapping, exact link-cell binding, complete bounded
+   candidate disambiguation, response-backed issuer/ticker/ISIN proof, canonical announcement
+   validation, and all malformed/non-target/HTTP-200-empty negatives pass synthetic tests.
+5. **Coverage/outcomes:** a total/exclusive result matrix covers no seed, proven seed/no matching rows,
+   rows-plus-partial/truncated precedence, candidate exhaustion, source failure, schema drift, and
+   the only allowed confirmed-empty proof. Candidate exhaustion is conjunctive across all enabled
+   candidates and pages.
+6. **Logical/physical budgets:** separate atomic ledgers charge a logical key once and a physical
+   `(logical_key, retry_number)` transmission separately; retries cannot consume page/candidate
+   cardinality; every physical send has one contiguous ordinal; zero-send budget diagnostics have no
+   physical-send ordinal; duplicate reservations, boundaries, and non-sequential retries are tested.
+7. **Compatibility and evidence:** explicit-seed BFS, legacy C4 no-seed scan, existing `max_fetch`
+   behavior, dynamic warning suffixes, cycle/dedup/FIFO behavior, and the current body-only test seam
+   remain unchanged until an additive design is separately approved.
+8. **Merged-tree gate:** synthetic fixtures and red-first tests pass on the merged tree, live official
+   probes remain opt-in, no provider response/token/cookie is committed, the mandatory blacklist scan
+   is clean, and the reviewer grants a new design PASS before production code, push, or close.
 
-The current candidate status is deliberately split so that a technical 200 cannot mask a legal or
-coverage failure:
+These conditions are intentionally conjunctive. A technical route pass cannot waive legal permission;
+legal permission cannot waive identity/coverage proof; and a budget model cannot waive compatibility.
 
-| Axis | Current C1/C2/C3 finding | Required reopen value |
-|---|---|---|
-| official ownership | `PASS` for the `vsd.vn` host and VSDC footer | owner confirms exact routes |
-| no-login reachability | `PASS` for sampled canonical HTML calls | repeatable route-specific pass |
-| response identity | `SAMPLED_ONLY` (FPT detail/announcement) | exact identity contract confirmed across samples |
-| pagination/window | `SAMPLED_ONLY` | documented server-bound traversal and date window |
-| date semantics | `UNRESOLVED` beyond labelled record-date fields | owner confirms each requested date field |
-| completeness/empty meaning | `UNRESOLVED` | response-backed coverage proof |
-| TLS/redirect/MIME | sampled HTTPS pass; non-canonical route redirects | strict repeated pass, no redirects |
-| rate/concurrency/cache | `UNRESOLVED`; no provider limits found | written operational terms |
-| licence/redistribution | `UNRESOLVED_PERMISSION_REQUIRED` | written owner permission |
-| runtime disposition | `DISABLED` | all axes pass and design re-review PASS |
+## 7. Scope of this correction
 
-The axes are not collapsed into a single “available” flag. In particular, legal permission alone
-would not make an unproven empty list safe, and technical reachability alone would not permit runtime
-fetching.
+This commit changes documentation only:
 
-## 6. Future diagnostics and no-false-absence rules
+- it records the active legacy C4 scan and the empty/disabled new C1-C3 chain;
+- it removes the prior speculative public/bulk API sketch and the proposed changed `max_fetch`
+  semantics;
+- it preserves the shipped facade, explicit-seed path, legacy no-seed behavior, warnings, and
+  body-only seam as the compatibility boundary; and
+- it retains source observations, legal gaps, probe bounds, and conjunctive reopen evidence.
 
-A future caller receives a typed diagnostics object even when no rows are returned. At minimum it
-must expose `outcome`, all five status axes, ordered attempts, typed errors/warnings, discovery and
-crawl ledger snapshots, and the response-backed identity proof when one exists.
-
-The following rules are mandatory:
-
-- `source_unavailable` is used for disabled, TLS, redirect, timeout, connection, or HTTP failures;
-- `schema_or_identity_drift` is used for wrong MIME, generic HTML, missing/malformed route shape,
-  ambiguous detail rows, or conflicting issuer/ticker/ISIN;
-- `bounded_seed_discovery_exhausted` means only that the bounded discovery plan found no proven seed;
-- `seed_obtained_crawl_partial` means a proven seed yielded rows but traversal was not complete for a
-  non-budget reason;
-- `crawl_truncated` is reserved for a proven seed whose separate crawl ledger was exhausted;
-- `confirmed_event_rows` requires at least one valid response-backed row; and
-- `confirmed_empty` is impossible until the owner-backed coverage proof, complete pagination, exact
-  identity, and requested date semantics all pass.
-
-No response-unidentified HOSE-like fallback, numeric-ID guess, title-only match, blank global search,
-or request-date assumption is permitted. No response may be described as a daily/event absence merely
-because the provider returned an empty HTML list.
-
-## 7. Future TDD/verification matrix (not implemented here)
-
-No production code or test code is changed in this docs-only round. If a later design PASS authorizes
-implementation, tests must be written red-first with committed synthetic fixtures and must cover:
-
-1. symbol preflight rejects blank/invalid input without an HTTP call;
-2. C1/C2 route URLs, exact JSON bodies, token/cookie handoff, and no GET pagination fallback;
-3. route-specific positive pages plus maintenance/login/generic HTML negatives;
-4. exact MIME positive and complete post-first-colon/colon-suffixed/duplicate-header negatives;
-5. exact detail identity, wrong ticker, missing identity, conflicting ISIN, derivative-like result,
-   and ambiguous candidate negatives;
-6. rights-table heading/column binding, populated distinct non-heading row, blank-row and repeated-
-   heading negatives, plus a valid nested report-table case;
-7. missing/malformed page metadata, server end-page bounds, deterministic ascending traversal, and no
-   request after a bound or budget is exhausted;
-8. announcement identity matching, relative-link canonicalization, redirect rejection, TLS/transport
-   failures, and no title-only seed acceptance;
-9. exact retry ledger: one retry only for the permitted classes, retry charged before send, atomic
-   reservation, no post-exhaustion HTTP call, deterministic FIFO, and separate discovery/crawl caps;
-10. empty search/list, no-seed, partial-crawl, and truncated-crawl diagnostics never become
-    `confirmed_empty`;
-11. explicit `seed_id` BFS compatibility and existing warning-token preservation; and
-12. a 30-symbol sequential diagnostic with `120/210/2520` request-count assertions and no bulk
-    budget borrowing.
-
-Live tests, if ever added, must be opt-in against official hosts only and never run in CI. No live
-response, token, cookie, broker row, or provider body may be committed as a fixture or bundled
-artifact.
-
-## 8. Documentation and release boundary
-
-This task adds only the research report and this design/source note. There is no public API change,
-source registration, skill change, changelog entry, API snapshot change, production code, or test
-fixture in this commit. A later additive implementation would require the normal docs, skill,
-CHANGELOG, API-snapshot, synthetic-fixture, full-suite, build/install, secret-scan, and blacklist
-checks in the same approved change.
-
-## 9. Reopen criteria and review request
-
-Reopen #203 for implementation only after all of the following are written and verifiable:
-
-1. VSDC owner permission covers automated no-login runtime fetch, ephemeral token/cookie handling,
-   cache duration, derived normalized rows, attribution, and redistribution;
-2. VSDC confirms the exact route shapes, identity fields, date semantics, pagination/empty semantics,
-   rate, concurrency, and retention rules;
-3. fresh strict HTTPS probes pass with exact MIME, no redirects, verified TLS, route-specific shape,
-   and response-backed identity;
-4. coverage proof supports requested date windows and defines the only conditions for
-   `confirmed_empty`;
-5. synthetic red-first tests implement every §7 contract on the merged tree; and
-6. the reviewer grants a new design PASS before any code, push, or issue close.
-
-This note is ready for design review at the exact commit containing it. Reviewer: please spawn
-parallel sub-agents for source/legal, parser/identity, and budget/diagnostic checks, then return the
-verdict against this SHA. No production code, push, or close is authorized before PASS.
+No production code, tests, fixtures, API snapshot, skill, changelog, source registration, push, or
+issue close is included. Reviewer: please spawn parallel source/legal, identity/schema, and
+logical/physical-budget sub-agents and perform exact-SHA design/source re-review. No implementation is
+authorized before PASS.
