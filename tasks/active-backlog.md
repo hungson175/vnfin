@@ -1023,12 +1023,17 @@ _None._
 
 ## Next
 
-- **#206 — VNFIN sector-index history (DESIGN_REVIEW_REQUESTED; B1-B7 correction awaiting reviewer, 2026-08-23).**
+- **#206 — VNFIN sector-index history (DESIGN_CORRECTION_IN_PROGRESS; final B6.1-B6.3 correction, 2026-08-23).**
   Reviewer packet `tasks/206-vnfin-sector-index-history-spec.md` at reviewer `bd0a501`; public
   triage receipt `issuecomment-5382313915`. Exact design anchor `dd9093b` was BLOCKED by
   reviewer report `6446dbf` at
   `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608230322-issue206-design-source-gate.md`.
-  Docs-only B1-B7 correction anchor is exact `582c432` (with backlog receipt after that anchor):
+  Docs-only B1-B7 correction anchor is exact `582c432`; final re-review BLOCK report `999a147`
+  requires one minimal B6.1-B6.3 docs correction at
+  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608230336-issue206-corrected-design-rereview.md`.
+  Correct stitched provenance/token compatibility, canonicalize every public producer identity,
+  and make actual-attempt truncation non-fabricating; also change the SSI budget to at most two.
+  The prior correction recorded:
   browser-UA dependency, single-provider route binding,
   per-source capability/SSI physical budget, fixed-window versus arbitrary/stitched coverage,
   total fail-loud volume, bounded diagnostics, and executable direct-success/MIME TDD. Preserve
