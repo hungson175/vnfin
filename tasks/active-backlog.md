@@ -1023,7 +1023,7 @@ _None._
 
 ## Next
 
-- **#206 — VNFIN sector-index history (DESIGN_CORRECTION_IN_PROGRESS; final B6.1-B6.3 correction, 2026-08-23).**
+- **#206 — VNFIN sector-index history (DESIGN_REVIEW_REQUESTED; final B6.1-B6.3 correction awaiting reviewer, 2026-08-23).**
   Reviewer packet `tasks/206-vnfin-sector-index-history-spec.md` at reviewer `bd0a501`; public
   triage receipt `issuecomment-5382313915`. Exact design anchor `dd9093b` was BLOCKED by
   reviewer report `6446dbf` at
@@ -1031,14 +1031,15 @@ _None._
   Docs-only B1-B7 correction anchor is exact `582c432`; final re-review BLOCK report `999a147`
   requires one minimal B6.1-B6.3 docs correction at
   `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608230336-issue206-corrected-design-rereview.md`.
-  Correct stitched provenance/token compatibility, canonicalize every public producer identity,
-  and make actual-attempt truncation non-fabricating; also change the SSI budget to at most two.
-  The prior correction recorded:
+  Final docs correction anchor is exact `4eb281b`: reconciles stitched provenance with a separate
+  bounded warning grammar, canonicalizes every public producer identity, makes actual-attempt
+  truncation non-fabricating with the real eight-call ceiling, and says SSI at most two physical
+  calls. The prior correction recorded:
   browser-UA dependency, single-provider route binding,
   per-source capability/SSI physical budget, fixed-window versus arbitrary/stitched coverage,
   total fail-loud volume, bounded diagnostics, and executable direct-success/MIME TDD. Preserve
   the empty chain and `SOURCE-GAP CLOSURE`. Merged gates: full suite 4021 passed, docs/secret
-  contracts 43 passed, isolated sdist/wheel build passed, and `git diff --check` passed; published
+  contracts 45 passed (37 + 8), isolated sdist/wheel build passed, and `git diff --check` passed; published
   `origin/master` remains `b90e924`. No production code, push, or close before exact-SHA design
   PASS; actor is `vnfin-oss` builder.
 
