@@ -622,9 +622,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   wording. Correction RED matrix is `8f8a8c0`; implementation/docs correction is exact
   `8020e62`: direct and chain paths now share the complete report validator (including duplicate
   fiscal dates), 89/90/91 + malformed payload negatives cover SSI/TCX, provenance/aggregate
-  diagnostics are sanitized, and coverage wording is recoverable-failure scoped. Merged-tree
-  `pytest -q` and `uv build` are green; source chain remains empty and SSI/TCX `NET_INCOME` stays
-  blocked. Request exact-SHA re-review at `8020e62`; no push or close.
+  diagnostics are sanitized, and coverage wording is recoverable-failure scoped. Review-time
+  RED `806c43b` exposed one additional declared-non-VND homogeneity edge; exact fix `acbe78e`
+  requires metric sources to declare only `None`/`VND` and validates all report currencies as
+  canonical VND. Merged-tree `pytest -q` and `uv build` are green; source chain remains empty and
+  SSI/TCX `NET_INCOME` stays blocked. Request exact-SHA re-review at `acbe78e`; no push or close.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
