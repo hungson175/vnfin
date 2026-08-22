@@ -609,15 +609,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `2026-08-22T09:45:15Z`. New C1-C3 chain remains empty/disabled; legacy C4 remains active and
   non-authoritative; no new production capability or reliable corporate-action claim. #204 separate.
 
-- **#204 — fundamentals SSI/TCX source/design gate (SOURCE-GATED; docs correction required,
+- **#204 — fundamentals SSI/TCX source/design gate (SOURCE-GATED; narrow docs correction required,
   2026-08-22).** Packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/204-fundamentals-ssi-tcx-spec.md`
-  at reviewer `802e518`; exact builder anchor `0951fbc62c9df7b73b1defef7ca2cad3e35410c9` received
-  **DESIGN BLOCK** from reviewer `d0010f2` in
-  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608221720-issue204-design-source-gate.md`.
-  One docs-only B1-B7 correction round: repair modelType evidence URLs; keep 89/90/91 independently
-  foreign and negative; sanitize all public source-error text; define total MISSING mapping,
-  logical-vs-physical calls, and wrapper symbol normalization. Preserve the SSI/TCX chain empty and
-  `NET_INCOME` blocked; no production code, push, or close before design PASS.
+  at reviewer `802e518`; exact builder anchor `90fd86fbac84b476bf1155191a73597b9b8adfcf` received
+  **CORRECTION BLOCK** from reviewer `3482823` in
+  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608221737-issue204-design-correction-rereview.md`.
+  One docs-only B1-B3 correction: repair the 89/90/91 response-identity scope, bind the TCX FY2020
+  gap to observed stream 91 only, and define bounded safe source-role normalization plus the exact
+  sanitized `MetricValue` reason. Preserve the SSI/TCX chain empty, negative 89/90/91 fixtures,
+  and `NET_INCOME` blocked; no production code, push, or close before design PASS.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
@@ -991,8 +991,9 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- **#204 — DESIGN BLOCK (reviewer `d0010f2`, exact `0951fbc`).** Docs-only B1-B7 correction is
-  required before re-review; preserve the empty source chain, blocked `NET_INCOME`, and no-code gate.
+- **#204 — CORRECTION BLOCK (reviewer `3482823`, exact `90fd86f`).** Docs-only B1-B3 correction is
+  required before narrow re-review; preserve the empty source chain, blocked `NET_INCOME`, and
+  no-code/no-push/no-close gate.
 
 ## Poller triage (newly triaged)
 
