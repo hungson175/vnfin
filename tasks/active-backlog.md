@@ -633,6 +633,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   pass, but one minimal docs edge remains—map required heading columns and require a distinct
   populated non-heading `td` row at those positions, rejecting blank/whitespace and repeated-heading
   rows; nested valid report tables must not be blanket-rejected. **No code, push, or close.**
+  Final exact-SHA heading-permutation BLOCK at reviewer `f158e0d`
+  (`reviews/review-202608221540-issue201-heading-permutation-review.md`): one predicate remains—reject
+  any mapped data value that belongs to `REQUIRED_HEADINGS`, regardless of column, and add a
+  cyclic/permuted heading-only negative. All other B1, MIME, source/legal/API/bulk, and empty-chain
+  gates pass. **No code, push, or close; return the exact SHA after the docs-only correction.**
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
