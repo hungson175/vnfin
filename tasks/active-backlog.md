@@ -1003,7 +1003,12 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Next
 
-- _(none — #185 promoted to NOW above)_
+- **#205 — quarterly operating-profit/ratio triage (DEFERRED; intake `#04caf289`, reviewer
+  `c285b25`).** Separate follow-on queue packet:
+  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/205-quarterly-operating-profit-ratio-triage.md`.
+  Do not expand #204's exact `0951fbc` design review or implement #205 now. Preserve
+  `operating_profit=BLOCKED` and zero-ratio-fetch until a later source/template/API packet proves
+  exact quarterly identity; the 18/30 breadth target remains caller-side.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
