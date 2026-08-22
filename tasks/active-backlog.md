@@ -1023,16 +1023,17 @@ _None._
 
 ## Next
 
-- **#205 — quarterly operating-profit/ratio triage (DESIGN_REVIEW_REQUESTED; design-only, 2026-08-22).**
+- **#205 — quarterly operating-profit/ratio triage (DESIGN_BLOCKED; docs-only correction round, 2026-08-22).**
   Reviewer packet `tasks/205-quarterly-operating-profit-ratio-spec.md` at `19de874`; public
-  spec receipt `issuecomment-5380386366`. Prepare only the docs/source design: 12-cell
-  SSI/TCX × VNDirect/CafeF × statement matrix, exact operating-profit identity,
-  template/cadence/unit/legal proof, quarterly discrete-vs-YTD lineage, derived-input gaps,
-  and qualified/partial/source-gap disposition. Preserve the 26-metric API, zero ratio calls,
-  code `14000` negative, and fail-closed 89/90/91. No production code, push, or close before
-  exact-SHA design PASS; the 18/30 breadth target remains caller-side. Docs/source anchor
-  `022f7df`; merged-tree gates are green (focused + full pytest, diff-check, import/version,
-  no-secrets, and isolated sdist/wheel build). Awaiting exact-SHA design review; no code/push/close.
+  spec receipt `issuecomment-5380386366`. Exact block report
+  `reviews/review-202608221944-issue205-design-source-gate.md` at reviewer `73e077c`, against
+  anchor `b42fb7c`. Apply six docs-only fixes: record CafeF raw-vs-typed outcomes and exact
+  canonical routes; make a source-gap PASS lead to docs publication/resolution/close, never
+  TDD; require an item code for `RAW_MAPPED`; keep template applicability blocked and require
+  exact cross-statement interval equality; reframe provisional lineage as future reopen design;
+  and bind the complete packet §6 RED/release matrix. Preserve the empty source chain, 26-metric
+  API, zero ratio calls, code `14000` negative, fail-closed 89/90/91, and no production code,
+  push, or close. Continue only after this correction receives an exact-SHA design verdict.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
