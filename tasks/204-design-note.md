@@ -143,6 +143,30 @@ attrs. URL/query tokens, response bodies, exception text, provider page counts, 
 attempt trails never enter public models. Internal diagnostics may retain richer data outside
 public models; source names may identify the responsible source but may not carry a secret URL.
 
+For every unavailable metric whose statement outcome is `SOURCE_ERROR`, the public
+`MetricValue.reason` is exactly `statement {statement} unavailable: recoverable source error`,
+where `{statement}` is the normalized statement enum value. The aggregate/per-period
+`StatementProvenance.detail` remains the bare allow-listed `recoverable source error`; the
+wrapper template is never replaced by arbitrary provider text.
+
+Before capability resolution and any physical call, apply one total source-role normalization:
+
+The canonical role allow-list is exactly `{"vndirect", "cafef", "custom"}`; no other source
+string is emitted publicly.
+
+- a registered built-in source object resolves to its fixed canonical role, `vndirect` or `cafef`;
+- an unregistered custom source, regardless of empty, non-string, URL-bearing, or overlong
+  `source.name`, resolves to the fixed safe role `custom` (maximum six ASCII characters);
+- the normalized role list is deduplicated in configured order and is the only source value used
+  in `OK`/`NOT_SERVED` `StatementFetchResult`, `StatementProvenance`, `MetricInput`, aggregate
+  coverage, and DataFrame attributes; raw `source.name` is never serialized; and
+- the current built-in capability resolver cannot serve the `custom` role, so an unregistered
+  custom source produces a bounded `NOT_SERVED` outcome with zero physical calls. A future custom
+  adapter must be explicitly registered with its own bounded canonical role before it can serve.
+
+This role contract is also the source of the stable `NOT_SERVED` detail; no name sanitization may
+fall back to truncating or echoing arbitrary text.
+
 The existing per-period `statement_provenance` keeps its shape when periods exist, but uses the
 same public source-error mapping. When no period exists, the exact invariant is:
 
@@ -199,6 +223,11 @@ Only after a design PASS may production TDD begin. The first failing tests must 
   sanitized `SOURCE_ERROR`, and no `SourceAttempt.reason` parsing;
 - URL/query-token, JSON/body, and long-sentinel source exceptions are absent from aggregate and
   per-period provenance, metric reasons, DataFrame attrs, and raised all-empty messages;
+- RED source-role cases inject an unregistered `source.name` containing a URL/query token plus a
+  1,000-character sentinel; assert zero physical calls, only the bounded `custom` role in every
+  public source field/detail and DataFrame attr, and no token/sentinel leakage;
+- for each source-error metric, bind the exact reason
+  `statement {statement} unavailable: recoverable source error`, not the bare detail string;
 - exact message/status/detail strings, symbol/cadence normalization, constructor compatibility,
   equality/repr/snapshot, and DataFrame attrs;
 - exactly three logical statement outcomes and zero ratio calls; explicit CafeF makes two physical

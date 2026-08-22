@@ -158,10 +158,12 @@ converted into income/balance/cashflow by item labels or by another library. A r
 happens to resemble an issuer filing cross-check is not enough to establish item identity.
 
 A separate bounded official probe of the same annual route also exposed foreign model tags
-`89.0`, `90.0`, and `91.0` for both symbols. The totals below are independently paginated per
-stream (page-one row count 640 in each stream), not one combined template:
+`89.0`, `90.0`, and `91.0` for both symbols. The observations below are independently filtered
+per stream (page-one row count 640 in each stream), not one combined template. Only stream 91 is
+paginated to the provider-declared total in the table above; the 89/90 observations remain bounded
+observations in this report:
 
-| Symbol | `modelType=89` total rows | `modelType=90` total rows | `modelType=91` total rows |
+| Symbol | `modelType=89` observed rows | `modelType=90` observed rows | `modelType=91` observed rows |
 |---|---:|---:|---:|
 | `SSI` | 3,805 | 1,863 | 3,246 |
 | `TCX` | 2,594 | 1,273 | 2,093 |
@@ -197,7 +199,7 @@ show why even a same-valued provider label cannot be selected by human text alon
 | Axis | VNDirect | CafeF | Required disposition |
 |---|---|---|---|
 | Transport | HTTPS endpoint accepted the sampled GETs with HTTP 200; no credentials were supplied | HTTPS handler accepted the sampled GETs with HTTP 200; no credentials were supplied | Observation only; no uptime or permission claim |
-| Response identity | `code` is present only on the unmodeled `91` stream; current candidate streams are empty | `Symbol` absent at both tested envelope locations | Require response-backed identity in any future typed source path |
+| Response identity | Independently filtered page-one observations for `89`, `90`, and `91` each carried the requested `code`, annual cadence, and exact requested model; stream `91` is paginated to the provider-declared total above, while `89`/`90` remain bounded observations here | `Symbol` absent at both tested envelope locations | Require response-backed identity for each future typed stream; do not treat bounded `89`/`90` observations as exhaustive |
 | Template/schema | `modelType=89`, `90`, and `91` are independently foreign to current 1/2/3 and 101/102/103 contract; no statement partition | no model type; current annual tags include unsupported `K` | Fail closed; add a statement-specific template only after provider + filing evidence |
 | Cadence/date | provider gives exact ISO `fiscalDate` on raw `91` rows; raw TCX history has missing years | provider gives `Time`/`Year` and `Quater=0`; adapter would synthesize 31 December | Never invent years or relabel publication dates |
 | Units | `numericValue` has no unit field; no accepted typed report for 91 | endpoint has no unit field; page labels financial table `(1.000 VNĐ)` and ×1000 is only a candidate ingest scale | Require explicit, independently verified scale before raw VND emission |
@@ -322,6 +324,30 @@ tokens, response bodies, exception text, provider page counts, and failed-source
 are never copied into public models. Internal diagnostics may retain richer data outside public
 models. Source names may identify the responsible source, but never carry a secret-bearing URL.
 
+Before capability resolution and any physical call, apply one total source-role normalization:
+
+The canonical role allow-list is exactly `{"vndirect", "cafef", "custom"}`; no other source
+string is emitted publicly.
+
+- a registered built-in source object resolves to its fixed canonical role, `vndirect` or `cafef`;
+- an unregistered custom source, regardless of empty, non-string, URL-bearing, or overlong
+  `source.name`, resolves to the fixed safe role `custom` (maximum six ASCII characters);
+- the normalized role list is deduplicated in configured order and is the only source value used
+  in `OK`/`NOT_SERVED` `StatementFetchResult`, `StatementProvenance`, `MetricInput`, aggregate
+  coverage, and DataFrame attributes; raw `source.name` is never serialized; and
+- the current built-in capability resolver cannot serve the `custom` role, so an unregistered
+  custom source produces a bounded `NOT_SERVED` outcome with zero physical calls. A future custom
+  adapter must be explicitly registered with its own bounded canonical role before it can serve.
+
+This role contract is also the source of the stable `NOT_SERVED` detail; no name sanitization may
+fall back to truncating or echoing arbitrary text.
+
+For every unavailable metric whose statement outcome is `SOURCE_ERROR`, the public
+`MetricValue.reason` is exactly `statement {statement} unavailable: recoverable source error`,
+where `{statement}` is the normalized statement enum value. The aggregate/per-period
+`StatementProvenance.detail` remains the bare allow-listed `recoverable source error`; the
+wrapper template is never replaced by arbitrary provider text.
+
 The existing per-period `statement_provenance` keeps its shape when periods exist, but applies
 the same public source-error mapping. When no period exists, the returned object is exactly:
 
@@ -394,6 +420,11 @@ fixtures for both symbols. No live provider row may be committed.
 - RED source-error cases inject URL/query-token, JSON/body, and long-sentinel exception text;
   none may appear in aggregate or per-period provenance, metric reasons, DataFrame attrs, or the
   raised all-empty message;
+- RED source-role cases inject an unregistered `source.name` containing a URL/query token plus a
+  1,000-character sentinel; assert zero physical calls, only the bounded `custom` role in every
+  public source field/detail and DataFrame attr, and no token/sentinel leakage;
+- for each source-error metric, bind the exact reason
+  `statement {statement} unavailable: recoverable source error`, not the bare detail string;
 - exact normalized symbol/cadence strings, status values, detail values, note, repr/equality,
   positional constructor compatibility, and deterministic DataFrame attrs;
 - exactly three logical statement outcomes and zero ratio fetches; physical calls are asserted
@@ -411,7 +442,8 @@ fixtures for both symbols. No live provider row may be committed.
   entity/template design;
 - reject cross-symbol rows, wrong cadence, each foreign/mixed/redirected `89`/`90`/`91` stream,
   malformed/empty envelopes, duplicates, non-finite values, and unit/scale mismatches;
-- preserve exact annual date sets and limit without fabricating missing FY2020 for `TCX`;
+- preserve the observed `modelType=91` annual date set and limit, including absent TCX FY2020;
+  do not generalize that stream-91 gap to streams `89`/`90` or to issuer history;
 - resolve `NET_INCOME` only from a verified source/template/item-code tuple, in raw VND, with
   exact lineage; keep total and parent-attributable concepts distinct;
 - keep an unmapped CafeF namespace `BLOCKED` with the stable source-map reason.
