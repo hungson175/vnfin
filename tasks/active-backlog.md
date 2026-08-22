@@ -607,6 +607,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   prove response-backed issuer identity, legal/runtime/redistribution posture, bounded discovery/
   crawl/retry budgets, and no-false-absence diagnostics. **No production code, push, or close before
   design PASS.**
+  **Design BLOCK at `fa8a05a`** (`reviews/review-202608221623-issue203-design-source-gate.md`,
+  reviewer `f2e9e51`): correction is docs-only. Record legacy C4 scan as active, keep the new C1-C3
+  discovery chain empty, remove speculative public/bulk API and changed `max_fetch` semantics, and
+  make transport/identity/outcome/logical-vs-physical gaps conjunctive reopen evidence. No code,
+  push, or close.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
