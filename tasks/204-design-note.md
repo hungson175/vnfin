@@ -1,0 +1,177 @@
+# Issue #204 design/source gate — SSI/TCX fundamentals
+
+**Status:** `BLOCKED` at the source/template/legal gate; design only
+**Date:** 22 August 2026 (UTC+7)
+**Packet:** `/home/hungson175/tools/vnfin-oss-reviewer/tasks/204-fundamentals-ssi-tcx-spec.md`
+**Evidence:** [`docs/research/2026-08-22-fundamentals-ssi-tcx-source-vetting.md`](../docs/research/2026-08-22-fundamentals-ssi-tcx-source-vetting.md)
+
+## 1. Decision and boundary
+
+This round delivers only a source-vetting report and an additive future API design. It does not
+implement an adapter, change the metric catalog, add a source, add a reporter/failover oracle,
+or claim SSI/TCX production fundamentals. No live response body or credential is committed.
+
+The mandatory repository blacklist was applied. Only official VNDirect, CafeF, SSI, TCBS,
+VSDC, and related primary pages were used. Existing named provider routes were probed
+independently; a failover miss is not a coverage or historical-absence oracle.
+
+**Source outcome:** neither `SSI` nor `TCX` has a qualified lawful source path in the accepted
+tree. The honest per-symbol result is `NO_QUALIFIED_SOURCE`, with `MetricId.NET_INCOME`
+remaining `BLOCKED`. This does not claim either symbol lacks history.
+
+## 2. Required named matrix — final disposition
+
+The complete 12-cell matrix, exact request parameters, HTTP/application results, identity,
+template, dates, units, and typed adapter outcomes are in the [source-vetting report](../docs/research/2026-08-22-fundamentals-ssi-tcx-source-vetting.md#5-independent-2-x-2-x-3-matrix).
+
+| Source | `SSI` income/balance/cashflow | `TCX` income/balance/cashflow | Gate result |
+|---|---|---|---|
+| VNDirect | Current adapter candidates `2/102`, `1/101`, `3/103`: HTTP 200 empty envelopes and `EmptyData`; unrestricted annual stream exposes foreign `modelType=89/90/91` | Same current-candidate failures; foreign streams expose response-backed `code=TCX`, with raw annual dates missing FY2020 and FY2013 in `modelType=91` | **Blocked:** provider template is foreign/unpartitioned; no safe `is_bank` or corporate-code reuse |
+| CafeF | Income/balance HTTP 200 `Success=true`, 15 annual objects for 2011–2025, no response `Symbol`, current parser rejects observed `ReportType=K`; cashflow not served | Income/balance HTTP 200 `Success=true`, two annual objects for 2024–2025, no response `Symbol`, current parser rejects `K`; cashflow not served | **Blocked:** response identity, current cadence tag, source namespace, and rights gaps |
+
+### 2.1 Issuer cross-check
+
+- Official SSI audited consolidated `B02-CTCK/HN` evidence: year ended 31 December 2025,
+  `Currency: VND`, code 200 total PAT `4,106,880,733,899 VND`, code 201 parent PAT
+  `4,106,090,416,749 VND`, code 203 non-controlling interests `790,317,150 VND`.
+- Official TCBS/TCX audited standalone `B02-CTCK` evidence: year ended 31 December 2025,
+  `Currency: VND`, code 200 PAT `5,683,331,855,108 VND`; code 500 ordinary-shareholder
+  appropriation is a separate `5,683,331,855,109 VND` line.
+
+These prove issuer-level securities-company template, fiscal date, units, and line semantics;
+they do not prove provider response identity, provider model/item-code identity, or reuse rights.
+
+## 3. Source qualification contract
+
+No source becomes eligible merely because it returns rows. A future source/template candidate
+must satisfy every axis below for each symbol and statement:
+
+1. **Transport/access:** official HTTPS route, no-login or explicitly approved credentials,
+   bounded request/page budget, and no invented retry/quota promise.
+2. **Response identity:** response-backed requested symbol; URL parameter alone is insufficient.
+   Mixed, redirected, absent, or contradictory identity fails closed.
+3. **Template/schema:** exact provider model/template bound to `(symbol, statement, annual
+   cadence)`. For VNDirect, observed `modelType=91` is not corporate or bank; do not force
+   `is_bank=False`, reuse models 1/2/3 or 101/102/103, or infer from labels/industry.
+4. **Cadence/date:** use provider fiscal dates; CafeF `Time`/`Year` plus `Quater=0` may be
+   converted to 31 December only after annual semantics and identity are proven. Never turn a
+   publication date into a fiscal date and never fabricate a missing year.
+5. **Unit/scale:** provider unit/scale must be explicit or independently reproducible against
+   the exact official filing. Emit raw VND only after that proof; no guessed multiplier,
+   rounding, or mixed scale.
+6. **Metric identity:** resolve by `(statement, source namespace, provider template, item
+   code)`, not human label alone. Total PAT and parent-attributable PAT remain distinct.
+7. **Rights/retention:** source owner must grant runtime use, retention, attribution, and
+   downstream redistribution, or an explicit license must cover all four. No-auth access and
+   `robots.txt` are not a data license.
+8. **Evidence:** exact official filing cross-check per symbol/template version; no raw provider
+   rows in fixtures. Until all axes pass, close the source gap per symbol.
+
+### 3.1 Source-specific mapping rule
+
+The current catalog's VNDirect numeric `corporate_code`/`bank_code` slots remain unchanged.
+Future securities-template mappings must be additive and template-qualified, conceptually:
+
+```text
+(source="vndirect", template="securities:91", statement="income", concept="total_pat")
+(source="vndirect", template="securities:91", statement="income", concept="parent_pat")
+(source="cafef", template="statement-summary", statement="income", concept="total_pat")
+(source="cafef", template="statement-summary", statement="income", concept="parent_pat")
+```
+
+The tuple is a design key, not an approved mapping. `LNSTTNDN` and `NetIncome` must remain in a
+CafeF namespace and cannot occupy a VNDirect numeric slot. The CafeF map stays `BLOCKED` until
+response identity, `K` cadence handling, template semantics, unit scale, legal posture, and the
+total/parent distinction are all re-verified.
+
+`MetricInput` must retain statement, item code, source namespace, raw provider line name, fiscal
+date, value, and unit. If a template id is needed, add it through a new immutable provenance
+field without changing the meaning of existing positional fields.
+
+## 4. Exact future diagnostics design
+
+This defect is independent of whether a source later qualifies.
+
+### 4.1 `metrics()`
+
+- Normalize the symbol and fetch exactly three logical statements in fixed order:
+  `(income, balance, cashflow)`. Do not fetch ratios.
+- If at least one validated statement supplies a fiscal date, preserve partial tolerance and
+  return aligned `MetricReport`s with existing per-metric unavailable statuses/reasons.
+- If the union of usable fiscal dates is empty after the three recoverable outcomes, raise the
+  existing typed `EmptyData` with this exact bounded message:
+
+  ```text
+  no usable {cadence} fiscal periods for symbol '{SYMBOL}'; call explain_metric_coverage()
+  ```
+
+  `{cadence}` is the lowercase normalized cadence (`annual` or `quarter`) and `SYMBOL` is the
+  normalized symbol. The message is trail-free: no raw body, URL, secret, source-attempt list,
+  or historical-absence assertion. Non-recoverable caller/schema violations keep their typed
+  behavior; this is the all-recoverable-outcomes boundary.
+
+### 4.2 `explain_metric_coverage()`
+
+Append after the current `MetricCoverage(symbol, period, periods, notes)` fields:
+
+```python
+statement_fetches: tuple[StatementProvenance, ...] = ()
+```
+
+The field is exactly three aggregate outcomes in fixed order `(income, balance, cashflow)` even
+when `periods == ()`.
+
+| Status | Meaning | `source` | Stable `detail` |
+|---|---|---|---|
+| `OK` | validated reports accepted | succeeding source | `None` |
+| `MISSING` | validated source supplied no usable requested fiscal period | `None` | `no usable {cadence} fiscal periods` |
+| `SOURCE_ERROR` | recoverable transport/application/source failure | `None` | `recoverable source error` |
+| `NOT_SERVED` | capability does not serve requested statement | responsible source name(s) | `statement {statement} not served by source '{source}'` |
+
+The existing per-period `statement_provenance` remains unchanged when periods exist. When no
+period exists, the exact invariant is:
+
+```python
+coverage.periods == ()
+coverage.notes == ("no_fiscal_periods",)
+len(coverage.statement_fetches) == 3
+```
+
+`to_dataframe().attrs["statement_fetches"]` is a deterministic tuple of exactly three
+`(statement.value, status.value, source, detail)` tuples. The new defaulted field is appended so
+old positional and keyword constructors remain valid. No attempt trail, raw response, secret,
+or unbounded provider diagnostics are exposed.
+
+## 5. Reopen and implementation gates
+
+Reopen is conjunctive per symbol/source. The owner must first provide written reuse permission or
+an explicit data/API license. Then a future design review must demonstrate:
+
+- response-backed identity and no mixed/redirected payload;
+- provider-documented `modelType=91` statement/template semantics, or a different verified
+  template, without using the bank flag as a proxy;
+- exact annual fiscal dates and explicit missing-year handling;
+- verified raw-VND scale;
+- separate total and parent-attributable mappings with exact line-code lineage;
+- official filing cross-checks for both symbols and template versions; and
+- deterministic bounded request/page/backoff behavior without claiming undisclosed provider
+  quotas.
+
+Only after a design PASS may production TDD begin. The first failing tests must cover:
+
+- three recoverable failures => exact `EmptyData`, non-fatal coverage, exact note, and three
+  top-level outcomes;
+- one-success/two-failure alignment and per-period/top-level provenance consistency;
+- static CafeF cashflow `NOT_SERVED` without exception-text heuristics;
+- exact message/status/detail strings, symbol/cadence normalization, constructor compatibility,
+  equality/repr/snapshot, and DataFrame attrs;
+- exactly three statement calls and zero ratio calls;
+- synthetic SSI/TCX identity/template/date/unit/scale/lineage fixtures and fail-closed foreign,
+  mixed, duplicate, non-finite, malformed, wrong-cadence, and wrong-symbol payloads; and
+- source-specific CafeF namespace remains `BLOCKED` until the full gate passes.
+
+## 6. Stop condition and handoff
+
+This note intentionally stops at the source-gap closure. The exact cited matrix and legal/source
+evidence are in the linked research report. No code, push, or issue close is authorized before
+reviewer PASS.
