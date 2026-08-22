@@ -632,7 +632,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `origin/master` (remote HEAD/ancestry/paths verified). Resolution comment:
   `issuecomment-5380343399`; issue re-read `CLOSED`/`COMPLETED` at
   `2026-08-22T12:06:57Z`. No SSI/TCX production-data claim or new source capability; #205 remains
-  separate.
+  separate. Independent completion ACK `#3835ac37` at 19:10 verified exact `origin/master`
+  `bd836c1`, approved ancestry/paths, and GitHub `CLOSED`/`COMPLETED`; local `247c93f` remains
+  unpushed.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
@@ -1021,10 +1023,12 @@ _None._
 
 ## Next
 
-- **#205 — quarterly operating-profit/ratio triage (DEFERRED; intake `#04caf289`, reviewer
-  `c285b25`).** Separate follow-on queue packet:
+- **#205 — quarterly operating-profit/ratio triage (SPEC_DRAFTING; reviewer-owned, 2026-08-22).**
+  Reviewer ACK `#3835ac37` says the full tech-lead packet and source/design gate are still pending.
+  Separate follow-on queue packet:
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/205-quarterly-operating-profit-ratio-triage.md`.
-  Do not expand #204's exact `0951fbc` design review or implement #205 now. Preserve
+  Hold all production code, push, and close until that packet and gate are delivered. Do not
+  expand #204's exact `0951fbc` design review or implement #205 now. Preserve
   `operating_profit=BLOCKED` and zero-ratio-fetch until a later source/template/API packet proves
   exact quarterly identity; the 18/30 breadth target remains caller-side.
 
