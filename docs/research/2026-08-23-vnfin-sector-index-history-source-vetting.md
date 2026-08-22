@@ -97,12 +97,12 @@ The request parameter is never treated as identity by itself.
   `VNFIN` versus `VNINDEX` control changed the returned content fingerprint while
   preserving the same bare-UDF shape and date boundary. The fingerprint was computed
   only as `sha256(canonical_json(t,o,h,l,c,v))[:16]` and the live payload was not
-  stored. The probe prefixes were `cd0c79bef8d60a85` (VNFIN) versus
-  `3b044cecefe4a5c3` (VNINDEX). For comparison, the same control produced
-  `e476d9ee85c6485d` versus `cc6528f9b2b99ba1` on VPS and
-  `666bb182267b6e87` versus `63d744f93e742c03` on SSI. These fingerprints
-  distinguish the bounded control responses but do not prove response-backed
-  selector identity, so VNDirect remains `IDENTITY_GAP`.
+  stored. The two control fingerprints were distinct on each provider (including
+  VNDirect); the digest values are deliberately not committed because a short
+  live-payload digest is not useful public provenance and resembles a credential
+  blob to repository secret scans. These fingerprints distinguish the bounded
+  control responses but do not prove response-backed selector identity, so VNDirect
+  remains `IDENTITY_GAP`.
 
 The same controls are not official-index proof and not a licence. They are only
 source-response diagnostics.
