@@ -14,12 +14,20 @@ units/date semantics, stable field contract, and written OSS/runtime/cache/redis
 
 The independent status axes are:
 
-| Candidate | Technical reachability | Historical coverage | Response identity/date | Units/field semantics | Legal/runtime/reuse | Operational stability | Disposition |
-|---|---|---|---|---|---|---|---|
-| HOSE `tradingresult/{code}` | `PASS` observed without credentials | `SAMPLED_ONLY`; three names do not prove market-wide 2018-current completeness | Symbol returned; epoch/session-date convention `UNRESOLVED` | Raw volume/value multiplier and field stability `UNRESOLVED` | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Rate/SLA/cache terms `UNRESOLVED`; intermittent 500 observed | `DISABLED` |
-| HOSE `foreign/{code}` | `PASS` observed without credentials | History sampled | Response symbol missing; `RESPONSE_IDENTITY_MISSING_REJECTED` | Component arithmetic observed; units still unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Unbounded route; no published limit | `DISABLED; not a fallback` |
-| HNX listed report | `TECHNICAL_CANDIDATE_UNDOCUMENTED` observed without credentials | Historical samples only; no range/completeness proof | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; request token is not response identity | VND label present; volume scale and field stability `UNRESOLVED` | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Undocumented HTML seam; rate/cache/SLA `UNRESOLVED` | `DISABLED` |
-| HNX UPCoM report | `PASS` for current snapshot | `FAIL`; historical date inputs ignored | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; unchanged snapshots do not prove requested date | VND label present; volume semantics unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Snapshot behavior undocumented | `DISABLED` |
+| Candidate | Technical reachability | Historical coverage | Response identity/date | Units/field semantics | Legal/runtime/reuse | TLS chain | Operational stability | Disposition |
+|---|---|---|---|---|---|---|---|---|
+| HOSE `tradingresult/{code}` | `PASS` observed without credentials | `SAMPLED_ONLY`; three names do not prove market-wide 2018-current completeness | Symbol returned; epoch/session-date convention `UNRESOLVED` | Raw volume/value multiplier and field stability `UNRESOLVED` | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `PASS` under strict-client control | Rate/SLA/cache terms `UNRESOLVED`; intermittent 500 observed | `DISABLED` |
+| HOSE `foreign/{code}` | `PASS` observed without credentials | History sampled | Response symbol missing; `RESPONSE_IDENTITY_MISSING_REJECTED` | Component arithmetic observed; units still unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `PASS` under strict-client control | Unbounded route; no published limit | `DISABLED; not a fallback` |
+| HNX listed report | Historical HTTP observations only; current strict-client access fails | Historical samples only; no range/completeness proof | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; request token is not response identity | VND label present; volume scale and field stability `UNRESOLVED` | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `TLS_CHAIN_VERIFICATION_FAIL` | Undocumented HTML seam; rate/cache/SLA `UNRESOLVED` | `DISABLED` |
+| HNX UPCoM report | Historical HTTP observations only; current strict-client access fails | `FAIL`; historical date inputs ignored | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; unchanged snapshots do not prove requested date | VND label present; volume semantics unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `TLS_CHAIN_VERIFICATION_FAIL` | Snapshot behavior undocumented | `DISABLED` |
+
+**Current strict TLS operational axis (rechecked 2026-08-22):** HOSE passed the same
+standard-client control, but `hnx.vn` failed strict certificate verification: `curl` reported
+error 60 and Python reported `CERTIFICATE_VERIFY_FAILED` because the observed server chain did not
+provide a verifiable issuer path. Earlier HNX/UPCoM HTTP observations are historical evidence only;
+they do not clear `TLS_CHAIN_VERIFICATION_FAIL` or make the routes currently reproducible. Probes
+must never use `--insecure` or `-k`. A valid, verified certificate chain is a separate mandatory
+condition before either HNX route can reopen.
 
 * **HOSE/HSX:** a 22 August 2026 probe served sampled 2018-01-01–2026-08-21 windows for
   FPT, VIC, and VCB, but three names do not establish market-wide coverage. The official
@@ -55,8 +63,8 @@ public reachability grants lawful reuse.
 |---|---:|---|---|---|---|---|
 | Official HOSE market API, `tradingresult/{code}` | Yes | HOSE | Date-filtered; sampled 2018-01-02 through 2026-08-21 | 200 without credentials | Paid foreign-investor statistics; no OSS/runtime/cache/redistribution grant or rate terms found | **TECHNICAL_REACHABILITY_PASS; SEMANTICS_UNRESOLVED; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
 | Official HOSE market API, `foreign/{code}` | Not safely response-identified | HOSE | Unbounded paginated history; sampled 2009-01-02 through 2026-08-21 | 200 without credentials | Same paid-data concern | **RESPONSE_IDENTITY_MISSING_REJECTED; not a fallback** |
-| Official HNX listed-equity report | Yes in returned HTML rows | HNX | UI window limited to most recent month; direct POST sampled 2018–2026 dates when `default-date` matched; no range API or returned session marker | 200 HTML + direct POST | Commercial package/fee material; no open licence; copyright/all rights reserved | **TECHNICAL_CANDIDATE_UNDOCUMENTED; RESPONSE_DATE_IDENTITY_UNRESOLVED; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
-| Official HNX UPCoM report | Yes, current snapshot | UPCoM | Direct endpoint ignored 2026, 2018, and 2000 date values in probe; identical snapshot | 200 HTML + direct POST | No open licence found; same copyright concern | **HISTORICAL_COVERAGE_FAIL; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
+| Official HNX listed-equity report | Yes in returned HTML rows in historical observations | HNX | UI window limited to most recent month; direct POST sampled 2018–2026 dates when `default-date` matched; no range API or returned session marker | Historical 200 HTML + direct POST; current strict TLS chain fails | Commercial package/fee material; no open licence; copyright/all rights reserved | **TECHNICAL_CANDIDATE_UNDOCUMENTED; TLS_CHAIN_VERIFICATION_FAIL; RESPONSE_DATE_IDENTITY_UNRESOLVED; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
+| Official HNX UPCoM report | Current snapshot in historical observations | UPCoM | Direct endpoint ignored 2026, 2018, and 2000 date values in probe; identical snapshot | Historical 200 HTML + direct POST; current strict TLS chain fails | No open licence found; same copyright concern | **HISTORICAL_COVERAGE_FAIL; TLS_CHAIN_VERIFICATION_FAIL; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
 | HNX foreign trading by index / industry PDFs | No | HNX/UPCoM aggregates | Daily aggregate/index or industry tables | Public PDF | Copyright notice; no redistribution grant | **SCOPE_FAIL** |
 | SSC reporting/statistics pages | No per-symbol daily series found | Market aggregate | Monthly/aggregate publication and reporting obligation | Public pages/PDF | Regulatory publication is not a data licence | **SCOPE_FAIL** |
 | SSI FastConnect | Yes in documented API family | HOSE/HNX/UPCOM | Docs expose daily fields, but access-token flow is required | **No** | Commercial/API terms require separate review | **NO_AUTH_FAIL** |
@@ -109,7 +117,7 @@ Observed successful envelope:
 Relevant source-published component names are:
 
 ```text
-reportDate                         Unix-seconds session date
+reportDate                         observed integral/epoch-like date field; unit/timezone/session mapping unresolved
 symbol                             response identity (padded in some payloads)
 mainBuyForeignVolume               order-matching buy volume
 mainBuyForeignValue                order-matching buy value
@@ -128,7 +136,10 @@ the official field labels as provenance, require non-negative whole-valued volum
 numbers, and reject an unknown scale rather than silently multiply or divide. Written provider
 confirmation is required before enabling the public `shares`/`VND` contract.
 
-The normalized totals are explicitly derived for this route:
+The normalized component totals and nets are derived for this observed route because the payload
+fields shown above are components. A future provider-published net, if present, must be validated
+against the exact component difference; a matching published net retains `SOURCE_PUBLISHED`
+provenance, while a net computed from components is `DERIVED`.
 
 ```text
 foreign_buy_volume  = mainBuyForeignVolume  + bigLotBuyForeignVolume
@@ -139,9 +150,10 @@ foreign_net_volume  = foreign_buy_volume - foreign_sell_volume
 foreign_net_value   = foreign_buy_value   - foreign_sell_value
 ```
 
-The design must mark all six derived totals with field-level provenance. Missing components
-remain `None`; a present zero remains zero. Any published total used by a future source must
-be checked against its components and rejected on conflict.
+The design must mark every total with field-level provenance. Missing components remain `None`; a
+present zero remains zero. Any published total or net used by a future source must be checked
+against its components and rejected on conflict; a validated published net must not be relabelled
+as derived merely because it equals the arithmetic result.
 
 ### 3.3 Reachability, pagination, and coverage probes
 
@@ -284,13 +296,14 @@ with identical response bytes in the probe—even when the final date token was 
 therefore a current snapshot and ignores the historical date for this path, not evidence of
 UPCoM historical coverage.
 
-The reports are technically reachable without credentials and provide the required gross
-buy/sell volume/value plus ISIN. The listed HNX route is a per-session HTML report, not a
-server-side date-range API: a 2018–current history would require one request per candidate
-trading date and local filtering/pagination. The endpoints provide no documented machine-
-readable licence or published rate limit. The direct POST is an undocumented web seam with
-unresolved response-date identity and must not be treated as a durable OSS source without
-provider confirmation.
+Historical reports were observed without credentials and provided the required gross
+buy/sell volume/value plus ISIN, but the current strict standard-client probe cannot verify the
+`hnx.vn` TLS chain. The listed HNX route is a per-session HTML report, not a server-side date-range
+API: a 2018–current history would require one request per candidate trading date and local
+filtering/pagination. The endpoints provide no documented machine-readable licence or published
+rate limit. The direct POST is an undocumented web seam with unresolved response-date identity and
+`TLS_CHAIN_VERIFICATION_FAIL`; it must not be treated as a durable OSS source without verified
+TLS, provider confirmation, and the other reopen evidence.
 
 ### 4.2 Aggregate HNX evidence is not a substitute
 
@@ -383,6 +396,8 @@ status:
   historical date inputs were ignored);
 * `UNRESOLVED` means evidence is absent or insufficient, not that a legal prohibition was proved;
 * `SAMPLED_ONLY` means observations are not a market-wide or completeness guarantee;
+* `TLS_CHAIN_VERIFICATION_FAIL` means the current standard client cannot verify the official
+  server certificate chain; earlier HTTP success does not clear this axis;
 * `DISABLED` is the current engineering disposition, not a source fact.
 
 The current disposition is `DISABLED` for every candidate. A candidate can be reopened only when
@@ -397,9 +412,9 @@ general website contact:
 
 | Candidate | Owner | Official contact/data-service path |
 |---|---|---|
-| HOSE `tradingresult/{code}` | Ho Chi Minh Stock Exchange (HOSE/HSX) market-information/data-service owner | [HOSE data-feed page](https://www.hsx.vn/vi/data-feed) and the [official information-service tariff](https://staticfile.hsx.vn/Uploads/UploadDocuments/2406142/Bieu%20gia%20dich%20vu%20cung%20cap%20tin.pdf) |
-| HNX listed report | Hanoi Stock Exchange (HNX) information-service/data owner | [HNX listed-data catalogue](https://www.hnx.vn/dich-vu-cctt/du-lieu-cung-cap-list.html) and [technical-requirements page](https://www.hnx.vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html) |
-| HNX UPCoM report | Hanoi Stock Exchange (HNX) information-service/data owner | [HNX UPCoM catalogue](https://www.hnx.vn/dich-vu-cctt/du-lieu-cung-cap-up.html) and [technical-requirements page](https://www.hnx.vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html) |
+| HOSE `tradingresult/{code}` | Ho Chi Minh Stock Exchange (HOSE/HSX) market-information/data-service owner | [HOSE contact page](https://www.hsx.vn/vi/lien-he); [data-feed page](https://www.hsx.vn/vi/data-feed); [official information-service tariff](https://staticfile.hsx.vn/Uploads/UploadDocuments/2406142/Bieu%20gia%20dich%20vu%20cung%20cap%20tin.pdf) |
+| HNX listed report | Hanoi Stock Exchange (HNX) information-service/data owner | [HNX contact page](https://www.hnx.vn/vi-vn/lien-he.html); [HNX listed-data catalogue](https://www.hnx.vn/dich-vu-cctt/du-lieu-cung-cap-list.html); [technical-requirements page](https://www.hnx.vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html) |
+| HNX UPCoM report | Hanoi Stock Exchange (HNX) information-service/data owner | [HNX contact page](https://www.hnx.vn/vi-vn/lien-he.html); [HNX UPCoM catalogue](https://www.hnx.vn/dich-vu-cctt/du-lieu-cung-cap-up.html); [technical-requirements page](https://www.hnx.vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html) |
 
 No individual contact is inferred from a web page. A reopen packet must record the official
 contact/channel, request date, responding owner/team, written artifact or reference number, and
@@ -438,24 +453,30 @@ identity tuple, unit proof, coverage proof, request budget, and synthetic verifi
 ## 8. Reproducible official-host-only probe procedure
 
 This appendix is opt-in research tooling, not a CI test or an implementation recipe. The only
-allowlisted hosts are `api.hsx.vn` and `hnx.vn`; redirects are rejected. It uses no credentials,
-cookies, bearer headers, third-party hosts, or persistent cache. Raw responses must stay under
-`/tmp/vnfin-201-probes/` (or another ignored directory) and must never be committed. The manifest
-records only client/package/repository versions, timestamp/timezone, exact method/URL/query/body,
-actually sent non-secret headers, explicit absence of Cookie/Authorization/API-key material,
-HTTP status, content type, cache-control, byte count, a canonical SHA-256 digest of sanitized
-aggregate metadata, row count, date bounds, and whether response-backed identity/date fields are
-present.
+allowlisted hosts are `api.hsx.vn` and `hnx.vn`; redirects are rejected and the effective URL is
+recorded and compared with the requested URL. It uses no credentials, cookies, bearer headers,
+third-party hosts, or persistent cache. Raw responses must stay under `/tmp/vnfin-201-probes/` (or
+another ignored directory) and must never be committed. The current HNX TLS failure is an expected
+recordable outcome: the script continues after a curl failure so it can write a complete status
+manifest. Strict TLS is mandatory; no `--insecure` or `-k` flag is permitted.
+
+The sanitized manifest records client/package/repository versions, timestamp/timezone, the exact
+method/URL/query/form/body/header request shape, explicit absence of Cookie/Authorization/API-key
+material, curl exit code, accepted HTTP status, effective URL, redirect rejection, content type,
+cache-control, byte count, a canonical SHA-256 digest of sanitized aggregate metadata, row count,
+raw date bounds where available, and whether response-backed identity/date markers were observed.
+It contains no raw-response hash; raw output remains ignored and private.
 
 ```bash
-set -eu
+set -u
 out=/tmp/vnfin-201-probes/$(date +%Y%m%d-%H%M%S)
 mkdir -p "$out"
-date '+%d/%m/%Y - %A %H:%M %z' > "$out/manifest.txt"
-python --version >> "$out/manifest.txt"
-curl --version | sed -n '1p' >> "$out/manifest.txt"
-git -C /home/hungson175/dev/vnfin-oss rev-parse HEAD >> "$out/manifest.txt"
-python - <<'PY' >> "$out/manifest.txt"
+manifest="$out/manifest.txt"
+printf 'probe_time=%s\n' "$(date '+%d/%m/%Y - %A %H:%M %z')" > "$manifest"
+python --version >> "$manifest"
+curl --version | sed -n '1p' >> "$manifest"
+git -C /home/hungson175/dev/vnfin-oss rev-parse HEAD >> "$manifest"
+python - <<'PY' >> "$manifest"
 try:
     from importlib.metadata import version
     print("vnfin_version=" + version("vnfin"))
@@ -464,85 +485,214 @@ except Exception:
 PY
 printf '%s\n' \
   'sent_headers=Accept,Content-Type(where form),User-Agent only' \
-  'cookie=absent' 'authorization=absent' 'api_key=absent' >> "$out/manifest.txt"
+  'cookie=absent' 'authorization=absent' 'api_key=absent' \
+  'tls=standard-verification-required' 'insecure_flags=forbidden' >> "$manifest"
+
+# This is the exact sanitized request shape. HNX uses an explicitly unfiltered form (empty
+# symbol component), so the probe does not pretend that a HOSE-only symbol is board-valid.
+cat > "$out/requests.json" <<'JSON'
+{
+  "hose": {
+    "method": "GET",
+    "url": "https://api.hsx.vn/mk/api/v1/market/securities/tradingresult/FPT?fromDate=2018-01-01&toDate=2026-08-21&pageIndex=1&pageSize=20",
+    "query": {"fromDate": "2018-01-01", "toDate": "2026-08-21", "pageIndex": "1", "pageSize": "20"},
+    "form": null,
+    "headers": ["Accept: application/json", "User-Agent: vnfin-201-probe/1"],
+    "auth_headers_absent": true
+  },
+  "hnx_listed": {
+    "method": "POST",
+    "url": "https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_Listed",
+    "query": {},
+    "form": {"p_keysearch": "01/03/2018|0|0||0|ALL|01/03/2018", "pColOrder": "col_a", "pOrderType": "ASC", "pCurrentPage": "1", "pRecordOnPage": "50", "pIsSearch": "1"},
+    "headers": ["Accept: text/html", "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", "User-Agent: vnfin-201-probe/1"],
+    "auth_headers_absent": true
+  },
+  "upcom": {
+    "method": "POST",
+    "url": "https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_UPCoM",
+    "query": {},
+    "form": {"p_keysearch": "01/03/2018|0|0||0|ALL|01/03/2018|", "pColOrder": "col_a", "pOrderType": "ASC", "pCurrentPage": "1", "pRecordOnPage": "50", "pIsSearch": "1"},
+    "headers": ["Accept: text/html", "Content-Type: application/x-www-form-urlencoded; charset=UTF-8", "User-Agent: vnfin-201-probe/1"],
+    "auth_headers_absent": true
+  }
+}
+JSON
+cat "$out/requests.json" >> "$manifest"
+
+printf 'name\tcurl_exit_code\thttp_status\teffective_url\taccepted\tredirect_rejected\n' > "$out/status.tsv"
+
+record_status() {
+  name="$1"
+  requested_url="$2"
+  curl_exit_code="$3"
+  http_status=000
+  effective_url=not_observed
+  if IFS=$'\t' read -r observed_status observed_url < "$out/$name.transport"; then
+    [ -n "${observed_status:-}" ] && http_status="$observed_status"
+    [ -n "${observed_url:-}" ] && effective_url="$observed_url"
+  fi
+  accepted=false
+  case "$http_status" in
+    2??)
+      [ "$curl_exit_code" -eq 0 ] && [ "$effective_url" = "$requested_url" ] && accepted=true
+      ;;
+  esac
+  redirect_rejected=false
+  [ "$curl_exit_code" -eq 47 ] && redirect_rejected=true
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$name" "$curl_exit_code" "$http_status" "$effective_url" "$accepted" "$redirect_rejected" \
+    >> "$out/status.tsv"
+}
+
+run_probe() {
+  name="$1"
+  requested_url="$2"
+  output_file="$3"
+  shift 3
+  : > "$out/$name.headers"
+  : > "$out/$name.transport"
+  : > "$out/$name.stderr"
+  curl --proto '=https' --proto-redir '=https' --fail --silent --show-error \
+    --max-redirs 0 --max-time 25 \
+    "$@" -D "$out/$name.headers" \
+    --write-out '%{http_code}\t%{url_effective}\n' \
+    "$requested_url" -o "$out/$output_file" \
+    > "$out/$name.transport" 2> "$out/$name.stderr"
+  curl_exit_code=$?
+  record_status "$name" "$requested_url" "$curl_exit_code"
+}
 
 # Official HOSE route; no Authorization, Cookie, or API key.
-curl --fail --silent --show-error --max-redirs 0 --max-time 25 \
-  --header 'Accept: application/json' \
-  --header 'User-Agent: vnfin-201-probe/1' \
-  -D "$out/hose.headers" \
+run_probe hose \
   'https://api.hsx.vn/mk/api/v1/market/securities/tradingresult/FPT?fromDate=2018-01-01&toDate=2026-08-21&pageIndex=1&pageSize=20' \
-  -o "$out/hose.json"
+  hose.json \
+  --header 'Accept: application/json' \
+  --header 'User-Agent: vnfin-201-probe/1'
 
-# Official HNX listed report; the final date token is recorded as an input only,
-# never accepted as response identity without an authoritative returned marker.
-curl --fail --silent --show-error --max-redirs 0 --max-time 25 \
+# Official HNX listed report. Empty symbol component is deliberate; request-date/default-date is
+# input only and never accepted as response identity without an authoritative returned marker.
+run_probe hnx \
+  'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_Listed' \
+  hnx.html \
   --header 'Accept: text/html' \
   --header 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
   --header 'User-Agent: vnfin-201-probe/1' \
-  -D "$out/hnx.headers" \
-  -X POST 'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_Listed' \
-  --data-urlencode 'p_keysearch=01/03/2018|0|0|FPT|0|ALL|01/03/2018' \
+  -X POST \
+  --data-urlencode 'p_keysearch=01/03/2018|0|0||0|ALL|01/03/2018' \
   --data-urlencode 'pColOrder=col_a' \
   --data-urlencode 'pOrderType=ASC' \
   --data-urlencode 'pCurrentPage=1' \
   --data-urlencode 'pRecordOnPage=50' \
-  --data-urlencode 'pIsSearch=1' \
-  -o "$out/hnx.html"
+  --data-urlencode 'pIsSearch=1'
 
-# Official HNX UPCoM report; retain a separate route and complete form shape.
-curl --fail --silent --show-error --max-redirs 0 --max-time 25 \
+# Official HNX UPCoM report; retain a separate route and complete unfiltered form shape.
+run_probe upcom \
+  'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_UPCoM' \
+  upcom.html \
   --header 'Accept: text/html' \
   --header 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
   --header 'User-Agent: vnfin-201-probe/1' \
-  -D "$out/upcom.headers" \
-  -X POST 'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_UPCoM' \
-  --data-urlencode 'p_keysearch=01/03/2018|0|0|FPT|0|ALL|01/03/2018|' \
+  -X POST \
+  --data-urlencode 'p_keysearch=01/03/2018|0|0||0|ALL|01/03/2018|' \
   --data-urlencode 'pColOrder=col_a' \
   --data-urlencode 'pOrderType=ASC' \
   --data-urlencode 'pCurrentPage=1' \
   --data-urlencode 'pRecordOnPage=50' \
-  --data-urlencode 'pIsSearch=1' \
-  -o "$out/upcom.html"
+  --data-urlencode 'pIsSearch=1'
 
-sha256sum "$out/hose.json" "$out/hnx.html" "$out/upcom.html" >> "$out/manifest.txt"
+cat "$out/status.tsv" >> "$manifest"
+for response in hose.json hnx.html upcom.html; do
+  if [ -f "$out/$response" ]; then
+    wc -c "$out/$response" >> "$manifest"
+  fi
+done
 awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|content-type:|cache-control:)/ {print}' \
-  "$out/hose.headers" "$out/hnx.headers" "$out/upcom.headers" >> "$out/manifest.txt"
-wc -c "$out/hose.json" "$out/hnx.html" "$out/upcom.html" >> "$out/manifest.txt"
+  "$out/hose.headers" "$out/hnx.headers" "$out/upcom.headers" >> "$manifest"
 
-# Emit only a canonical, sanitized aggregate; never print or hash raw provider rows as a
-# committed artifact. The HNX booleans/counts are shape checks, not response identity proof.
+# Emit only a canonical, sanitized aggregate. The HNX marker state distinguishes an empty/no-body
+# TLS failure from a successful response with no marker. Identity booleans require non-empty rows.
 python - "$out" <<'PY'
 import hashlib, json, pathlib, re, sys
 
 out = pathlib.Path(sys.argv[1])
-hose = json.loads((out / "hose.json").read_text())
+
+def read_json(path: pathlib.Path):
+    if not path.is_file() or path.stat().st_size == 0:
+        return None
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+def status_rows():
+    rows = {}
+    for line in (out / "status.tsv").read_text().splitlines()[1:]:
+        name, rc, http, effective, accepted, redirect = line.split("\t", 5)
+        rows[name] = {
+            "curl_exit_code": int(rc),
+            "http_status": int(http),
+            "effective_url": effective,
+            "accepted": accepted == "true",
+            "redirect_rejected": redirect == "true",
+        }
+    return rows
+
+statuses = status_rows()
+hose = read_json(out / "hose.json") or {}
 rows = ((hose.get("data") or {}).get("list") or [])
+report_dates = [
+    row.get("reportDate")
+    for row in rows
+    if isinstance(row, dict)
+    and isinstance(row.get("reportDate"), int)
+    and not isinstance(row.get("reportDate"), bool)
+]
+
 aggregate = {
+    "probe_status": statuses,
     "hose_success": hose.get("success"),
     "hose_row_count": len(rows),
     "hose_fields": sorted({k for row in rows if isinstance(row, dict) for k in row}),
-    "hose_has_symbol": all(isinstance(row, dict) and "symbol" in row for row in rows),
-    "hose_has_reportDate": all(isinstance(row, dict) and "reportDate" in row for row in rows),
+    "hose_has_symbol": bool(rows) and all(isinstance(row, dict) and "symbol" in row for row in rows),
+    "hose_has_reportDate": bool(rows) and all(isinstance(row, dict) and "reportDate" in row for row in rows),
+    "hose_reportDate_raw_bounds": (
+        {"min": min(report_dates), "max": max(report_dates)} if report_dates else None
+    ),
+    "hose_reportDate_semantics": "observed_integral_or_epoch_like_unresolved",
     "hnx_shape": {},
 }
 for name in ("hnx", "upcom"):
-    html = (out / f"{name}.html").read_text(errors="replace")
+    path = out / f"{name}.html"
+    html = path.read_text(errors="replace") if path.is_file() and path.stat().st_size else ""
+    hnx_status = statuses[name]
+    marker = (
+        "not_observed_tls_chain_failure"
+        if not html and hnx_status["curl_exit_code"] == 60
+        else "not_observed_no_body"
+        if not html
+        else "present"
+        if re.search(r"(?:sessionDate|tradingDate|data-session-date)", html, re.I)
+        else "absent"
+    )
     aggregate["hnx_shape"][name] = {
         "bytes": len(html.encode()),
         "row_like_tags": len(re.findall(r"<tr\b", html, re.I)),
-        "has_security_code": bool(re.search(r"security\s+code", html, re.I)),
-        "has_isin": bool(re.search(r"isin", html, re.I)),
-        "has_buy_volume": bool(re.search(r"buy\s+volume", html, re.I)),
-        "has_sell_volume": bool(re.search(r"sell\s+volume", html, re.I)),
+        "has_security_code": bool(html) and bool(re.search(r"security\s+code", html, re.I)),
+        "has_isin": bool(html) and bool(re.search(r"isin", html, re.I)),
+        "has_buy_volume": bool(html) and bool(re.search(r"buy\s+volume", html, re.I)),
+        "has_sell_volume": bool(html) and bool(re.search(r"sell\s+volume", html, re.I)),
+        "returned_date_bounds": None,
+        "authoritative_session_date_marker": marker,
+        "identity_assertion": "not_applicable_unfiltered_probe",
     }
 canonical = json.dumps(aggregate, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
-(out / "sanitized-aggregate.json").write_text(canonical + "\\n")
+(out / "sanitized-aggregate.json").write_text(canonical + "\n")
 (out / "sanitized-aggregate.sha256").write_text(
-    hashlib.sha256(canonical.encode()).hexdigest() + "\\n"
+    hashlib.sha256(canonical.encode()).hexdigest() + "\n"
 )
 PY
-cat "$out/sanitized-aggregate.sha256" >> "$out/manifest.txt"
+printf 'sanitized_aggregate_sha256=%s\n' "$(cat "$out/sanitized-aggregate.sha256")" >> "$manifest"
 ```
 
 The procedure must be rerun only after a source-owner response or a materially changed official
