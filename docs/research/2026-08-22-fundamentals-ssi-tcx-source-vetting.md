@@ -27,8 +27,8 @@ gap, not a claim that either issuer lacks historical statements.
 
 | Symbol | What is proven | Blocking axes | Disposition |
 |---|---|---|---|
-| `SSI` | Official issuer identity and securities-company context; official annual report reports FY2025 ending 31 December 2025 in VND; direct provider probes returned rows under an unrecognized provider `modelType=91`; CafeF returned annual income/balance objects | VNDirect statement/template identity is not representable by the current adapter; CafeF current rows use `ReportType=K`, which the current adapter rejects; CafeF response does not echo `Symbol`; no source-specific metric namespace/rights grant | `NO_QUALIFIED_SOURCE` / `MetricId.NET_INCOME=BLOCKED` |
-| `TCX` | VSDC and TCBS identify `TCX` as Techcom Securities; official FY2025 filing uses VND and 31 December 2025; direct provider probes returned rows under `modelType=91`; CafeF returned FY2024–FY2025 income/balance objects | Same template, response-identity, current `K`-tag, source-code, and rights gaps; raw provider date history also has gaps and cannot be promoted | `NO_QUALIFIED_SOURCE` / `MetricId.NET_INCOME=BLOCKED` |
+| `SSI` | Official issuer identity and securities-company context; official annual report reports FY2025 ending 31 December 2025 in VND; direct provider probes returned rows in independently foreign/unqualified `modelType=89/90/91` streams; CafeF returned annual income/balance objects | VNDirect statement/template identity is not representable by the current adapter; CafeF current rows use `ReportType=K`, which the current adapter rejects; CafeF response does not echo `Symbol`; no source-specific metric namespace/rights grant | `NO_QUALIFIED_SOURCE` / `MetricId.NET_INCOME=BLOCKED` |
+| `TCX` | VSDC and TCBS identify `TCX` as Techcom Securities; official FY2025 filing uses VND and 31 December 2025; direct provider probes returned rows in independently foreign/unqualified `modelType=89/90/91` streams; CafeF returned FY2024–FY2025 income/balance objects | Same template, response-identity, current `K`-tag, source-code, and rights gaps; the raw `modelType=91` date history also has gaps and cannot be promoted or generalized to streams 89/90 | `NO_QUALIFIED_SOURCE` / `MetricId.NET_INCOME=BLOCKED` |
 
 The provider observations below are deliberately retained as **probe outcomes**. An empty
 envelope, a parser rejection, or an unrecognized template does not establish issuer absence,
@@ -86,7 +86,9 @@ GET https://api-finfo.vndirect.com.vn/v4/financial_statements
 It is recorded only to close the source gap, not as an accepted adapter route. The current
 adapter's valid statement template sets are `{1,101}` for balance, `{2,102}` for income, and
 `{3,103}` for cashflow. `91` is therefore foreign to the current typed contract and must fail
-closed until an additive securities-template design proves statement identity.
+closed until an additive, statement-specific template design proves identity. The later bounded
+observations of `89`, `90`, and `91` are three independently foreign streams; none is a combined
+securities template and no one stream is evidence for another statement.
 
 ### 4.2 CafeF adapter calls
 
@@ -138,10 +140,11 @@ alone is not response-backed identity.
 | `TCX` | CafeF / balance | same path; `Type=2`, other params as above | `200`; `Success=true`, `Count=2`, `Value` length 2 | `identity=absent`; no `modelType`; annual objects; tag `K` | 5 items/object; `2024-12-31*`, `2025-12-31*` | same thousand-VND candidate scale; no endpoint unit field | `InvalidData`: current parser rejects `ReportType=K`; source identity/template/rights gap |
 | `TCX` | CafeF / cashflow | direct probe: `Type=3`, `Symbol=TCX`, `TotalRow=32`, `EndDate=2026`, `ReportType=NAM`, `Sort=DESC`; adapter makes no request | `200`; `Success=true`, `Count=2`, `Value=[]` | source capability says no cashflow; no identity/template | 0; `∅` | not applicable | `EmptyData` / `NOT_SERVED`; no absence claim |
 
-### 5.1 Raw VNDirect `modelType=91` observation (not an accepted result)
+### 5.1 Raw VNDirect foreign model-stream observations (not accepted results)
 
-The additional provider probe was complete to the provider-declared page count, with the same
-bounded page size of 640. It proves response-backed `code`, `reportType`, and `modelType` only:
+The additional `modelType=91` provider probe was complete to the provider-declared page count,
+with the same bounded page size of 640. It proves response-backed `code`, `reportType`, and
+`modelType` for **stream 91 only**:
 
 | Symbol | HTTP pages / rows | Response-backed identity | Model/cadence | Complete raw fiscal-date set observed | Interpretation |
 |---|---:|---|---|---|---|
@@ -155,7 +158,8 @@ converted into income/balance/cashflow by item labels or by another library. A r
 happens to resemble an issuer filing cross-check is not enough to establish item identity.
 
 A separate bounded official probe of the same annual route also exposed foreign model tags
-`89.0`, `90.0`, and `91.0` for both symbols (page-one row count 640 in each stream):
+`89.0`, `90.0`, and `91.0` for both symbols. The totals below are independently paginated per
+stream (page-one row count 640 in each stream), not one combined template:
 
 | Symbol | `modelType=89` total rows | `modelType=90` total rows | `modelType=91` total rows |
 |---|---:|---:|---:|
@@ -164,8 +168,9 @@ A separate bounded official probe of the same annual route also exposed foreign 
 
 The `modelType=90` stream visibly contains both numeric item codes `23003.0` and `23000.0`,
 but no provider semantic field binds them to total versus parent-attributable income. This is
-exactly the kind of tempting cross-template inference the design rejects. All 89/90/91 streams
-remain foreign and untyped.
+exactly the kind of tempting cross-stream inference the design rejects. The `89` and `90` counts
+do not establish the `91` date set, and the `91` TCX FY2020 observation does not govern streams
+`89` or `90`. All three streams remain independently foreign, untyped, and fail-closed.
 
 ### 5.2 CafeF line identity observations
 
@@ -193,7 +198,7 @@ show why even a same-valued provider label cannot be selected by human text alon
 |---|---|---|---|
 | Transport | HTTPS endpoint accepted the sampled GETs with HTTP 200; no credentials were supplied | HTTPS handler accepted the sampled GETs with HTTP 200; no credentials were supplied | Observation only; no uptime or permission claim |
 | Response identity | `code` is present only on the unmodeled `91` stream; current candidate streams are empty | `Symbol` absent at both tested envelope locations | Require response-backed identity in any future typed source path |
-| Template/schema | `modelType=91` is foreign to current 1/2/3 and 101/102/103 contract; no statement partition | no model type; current annual tags include unsupported `K` | Fail closed; add a securities template only after provider + filing evidence |
+| Template/schema | `modelType=89`, `90`, and `91` are independently foreign to current 1/2/3 and 101/102/103 contract; no statement partition | no model type; current annual tags include unsupported `K` | Fail closed; add a statement-specific template only after provider + filing evidence |
 | Cadence/date | provider gives exact ISO `fiscalDate` on raw `91` rows; raw TCX history has missing years | provider gives `Time`/`Year` and `Quater=0`; adapter would synthesize 31 December | Never invent years or relabel publication dates |
 | Units | `numericValue` has no unit field; no accepted typed report for 91 | endpoint has no unit field; page labels financial table `(1.000 VNĐ)` and ×1000 is only a candidate ingest scale | Require explicit, independently verified scale before raw VND emission |
 | Owner/rights | [API robots](https://api-finfo.vndirect.com.vn/robots.txt) says `search=yes,ai-train=no,use=reference`; [VNDIRECT terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) provide disclaimers; no OSS/API redistribution grant found | [CafeF robots](https://cafef.vn/robots.txt) allows `/`; [CafeF data-tool note](https://cafef.vn/du-lieu/ScreenerHelper.aspx) says reference/no liability; no OSS/API redistribution grant found | Runtime-fetch/research only; no bundled rows, cache, or redistribution |
@@ -243,9 +248,11 @@ following must be true before source implementation review:
   permission, or a license that clearly covers them;
 - the response exposes exact requested-symbol identity (or a documented, independently verified
   identity envelope) and the route is stable/no-login or has approved credentials;
-- VNDirect `modelType=91` is documented by the provider as one securities-company template with
-  separate, verified income/balance/cashflow semantics; foreign, mixed, redirected, or
-  statement-ambiguous streams fail closed;
+- for each statement separately, the provider documents and supports the exact VNDirect stream
+  and template for income, balance, or cashflow, with response-backed identity and semantics;
+  `modelType=89`, `90`, and `91` must each be qualified independently, never collapsed into one
+  template or inferred across statements; foreign, mixed, redirected, or statement-ambiguous
+  streams fail closed;
 - each target fiscal date is a provider fiscal date, not a publication date; annual cadence is
   independently validated and missing years remain missing;
 - provider scale/unit is explicit or proven by a repeatable official filing cross-check, then
@@ -268,8 +275,10 @@ contract is:
 
 ### 8.1 `metrics()` fail-loud boundary
 
-1. Normalize the symbol exactly as today. Fetch exactly the existing three logical statements in
-   stable order: income, balance, cashflow. Never fetch ratios for this path.
+1. At the public wrapper boundary, validate and canonicalize the symbol once before any source or
+   ratio call. Pass that canonical symbol to all three logical statement fetches and pure
+   transformers. Fetch the statements in stable order: income, balance, cashflow. Never fetch
+   ratios for this path. Invalid or malformed input fails before any physical call.
 2. If the union of usable fiscal dates is non-empty, preserve today's partial tolerance: return
    aligned `MetricReport`s and represent unavailable statement inputs per metric with the
    existing statuses/reasons.
@@ -283,8 +292,9 @@ contract is:
 
    This message makes no historical-absence claim, contains no raw response, URL, secret,
    provider attempt trail, or exception text, and directs the caller to the non-fatal diagnostic.
-   Invalid caller input and non-recoverable schema/contract violations retain their existing
-   typed behavior; this boundary concerns the three recoverable statement outcomes.
+   Invalid caller input and contract violations retain their existing typed behavior. A source-level
+   `InvalidData`/schema failure is a recoverable `SourceError` outcome and is sanitized by the
+   source-error mapping below; this boundary concerns the three recoverable statement outcomes.
 
 ### 8.2 Top-level non-fatal coverage
 
@@ -301,12 +311,19 @@ not a failed-source attempt trail.
 | Status | Aggregate meaning | `source` | `detail` |
 |---|---|---|---|
 | `OK` | at least one validated report was accepted | succeeding source name | `None` |
-| `MISSING` | a validated source completed but supplied no usable requested fiscal period | `None` | exact bounded `no usable {cadence} fiscal periods` |
+| `MISSING` | an accepted direct/custom source completed but supplied no usable requested fiscal period | `None` | exact bounded `no usable {cadence} fiscal periods` |
 | `SOURCE_ERROR` | recoverable transport/application/source failure | `None` | exact bounded `recoverable source error` |
 | `NOT_SERVED` | the resolved source capability does not serve the statement | responsible source name(s) | exact bounded `statement {statement} not served by source '{source}'` |
 
-The existing per-period `statement_provenance` remains unchanged when periods exist. When no
-period exists, the returned object is exactly:
+Every public `SOURCE_ERROR` detail uses one allow-listed, bounded, trail-free value exactly equal
+to `recoverable source error`. This applies to aggregate `statement_fetches`, per-period
+`statement_provenance`, `MetricValue.reason`, and the `detail` field in DataFrame attrs. URL/query
+tokens, response bodies, exception text, provider page counts, and failed-source attempt trails
+are never copied into public models. Internal diagnostics may retain richer data outside public
+models. Source names may identify the responsible source, but never carry a secret-bearing URL.
+
+The existing per-period `statement_provenance` keeps its shape when periods exist, but applies
+the same public source-error mapping. When no period exists, the returned object is exactly:
 
 ```python
 MetricCoverage(
@@ -328,9 +345,24 @@ MetricCoverage(
 )
 ```
 
-No raw body, secret-bearing URL, provider page count, or aggregate failed-source trail is
-publicly serialized. Existing positional and keyword constructors remain valid because the new
-defaulted field is appended after `notes`.
+Existing positional and keyword constructors remain valid because the new defaulted field is
+appended after `notes`.
+
+The aggregate transformer is total and pure over typed outcomes; it never parses an exception or
+`SourceAttempt.reason` string. For each logical statement, apply this precedence:
+
+1. non-empty validated reports → `OK`, with the producing source;
+2. a capability skip → `NOT_SERVED`, with the stable responsible source role and the exact
+   bounded `statement {statement} not served by source '{source}'` detail;
+3. an accepted direct/custom completion with an empty validated report tuple → `MISSING`, with
+   `source=None` and detail `no usable {cadence} fiscal periods`;
+4. a caught source/failover failure, including `EmptyData` inside the default failed chain →
+   `SOURCE_ERROR`, with `source=None` and detail exactly `recoverable source error`.
+
+Thus a direct `source=` result with no reports is never `OK`, while a failed default chain is not
+reclassified as `MISSING` by inspecting human-readable reasons. `explain_metric_coverage()` uses
+this pure mapping and remains non-fatal; `metrics()` may still raise the exact all-empty
+`EmptyData` message.
 
 ### 8.3 Source-role and metric lineage invariants
 
@@ -359,15 +391,25 @@ fixtures for both symbols. No live provider row may be committed.
 - one success plus two failures: aligned dates still return, per-period provenance and the
   top-level outcome agree, and unavailable metric inputs retain typed reasons;
 - CafeF cashflow is `NOT_SERVED`, not exception-text classified;
+- RED source-error cases inject URL/query-token, JSON/body, and long-sentinel exception text;
+  none may appear in aggregate or per-period provenance, metric reasons, DataFrame attrs, or the
+  raised all-empty message;
 - exact normalized symbol/cadence strings, status values, detail values, note, repr/equality,
   positional constructor compatibility, and deterministic DataFrame attrs;
-- exactly three statement fetches and zero ratio fetches.
+- exactly three logical statement outcomes and zero ratio fetches; physical calls are asserted
+  separately: explicit CafeF makes two source calls (income/balance) and no cashflow HTTP call,
+  while a source that serves all three statements makes three source calls. Adapter-internal
+  failover, pagination, and retries are separately bounded physical work, not extra logical
+  outcomes.
 
 ### Source/template and metric identity
 
-- synthetic `SSI` and `TCX` provider rows with verified symbol/model/cadence but fabricated
-  dates, labels, and values;
-- reject cross-symbol rows, wrong cadence, `modelType=91` mixed/redirected/foreign streams,
+- diagnostics fixtures may use normalized `SSI` and `TCX` symbols with injected empty/failure
+  outcomes, but no positive provider row is authorized at this source-gap anchor;
+- every `modelType=89`, `90`, and `91` response fixture remains a negative/fail-closed case;
+  positive source/template fixtures require a later conjunctive reopen and additive
+  entity/template design;
+- reject cross-symbol rows, wrong cadence, each foreign/mixed/redirected `89`/`90`/`91` stream,
   malformed/empty envelopes, duplicates, non-finite values, and unit/scale mismatches;
 - preserve exact annual date sets and limit without fabricating missing FY2020 for `TCX`;
 - resolve `NET_INCOME` only from a verified source/template/item-code tuple, in raw VND, with
@@ -383,8 +425,8 @@ code, push, or issue close is authorized by this note.
 ## 10. Sources
 
 - [Official VNDirect financial-statements route](https://api-finfo.vndirect.com.vn/v4/financial_statements)
-- [VNDirect SSI annual `modelType=91` probe route](https://api-finfo.vndirect.com.vn/v4/financial_statements?q=code:SSI~reportType:ANNUAL~modelType:91&sort=fiscalDate:desc&size=640&page=1)
-- [VNDirect TCX annual `modelType=91` probe route](https://api-finfo.vndirect.com.vn/v4/financial_statements?q=code:TCX~reportType:ANNUAL~modelType=91&sort=fiscalDate:desc&size=640&page=1)
+- [VNDirect SSI annual `modelType=91` probe route](https://api-finfo.vndirect.com.vn/v4/financial_statements?q=code%3ASSI~reportType%3AANNUAL~modelType%3A91&sort=fiscalDate:desc&size=640&page=1)
+- [VNDirect TCX annual `modelType=91` probe route](https://api-finfo.vndirect.com.vn/v4/financial_statements?q=code%3ATCX~reportType%3AANNUAL~modelType%3A91&sort=fiscalDate:desc&size=640&page=1)
 - [VNDirect API robots.txt](https://api-finfo.vndirect.com.vn/robots.txt)
 - [VNDirect online-application terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/)
 - [Official CafeF FinanceReport route](https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx)

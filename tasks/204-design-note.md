@@ -26,7 +26,7 @@ template, dates, units, and typed adapter outcomes are in the [source-vetting re
 
 | Source | `SSI` income/balance/cashflow | `TCX` income/balance/cashflow | Gate result |
 |---|---|---|---|
-| VNDirect | Current adapter candidates `2/102`, `1/101`, `3/103`: HTTP 200 empty envelopes and `EmptyData`; unrestricted annual stream exposes foreign `modelType=89/90/91` | Same current-candidate failures; foreign streams expose response-backed `code=TCX`, with raw annual dates missing FY2020 and FY2013 in `modelType=91` | **Blocked:** provider template is foreign/unpartitioned; no safe `is_bank` or corporate-code reuse |
+| VNDirect | Current adapter candidates `2/102`, `1/101`, `3/103`: HTTP 200 empty envelopes and `EmptyData`; unrestricted annual route exposes independently foreign `modelType=89/90/91` streams | Same current-candidate failures; foreign streams expose response-backed `code=TCX`; only the observed `modelType=91` stream has raw annual dates missing FY2020 and FY2013 | **Blocked:** provider streams are foreign/unpartitioned; no safe `is_bank` or corporate-code reuse |
 | CafeF | Income/balance HTTP 200 `Success=true`, 15 annual objects for 2011–2025, no response `Symbol`, current parser rejects observed `ReportType=K`; cashflow not served | Income/balance HTTP 200 `Success=true`, two annual objects for 2024–2025, no response `Symbol`, current parser rejects `K`; cashflow not served | **Blocked:** response identity, current cadence tag, source namespace, and rights gaps |
 
 ### 2.1 Issuer cross-check
@@ -51,8 +51,9 @@ must satisfy every axis below for each symbol and statement:
 2. **Response identity:** response-backed requested symbol; URL parameter alone is insufficient.
    Mixed, redirected, absent, or contradictory identity fails closed.
 3. **Template/schema:** exact provider model/template bound to `(symbol, statement, annual
-   cadence)`. For VNDirect, observed `modelType=91` is not corporate or bank; do not force
-   `is_bank=False`, reuse models 1/2/3 or 101/102/103, or infer from labels/industry.
+   cadence)`. For VNDirect, observed `modelType=89`, `90`, and `91` are independently foreign
+   and unqualified; do not collapse them into one template, force `is_bank=False`, reuse models
+   1/2/3 or 101/102/103, or infer from labels/industry.
 4. **Cadence/date:** use provider fiscal dates; CafeF `Time`/`Year` plus `Quater=0` may be
    converted to 31 December only after annual semantics and identity are proven. Never turn a
    publication date into a fiscal date and never fabricate a missing year.
@@ -70,19 +71,23 @@ must satisfy every axis below for each symbol and statement:
 ### 3.1 Source-specific mapping rule
 
 The current catalog's VNDirect numeric `corporate_code`/`bank_code` slots remain unchanged.
-Future securities-template mappings must be additive and template-qualified, conceptually:
+Future mappings must be additive and independently qualified per statement, conceptually:
 
 ```text
-(source="vndirect", template="securities:91", statement="income", concept="total_pat")
-(source="vndirect", template="securities:91", statement="income", concept="parent_pat")
+(source="vndirect", stream="<verified income stream>", template="<verified income template>", statement="income", concept="total_pat")
+(source="vndirect", stream="<verified income stream>", template="<verified income template>", statement="income", concept="parent_pat")
+(source="vndirect", stream="<verified balance stream>", template="<verified balance template>", statement="balance", concept="<verified concept>")
+(source="vndirect", stream="<verified cashflow stream>", template="<verified cashflow template>", statement="cashflow", concept="<verified concept>")
 (source="cafef", template="statement-summary", statement="income", concept="total_pat")
 (source="cafef", template="statement-summary", statement="income", concept="parent_pat")
 ```
 
-The tuple is a design key, not an approved mapping. `LNSTTNDN` and `NetIncome` must remain in a
-CafeF namespace and cannot occupy a VNDirect numeric slot. The CafeF map stays `BLOCKED` until
-response identity, `K` cadence handling, template semantics, unit scale, legal posture, and the
-total/parent distinction are all re-verified.
+These are design-key placeholders, not approved mappings; no `securities:91` income mapping is
+authorized. The `89`, `90`, and `91` streams must each earn a statement-specific provider
+template and item identity. `LNSTTNDN` and `NetIncome` must remain in a CafeF namespace and
+cannot occupy a VNDirect numeric slot. The CafeF map stays `BLOCKED` until response identity,
+`K` cadence handling, template semantics, unit scale, legal posture, and the total/parent
+distinction are all re-verified.
 
 `MetricInput` must retain statement, item code, source namespace, raw provider line name, fiscal
 date, value, and unit. If a template id is needed, add it through a new immutable provenance
@@ -94,8 +99,10 @@ This defect is independent of whether a source later qualifies.
 
 ### 4.1 `metrics()`
 
-- Normalize the symbol and fetch exactly three logical statements in fixed order:
-  `(income, balance, cashflow)`. Do not fetch ratios.
+- At the public wrapper boundary, validate and canonicalize the symbol once before any source or
+  ratio call. Pass that canonical symbol to all three logical statement fetches and pure
+  transformers in fixed order `(income, balance, cashflow)`. Invalid or malformed input fails
+  before any physical call. Do not fetch ratios.
 - If at least one validated statement supplies a fiscal date, preserve partial tolerance and
   return aligned `MetricReport`s with existing per-metric unavailable statuses/reasons.
 - If the union of usable fiscal dates is empty after the three recoverable outcomes, raise the
@@ -107,8 +114,9 @@ This defect is independent of whether a source later qualifies.
 
   `{cadence}` is the lowercase normalized cadence (`annual` or `quarter`) and `SYMBOL` is the
   normalized symbol. The message is trail-free: no raw body, URL, secret, source-attempt list,
-  or historical-absence assertion. Non-recoverable caller/schema violations keep their typed
-  behavior; this is the all-recoverable-outcomes boundary.
+  or historical-absence assertion. Invalid caller input and contract violations keep their typed
+  behavior; a source-level `InvalidData`/schema failure is a recoverable `SourceError` outcome
+  and is sanitized by the source-error mapping below.
 
 ### 4.2 `explain_metric_coverage()`
 
@@ -124,12 +132,19 @@ when `periods == ()`.
 | Status | Meaning | `source` | Stable `detail` |
 |---|---|---|---|
 | `OK` | validated reports accepted | succeeding source | `None` |
-| `MISSING` | validated source supplied no usable requested fiscal period | `None` | `no usable {cadence} fiscal periods` |
+| `MISSING` | accepted direct/custom source completed with no usable requested fiscal period | `None` | `no usable {cadence} fiscal periods` |
 | `SOURCE_ERROR` | recoverable transport/application/source failure | `None` | `recoverable source error` |
 | `NOT_SERVED` | capability does not serve requested statement | responsible source name(s) | `statement {statement} not served by source '{source}'` |
 
-The existing per-period `statement_provenance` remains unchanged when periods exist. When no
-period exists, the exact invariant is:
+Every public `SOURCE_ERROR` detail is exactly the bounded, trail-free string
+`recoverable source error`. Apply this same allow-list to aggregate `statement_fetches`,
+per-period `statement_provenance`, `MetricValue.reason`, and the `detail` field in DataFrame
+attrs. URL/query tokens, response bodies, exception text, provider page counts, and failed-source
+attempt trails never enter public models. Internal diagnostics may retain richer data outside
+public models; source names may identify the responsible source but may not carry a secret URL.
+
+The existing per-period `statement_provenance` keeps its shape when periods exist, but uses the
+same public source-error mapping. When no period exists, the exact invariant is:
 
 ```python
 coverage.periods == ()
@@ -139,8 +154,24 @@ len(coverage.statement_fetches) == 3
 
 `to_dataframe().attrs["statement_fetches"]` is a deterministic tuple of exactly three
 `(statement.value, status.value, source, detail)` tuples. The new defaulted field is appended so
-old positional and keyword constructors remain valid. No attempt trail, raw response, secret,
-or unbounded provider diagnostics are exposed.
+old positional and keyword constructors remain valid. No attempt trail, raw response, secret, or
+unbounded provider diagnostics are exposed.
+
+The aggregate transformer is total and pure over typed outcomes; it never parses an exception or
+`SourceAttempt.reason` string. For each logical statement, apply this precedence:
+
+1. non-empty validated reports → `OK`, with the producing source;
+2. a capability skip → `NOT_SERVED`, with the stable responsible source role and the exact
+   bounded `statement {statement} not served by source '{source}'` detail;
+3. an accepted direct/custom completion with an empty validated report tuple → `MISSING`, with
+   `source=None` and detail `no usable {cadence} fiscal periods`;
+4. a caught source/failover failure, including `EmptyData` inside the default failed chain →
+   `SOURCE_ERROR`, with `source=None` and detail exactly `recoverable source error`.
+
+Thus a direct `source=` result with no reports is never `OK`, while a failed default chain is not
+reclassified as `MISSING` by inspecting human-readable reasons. `explain_metric_coverage()` uses
+this pure mapping and remains non-fatal; `metrics()` may still raise the exact all-empty
+`EmptyData` message.
 
 ## 5. Reopen and implementation gates
 
@@ -148,8 +179,9 @@ Reopen is conjunctive per symbol/source. The owner must first provide written re
 an explicit data/API license. Then a future design review must demonstrate:
 
 - response-backed identity and no mixed/redirected payload;
-- provider-documented `modelType=91` statement/template semantics, or a different verified
-  template, without using the bank flag as a proxy;
+- for each statement separately, provider-documented stream/template semantics for income,
+  balance, or cashflow, without using the bank flag as a proxy; `modelType=89`, `90`, and `91`
+  must each be qualified independently and may not be collapsed into one template;
 - exact annual fiscal dates and explicit missing-year handling;
 - verified raw-VND scale;
 - separate total and parent-attributable mappings with exact line-code lineage;
@@ -160,14 +192,24 @@ an explicit data/API license. Then a future design review must demonstrate:
 Only after a design PASS may production TDD begin. The first failing tests must cover:
 
 - three recoverable failures => exact `EmptyData`, non-fatal coverage, exact note, and three
-  top-level outcomes;
+  top-level logical outcomes;
 - one-success/two-failure alignment and per-period/top-level provenance consistency;
 - static CafeF cashflow `NOT_SERVED` without exception-text heuristics;
+- direct/custom empty completion => aggregate `MISSING`, default failed-chain `EmptyData` =>
+  sanitized `SOURCE_ERROR`, and no `SourceAttempt.reason` parsing;
+- URL/query-token, JSON/body, and long-sentinel source exceptions are absent from aggregate and
+  per-period provenance, metric reasons, DataFrame attrs, and raised all-empty messages;
 - exact message/status/detail strings, symbol/cadence normalization, constructor compatibility,
   equality/repr/snapshot, and DataFrame attrs;
-- exactly three statement calls and zero ratio calls;
-- synthetic SSI/TCX identity/template/date/unit/scale/lineage fixtures and fail-closed foreign,
-  mixed, duplicate, non-finite, malformed, wrong-cadence, and wrong-symbol payloads; and
+- exactly three logical statement outcomes and zero ratio calls; explicit CafeF makes two physical
+  source calls with no cashflow HTTP call, while an all-statement source makes three physical
+  source calls, with internal failover/pagination/retry work counted separately;
+- normalized padded/lowercase/malformed symbols, with malformed input proving zero physical calls;
+- normalized `SSI`/`TCX` diagnostics fixtures using injected empty/failure outcomes only; every
+  `modelType=89`, `90`, and `91` response fixture remains negative/fail-closed until a later
+  conjunctive reopen and additive entity/template design; and
+- reject cross-symbol, wrong-cadence, mixed, duplicate, non-finite, malformed, wrong-unit, and
+  wrong-scale payloads;
 - source-specific CafeF namespace remains `BLOCKED` until the full gate passes.
 
 ## 6. Stop condition and handoff
