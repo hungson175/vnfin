@@ -583,6 +583,16 @@ def _li(code, value, *, name=None, value_unit="VND"):
 
 def _report(symbol, statement, fiscal_date, items, *, source="vndirect",
             is_bank=False, period=Period.ANNUAL):
+    model_type = None
+    if source == "vndirect":
+        model_type = {
+            (StatementType.BALANCE, False): 1,
+            (StatementType.INCOME, False): 2,
+            (StatementType.CASHFLOW, False): 3,
+            (StatementType.BALANCE, True): 101,
+            (StatementType.INCOME, True): 102,
+            (StatementType.CASHFLOW, True): 103,
+        }[(statement, is_bank)]
     return FinancialReport(
         symbol=symbol,
         statement_type=statement,
@@ -591,6 +601,7 @@ def _report(symbol, statement, fiscal_date, items, *, source="vndirect",
         items=tuple(items),
         source=source,
         is_bank=is_bank,
+        model_type=model_type,
     )
 
 

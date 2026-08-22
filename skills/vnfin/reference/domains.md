@@ -67,7 +67,9 @@ import vnfin
 rep = vnfin.fundamentals.metrics("FPT", period="annual")[0]
 print(rep.get("net_revenue").value, rep.get("gross_margin").value)   # raw VND, ratio
 print(rep.get("net_interest_income").availability.value)             # 'not_applicable' (corporate)
-cov = vnfin.fundamentals.explain_metric_coverage("FPT", period="annual")  # never raises
+cov = vnfin.fundamentals.explain_metric_coverage(
+    "FPT", period="annual"
+)  # recoverable source failures become diagnostics
 ```
 
 ## funds — mutual-fund NAV (VND/unit) — single-source

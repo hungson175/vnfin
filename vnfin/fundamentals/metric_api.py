@@ -841,7 +841,7 @@ def _coverage_from_statement_results(
 ) -> MetricCoverage:
     """PURE transformer: synthetic StatementFetchResults -> MetricCoverage.
 
-    NO network, never raises on a per-statement failure. One PeriodCoverage per
+    NO network, does not raise on a recoverable per-statement source failure. One PeriodCoverage per
     fiscal_date (newest first); NEVER fetches/requires ratios (B7 —
     ratio_status is always NOT_REQUESTED).
     """
@@ -883,7 +883,7 @@ def _coverage_from_statement_results(
 # ``metrics`` / ``explain_metric_coverage`` fetch each of income/balance/cashflow
 # (NEVER ratios — B7) via the existing ``fundamentals.get_financials`` failover,
 # turn each outcome into a typed ``StatementFetchResult`` (success OR recoverable
-# failure — a per-statement error must NEVER raise out), resolve the concrete
+# failure — a recoverable per-statement error must not raise out), resolve the concrete
 # ``is_bank`` template, then hand the 3 results to the PURE Stage-B transformers.
 # A statement no resolved source can serve is gated OUT before any fetch via the
 # static ``serves(...)`` predicate (deterministic, not exception-text
@@ -948,6 +948,51 @@ def _reports_match_roles(reports, allowed_roles: tuple[str, ...]) -> bool:
         if source_name not in observed:
             observed.append(source_name)
     return len(observed) == 1
+
+
+def _validate_metric_reports(
+    reports,
+    *,
+    symbol: str,
+    statement: StatementType,
+    period: Period,
+    is_bank,
+    source,
+) -> bool:
+    """Apply the complete fundamentals result contract at the metric seam.
+
+    The top-level ``get_financials(source=...)`` compatibility branch returns a
+    source result without constructing :class:`FailoverFundamentalClient`, so a
+    metrics wrapper must not treat that branch as trusted.  Reuse the same
+    private validator used by the failover client and discard its detailed
+    reason; public metric diagnostics have one fixed source-error string.
+    Duplicate fiscal dates are rejected by that shared result-level contract.
+    """
+    try:
+        from .client import _fundamental_unit, _validate_fundamental_result
+
+        chain_unit = _fundamental_unit(source)
+        # Metrics consume raw statement money.  A source that omits its unit is
+        # kept compatible with the fundamentals client, while malformed report
+        # currencies still fail against the canonical VND metric contract.
+        if chain_unit is None:
+            chain_unit = "VND"
+        reason = _validate_fundamental_result(
+            reports,
+            symbol=symbol,
+            statement=statement,
+            period=period,
+            is_bank=is_bank,
+            chain_unit=chain_unit,
+        )
+        if reason is not None:
+            return False
+
+    except BaseException:
+        # Validation is a fail-closed trust boundary.  Never expose a custom
+        # property/value exception or the validator's raw reason publicly.
+        return False
+    return True
 
 
 def _source_error_result(statement: StatementType) -> StatementFetchResult:
@@ -1067,6 +1112,16 @@ def _fetch_statement_result(
                 source=None,
                 detail=_missing_detail(period),
             )
+        return _source_error_result(statement)
+
+    if not _validate_metric_reports(
+        reports,
+        symbol=symbol,
+        statement=statement,
+        period=period,
+        is_bank=is_bank,
+        source=capable_sources[0],
+    ):
         return _source_error_result(statement)
 
     if not _reports_match_roles(reports, allowed_roles):
@@ -1249,8 +1304,8 @@ def explain_metric_coverage(
     """Offline-friendly, NON-FATAL coverage diagnostics for ``symbol``.
 
     Same 3-statement fetch as :func:`metrics` (NEVER ratios — B7,
-    ``ratio_status`` is always ``not_requested``), but never raises on a
-    *recoverable* per-statement failure (``SourceError``/``AllSourcesFailed``):
+    ``ratio_status`` is always ``not_requested``), but does not raise on a
+    *recoverable* per-statement source failure (``SourceError``/``AllSourcesFailed``):
     it returns a :class:`MetricCoverage` whose ``periods``
     is one :class:`PeriodCoverage` per fiscal_date (newest first), each carrying
     per-statement provenance, named-vs-generic item counts, unmapped codes, and
@@ -1259,6 +1314,7 @@ def explain_metric_coverage(
     The returned object always carries exactly three aggregate
     ``statement_fetches`` in income/balance/cashflow order, including an empty
     ``periods`` result, with ``notes == ("no_fiscal_periods",)`` in that case.
+    Invalid input and non-recoverable contract errors still raise normally.
     Source errors expose only the bounded ``recoverable source error`` detail;
     response text, URLs, exception text, and attempt trails are not public.
     """

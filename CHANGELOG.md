@@ -13,7 +13,8 @@ All notable changes to `vnfin` are documented here. The format follows
   `statement_fetches` outcomes and `no_fiscal_periods` diagnostics. Source precedence remains
   `source=` over `sources=`, incapable roles are filtered before per-statement failover, malformed
   source/provenance values fail closed as bounded `custom`/`SOURCE_ERROR`, and public source-error
-  text is trail-free. The SSI/TCX source chain and `NET_INCOME` remain blocked.
+  text is trail-free. `NET_INCOME` remains blocked for SSI/TCX because no qualified source/template
+  exists; it remains mapped for qualified VNDirect corporate and bank reports globally.
 
 ### Documentation
 - **World-index deployment reality clarified** (#184) — `docs/sources/indices-world.md` (+ the skill

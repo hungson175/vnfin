@@ -155,9 +155,10 @@ print(d.formula, [i.value for i in d.inputs])   # 'total_liabilities / owners_eq
 
 ### Coverage diagnostics (non-fatal)
 
-For a per-symbol audit that never raises (ideal for a loop over a universe), use
-`explain_metric_coverage(...)`. It runs the same 3-statement fetch but catches every per-statement
-failure and returns a `MetricCoverage` with one `PeriodCoverage` per fiscal date — each carrying
+For a per-symbol audit that does not raise on recoverable per-statement source failures (ideal for a
+loop over a universe), use `explain_metric_coverage(...)`. It runs the same 3-statement fetch but
+converts each recoverable per-statement failure into typed diagnostics and returns a `MetricCoverage`
+with one `PeriodCoverage` per fiscal date — each carrying
 per-statement provenance, per-metric availability + reasons, named-vs-generic item counts, and
 unmapped provider codes. It also always retains exactly three aggregate outcomes in
 `coverage.statement_fetches`, in income/balance/cashflow order.

@@ -445,7 +445,8 @@ examples and tests in §9 reference these exact strings.
 
 ### Coverage (`explain_metric_coverage`)
 
-Same fetch, but never raises on a per-statement failure. It returns a `MetricCoverage` whose
+Same fetch, but does not raise on a recoverable per-statement source failure. It returns a
+`MetricCoverage` whose
 `periods` is **one `PeriodCoverage` per fiscal_date** (B1). Each period entry records: per-statement
 `StatementProvenance` (status + **source per the role rule**: OK→succeeding, NOT_SERVED→responsible,
 else None), named-vs-generic item-label counts, unmapped

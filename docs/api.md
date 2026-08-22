@@ -248,10 +248,10 @@ for symbol '{SYMBOL}'; call explain_metric_coverage()")`.
   auto-detects bank vs corporate from the first OK report.
 - `vnfin.fundamentals.explain_metric_coverage(symbol, period="annual", *, is_bank=None, limit=8,
   source=None, sources=None, max_attempts=3, http_get=None, timeout=25.0) -> MetricCoverage` — same
-  3-statement fetch, but **never raises** on a recoverable per-statement failure; one
+  3-statement fetch, but does not raise on a recoverable per-statement source failure; one
   `PeriodCoverage` per fiscal date plus exactly three aggregate `statement_fetches` outcomes in
   income/balance/cashflow order, even when there are no periods. Designed for a batch loop over a
-  universe.
+  universe; invalid input and non-recoverable contract errors still raise normally.
 - `vnfin.fundamentals.metric_catalog(applies_to=None) -> tuple[MetricDefinition, ...]` — pure, no
   network. `None` → all 26; `"bank"`/`AppliesTo.BANK` → `BANK`+`BOTH`; `"corporate"`/`"non_bank"`/
   `AppliesTo.CORPORATE` → `CORPORATE`+`BOTH`. Any other string raises `VnfinError`.

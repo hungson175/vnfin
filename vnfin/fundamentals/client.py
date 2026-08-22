@@ -196,6 +196,7 @@ def _validate_fundamental_result(
     if not reports:
         return "empty result"
 
+    seen_fiscal_dates: set[date] = set()
     for report in reports:
         reason = result_type_reason(report, FinancialReport, noun="report")
         if reason:
@@ -210,6 +211,9 @@ def _validate_fundamental_result(
         fd = report.fiscal_date
         if not isinstance(fd, date) or isinstance(fd, datetime):
             return f"malformed fiscal_date {fd!r}: expected a plain date"
+        if fd in seen_fiscal_dates:
+            return f"duplicate fiscal_date {fd!r} in result"
+        seen_fiscal_dates.add(fd)
 
         # Issue #127: reject present-malformed fetched_at_utc metadata (per report).
         reason = _fetched_at_utc_reason(report.fetched_at_utc)
