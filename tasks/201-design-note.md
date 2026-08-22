@@ -1,8 +1,8 @@
 # #201 design note — Vietnamese equity foreign-investor daily flow
 
-**Status:** `BLOCKED — source-gap closure; no source enabled; closure precision round pending re-review`
-**Reviewer gate:** closure review BLOCK at reviewer commit `ab9167c`; report
-`reviews/review-202608221506-issue201-closure-review.md`
+**Status:** `BLOCKED — source-gap closure; no source enabled; exact closure round pending re-review`
+**Reviewer gate:** exact closure BLOCK at reviewer commit `4d91560`; report
+`reviews/review-202608221518-issue201-exact-closure-review.md`
 **Issue:** #201; public triage `issuecomment-5378368603`
 **Research evidence:** `docs/research/2026-08-22-vn-foreign-flow-source-vetting.md`
 **Clean-room:** primary official exchange/regulator pages and first-party UI/Swagger inspection only; the mandatory repository blacklist was applied to every search and no excluded material was opened or used.
@@ -1011,7 +1011,7 @@ provider rows or bundled datasets are permitted. Live endpoint tests are opt-in 
 | Bulk budget | atomic ledger passed to sources, strict sequential scheduler, one source/page reservation versus per-page physical requests/retries, 100 default/200 hard-cap source attempts, 5,000-page/6,000-request boundaries, dimension-specific queued failures, no silent drop |
 | Bulk result | XOR item invariant (both-null/both-present reject), stable order, bounded failure codes, full `TimeSeriesResult` mixin fields/index/attrs |
 | Dataframe | exact row/summary columns, origin columns, attrs, units/source/coverage, duplicate-index backstop |
-| Probe reproducibility | official-host-only opt-in command, `set -euo pipefail` with explicit curl-failure capture, exact 200/effective-URL/redirect/body gates, exact normalized MIME (media type before `;`), route-specific HNX/UPCoM report table/heading shape, generic maintenance HTML and `text/htmlx`/`application/jsonp` negative mocks, payload observations gated on accepted transport/body, syntactic-only date markers, sanitized aggregate embedded in manifest, nonzero aggregation/manifest failures, raw output untracked |
+| Probe reproducibility | official-host-only opt-in command, `set -euo pipefail` with explicit curl-failure capture, exact 200/effective-URL/redirect/body gates, complete `Content-Type` parsing after its first colon, exact normalized MIME (media type before `;`), one-table HNX/UPCoM exact heading-row plus distinct data-row contract, generic/maintenance and unrelated-table/off-table-phrase negatives, colon-suffixed MIME negatives, payload observations gated on accepted transport/body, syntactic-only date markers, sanitized aggregate embedded in manifest, nonzero aggregation/manifest failures, raw output untracked |
 | Public/release | docs contract, API snapshot, source/API/architecture docs, AI guidance, skill, changelog, build/wheel/archive inspection, clean-install import smoke |
 
 A future implementation must run focused tests RED-first, then the full merged offline suite before
@@ -1023,7 +1023,7 @@ clean-install smoke. No such implementation or test claim is made by this correc
 
 This correction round is deliberately source-gap closure, not a proposal to choose between HOSE
 and HNX. Please review this note and the research report against B1–B2 in
-`reviews/review-202608221506-issue201-closure-review.md`. At handoff, the reviewer should spawn
+`reviews/review-202608221518-issue201-exact-closure-review.md`. At handoff, the reviewer should spawn
 parallel sub-agents for route/body/MIME fail-closed checks and runtime warning-container/prefix
 validation.
 

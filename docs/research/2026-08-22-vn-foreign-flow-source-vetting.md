@@ -471,9 +471,10 @@ sanitized aggregate is embedded in `manifest.txt` between explicit delimiters. I
 raw-response hash; raw output remains ignored and private.
 
 For HNX and UPCoM, body acceptance is route-specific: after exact MIME normalization to the lower-
-case media type before any `;` parameters, the HTML must contain a table and at least one data row plus all six
-bounded report identifiers (`Security code`, `ISIN code`, `Buy volume`, `Buy value`, `Sell volume`,
-`Sell value`). A generic document, maintenance page, or MIME such as `text/htmlx` is rejected and
+case media type before any `;` parameters, one report table must contain one heading row with all
+six exact normalized fields (`Security code`, `ISIN code`, `Buy volume`, `Buy value`, `Sell volume`,
+`Sell value`) and a distinct data row with at least six data cells. A generic document, maintenance
+page, unrelated table, off-table field phrases, or MIME such as `text/htmlx` is rejected and
 produces no payload observations.
 
 ```bash
@@ -551,8 +552,9 @@ record_status() {
   if [ -f "$out/$output_file" ]; then
     body_bytes=$(wc -c < "$out/$output_file")
   fi
-  content_type=$(awk -F: 'BEGIN{IGNORECASE=1} /^content-type:/ {
-    value=$2
+  content_type=$(awk 'BEGIN{IGNORECASE=1} /^[[:space:]]*content-type[[:space:]]*:/ {
+    value=$0
+    sub(/^[^:]*:/, "", value)
     gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
     split(value, parts, ";")
     gsub(/^[[:space:]]+|[[:space:]]+$/, "", parts[1])
@@ -584,42 +586,97 @@ record_status() {
         if python - "$out/$output_file" <<'PY'
 from html.parser import HTMLParser
 import pathlib
+import re
 import sys
 
-class ShapeParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.report_tables = 0
-        self.report_rows = 0
-        self.data_cells = 0
-        self.text_parts = []
-
-    def handle_starttag(self, tag, _attrs):
-        if tag.lower() == "table":
-            self.report_tables += 1
-        elif tag.lower() == "tr":
-            self.report_rows += 1
-        elif tag.lower() == "td":
-            self.data_cells += 1
-
-    def handle_data(self, data):
-        self.text_parts.append(" ".join(data.split()).lower())
-
-parser = ShapeParser()
-parser.feed(pathlib.Path(sys.argv[1]).read_text(errors="replace"))
-parser.close()
-required = (
+REQUIRED_HEADINGS = {
     "security code",
     "isin code",
     "buy volume",
     "buy value",
     "sell volume",
     "sell value",
+}
+
+def normalize_cell(text):
+    text = " ".join(text.split()).lower()
+    return re.sub(r"\s*\(vnd\)$", "", text).strip()
+
+class ReportShapeParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.tables = []
+        self.table_stack = []
+        self.invalid = False
+
+    def handle_starttag(self, tag, _attrs):
+        tag = tag.lower()
+        if tag == "table":
+            state = {"rows": [], "row": None, "cell": None, "cell_tag": None}
+            self.tables.append(state)
+            self.table_stack.append(state)
+        elif not self.table_stack:
+            return
+        elif tag == "tr":
+            state = self.table_stack[-1]
+            if state["row"] is not None:
+                self.invalid = True
+            state["row"] = []
+        elif tag in {"th", "td"}:
+            state = self.table_stack[-1]
+            if state["row"] is None or state["cell"] is not None:
+                self.invalid = True
+            state["cell"] = []
+            state["cell_tag"] = tag
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if not self.table_stack:
+            return
+        state = self.table_stack[-1]
+        if tag in {"th", "td"}:
+            if state["cell"] is None or state["cell_tag"] != tag:
+                self.invalid = True
+            elif state["row"] is not None:
+                state["row"].append((tag, normalize_cell(" ".join(state["cell"]))))
+            state["cell"] = None
+            state["cell_tag"] = None
+        elif tag == "tr":
+            if state["row"] is None or state["cell"] is not None:
+                self.invalid = True
+            elif state["row"]:
+                state["rows"].append(state["row"])
+            state["row"] = None
+        elif tag == "table":
+            if state["row"] is not None or state["cell"] is not None:
+                self.invalid = True
+            self.table_stack.pop()
+
+    def handle_data(self, data):
+        if self.table_stack and self.table_stack[-1]["cell"] is not None:
+            self.table_stack[-1]["cell"].append(data)
+
+parser = ReportShapeParser()
+parser.feed(pathlib.Path(sys.argv[1]).read_text(errors="replace"))
+parser.close()
+
+def report_table_ok(table):
+    for heading_index, heading_row in enumerate(table["rows"]):
+        heading_cells = {cell for _tag, cell in heading_row}
+        if not REQUIRED_HEADINGS.issubset(heading_cells):
+            continue
+        for data_index, data_row in enumerate(table["rows"]):
+            if data_index == heading_index:
+                continue
+            data_cells = [cell for tag, cell in data_row if tag == "td"]
+            if len(data_cells) >= len(REQUIRED_HEADINGS):
+                return True
+    return False
+
+shape_ok = not parser.invalid and not parser.table_stack and any(
+    report_table_ok(table) for table in parser.tables
 )
-body_text = " ".join(parser.text_parts)
-shape_ok = parser.report_tables > 0 and parser.report_rows > 1 and parser.data_cells > 0
-fields_ok = all(field in body_text for field in required)
-raise SystemExit(0 if shape_ok and fields_ok else 1)
+raise SystemExit(0 if shape_ok else 1)
 PY
         then
           body_accepted=true
@@ -813,7 +870,9 @@ a rejected transport or body produces no payload observations. Neither outcome p
 candidate, authorizes reuse, or establishes unit/date/identity semantics.
 
 The offline mock gate includes a generic HNX/UPCoM maintenance body such as
-`<html><body>Maintenance</body></html>` and wrong media types `text/htmlx` and
-`application/jsonp`; each must retain `transport_accepted=true` only when its HTTP envelope is
+`<html><body>Maintenance</body></html>`, an unrelated two-row layout table with the six phrases
+outside that table, and wrong media types `text/htmlx`, `text/html:evil`, and
+`application/json:evil`; each must retain `transport_accepted=true` only when its HTTP envelope is
 otherwise valid, but set `body_accepted=false`, `accepted=false`, and emit no report-field
-observations. A valid report-shaped table is the only HTML body accepted by this probe sketch.
+observations. A single table containing the exact heading row and distinct data row is the only
+HTML body accepted by this probe sketch.
