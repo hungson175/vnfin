@@ -1025,9 +1025,11 @@ _None._
 
 - **#206 — VNFIN sector-index history (DESIGN_REVIEW_REQUESTED; builder waiting reviewer, 2026-08-23).**
   Reviewer packet `tasks/206-vnfin-sector-index-history-spec.md` at reviewer `bd0a501`; public
-  triage receipt `issuecomment-5382313915`. Docs/source design anchor is exact `07145cc`
+  triage receipt `issuecomment-5382313915`. Docs/source design anchor is exact `dd9093b`
   (`docs/research/2026-08-23-vnfin-sector-index-history-source-vetting.md` and
-  `tasks/206-design-note.md`); published `origin/master` remains `b90e924`. The note records
+  `tasks/206-design-note.md`); precision correction from `07145cc` removes short live-payload
+  digest prefixes that tripped the repository secret scan; published `origin/master` remains
+  `b90e924`. The note records
   direct VPS/SSI/VNDirect VNFIN D1 identity, exact `2020-05-11..2026-08-19` observations,
   vendor/legal gaps, the daily-only registry guard, strict single-source failover, and no
   silent missing-volume zero. Merged gates: docs contract 37 passed, full suite 4021 passed,
