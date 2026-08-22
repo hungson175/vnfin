@@ -601,6 +601,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#203 — corporate-action seed discovery (ACCEPTED, source-gated, 2026-08-22).** Reviewer packet
+  `tasks/203-corp-action-seed-discovery-spec.md` at reviewer commit `c75a86e`. Design/source gate is
+  limited to official VSDC-owned no-login routes with the mandatory repository blacklist applied:
+  prove response-backed issuer identity, legal/runtime/redistribution posture, bounded discovery/
+  crawl/retry budgets, and no-false-absence diagnostics. **No production code, push, or close before
+  design PASS.**
+
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
   S&P/TSX Composite/60/Venture) in reviewer repo; specs `tasks/199-bangladesh-main-indices-spec.md` /
