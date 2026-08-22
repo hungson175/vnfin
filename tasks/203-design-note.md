@@ -225,8 +225,8 @@ did not provide a usable crawl policy. These observations are not permission or 
 Written VSDC owner permission must cover runtime no-login fetching, session/token handling, caching,
 derived normalized event rows, attribution, redistribution, rate/concurrency, and retention.
 
-Conservative probe ceilings in the research report are evidence bounds only. They do not change
-`max_fetch`, add retry behavior, or authorize a bulk API. A reopened design must separately define
+The research report records bounded observations only. They do not change `max_fetch`, add retry
+behavior, or authorize a bulk API. A reopened design must separately define
 logical candidate/page limits and physical request/retry limits, but this closure deliberately does
 not choose or publish those runtime values.
 
@@ -274,7 +274,7 @@ This commit changes documentation only:
   semantics;
 - it preserves the shipped facade, explicit-seed path, legacy no-seed behavior, warnings, and
   body-only seam as the compatibility boundary; and
-- it retains source observations, legal gaps, probe bounds, and conjunctive reopen evidence.
+- it retains source observations, legal gaps, bounded observations, and conjunctive reopen evidence.
 
 No production code, tests, fixtures, API snapshot, skill, changelog, source registration, push, or
 issue close is included. Reviewer: please spawn parallel source/legal, identity/schema, and

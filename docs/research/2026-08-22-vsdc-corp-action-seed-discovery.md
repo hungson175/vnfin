@@ -36,7 +36,7 @@ licence or redistribution grant, the related-list routes are only observed from 
 JavaScript, and provider rate/concurrency/retention terms were not disclosed. The lawful engineering
 disposition is therefore:
 
-> **`NO_SOURCE_ENABLED / SOURCE_GAP_LEGAL_AND_CONTRACT`** — preserve the existing explicit-seed
+> **`NO_NEW_C1_C3_SOURCE_ENABLED / SOURCE_GAP_LEGAL_AND_CONTRACT`** — preserve the existing explicit-seed
 > adapter path and legacy C4 behavior, keep the new C1-C3 chain empty, record bounded discovery as
 > source-gap evidence only, and require written VSDC owner clearance plus a new design gate before
 > any new runtime discovery request or public claim.
@@ -244,8 +244,8 @@ observation, not legal advice. The status is:
 
 ```text
 legal_status = UNRESOLVED_PERMISSION_REQUIRED
-runtime_status = NO_RUNTIME_REQUESTS_AUTHORIZED
-redistribution_status = NOT_GRANTED
+new_C1_C3_runtime_status = NO_NEW_RUNTIME_REQUESTS_AUTHORIZED
+new_C1_C3_redistribution_status = NOT_GRANTED
 ```
 
 The official [VSDC legal/rules section](https://vsd.vn/vi/lel) publishes laws, rules, and fee
@@ -255,11 +255,10 @@ HTML rather than providing a machine-readable crawl policy; neither absence is p
 
 Written owner permission would need to cover automated runtime fetches, the session token/cookie
 mechanism, request frequency and concurrency, cache duration, derived normalized event rows,
-attribution, and redistribution to library users. Until that is obtained, the source chain remains
-empty. No rate, concurrency, SLA, or retention limit was documented in the inspected pages or inline
-scripts. The design therefore recommends sequential requests, one in-flight request, a 250 ms minimum
-inter-request delay, a 25-second per-request timeout, and one retry maximum for retryable transport
-failures. These are conservative library policies, not provider guarantees.
+attribution, and redistribution to library users. Until that is obtained, the new C1-C3 candidate
+chain remains empty. No rate, concurrency, SLA, retention, or retry policy is selected by this
+research; any such runtime values require owner evidence and a later design PASS. The active legacy
+C4 implementation retains its existing behavior.
 
 ## 4. Coverage and identity conclusion
 
@@ -276,9 +275,9 @@ No candidate currently proves all of the following at once:
 5. permitted runtime fetching, caching, derived-output redistribution, and attribution; and
 6. stable operational limits compatible with a public OSS client.
 
-Consequently, #203 is a source-gap closure/design artifact. It must not be represented as a working
-no-seed discovery implementation and must not turn an empty result into `[]` or a false “no dividend”
-claim.
+Consequently, #203 is a source-gap closure/design artifact. It is not a working new reliable C1-C3
+discovery implementation; the legacy C4 no-seed implementation remains separately active and
+non-authoritative. Neither path may turn an empty result into `[]` or a false “no dividend” claim.
 
 ## 5. Reopen criteria
 
