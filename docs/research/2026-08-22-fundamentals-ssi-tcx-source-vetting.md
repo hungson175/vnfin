@@ -163,7 +163,11 @@ per stream (page-one row count 640 in each stream), not one combined template. O
 paginated to the provider-declared total in the table above; the 89/90 observations remain bounded
 observations in this report:
 
-| Symbol | `modelType=89` observed rows | `modelType=90` observed rows | `modelType=91` observed rows |
+The numeric cells below are the provider-declared `totalElements` values read from the bounded
+page-one envelopes; they are not counts of rows paginated by this report. Only stream 91 was then
+paginated to its provider-declared total above.
+
+| Symbol | `modelType=89` page-one `totalElements` | `modelType=90` page-one `totalElements` | `modelType=91` page-one `totalElements` |
 |---|---:|---:|---:|
 | `SSI` | 3,805 | 1,863 | 3,246 |
 | `TCX` | 2,594 | 1,273 | 2,093 |
@@ -201,7 +205,7 @@ show why even a same-valued provider label cannot be selected by human text alon
 | Transport | HTTPS endpoint accepted the sampled GETs with HTTP 200; no credentials were supplied | HTTPS handler accepted the sampled GETs with HTTP 200; no credentials were supplied | Observation only; no uptime or permission claim |
 | Response identity | Independently filtered page-one observations for `89`, `90`, and `91` each carried the requested `code`, annual cadence, and exact requested model; stream `91` is paginated to the provider-declared total above, while `89`/`90` remain bounded observations here | `Symbol` absent at both tested envelope locations | Require response-backed identity for each future typed stream; do not treat bounded `89`/`90` observations as exhaustive |
 | Template/schema | `modelType=89`, `90`, and `91` are independently foreign to current 1/2/3 and 101/102/103 contract; no statement partition | no model type; current annual tags include unsupported `K` | Fail closed; add a statement-specific template only after provider + filing evidence |
-| Cadence/date | provider gives exact ISO `fiscalDate` on raw `91` rows; raw TCX history has missing years | provider gives `Time`/`Year` and `Quater=0`; adapter would synthesize 31 December | Never invent years or relabel publication dates |
+| Cadence/date | provider gives exact ISO `fiscalDate` on raw `91` rows; the observed TCX `modelType=91` date set has gaps, which is not evidence about streams `89`/`90` or issuer history | provider gives `Time`/`Year` and `Quater=0`; adapter would synthesize 31 December | Never invent years or relabel publication dates |
 | Units | `numericValue` has no unit field; no accepted typed report for 91 | endpoint has no unit field; page labels financial table `(1.000 VNĐ)` and ×1000 is only a candidate ingest scale | Require explicit, independently verified scale before raw VND emission |
 | Owner/rights | [API robots](https://api-finfo.vndirect.com.vn/robots.txt) says `search=yes,ai-train=no,use=reference`; [VNDIRECT terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) provide disclaimers; no OSS/API redistribution grant found | [CafeF robots](https://cafef.vn/robots.txt) allows `/`; [CafeF data-tool note](https://cafef.vn/du-lieu/ScreenerHelper.aspx) says reference/no liability; no OSS/API redistribution grant found | Runtime-fetch/research only; no bundled rows, cache, or redistribution |
 | Rate limits/retry | no numeric API quota published; robots is not a quota | no numeric quota published; robots is not a quota; transient protection can occur | Use a small deterministic self-budget and honor explicit response backoff; do not infer a provider SLA |
@@ -312,10 +316,10 @@ not a failed-source attempt trail.
 
 | Status | Aggregate meaning | `source` | `detail` |
 |---|---|---|---|
-| `OK` | at least one validated report was accepted | succeeding source name | `None` |
-| `MISSING` | an accepted direct/custom source completed but supplied no usable requested fiscal period | `None` | exact bounded `no usable {cadence} fiscal periods` |
+| `OK` | at least one validated report was accepted | matching canonical role | `None` |
+| `MISSING` | an allowed-role direct source completed with no usable requested fiscal period | `None` | exact bounded `no usable {cadence} fiscal periods` |
 | `SOURCE_ERROR` | recoverable transport/application/source failure | `None` | exact bounded `recoverable source error` |
-| `NOT_SERVED` | the resolved source capability does not serve the statement | responsible source name(s) | exact bounded `statement {statement} not served by source '{source}'` |
+| `NOT_SERVED` | no resolved source capability serves the requested statement | bounded composite canonical role(s) | exact bounded `statement {statement} not served by source '{source}'` |
 
 Every public `SOURCE_ERROR` detail uses one allow-listed, bounded, trail-free value exactly equal
 to `recoverable source error`. This applies to aggregate `statement_fetches`, per-period
@@ -324,23 +328,36 @@ tokens, response bodies, exception text, provider page counts, and failed-source
 are never copied into public models. Internal diagnostics may retain richer data outside public
 models. Source names may identify the responsible source, but never carry a secret-bearing URL.
 
-Before capability resolution and any physical call, apply one total source-role normalization:
+Before capability resolution and any physical call, apply one total source-role and routing
+algorithm. The atomic canonical role allow-list is exactly
+`{"vndirect", "cafef", "custom"}`; no raw source name is emitted publicly.
 
-The canonical role allow-list is exactly `{"vndirect", "cafef", "custom"}`; no other source
-string is emitted publicly.
+1. Resolve a source object's role by exact name equality, without registration or text rewriting:
+   an object whose `name` is the exact string `"vndirect"` or `"cafef"` keeps that role, including
+   duck-typed/injected test sources; every missing/raising attribute, non-string, empty,
+   URL-bearing, overlong, or other name resolves to the fixed safe role `custom` (six ASCII
+   characters).
+2. For a single direct `source=`, invoke the original object only when its canonical role serves
+   the requested statement. A direct allowed-role completion returning `()` is the reachable
+   `MISSING` outcome; a custom or incapable role returns `NOT_SERVED` with zero physical calls.
+   An explicit empty `sources=[]` is a typed caller-validation error before any call.
+3. For an explicit `sources=` chain, resolve every member, then filter out every incapable role
+   before constructing/running failover. Only the original source objects whose canonical role
+   serves the requested statement may be invoked; a custom member can never become a fallback
+   after an allowed source fails. The default chain resolves to `vndirect,cafef` as usual.
+4. A non-empty accepted result must have every returned report's `source` exactly equal to the
+   resolved canonical role of the object that produced it. A mismatch is rejected/fail-closed as
+   sanitized `SOURCE_ERROR`; it is never silently relabeled. `OK` provenance and `MetricInput`
+   lineage use that same matching atomic role.
+5. For `NOT_SERVED`, encode the responsible roles as a deduplicated, configured-order comma join
+   of atomic roles, with no whitespace and an exact maximum of 21 ASCII characters
+   (`vndirect,cafef,custom`). This bounded composite is the only multi-role public source value;
+   it is used identically in `StatementFetchResult.source`, `StatementProvenance.source`,
+   `statement_fetches`, DataFrame attrs, and the exact detail
+   `statement {statement} not served by source '{source}'`.
 
-- a registered built-in source object resolves to its fixed canonical role, `vndirect` or `cafef`;
-- an unregistered custom source, regardless of empty, non-string, URL-bearing, or overlong
-  `source.name`, resolves to the fixed safe role `custom` (maximum six ASCII characters);
-- the normalized role list is deduplicated in configured order and is the only source value used
-  in `OK`/`NOT_SERVED` `StatementFetchResult`, `StatementProvenance`, `MetricInput`, aggregate
-  coverage, and DataFrame attributes; raw `source.name` is never serialized; and
-- the current built-in capability resolver cannot serve the `custom` role, so an unregistered
-  custom source produces a bounded `NOT_SERVED` outcome with zero physical calls. A future custom
-  adapter must be explicitly registered with its own bounded canonical role before it can serve.
-
-This role contract is also the source of the stable `NOT_SERVED` detail; no name sanitization may
-fall back to truncating or echoing arbitrary text.
+No name sanitization may truncate or echo arbitrary text. A future custom adapter must explicitly
+register a bounded canonical role before it can serve a statement.
 
 For every unavailable metric whose statement outcome is `SOURCE_ERROR`, the public
 `MetricValue.reason` is exactly `statement {statement} unavailable: recoverable source error`,
@@ -378,10 +395,10 @@ The aggregate transformer is total and pure over typed outcomes; it never parses
 `SourceAttempt.reason` string. For each logical statement, apply this precedence:
 
 1. non-empty validated reports → `OK`, with the producing source;
-2. a capability skip → `NOT_SERVED`, with the stable responsible source role and the exact
+2. a capability skip → `NOT_SERVED`, with the bounded composite canonical role and the exact
    bounded `statement {statement} not served by source '{source}'` detail;
-3. an accepted direct/custom completion with an empty validated report tuple → `MISSING`, with
-   `source=None` and detail `no usable {cadence} fiscal periods`;
+3. an accepted allowed-role direct completion with an empty validated report tuple → `MISSING`,
+   with `source=None` and detail `no usable {cadence} fiscal periods`;
 4. a caught source/failover failure, including `EmptyData` inside the default failed chain →
    `SOURCE_ERROR`, with `source=None` and detail exactly `recoverable source error`.
 
@@ -393,8 +410,8 @@ this pure mapping and remains non-fatal; `metrics()` may still raise the exact a
 ### 8.3 Source-role and metric lineage invariants
 
 - `StatementCoverageStatus.OK/MISSING/SOURCE_ERROR/NOT_SERVED` remain the only statuses.
-- `OK` names only the source that produced the accepted report; `NOT_SERVED` names the
-  responsible non-serving source; `MISSING` and `SOURCE_ERROR` do not expose a failed-source
+- `OK` names only the matching atomic role that produced the accepted report; `NOT_SERVED` uses
+  the bounded composite role encoding; `MISSING` and `SOURCE_ERROR` do not expose a failed-source
   trail.
 - `MetricInput` retains statement, item code, source, raw provider line name, fiscal date,
   value, and unit for every available value.
@@ -423,6 +440,13 @@ fixtures for both symbols. No live provider row may be committed.
 - RED source-role cases inject an unregistered `source.name` containing a URL/query token plus a
   1,000-character sentinel; assert zero physical calls, only the bounded `custom` role in every
   public source field/detail and DataFrame attr, and no token/sentinel leakage;
+- allowed-role duck-typed/injected sources named exactly `vndirect` or `cafef` remain callable;
+  an exact-role direct source returning `()` reaches aggregate `MISSING` rather than being skipped;
+- a mixed chain `[failing vndirect, malicious custom]` filters `custom` before failover, makes no
+  custom call, and leaks neither its token nor its long name; a `cafef + custom` cashflow chain
+  returns `NOT_SERVED` with exact composite source `cafef,custom` (maximum 21 characters);
+- a non-empty report whose `source` differs from the producing canonical role is rejected/fails
+  closed rather than silently relabeled;
 - for each source-error metric, bind the exact reason
   `statement {statement} unavailable: recoverable source error`, not the bare detail string;
 - exact normalized symbol/cadence strings, status values, detail values, note, repr/equality,
