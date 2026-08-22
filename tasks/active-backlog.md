@@ -1023,7 +1023,13 @@ _None._
 
 ## Next
 
-_None._
+- **#206 — VNFIN sector-index history (SOURCE_DESIGN; builder active, 2026-08-23).**
+  Reviewer packet `tasks/206-vnfin-sector-index-history-spec.md` at reviewer `bd0a501`; public
+  triage receipt `issuecomment-5382313915`. Current builder anchor is local `89bad16` (the
+  published `origin/master` remains `b90e924`). Prepare docs/source design only: direct VPS/SSI/
+  VNDirect VNFIN D1 identity, exact `2020-05-11..2026-08-19` coverage, vendor/legal posture,
+  daily-only registry guard, strict single-source failover, and no silent missing-volume zero.
+  No production code, push, or close before exact-SHA design PASS; actor is `vnfin-oss` builder.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
