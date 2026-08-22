@@ -609,6 +609,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `2026-08-22T09:45:15Z`. New C1-C3 chain remains empty/disabled; legacy C4 remains active and
   non-authoritative; no new production capability or reliable corporate-action claim. #204 separate.
 
+- **#204 — fundamentals SSI/TCX source/design gate (ACCEPTED, source-gated, 2026-08-22).** Reviewer
+  packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/204-fundamentals-ssi-tcx-spec.md` at
+  reviewer `802e518`. Design/source evidence only: named SSI/TCX × VNDirect/CafeF statement matrix;
+  prove template/date/unit/NET_INCOME identity or a per-symbol source gap; specify fail-loud metrics
+  and non-fatal top-level coverage diagnostics. Apply the mandatory repository blacklist; no reporter
+  or failover oracle, production code, push, or close before design PASS.
+
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
   S&P/TSX Composite/60/Venture) in reviewer repo; specs `tasks/199-bangladesh-main-indices-spec.md` /
