@@ -1,40 +1,48 @@
 # #201 design note — Vietnamese equity foreign-investor daily flow
 
-**Status:** source-gated design → **requesting reviewer PASS**; no production code in this change
-**Issue:** #201
-**Reviewer packet:** `~/tools/vnfin-oss-reviewer/tasks/201-vn-equity-foreign-flow-spec.md`, reviewer commit `62e1e32`
-**Public triage:** `issuecomment-5378368603`
+**Status:** `BLOCKED — source-gap closure; no source enabled; correction round pending re-review`
+**Reviewer gate:** design BLOCK at reviewer commit `e5ed626`; report
+`reviews/review-202608221350-issue201-design-gate.md`
+**Issue:** #201; public triage `issuecomment-5378368603`
 **Research evidence:** `docs/research/2026-08-22-vn-foreign-flow-source-vetting.md`
 **Clean-room:** primary official exchange/regulator pages and first-party UI/Swagger inspection only; the mandatory repository blacklist was applied to every search and no excluded material was opened or used.
+**Authorization boundary:** this entire note is a future, non-authoritative design artifact. It authorizes no parser, adapter, public model, facade, source chain, runtime request, cache, production code, push, or issue close.
 
-## 0. Gate result and recommendation
+## 0. Source-gap closure disposition
 
-The design is ready for review, but source/legal clearance is not yet PASS:
+No candidate currently satisfies the accepted source gate. The current default source chain is
+**empty**. The only permitted work before a new design gate is source-owner evidence collection,
+correction of this packet, and deterministic offline contract planning.
 
-* **HOSE:** technically viable for a bounded 2018-current request using the official
-  date-filtered market API. The same-host unbounded foreign route is a fallback. Both require
-  written confirmation of OSS/runtime use, attribution, caching, and redistribution terms
-  before code is enabled.
-* **HNX listed:** the official page exposes the right columns and its underlying no-auth POST
-  returned sampled historical dates in 2018–2026 when the `default-date` request token matched
-  the requested session. This is an undocumented per-session HTML seam, not a date-range API,
-  and HNX's official fee/catalogue material points to paid data services.
-* **UPCoM:** the official endpoint returned the same current snapshot for current, 2018, and
-  2000 date inputs, so it remains a historical source gap.
-* **Recommended implementation boundary:** HOSE-first after legal sign-off; preserve the
-  public contract's exchange field and typed unavailable/partial failures so adding HNX/UPCoM
-  later does not require cross-source stitching.
+| Candidate | Technical reachability | Coverage | Response identity/date | Units/fields | Legal/reuse | Disposition |
+|---|---|---|---|---|---|---|
+| HOSE `tradingresult/{code}` | `TECHNICAL_REACHABILITY_PASS` observed without credentials | `HISTORICAL_COVERAGE_SAMPLED_ONLY`; three names do not prove market-wide completeness | Symbol is returned; epoch/session-date semantics `UNRESOLVED` | Raw scale, shares/VND meaning, field stability `UNRESOLVED` | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `DISABLED` |
+| HOSE `foreign/{code}` | HTTP reachability observed | History sampled | `RESPONSE_IDENTITY_MISSING_REJECTED`; response does not echo symbol | Units/field stability unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `DISABLED; not a fallback` |
+| HNX listed report | `TECHNICAL_CANDIDATE_UNDOCUMENTED` | Historical samples only; no range/completeness proof | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; request-date coupling is not returned identity | VND label present; volume scale/field stability unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `DISABLED` |
+| HNX UPCoM report | Current snapshot reachable | `HISTORICAL_COVERAGE_FAIL`; historical date inputs were ignored | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; unchanged snapshots do not prove requested date | VND label present; volume semantics unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | `DISABLED` |
 
-If the reviewer interprets #201 as requiring all three boards before any implementation, this
-note recommends **BLOCK pending HNX rights/contract and UPCoM source-gap closure**. The library
-must not turn an undocumented HNX seam or a current UPCoM snapshot into an unqualified
-historical series.
+Status vocabulary is independent:
 
-## 1. Public API
+* `PASS` means the named property was positively evidenced for that route;
+* `FAIL` means the probe demonstrated that the property does not hold;
+* `UNRESOLVED` means evidence is absent or insufficient, not that a prohibition was proved;
+* `SAMPLED_ONLY` means observations are not a market-wide or completeness guarantee;
+* `DISABLED` is the engineering disposition, not a source fact.
+
+The candidate boundary is therefore **pending source-owner clearance**, not “HOSE-first after
+legal sign-off.” Legal permission alone would not authorize implementation: identity, units,
+date semantics, coverage, field stability, and operational terms must also pass.
+
+## 1. Future, non-authoritative API sketch
+
+> **Not approved for implementation.** The following signatures and models specify the correction
+> target only. With no enabled source, every call must fail before provider access with a typed
+> coverage/identity error. They must not be added to the package, API snapshot, docs surface,
+> skill, or changelog until a later design gate passes.
 
 ### 1.1 One obvious single-symbol facade
 
-The public entry is `vnfin.equities.foreign_flow`:
+The future public entry remains `vnfin.equities.foreign_flow`:
 
 ```python
 from datetime import date
@@ -42,15 +50,18 @@ from datetime import date
 from vnfin import Interval
 from vnfin.equities import foreign_flow
 
+# Illustrative only. With the current empty chain this raises typed coverage/identity
+# failure; it is not a live usage example or a promise of coverage.
 history = foreign_flow(
     "FPT",
     start=date(2018, 1, 1),
     end=date.today(),
     interval=Interval.D1,
+    exchange="HOSE",
 )
 ```
 
-Exact signature:
+Exact future signature:
 
 ```python
 def foreign_flow(
@@ -59,39 +70,45 @@ def foreign_flow(
     end: date,
     interval: Interval = Interval.D1,
     *,
-    exchange: str | None = None,       # HOSE | HNX | UPCOM; None = configured chain
-    http_get=None,                     # deterministic test seam, never a public token
+    exchange: Exchange,
+    require_full: bool = False,
+    http_get=None,                  # deterministic synthetic-fixture seam only
     timeout: float = 25.0,
-    max_attempts: int = 2,
+    max_source_attempts: int = 2,
+    max_transport_retries: int = 1,
 ) -> ForeignFlowHistory: ...
 ```
 
-Rules before any network call:
+Preflight rules, before any network call:
 
-1. `symbol` is a non-empty canonical security identifier using the repository's shared
-   security-symbol grammar; trim and uppercase exactly once.
+1. `symbol` is a non-empty canonical security identifier using the repository's shared grammar;
+   trim and uppercase exactly once.
 2. `start` and `end` are plain `datetime.date` objects, not `datetime`; require
    `start <= end` and reject a future `end` using Vietnam time.
-3. `interval is Interval.D1`; every other interval fails with `InvalidData` before source
-   selection. No resampling or intraday interpretation is hidden behind this facade.
-4. `exchange`, when present, is one of `HOSE`, `HNX`, or `UPCOM`. It restricts the source chain;
-   it is never inferred from a symbol suffix or silently changed after a source response.
-5. The default chain is the set of legally enabled sources only. The design candidate is
-   `HSXTradingResultSource` followed by `HSXForeignHistorySource`; HNX/UPCoM adapters are not
-   enabled until their history and rights gates pass.
+3. `interval is Interval.D1`; every other interval fails with typed `InvalidData` before
+   source selection. No resampling or intraday interpretation is hidden here.
+4. `exchange` is mandatory and exactly `HOSE`, `HNX`, or `UPCOM`; a source response may never
+   override it. `exchange=None`, omission, symbol suffixes, and guessed boards fail preflight
+   before HTTP.
+5. When the explicit exchange has no enabled source, the call returns
+   `exchange_unavailable` or `coverage_gap` naming the board and evidence-backed gap; it never falls through to
+   another exchange.
+6. `max_source_attempts` and `max_transport_retries` are positive bounded integers; their
+   diagnostics are distinct and redacted.
 
-`foreign_flow` returns one immutable `ForeignFlowHistory`. It never returns a dataframe by
-   default, never fills non-trading dates, and never merges source segments.
+The result is immutable, one-source homogeneous, and never fills non-trading dates, invents
+listing history, or merges source segments.
 
-### 1.2 Reusable failover client
+### 1.2 Reusable future client and exact bulk facade
 
 ```python
 def foreign_flow_client(
     *,
-    sources=None,                     # injected source sequence for tests/approved adapters
+    sources: Sequence[ForeignFlowSource] = (),  # empty until a gate-approved source exists
     http_get=None,
     timeout: float = 25.0,
-    max_attempts: int = 2,
+    max_source_attempts: int = 2,
+    max_transport_retries: int = 1,
 ) -> ForeignFlowClient: ...
 
 
@@ -103,89 +120,151 @@ class ForeignFlowClient:
         end: date,
         interval: Interval = Interval.D1,
         *,
-        exchange: str | None = None,
+        exchange: Exchange,
+        require_full: bool = False,
     ) -> ForeignFlowHistory: ...
 
     def history_bulk(
         self,
-        symbols,
+        symbols: Iterable[str | IndexMember] | IndexConstituents,
         start: date,
         end: date,
         interval: Interval = Interval.D1,
         *,
-        exchange: str | None = None,
-        max_concurrency: int = 4,
+        exchange: Exchange | None = None,  # only when every input carries its own exchange
+        require_full: bool = False,
+        max_concurrency: int = 1,
         max_symbols: int = 100,
+        max_total_source_attempts: int = 60,
+        max_total_pages: int = 5_000,
+        max_total_requests: int = 6_000,
     ) -> ForeignFlowBulk: ...
 ```
 
-The matching one-shot bulk facade is:
+The matching one-shot facade is:
 
 ```python
 def foreign_flow_bulk(
-    symbols,
+    symbols: Iterable[str | IndexMember] | IndexConstituents,
     start: date,
     end: date,
     interval: Interval = Interval.D1,
     *,
-    exchange: str | None = None,
+    exchange: Exchange | None = None,  # only when every input carries its own exchange
+    require_full: bool = False,
     http_get=None,
     timeout: float = 25.0,
-    max_attempts: int = 2,
-    max_concurrency: int = 4,
+    max_source_attempts: int = 2,
+    max_transport_retries: int = 1,
+    max_concurrency: int = 1,
     max_symbols: int = 100,
+    max_total_source_attempts: int = 60,
+    max_total_pages: int = 5_000,
+    max_total_requests: int = 6_000,
 ) -> ForeignFlowBulk: ...
 ```
 
-`foreign_flow_bulk` constructs the same default client as `foreign_flow`; callers that need a
-custom source chain use `foreign_flow_client().history_bulk(...)`. The two facades must share
-the exact validation, source ordering, error redaction, and result model.
+The two facades must share exact validation, source ordering, coverage ranking, error codes,
+redaction, request accounting, and result models. No default source is constructed while the
+source chain is empty.
 
-Failover is whole-result and coverage-compatible:
+#### 1.2.1 Whole-result failover and coverage selection
 
-* A source is attempted for the complete requested `[start, end]` range.
-* A source that returns malformed identity, units, date keys, duplicate dates, conflicting
-  arithmetic, or an exceeded page ceiling is rejected and recorded as a failed
-  `SourceAttempt`.
-* The first validated result wins. The client never appends rows from a second source to repair
-  a gap in the first result.
-* The result's `source` and `dataset_id` identify the successful source; `attempts` records
-  every tried source and a redacted reason. A failed source is not hidden merely because a
-  later source succeeds.
-* If all compatible sources fail, raise the repository's typed all-sources failure carrying
-  the immutable attempt diagnostics. If a board has no enabled source, raise a typed coverage
-  error naming the board and the evidence-backed gap; do not fall through to another board.
+A future client may evaluate only sources that have passed the same design/legal gate and match
+the requested exchange and units:
 
-The source protocol is internal until a public adapter is approved:
+* A source attempt requests the complete `[start, end]` range. It is rejected for malformed
+  envelope, response identity/date, units, duplicate dates, arithmetic conflict, schema drift,
+  page inconsistency, or budget truncation.
+* `coverage_status=` `full` requires an approved provider completeness marker or an approved
+  exchange calendar, every expected session exactly once, no internal gap, and a publication-lag
+  check for the requested end. Without that proof the result cannot claim full coverage.
+* `coverage_status=` `partial_known` or `partial_unknown` is valid only when at least one
+  structurally valid row exists, all returned rows are within the request, identity and units
+  pass, and truncation did not occur. It carries explicit served bounds and a bounded coverage
+  reason.
+* An internal gap is listed when an approved calendar identifies missing sessions. If no approved
+  calendar exists, internal completeness is `UNOBSERVABLE`; the result remains partial, never
+  full. Missing dates are never filled.
+* A source returning partial coverage does not stop the chain: compatible enabled sources are
+  tried. The first valid `full` result wins. If no full result exists, `partial_known` ranks above
+  `partial_unknown`; among known partials, least uncovered-session count, then least internal-gap
+  count, then configured source priority wins. Among unknown partials, configured source priority
+  wins. Row count alone is never a quality tie-break.
+* `require_full=True` rejects all partial results with `coverage_gap`. No source rows
+  are stitched, appended, or used to repair another source.
+* Attempt statuses are retained: `DISABLED`, `TRANSPORT_FAILED`, `SCHEMA_REJECTED`,
+  `IDENTITY_REJECTED`, `UNITS_REJECTED`, `EMPTY`, `COVERAGE_REJECTED`,
+  `VALID_PARTIAL`, or `VALID_FULL`.
+* If all compatible sources fail, raise a typed future `ForeignFlowCoverageUnavailable` or
+  `ForeignFlowAllSourcesFailed` carrying immutable, redacted attempts. An unsupported board
+  never falls through to another board.
+
+The source protocol is internal until a future public adapter is approved:
 
 ```python
 class ForeignFlowSource(Protocol):
     name: ForeignFlowSourceName
+    source_type: ForeignFlowSourceType
+    dataset_id: ForeignFlowDatasetId
     supported_exchanges: frozenset[Exchange]
 
     def get_history(
-        self, symbol: str, start: date, end: date, *, interval: Interval
+        self,
+        symbol: str,
+        start: date,
+        end: date,
+        *,
+        exchange: Exchange,
+        interval: Interval,
+        require_full: bool,
+        request_budget: RequestBudget,
     ) -> ForeignFlowHistory: ...
 ```
 
-The source name is bounded to prevent arbitrary provider strings in a stable result:
+> **Future, non-authoritative design sketch — not approved for implementation.** Every type alias,
+> model, field, warning token, exception, dataset identifier, and invariant below is provisional
+> until source-owner clearance and a new design gate pass.
+
+## 2. Future typed models and invariants
+
+### 2.1 Bounded provenance and source identity
 
 ```python
+Exchange = Literal["HOSE", "HNX", "UPCOM"]
+Frequency = Literal["daily"]
+VolumeUnit = Literal["shares"]
+ValueUnit = Literal["VND"]
+ForeignFlowSourceType = Literal[
+    "official_exchange",
+    "official_regulator",
+    "licensed_vendor",
+]
 ForeignFlowSourceName = Literal[
     "hsx_market_tradingresult_v1",
-    "hsx_market_foreign_v1",
-    "hnx_report_ny_v1",       # future, disabled pending history/legal gate
-    "hnx_report_uc_v1",       # future, disabled pending history/legal gate
+    "hnx_report_ny_v1",
+    "hnx_report_uc_v1",
 ]
-Exchange = Literal["HOSE", "HNX", "UPCOM"]
+ForeignFlowDatasetId = Literal[
+    "hsx.market.securities.tradingresult.v1.0",
+    "hnx.report.stocketfs.tradingresult.listed.v1",
+    "hnx.report.stocketfs.tradingresult.upcom.v1",
+]
 ```
 
-## 2. Typed models and invariants
+The exact immutable provenance tuple is
+`(source, dataset_id, source_type, exchange)`. The only permitted mappings are:
 
-### 2.1 Field-level provenance
+| source | dataset_id | source_type | exchange | current status |
+|---|---|---|---|---|
+| `hsx_market_tradingresult_v1` | `hsx.market.securities.tradingresult.v1.0` | `official_exchange` | `HOSE` | disabled; semantics/legal reopen required |
+| `hnx_report_ny_v1` | `hnx.report.stocketfs.tradingresult.listed.v1` | `official_exchange` | `HNX` | disabled; date identity/legal reopen required |
+| `hnx_report_uc_v1` | `hnx.report.stocketfs.tradingresult.upcom.v1` | `official_exchange` | `UPCOM` | disabled; historical coverage/legal reopen required |
 
-Gross buy/sell and net are not interchangeable. The result must show whether a value came from
-the source or was calculated by vnfin:
+The rejected HOSE `foreign/{code}` route has no source name in this contract and cannot enter the
+chain unless first-party response-backed symbol identity is proven in a new gate.
+
+### 2.2 Field-level provenance and signed arithmetic
 
 ```python
 class ForeignFlowFieldOrigin(str, Enum):
@@ -204,145 +283,231 @@ class ForeignFlowProvenance:
     foreign_net_value_vnd: ForeignFlowFieldOrigin
 ```
 
-For the HOSE `tradingresult` route, buy/sell totals are sums of its published order-matching
-and put-through components, so all four gross totals are `DERIVED`; both net values are also
-`DERIVED`. If the HOSE fallback's published total volume is used, that volume may be
-`SOURCE_PUBLISHED` only after the component arithmetic agrees. A missing source component
-produces `None` and `MISSING`; a present zero is never converted to missing.
+Gross buy/sell fields are non-negative. Net fields are signed and are always
+`buy - sell`. A future implementation uses this exact parser bound for every integer field:
 
-### 2.2 One daily row
+```python
+MAX_ABS_INTEGER = 2**63 - 1
+```
+
+For every numeric field, `value is None` if and only if its origin is `MISSING`. A present
+zero is never missing. Gross values must be whole integers in `[0, MAX_ABS_INTEGER]`; net
+values must be whole signed integers in `[-MAX_ABS_INTEGER, MAX_ABS_INTEGER]`. Boolean values,
+fractional values, non-finite values, overflow, unknown-scale, or negative gross values fail
+closed. Exact integral provider floats may be normalized to integers. If a provider publishes a
+net field, it must equal the derived difference or the entire source result is rejected; the
+normalized net remains `DERIVED` so its signed arithmetic is unambiguous. A net is `None` and
+`MISSING` whenever either gross operand is missing.
+
+### 2.3 Identity-bearing daily row
 
 ```python
 @dataclass(frozen=True)
 class ForeignFlowRow:
+    symbol: str
+    exchange: Exchange
     session_date: date
-    foreign_buy_volume: int | None       # shares
-    foreign_sell_volume: int | None      # shares
-    foreign_net_volume: int | None       # shares; buy - sell
-    foreign_buy_value_vnd: int | None
-    foreign_sell_value_vnd: int | None
-    foreign_net_value_vnd: int | None    # VND; buy - sell
+    foreign_buy_volume: int | None       # non-negative shares
+    foreign_sell_volume: int | None      # non-negative shares
+    foreign_net_volume: int | None       # signed shares
+    foreign_buy_value_vnd: int | None    # non-negative VND
+    foreign_sell_value_vnd: int | None   # non-negative VND
+    foreign_net_value_vnd: int | None    # signed VND
     provenance: ForeignFlowProvenance
 ```
 
-Row invariants:
+Symbol and exchange are repeated on each row deliberately, so the hard row identity invariant
+does not depend only on homogeneous result metadata. Row invariants:
 
-* `session_date` is a plain date and rows are strictly ascending by it.
-* One date appears at most once. An identical duplicate may be deduplicated only if the full
-  normalized row is identical; a conflicting duplicate rejects the entire source result.
-* Volumes and VND values are finite, non-negative, whole-valued numbers at the provider
-  boundary. Exact integral floats may be normalized to `int`; fractional values, strings with
-  an unknown scale, negative gross values, and overflow fail closed.
-* Net is calculated only when both gross operands are present. The arithmetic is integer
-  arithmetic; no rounding or float subtraction is allowed.
-* No calendar rows are synthesized for weekends, holidays, suspended sessions, pre-listing
-  dates, or provider outages. Missing dates are represented by the requested/served coverage
-  fields and warnings, not by zero rows.
+* `symbol` is canonical and exactly matches the response-backed source symbol;
+* `exchange` is the source-bound board and exactly matches the requested board;
+* `session_date` is a plain date; rows are strictly ascending;
+* one date appears at most once; identical duplicates may be deduplicated only when the complete
+  normalized row is identical; a conflict rejects the source result;
+* net is calculated with integer arithmetic only, with no rounding or float subtraction;
+* no calendar rows are synthesized for weekends, holidays, suspensions, pre-listing dates,
+  publication lag, or provider outages.
 
-### 2.3 Immutable history result
+### 2.4 Immutable history and coverage model
+
+```python
+CoverageStatus = Literal["full", "partial_known", "partial_unknown"]
+CoverageReason = Literal[
+    "complete_requested_sessions",
+    "dataset_inception",
+    "symbol_inception",
+    "publication_lag",
+    "source_window",
+    "internal_gap",
+    "coverage_unverified",
+]
+
+@dataclass(frozen=True)
+class ForeignFlowCoverage:
+    status: CoverageStatus
+    reason: CoverageReason
+    expected_session_count: int | None
+    served_session_count: int
+    missing_session_dates: tuple[date, ...]
+    internal_gap_status: Literal["none", "known", "unobservable"]
+```
+
+`full` is legal only when pagination is complete, all identities/arithmetic validate, the source
+contract proves every requested exchange session is represented, and the current publication lag
+is within the owner-confirmed bound. `partial_known` is structurally valid but bounded by a known
+dataset/symbol inception, source window, publication lag, or known internal gap. `partial_unknown`
+has valid rows but complete session coverage cannot be proved. Any unknown calendar, missing
+interior session, stale end, source listing uncertainty, or unresolved publication lag prevents
+`full`; a page-budget stop is not a partial result but a typed failure. A source with an
+authoritative calendar treats weekends/holidays as non-sessions, never as missing rows.
 
 ```python
 @dataclass(frozen=True)
 class ForeignFlowHistory(TimeSeriesResult):
     symbol: str
     exchange: Exchange
-    interval: Interval                    # always Interval.D1
-    frequency: str                        # always "daily"
+    interval: Literal[Interval.D1]        # only Interval.D1
+    frequency: Frequency                  # always "daily"
     source: ForeignFlowSourceName
-    dataset_id: str                       # bounded endpoint/dataset identity
+    dataset_id: ForeignFlowDatasetId
+    source_type: ForeignFlowSourceType
     rows: tuple[ForeignFlowRow, ...]
     requested_start: date
     requested_end: date
     served_start: date | None
     served_end: date | None
-    volume_unit: str                       # "shares"
-    value_unit: str                        # "VND"
-    currency: str                          # "VND"
+    coverage: ForeignFlowCoverage
+    volume_unit: VolumeUnit               # "shares", only after scale gate
+    value_unit: ValueUnit                 # "VND", only after scale gate
+    currency: Literal["VND"]
     fetched_at_utc: datetime               # aware UTC only
     warnings: tuple[str, ...] = ()
-    attempts: tuple[SourceAttempt, ...] = ()
+    attempts: tuple[ForeignFlowSourceAttempt, ...] = ()
 ```
 
-The concrete model must set `_items_attr = "rows"`, `_index_column = "session_date"`, and an
-explicit dataframe column order. `.to_dataframe()` must attach at least:
+The future model must set `_items_attr = "rows"`, `_index_column = "session_date"`, and a
+fixed `_df_columns` order. `.to_dataframe()` attaches these attrs:
 
 ```text
-symbol, exchange, interval, frequency, source, dataset_id,
+symbol, exchange, interval, frequency, source, dataset_id, source_type,
 requested_start, requested_end, served_start, served_end,
+coverage_status, coverage_reason, expected_session_count, served_session_count,
 volume_unit, value_unit, currency, fetched_at_utc
 ```
 
-The row-level dataframe columns are the six numeric fields plus six stable `*_origin` columns.
-No provider URL containing credentials is placed in dataframe metadata. `fetched_at_utc` must
-be timezone-aware UTC, and `warnings`/`attempts` must be tuples.
+Rows have the identity columns, six numeric fields, and six stable `*_origin` columns. No
+credential-bearing URL appears in dataframe metadata. `fetched_at_utc` is aware UTC and
+`warnings`/attempts are tuples.
 
-Stable warning prefixes for the first implementation:
+Every row must satisfy `row.symbol == history.symbol` and
+`row.exchange == history.exchange`. The result is source-homogeneous: every row inherits the
+exact `(source, dataset_id, source_type, exchange)` identity of its enclosing result. Cross-source
+row stitching is forbidden.
 
-```text
-partial_start_coverage
-partial_end_coverage
-source_listing_or_inception_unknown
-derived_total_volume
-derived_total_value
-derived_net
-current_membership_snapshot
+### 2.5 Attempts, budgets, and bounded diagnostics
+
+```python
+ForeignFlowAttemptStatus = Literal[
+    "disabled", "transport_failed", "schema_rejected", "identity_rejected",
+    "units_rejected", "empty", "coverage_rejected", "valid_partial", "valid_full",
+]
+
+ForeignFlowFailureCode = Literal[
+    "unsupported_exchange", "exchange_unavailable", "coverage_gap", "empty_data",
+    "all_sources_failed", "source_unavailable", "transport_retry_exhausted",
+    "malformed_payload", "schema_drift", "identity_missing", "identity_mismatch",
+    "unit_mismatch", "arithmetic_conflict", "pagination_invalid",
+    "page_budget_exhausted", "request_budget_exhausted", "attempt_budget_exhausted",
+]
+
+@dataclass(frozen=True)
+class ForeignFlowSourceAttempt:
+    source: ForeignFlowSourceName
+    dataset_id: ForeignFlowDatasetId
+    source_type: ForeignFlowSourceType
+    exchange: Exchange
+    status: ForeignFlowAttemptStatus
+    source_attempt_number: int
+    transport_requests: int
+    pages: int
+    reason_code: ForeignFlowFailureCode
 ```
 
-Warnings disclose facts; they do not turn incomplete history into a successful full-history
-promise. The result remains one-source homogeneous even when `attempts` contains failed sources.
+`source_attempt_number` counts candidate source selections. `transport_requests` counts
+actual HTTP requests, including bounded retries. They are never conflated. Transport errors,
+HTTP statuses, URLs, symbols, and provider messages are redacted to bounded public error codes.
 
-### 2.4 Typed bulk result
+The future public coverage error is named and bounded:
+
+```python
+class ForeignFlowCoverageError(VnfinError):
+    symbol: str
+    exchange: Exchange
+    requested_start: date
+    requested_end: date
+    code: ForeignFlowFailureCode
+```
+
+Per-symbol bulk handling may catch only source-layer `SourceUnavailable`, `EmptyData`/
+`StaleData`, `InvalidData`, `AllSourcesFailed`, `ForeignFlowCoverageError`, and adapter-wrapped
+`TimeoutError`, `ConnectionError`, or `OSError`. It must never catch arbitrary `Exception`.
+Preflight `InvalidData` remains a whole-call error. Unexpected programming errors escape.
+
+The shared invocation budget is explicit and immutable:
 
 ```python
 @dataclass(frozen=True)
-class ForeignFlowFailure:
-    symbol: str
-    error_type: str
-    message: str
-    attempts: tuple[SourceAttempt, ...]
-
-
-@dataclass(frozen=True)
-class ForeignFlowBulkItem:
-    symbol: str
-    history: ForeignFlowHistory | None
-    failure: ForeignFlowFailure | None
-
-
-@dataclass(frozen=True)
-class ForeignFlowBulk(TimeSeriesResult):
-    requested_symbols: tuple[str, ...]
-    items: tuple[ForeignFlowBulkItem, ...]
-    requested_start: date
-    requested_end: date
-    interval: Interval
-    fetched_at_utc: datetime
-    warnings: tuple[str, ...] = ()
+class RequestBudget:
+    max_source_attempts: int = 60
+    max_pages: int = 5_000
+    max_requests: int = 6_000
+    max_transport_retries_per_request: int = 1
 ```
 
-`ForeignFlowBulkItem` has an XOR invariant: exactly one of `history` and `failure` is non-null.
-There is exactly one item per canonical requested symbol, in canonical first-seen input order;
-an individual failure is data, not a silent omission. The bulk container's dataframe is a
-summary/diagnostics view; callers use each successful `history.to_dataframe()` for rows.
+One source attempt means one `(symbol, source)` invocation; one logical page means one provider
+page; one physical request means every transport call, including retries. A transport retry
+consumes request budget but never creates a new source attempt. All reservations happen before
+the physical call and are shared across the entire bulk invocation, not the client lifetime.
 
-Bulk request rules:
+> **Future, non-authoritative design sketch — not approved for implementation.** Bulk behavior,
+> membership propagation, and budget values below are correction targets only.
 
-1. Materialize the iterable once. A bare string is invalid; an empty iterable is invalid.
-2. Canonicalize each symbol before any network request. Case-fold duplicates such as `fpt` and
-   `FPT` are a preflight `InvalidData`, not silently deduplicated.
-3. Refuse more than 100 unique symbols and `max_concurrency` outside 1–4 before network.
-4. Preserve canonical input order in `requested_symbols` and `items`; internal scheduling may
-   be sorted, but output order is stable.
-5. HOSE has no native multi-symbol route in the approved candidate, so bulk uses bounded
-   individual requests with at most four concurrent workers. A future HNX batch adapter may
-   fetch a session table once and filter it, but it cannot be enabled as a historical fallback
-   until its date coverage/legal gate passes.
-6. A per-symbol page ceiling (`250` pages) and a client-wide bounded worker count prevent an
-   accidental unbounded crawl. A symbol that exceeds a ceiling gets a typed failure item, not
-   a partial successful history.
+## 3. Bulk and VN30 context contract
 
-There is deliberately no `foreign_flow_bulk("VN30", ...)` overload. The safe current-membership
-pattern is:
+### 3.1 Typed inputs preserve identity and membership provenance
+
+The input type is intentionally either a typed basket/context or an iterable of strings/member
+objects:
+
+```python
+from vnfin.indices.models import IndexConstituents, IndexMember
+
+@dataclass(frozen=True)
+class ForeignFlowMembershipContext:
+    index: str
+    source: str
+    provider_group: str | None
+    fetched_at_utc: datetime | None
+    as_of: datetime | None
+    warnings: tuple[str, ...]
+
+ForeignFlowKey = tuple[Exchange | None, str]
+```
+
+`foreign_flow_bulk(members, ...)` accepts one `IndexConstituents` object directly; a raw symbol
+iterable and typed constituent input are mutually exclusive. It copies
+`index`, `source`, `provider_group`, `fetched_at_utc`, `as_of`, and `warnings` into the immutable
+`ForeignFlowMembershipContext`; it never fabricates `as_of`. If `as_of is None`, it preserves
+the existing stable `current_snapshot_only` warning (and adds no replacement token).
+
+An `IndexMember` preserves its optional exchange. A plain-string iterable requires the explicit
+`exchange=...` argument; omitting it is a whole-call preflight `InvalidData`, not board inference.
+A typed `IndexMember`/`IndexConstituents` input may carry an explicit exchange per member; a
+member without one becomes an `unsupported_exchange` item and makes no HTTP call. If an explicit
+exchange conflicts with an `IndexMember.exchange`, preflight rejects the request. Mixed-board
+bulk identity is the pair `(exchange, symbol)`, never symbol alone.
+
+The safe current-membership pattern is:
 
 ```python
 from vnfin.indices import index_constituents
@@ -350,190 +515,264 @@ from vnfin.equities import foreign_flow_bulk
 
 members = index_constituents("VN30")
 bundle = foreign_flow_bulk(
-    members.symbols,
+    members,                         # preserve source/fetch/as_of/warnings
     start=date(2018, 1, 1),
     end=date.today(),
 )
 ```
 
-`members` is a current snapshot, not a point-in-time VN30 membership history. The caller must
-carry `members.warnings`/`members.as_of` alongside the bulk result; docs must repeat the
-survivorship warning. The bulk client must never claim that the returned symbols were VN30
-members throughout the requested history.
+This is a current membership basket, not point-in-time VN30 history. `as_of=None` remains
+unknown; the bulk result must carry `current_snapshot_only` and never claim that returned
+symbols belonged to the basket throughout the requested history. Passing `members.symbols`
+is a lossy escape hatch and is not the documented VN30 path because it discards that context.
 
-## 3. Source adapters and exact normalization
+### 3.2 Bulk result, failures, and request budget
 
-### 3.1 Approved candidate chain after legal gate
+```python
+@dataclass(frozen=True)
+class ForeignFlowFailure:
+    symbol: str
+    exchange: Exchange | None
+    code: ForeignFlowFailureCode
+    message: str                    # bounded/redacted, never raw provider text
+    attempts: tuple[ForeignFlowSourceAttempt, ...]
 
-| Adapter name | Official route | Exchange | Request | Dataset identity | Status |
-|---|---|---|---|---|---|
-| `hsx_market_tradingresult_v1` | `/mk/api/v1/market/securities/tradingresult/{code}` | HOSE | GET `fromDate`, `toDate`, `pageIndex`, `pageSize=20` | `hsx.market.securities.tradingresult.v1.0` | Primary candidate |
-| `hsx_market_foreign_v1` | `/mk/api/v1/market/securities/foreign/{code}` | HOSE | GET `pageIndex`, `pageSize=100`; local range filter | `hsx.market.securities.foreign.v1.0` | Same-host fallback candidate |
-| `hnx_report_ny_v1` | `Report_MD_TradingResult/ListData_Listed` | HNX | POST web report once per session date; `default-date` must match requested date; HTML pagination | `hnx.report.stocketfs.tradingresult.listed.v1` | Technical candidate; disabled pending rights/contract |
-| `hnx_report_uc_v1` | `Report_MD_TradingResult/ListData_UPCoM` | UPCOM | POST web report; observed current snapshot regardless of date | `hnx.report.stocketfs.tradingresult.upcom.v1` | Historical source-gap; disabled |
+@dataclass(frozen=True)
+class ForeignFlowBulkItem:
+    symbol: str
+    exchange: Exchange | None
+    history: ForeignFlowHistory | None
+    failure: ForeignFlowFailure | None
 
-The first two are not separate economic sources and must not be stitched. The second is only a
-fallback for a complete requested result when the primary route is unavailable. The HNX rows are
-documented for future source-gate work, not enabled by this note. HNX listed history is a
-per-session request seam, not a server-side range query; the legal and operational cost of
-walking 2018-current dates must be accepted explicitly before it can enter the default chain.
-The current HOSE frontend route under `/mk/api/v1` is canonical for this design; the official
-Swagger's `/market-api/api/v1.0` server/route form is retained only as a reachability cross-check,
-not as a second dataset or a route to stitch.
+@dataclass(frozen=True)
+class ForeignFlowBulk(TimeSeriesResult):
+    requested_symbols: tuple[str, ...]
+    requested_keys: tuple[ForeignFlowKey, ...]
+    items: tuple[ForeignFlowBulkItem, ...]
+    membership_context: ForeignFlowMembershipContext | None
+    requested_start: date
+    requested_end: date
+    interval: Interval
+    fetched_at_utc: datetime
+    warnings: tuple[str, ...] = ()
+```
 
-### 3.2 HOSE parser
+`ForeignFlowBulkItem` has an XOR invariant: exactly one of `history` and `failure` is
+non-null. There is exactly one item per canonical requested key, in canonical first-seen input
+order. A failure is data, never a silent omission.
 
-* Request `pageSize=20` regardless of a caller's desired page size; the provider's observed cap
-  is a contract guard, not a tunable performance knob.
-* Parse `data.list` and `data.paging`; reject a successful envelope with a non-list, missing
-  paging, non-positive page count, page-index mismatch, or a page count that changes
-  unexpectedly.
-* Convert `reportDate` epoch seconds to a UTC-aware date. Reject a non-finite/non-integral
-  timestamp or a timestamp outside the requested date attribution.
-* Canonicalize `symbol` and require exact equality with the requested symbol. The route host and
-  adapter name supply `exchange="HOSE"`; a response cannot override it.
-* For the primary route, map `mainBuyForeign*`/`mainSellForeign*` and
-  `bigLotBuyForeign*`/`bigLotSellForeign*`, sum components, then derive net. Record field
-  origins and `derived_total_*`/`derived_net` warnings.
-* For the fallback, map its `mainBuyerForeign*`/`mainSellerForeign*` spellings. Prefer its
-  published total volume only when it equals component sums; derive values and net because no
-  published total value field was observed. Request `pageSize=100`, validate the provider's
-  returned paging metadata, paginate newest-first, and filter locally to `[start, end]` after
-  pagination. Because the fallback does not echo a symbol, the canonical path code is its
-  identity check. Apply a bounded client page ceiling and fail closed if the requested start is
-  not reached.
-* The official labels establish the field meanings, but the JSON response has no machine-readable
-  multiplier. Do not silently scale raw values. The public model's normative `shares`/`VND` units
-  may be enabled only after written provider confirmation of the raw scale; until then the
-  adapter must reject the result or expose an explicitly unavailable-unit outcome, rather than
-  laundering an inference into the contract.
-* Reject a conflicting duplicate date, a source arithmetic mismatch, or a row whose date is
-  outside the requested range after the provider page has been attributed. Never use another
-  endpoint to fill the rejected row.
+Bulk preflight is deterministic and happens before HTTP:
 
-### 3.3 HNX future adapter boundary
+1. Materialize an iterable exactly once. A bare `str`/`bytes` is invalid; an empty input is
+   invalid; a typed `IndexConstituents` object is the sole context-bearing basket path.
+2. Canonicalize every symbol before scheduling. Duplicate `(exchange, symbol)` keys, including
+   case-folded duplicates, reject rather than silently deduplicate.
+3. Refuse an input over `max_symbols` and reject malformed exchange/member conflicts before any
+   budget reservation or source call.
 
-If HNX listed history and legal permission are later established, the adapter may normalize one
-official per-session HTML response at a time. The request must set the final
-`default-date` token equal to the requested `dd/mm/yyyy` session date, paginate at the observed
-maximum of 200 rows, and filter the returned `Security code`/ISIN rows to the requested symbol.
-The source labels `Buy volume`, `Buy value (VND)`, `Sell volume`, and `Sell value (VND)`;
-gross values may carry `SOURCE_PUBLISHED` origins and `net` is `DERIVED`. The route's volume
-label is quantity-like but does not explicitly say “shares”; provider confirmation is required
-before setting the public `volume_unit="shares"` without a warning.
+Because `ForeignFlowBulk` inherits `TimeSeriesResult`, the future implementation must provide
+the full mixin contract:
 
-UPCoM remains disabled: its endpoint returned an identical current snapshot for dates in 2000,
-2018, and 2026, so it cannot support the target historical contract. Both HNX dataset IDs must
-remain separate, preserve ISIN when the model is extended, and never infer a historical row
-from current foreign room or from index/industry PDFs.
+```python
+_items_attr = "items"
+_index_column = "request_key"
+_df_columns = (
+    "request_key", "status", "failure_code", "exchange", "source", "dataset_id",
+    "row_count", "served_start", "served_end", "attempt_count",
+)
 
-## 4. Coverage and legal contract
+def _row_record(item: ForeignFlowBulkItem) -> dict: ...
+def _df_attrs(self) -> dict: ...
+```
 
-### 4.1 Coverage truth table
+Its summary dataframe has one row per item, a stable `request_key` index
+(`"{exchange or '?'}:{symbol}"`), the columns above, and attrs for
+`requested_symbols`, `requested_keys`, `requested_start`, `requested_end`, `interval`,
+`membership_context`, `membership_index`, `membership_source`, `membership_provider_group`,
+`membership_fetched_at_utc`, `membership_as_of`, `membership_warnings`, `current_snapshot_only`,
+`fetched_at_utc`, and total source-attempt,
+logical-page, physical-request, and retry counts. `status` is only `"success"` or `"failure"`;
+failure rows use a bounded `failure_code`, and successful rows expose source/dataset, row count,
+and served bounds. Successful histories remain the only row-level data view.
 
-| Dimension | Required behavior |
+Exact budget rules:
+
+1. `max_symbols` is lowering-only: `1 <= max_symbols <= 100`; values above the hard cap reject
+   before network. An input exceeding the selected ceiling is rejected, never silently truncated;
+   the parameter cannot raise the safety ceiling.
+2. `max_total_source_attempts` is lowering-only from 60; `max_total_pages` is lowering-only
+   from 5,000; `max_total_requests` is lowering-only from 6,000. Pages count logical pages and
+   requests count every physical page request, initial and retry, across symbols and sources.
+3. Per-symbol `max_source_attempts=2` counts source selections; `max_transport_retries=1` counts
+   retries of one page. They are reported separately and never multiplied invisibly.
+4. `max_concurrency` accepts 1–4 but defaults to 1. No parallel fan-out is authorized until a
+   source owner supplies rate/concurrency terms and a later gate approves it.
+5. A source has a hard page ceiling of 250, but a ceiling hit is `page_budget_exhausted` or
+   `coverage_gap`, never a successful partial result.
+6. Before every physical HTTP call, the shared budget reserves source-attempt, logical-page,
+   request, and retry capacity. If any global budget is exhausted, no further HTTP call is issued;
+   completed items remain; current/truncated items receive `request_budget_exhausted` or
+   `page_budget_exhausted`; queued items receive `request_budget_exhausted`; no item is silently
+   dropped and no new source attempt starts.
+
+> **Future, non-authoritative design sketch — not approved for implementation.** Source routes and
+> parser rules below document reopen conditions; they are not adapter approval.
+
+## 4. Future source boundaries and exact normalization
+
+### 4.1 Technical-candidate table (no enabled chain)
+
+| Source | Official route | Request shape | Source type/dataset | Current status |
+|---|---|---|---|---|
+| `hsx_market_tradingresult_v1` | `/mk/api/v1/market/securities/tradingresult/{code}` | GET `fromDate`, `toDate`, `pageIndex`, observed `pageSize=20` | official JSON / `hsx.market.securities.tradingresult.v1.0` | reachability pass; semantics/legal unresolved; disabled |
+| `hnx_report_ny_v1` | `Report_MD_TradingResult/ListData_Listed` | POST one requested date; `default-date` coupling observed; HTML pagination | official HTML / `hnx.report.stocketfs.tradingresult.listed.v1` | technical candidate; response date identity/legal unresolved; disabled |
+| `hnx_report_uc_v1` | `Report_MD_TradingResult/ListData_UPCoM` | POST report; historical date ignored in probe | official HTML / `hnx.report.stocketfs.tradingresult.upcom.v1` | historical coverage fail/legal unresolved; disabled |
+
+There is no default source chain. The rejected HOSE `foreign/{code}` route is intentionally absent
+because it does not return the requested symbol. No source row may be stitched with another board
+or another endpoint.
+
+### 4.2 HOSE future parser boundary
+
+The official date-filtered route returned a `symbol` field and component names for order
+matching and put-through buy/sell volume/value. A future adapter may normalize those fields only
+after owner evidence confirms:
+
+* `reportDate` epoch, timezone, and exchange-session-date mapping;
+* raw multiplier and exact shares/VND meaning;
+* stable field names, error envelopes, invalid-symbol/empty behavior, and intended automated use;
+* publication cadence/current-session lag, pagination ceilings, and rate/concurrency terms.
+
+Once reopened, the parser must request the observed fixed `pageSize=20`. Page 1 establishes the
+expected `(totalCount, totalPages, pageSize)` tuple. Every subsequent page must return the same
+tuple, and `pageIndex` must equal the requested page number. The client requests every page from
+1 through `totalPages` exactly once: a non-final page is non-empty and contains exactly
+`pageSize` rows; the final page contains exactly the remaining `totalCount` rows; gathered row
+count equals `totalCount`. Repeated pages, missing pages, early-empty pages, changed metadata,
+cross-page identity conflicts, or `totalPages > 250` reject the entire source result. No partial
+history is returned after pagination truncation. Global logical-page and physical-request budgets
+are enforced before each call.
+
+It must canonicalize and compare returned `symbol`. `reportDate` is accepted only as a finite
+integral Unix-seconds value and is converted exactly with
+`datetime.fromtimestamp(ts, timezone.utc).date()`; local machine timezone conversion is
+forbidden. A converted date outside the inclusive request range rejects the source. Missing or
+malformed date identity is a hard rejection until owner evidence changes the contract.
+
+Buy/sell totals are derived by exact integer addition of the four published components; net is
+signed `buy - sell`. If a provider total/net is also published, it is compared and conflicts
+reject the source. No implicit scale factor is ever applied.
+
+### 4.3 Rejected HOSE route
+
+The observed `foreign/{code}` route has no date bound and does not echo a symbol. The path token
+proves only the request, not the response. It is removed from the source protocol and cannot be
+a whole-result fallback. It may return only as a future candidate if first-party evidence adds
+response-backed symbol identity and the entire source gate is reopened.
+
+### 4.4 HNX future boundary
+
+The listed HNX POST returned HTML rows with security code/ISIN and buy/sell fields, but the
+request-date/`default-date` coupling is not authoritative response identity. A future adapter
+must reject the response unless the response itself contains an owner-confirmed session marker
+equal to the requested date (or equivalent response-backed proof). Missing, malformed, or
+mismatched response date identity is a hard rejection; it must not derive `session_date` from the
+request alone.
+
+The VND value label is explicit; the volume label is quantity-like but does not establish shares.
+The adapter remains disabled until the owner confirms the raw volume scale, field stability,
+pagination, publication cadence, intended automated use, and reuse terms. UPCoM is
+`HISTORICAL_COVERAGE_FAIL` and `RESPONSE_DATE_IDENTITY_UNRESOLVED`: identical snapshots were
+returned for current, historical, and very old date inputs, so they must not be interpreted as
+historical data.
+
+## 5. Coverage, legal gate, and reopen evidence
+
+### 5.1 Coverage truth
+
+| Dimension | Future contract |
 |---|---|
-| Exchange identity | `HOSE`, `HNX`, or `UPCOM` is explicit; source-bound and validated |
-| Target period | Request accepts 2018-01-01–current, but served coverage is source/per-symbol truth |
-| Dataset inception | Never inferred; `source_listing_or_inception_unknown` remains visible when not published |
-| Per-symbol listing | No promise that every symbol existed in 2018; `served_start` records first returned session |
-| Gaps | No fill, interpolation, calendar reconstruction, or cross-source backfill |
-| Publication delay | `served_end` and `partial_end_coverage` disclose lag; no “latest” promise without a row |
-| Frequency | D1 only; one normalized row per source session date |
-| VN30 | Current membership only when explicitly supplied by `index_constituents`; never PIT fiction |
+| Exchange identity | Explicit requested/source-bound `HOSE`, `HNX`, or `UPCOM`; unknown exchange fails before HTTP |
+| Target period | Caller may request 2018-current; served bounds are source/per-symbol truth |
+| Dataset inception/listing | Never inferred; first row is `served_start`, not a backfill |
+| Expected sessions | Only an owner-approved provider completeness marker or approved calendar can establish them |
+| Publication lag | Owner-confirmed cadence and lag required; unresolved lag means partial, never full |
+| Internal gaps | Known missing dates are listed; an unavailable calendar is `unobservable`, never “complete” |
+| Missing dates | No fill, interpolation, calendar reconstruction, or cross-source backfill |
+| Frequency | D1 only; one normalized row per authoritative source session date |
+| VN30 | Current membership context only; never point-in-time fiction |
 
-The current official SSC consolidated disclosure text says an exchange must publish foreign-
-investor trading during market hours and end-of-day per-security trading/ownership information,
-with a 24-hour publication window. This establishes a publication obligation, not that a
-particular public API is a licensed historical bulk feed. The source-vetting report records the
-exact HNX/HOSE probes, commercial fee schedules, and remaining rights/coverage gaps.
+The current regulator disclosure rule establishes a publication obligation, not an open historical
+consumer feed or a licence. The report's official legal references are evidence for the source
+owner discussion, not permission.
 
-### 4.2 Legal gate
+### 5.2 Owner and legal evidence
 
-Before implementing or enabling an adapter, obtain/record from the source owner:
+The owner paths and full conjunctive reopen checklist are maintained in
+`docs/research/2026-08-22-vn-foreign-flow-source-vetting.md §7`. Before any implementation gate,
+record the official contact/channel, date, responding owner/team, written artifact/reference, and
+exact dataset/endpoint. Evidence must cover:
 
-1. Permission for an open-source client to make no-auth runtime requests.
-2. Whether returned rows may be cached in memory, persisted, replayed in tests, or redistributed
-   through a downstream package.
-3. Required attribution, trademark/use-of-name constraints, retention limits, and rate limits.
-4. Whether the official UI/XHR route is an intended public API or only an internal web seam.
-5. For HNX specifically, whether the listed `NY.DLCN 2.4`/InfoFile commercial package or an
-   OSS-compatible permission is the only lawful route; for HOSE, whether the fee-schedule
-   foreign-statistics product governs the public API response.
+1. no-paid automated OSS runtime use and intended UI/XHR/API use;
+2. exact endpoint/dataset, attribution, retention, caching, replay, and downstream redistribution;
+3. raw volume multiplier, shares meaning, exact VND semantics, and no display scaling ambiguity;
+4. returned symbol and returned session-date identity, including epoch/timezone convention;
+5. stable fields and documented invalid/empty/error/schema-drift shapes;
+6. listing/delisting/rename/board-transfer/corporate-action identity;
+7. inception, publication cadence, current-session lag, and missing-session meaning;
+8. pagination, rate/concurrency limits, retries, cache/retention, and change notification.
 
-Until that evidence is committed, v1 behavior is:
+Until then, behavior is source-gap closure only:
 
-* no bundled provider rows, no checked-in real cassettes, no live calls in CI;
-* synthetic fixtures only, with source field shapes but invented values;
-* no persistent cache and no request fan-out beyond the conservative limits;
-* source attribution and `dataset_id` are designed but not a claim of licence;
-* HNX listed and UPCoM adapters remain disabled; HNX is a technical candidate pending written
-  rights/contract evidence, while UPCoM still lacks historical coverage.
+* no source is enabled and the default chain is empty;
+* no provider rows, real cassettes, persistent cache, runtime call, or live CI test;
+* only synthetic fixtures may use invented values and schematic field names;
+* no parser/model/facade may be added to the package;
+* no source attribution text is a licence claim.
 
-## 5. Invariants and failover acceptance
+> **Future, non-authoritative design sketch — not approved for implementation.** This matrix is a
+> future RED-first contract and not a claim that tests or production code exist.
 
-The merged implementation must reject a source result unless all applicable checks pass:
+## 6. Verification and future implementation/release gates
 
-1. **Identity:** canonical symbol, source-bound exchange, daily interval, and endpoint dataset
-   identity agree.
-2. **Units:** volume is whole shares; money is whole VND; no implicit scale factor.
-3. **Arithmetic:** gross totals equal the documented components; net equals buy minus sell;
-   conflicts invalidate the source result.
-4. **Shape:** typed immutable rows, plain dates, strict ascending order, atomic duplicate
-   handling, bounded pagination, no malformed envelope.
-5. **Coverage:** requested and served bounds are distinct; partial/unknown coverage is visible;
-   no fill or stitch.
-6. **Provenance:** every numeric field has a source-published/derived/missing origin; result
-   source and `SourceAttempt` diagnostics are immutable and redacted.
-7. **Preflight:** invalid symbol/date/range/interval/exchange/bulk limits fail before HTTP.
-8. **Compatibility:** one valid source result is homogeneous; a later fallback cannot change
-   units, exchange, or row identity.
-9. **VN30 honesty:** a current `index_constituents("VN30")` input is never labelled historical
-   membership and never causes the client to fabricate a point-in-time basket.
+This section is a future RED → GREEN → REFACTOR matrix, not a claim that tests were added.
 
-## 6. Verification matrix (design only; no tests added yet)
-
-All future adapter tests use committed synthetic JSON/HTML fixtures. No real broker rows or
-provider datasets are committed. Live endpoint tests, if needed, stay opt-in and untracked.
+All adapter tests must use committed synthetic JSON/HTML fixtures with invented values. No real
+provider rows or bundled datasets are permitted. Live endpoint tests are opt-in and untracked.
 
 | Area | Required offline checks |
 |---|---|
-| Preflight | D1-only, plain dates, ordering, future bound, symbol/exchange grammar; HTTP call count is zero on failure |
-| HOSE envelope | success flag, list/paging shape, page-size cap, page loop, page-count mismatch, HTTP/error mapping |
-| Field parser | both HOSE spellings, exact integral numeric coercion, `None` vs zero, negative/fractional/overflow rejection |
-| Arithmetic | main+big-lot totals, published-total equality, net buy-minus-sell, conflict rejection |
-| Identity | padded symbol canonicalization, mismatch rejection, HOSE source-bound exchange, Unix date conversion |
-| Rows | date filtering, ascending order, identical duplicate dedupe, conflicting duplicate rejection, no synthetic dates |
-| Coverage | requested/served bounds, listing/inception unknown, partial warnings, empty-range typed failure |
-| Failover | primary reject → fallback whole-result success; attempts retained; no cross-source stitching; all-failed diagnostics |
-| Bulk | iterable materialization, bare-string/empty/duplicate/limit rejection, stable order, max four workers, every failed symbol represented |
-| HNX future seam | separate NY/UC dataset IDs, date-coupled per-session POST, 200-row page cap, UPCoM current-snapshot rejection, no index/industry reconstruction |
-| Dataframe | exact columns, origin columns, attrs units/source/coverage, duplicate-index backstop |
-| Public/docs | API surface snapshot additive check, docs/API examples, CHANGELOG and skill updates in implementation change |
-| Safety scans | repository blacklist scan, secret scan, no real-provider-row scan, synthetic fixture provenance scan |
+| Preflight | D1-only, plain dates, ordering, future bound, symbol grammar, explicit/unknown exchange, zero HTTP calls |
+| Source gating | empty default chain, disabled-source rejection, bounded source/dataset/type tuple |
+| Signed arithmetic | non-negative gross bounds, signed net bounds, exact buy-minus-sell, provider-total/net conflict |
+| Units | explicit shares/lots/thousands and raw/scaled-VND fixtures, acceptance only after gate, unknown/fractional/negative/overflow/boolean rejection |
+| HOSE envelope | success flag, list/paging shape, stable page index/size/counts, page-size cap, malformed JSON, provider error |
+| Pagination | total-count arithmetic, total-pages arithmetic, repeated/missing/early-empty pages, page-index/page-size drift, ceiling boundary, zero/nonzero truncation both fail, no partial on truncation |
+| Identity/date | missing/blank/aggregate/cross-symbol response identity, mismatch, returned-date missing/mismatch, epoch timezone/session conversion, out-of-range rows, row exchange mismatch |
+| HNX | malformed HTML, request-date coupling rejected without returned marker, missing/renamed/wrong-type/schema-drift fields, current snapshot cannot satisfy historical request |
+| Coverage | full proof versus partial, calendar unknown, known internal gap, publication lag, pre-listing, stale end, `require_full`, no synthesized dates |
+| Failover | partial continues to compatible source, full outranks partial, exact partial ranking/tie-break, no stitching, fallback remains disabled/rejected, disabled/identity/unit/schema attempts retained |
+| Attempts | source attempts versus transport retries, capability skips consume no budget, global request accounting, bounded codes, caught-exception set, redacted diagnostics |
+| Bulk input | iterable materialization, typed `IndexConstituents` context, `current_snapshot_only`, `as_of=None`, mixed-board `(exchange,symbol)`, duplicate/empty/string rejection |
+| Bulk budget | lowering-only caps, sequential default, max workers, global 60-attempt/5,000-page/6,000-request boundaries, queued budget failures, no silent drop |
+| Bulk result | XOR item invariant (both-null/both-present reject), stable order, bounded failure codes, full `TimeSeriesResult` mixin fields/index/attrs |
+| Dataframe | exact row/summary columns, origin columns, attrs, units/source/coverage, duplicate-index backstop |
+| Probe reproducibility | official-host-only opt-in command, no-secret headers/redirect allowlist, client/repo version, sanitized status/digest/count manifest, raw output untracked |
+| Public/release | docs contract, API snapshot, source/API/architecture docs, AI guidance, skill, changelog, build/wheel/archive inspection, clean-install import smoke |
 
-The implementation must follow Red → Green → Refactor and run the full merged suite before and
-after refactoring. This design note intentionally adds no production code and therefore does
-not claim any test result beyond the sanitized source probes in the research report.
+A future implementation must run focused tests RED-first, then the full merged offline suite before
+and after refactoring, coverage/docs/API gates, mandatory blacklist and previous-contamination scan,
+no-secrets scan, provider-row scan, `git diff --check`, build, wheel/archive inspection, and
+clean-install smoke. No such implementation or test claim is made by this correction packet.
 
-## 7. Open reviewer decisions
+## 7. Re-review request
 
-1. **Scope:** PASS the bounded HOSE-first source gate after written terms, or require all-board
-   archival/licensed evidence before any implementation. Recommendation: HOSE-first plus HNX
-   listed as a disabled technical candidate and UPCoM explicitly unavailable.
-2. **Fallback:** accept the same-host `foreign/{code}` endpoint as a bounded whole-result
-   fallback, or keep only the date-filtered route until the owner documents it. Recommendation:
-   accept it as a source adapter only after the same legal gate; never stitch.
-3. **Warning vocabulary:** approve the listed stable prefixes before implementation so docs,
-   tests, and the warning-token registry can be updated in one public-API change.
-4. **Legal evidence:** identify the required owner/terms contact and the minimum written
-   permission needed to move `UNKNOWN`/`FAIL` to `APPROVED`; confirm whether paid HOSE/HNX
-   products prohibit OSS runtime retrieval or only redistribution.
+This correction round is deliberately source-gap closure, not a proposal to choose between HOSE
+and HNX. Please review this note and the research report against B1–B6 in
+`reviews/review-202608221350-issue201-design-gate.md`. At handoff, the reviewer should spawn
+three parallel sub-agents: source/legal/reopen evidence, API/identity/coverage semantics, and
+bulk/budget/verification adversarial review.
 
-## 8. Requested design review
-
-Please review this note and `docs/research/2026-08-22-vn-foreign-flow-source-vetting.md` against
-the packet. At handoff, the reviewer should spawn its own parallel sub-agents—one for source/
-legal evidence, one for API/model/coverage semantics, and one adversarially for failover/bulk
-invariants—and return a design decision with exact issue references. No production code, push,
-or issue close is authorized until the reviewer returns **PASS**.
+The required decision is whether the packet now precisely documents the gap and conjunctive reopen
+criteria. No parser, adapter, public model, facade, source chain, production code, push, or issue
+close is authorized until a later reviewer design gate returns **PASS**.

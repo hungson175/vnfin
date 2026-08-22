@@ -7,31 +7,34 @@
 
 ## Executive decision
 
-There is one technically credible no-auth source for a bounded first implementation:
+**Disposition: SOURCE-GAP CLOSURE. No source is enabled and no production implementation is
+authorized.** The probes found useful technical leads, but no candidate currently satisfies the
+complete source gate: no-auth runtime, 2018-current coverage, response-backed identity, exact
+units/date semantics, stable field contract, and written OSS/runtime/cache/redistribution terms.
 
-* **HOSE/HSX official market API** exposes per-symbol daily foreign buy/sell components and a
-  server-side date range. A 22 August 2026 probe served 2018-01-01–2026-08-21 windows for
-  FPT, VIC, and VCB (2,154 rows, 108 pages per sampled symbol). This is a **technical
-  candidate**, not yet a legal clearance: the official Swagger contains no reuse licence,
-  rate-limit statement, caching permission, or redistribution terms.
-* **HNX official web reports** expose per-symbol buy/sell volume and VND value for HNX-listed
-  and UPCoM securities, with ISIN and foreign-room fields. The listed-equity HTML page guards
-  its UI to the most recent month, but the underlying no-auth POST returned rows for sampled
-  trading dates in 2018, 2019, and 2026 when the request's `default-date` token matched the
-  requested trading date. This is an **undocumented historical web seam**, not a documented
-  archival API or a coverage guarantee. The UPCoM endpoint returned the same current snapshot
-  for current, 2018, and 2000 date inputs, so UPCoM remains a historical source gap. HNX also
-  publishes commercial package/fee material and copyright/all-rights-reserved notices; no
-  open-data licence was found.
-* **SSC/regulator pages and HNX PDFs** found in this round are aggregate/monthly, by-index, or
-  by-industry—not a lawful no-auth per-symbol daily history. They cannot be a v1 adapter.
-* **SSI FastConnect documentation** requires an access token, so it is not a no-auth candidate.
+The independent status axes are:
 
-**Recommendation for the design gate:** approve a source-bounded contract and a HOSE-first
-implementation only after legal permission/terms are resolved. Do not promise HNX/UPCoM
-2018-current coverage, do not stitch sources, and do not bundle or persist provider rows while
-the licence remains unknown. If the reviewer requires all three boards before implementation,
-the correct state is **blocked by source gap**, not a fabricated fallback.
+| Candidate | Technical reachability | Historical coverage | Response identity/date | Units/field semantics | Legal/runtime/reuse | Operational stability | Disposition |
+|---|---|---|---|---|---|---|---|
+| HOSE `tradingresult/{code}` | `PASS` observed without credentials | `SAMPLED_ONLY`; three names do not prove market-wide 2018-current completeness | Symbol returned; epoch/session-date convention `UNRESOLVED` | Raw volume/value multiplier and field stability `UNRESOLVED` | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Rate/SLA/cache terms `UNRESOLVED`; intermittent 500 observed | `DISABLED` |
+| HOSE `foreign/{code}` | `PASS` observed without credentials | History sampled | Response symbol missing; `RESPONSE_IDENTITY_MISSING_REJECTED` | Component arithmetic observed; units still unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Unbounded route; no published limit | `DISABLED; not a fallback` |
+| HNX listed report | `TECHNICAL_CANDIDATE_UNDOCUMENTED` observed without credentials | Historical samples only; no range/completeness proof | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; request token is not response identity | VND label present; volume scale and field stability `UNRESOLVED` | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Undocumented HTML seam; rate/cache/SLA `UNRESOLVED` | `DISABLED` |
+| HNX UPCoM report | `PASS` for current snapshot | `FAIL`; historical date inputs ignored | `RESPONSE_DATE_IDENTITY_UNRESOLVED`; unchanged snapshots do not prove requested date | VND label present; volume semantics unresolved | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` | Snapshot behavior undocumented | `DISABLED` |
+
+* **HOSE/HSX:** a 22 August 2026 probe served sampled 2018-01-01–2026-08-21 windows for
+  FPT, VIC, and VCB, but three names do not establish market-wide coverage. The official
+  Swagger and tariff do not establish reuse, caching, retention, or redistribution permission.
+* **HNX listed:** direct POSTs returned rows for sampled dates when the request token matched the
+  requested date, but the response did not provide an authoritative session-date marker. This
+  is an undocumented technical observation, not an identity-safe historical source.
+* **UPCoM:** the endpoint returned an identical current snapshot for current, 2018, and 2000 date
+  inputs, so it cannot support the requested historical contract.
+* **SSC/regulator pages, HNX aggregate PDFs, and token-gated commercial API documentation** are
+  legal/reference or aggregate evidence, not qualifying no-auth per-symbol sources.
+
+The correction artifact therefore records a **candidate boundary pending source-owner clearance**
+only. It does not package a parser contract for shipping, enable a default chain, or imply that
+public reachability grants lawful reuse.
 
 ## 1. Method and evidence boundary
 
@@ -48,15 +51,15 @@ the correct state is **blocked by source gap**, not a fabricated fallback.
 
 ## 2. Candidate matrix
 
-| Candidate | Per-symbol | Boards | Daily/history evidence | No-auth probe | Legal/reuse evidence | Verdict |
+| Candidate | Per-symbol | Boards | Daily/history evidence | No-auth probe | Legal/reuse evidence | Independent status |
 |---|---:|---|---|---|---|---|
-| Official HOSE market API, `tradingresult/{code}` | Yes | HOSE | Date-filtered; sampled 2018-01-02 through 2026-08-21 | 200 without credentials | Official fee schedule lists paid foreign-investor statistics; no OSS redistribution grant or API rate/caching terms found | **Technical PASS; legal FAIL/UNKNOWN** |
-| Official HOSE market API, `foreign/{code}` | Yes | HOSE | Unbounded paginated history; sampled 2009-01-02 through 2026-08-21 | 200 without credentials | Same paid-data/redistribution concern | **Fallback technical PASS; legal FAIL/UNKNOWN** |
-| Official HNX listed-equity report | Yes | HNX | UI window limited to most recent month; direct POST sampled 2018–2026 dates when `default-date` matched the requested date; no range API | 200 HTML + direct POST | Commercial package/fee material; no open licence; copyright/all rights reserved | **Technical candidate; legal FAIL/UNKNOWN** |
-| Official HNX UPCoM report | Yes, current snapshot | UPCoM | Direct endpoint ignored 2026, 2018, and 2000 date values in probe; identical snapshot | 200 HTML + direct POST | No open licence found; same copyright concern | **History FAIL; legal UNKNOWN** |
-| HNX foreign trading by index / industry PDFs | No | HNX/UPCoM aggregates | Daily aggregate/index or industry tables | Public PDF | Copyright notice; no redistribution grant | **Scope FAIL** |
-| SSC reporting/statistics pages | No per-symbol daily series found | Market aggregate | Monthly/aggregate publication and reporting obligation | Public pages/PDF | Regulatory publication is not a data licence | **Scope FAIL** |
-| SSI FastConnect | Yes in documented API family | HOSE/HNX/UPCOM | Docs expose daily fields, but access-token flow is required | **No** | Commercial/API terms require separate review | **No-auth FAIL** |
+| Official HOSE market API, `tradingresult/{code}` | Yes | HOSE | Date-filtered; sampled 2018-01-02 through 2026-08-21 | 200 without credentials | Paid foreign-investor statistics; no OSS/runtime/cache/redistribution grant or rate terms found | **TECHNICAL_REACHABILITY_PASS; SEMANTICS_UNRESOLVED; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
+| Official HOSE market API, `foreign/{code}` | Not safely response-identified | HOSE | Unbounded paginated history; sampled 2009-01-02 through 2026-08-21 | 200 without credentials | Same paid-data concern | **RESPONSE_IDENTITY_MISSING_REJECTED; not a fallback** |
+| Official HNX listed-equity report | Yes in returned HTML rows | HNX | UI window limited to most recent month; direct POST sampled 2018–2026 dates when `default-date` matched; no range API or returned session marker | 200 HTML + direct POST | Commercial package/fee material; no open licence; copyright/all rights reserved | **TECHNICAL_CANDIDATE_UNDOCUMENTED; RESPONSE_DATE_IDENTITY_UNRESOLVED; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
+| Official HNX UPCoM report | Yes, current snapshot | UPCoM | Direct endpoint ignored 2026, 2018, and 2000 date values in probe; identical snapshot | 200 HTML + direct POST | No open licence found; same copyright concern | **HISTORICAL_COVERAGE_FAIL; LEGAL_UNRESOLVED_PERMISSION_REQUIRED** |
+| HNX foreign trading by index / industry PDFs | No | HNX/UPCoM aggregates | Daily aggregate/index or industry tables | Public PDF | Copyright notice; no redistribution grant | **SCOPE_FAIL** |
+| SSC reporting/statistics pages | No per-symbol daily series found | Market aggregate | Monthly/aggregate publication and reporting obligation | Public pages/PDF | Regulatory publication is not a data licence | **SCOPE_FAIL** |
+| SSI FastConnect | Yes in documented API family | HOSE/HNX/UPCOM | Docs expose daily fields, but access-token flow is required | **No** | Commercial/API terms require separate review | **NO_AUTH_FAIL** |
 
 ## 3. HOSE/HSX official source
 
@@ -82,6 +85,9 @@ credential parameter was present in the document. The official frontend calls th
 and renders the foreign fields beneath order-matching and put-through volume/value headings.
 
 ### 3.2 Exact observed request and response contract
+
+> The following is an observed first-party probe shape, not a stable provider contract and not
+> an approved adapter contract. It is retained only to identify source-gap closure evidence.
 
 ```text
 GET https://api.hsx.vn/mk/api/v1/market/securities/tradingresult/FPT
@@ -155,15 +161,15 @@ coverage field in this response. The first available session is therefore record
 The date-filtered `tradingresult` route capped `pageSize` at 20 in the observed response:
 requests for 50, 100, and 1,000 were returned with `paging.pageSize == 20`. The adapter must
 request 20, stop at the server-reported page count, reject page-count inconsistencies, and
-enforce a client hard ceiling before any unbounded loop. The fallback `foreign` route accepted
-100 and returned 45 pages for the 4,401-row sample; it has a separate, less stable cap and must
-be probed/validated independently. No published maximum exists.
+enforce a client hard ceiling before any unbounded loop. The separately observed `foreign` route
+accepted 100 and returned 45 pages for the 4,401-row sample; its missing response symbol means it
+is rejected regardless of its pagination behavior. No published maximum exists.
 
 The endpoint returned `symbol` in the date-filtered response. The parser must trim and
 canonicalize it, compare it with the requested symbol, and fail closed on a mismatch. Exchange
 identity is source-bound to HOSE; no response from this route may be relabelled HNX or UPCoM.
 
-### 3.4 Official same-host fallback
+### 3.4 Rejected same-host route (not a fallback)
 
 The official Swagger also exposes:
 
@@ -176,11 +182,12 @@ This route has no date parameters. A probe for the same public symbol returned 4
 45 pages at `pageSize=100`, with the last page reaching 2009-01-02. Its field spellings are
 `mainBuyerForeign*`/`mainSellerForeign*` and `bigLotBuyerForeign*`/`bigLotSellerForeign*`;
 its total foreign volumes matched the main-plus-big-lot sum for all 20 overlapping first-page
-dates checked against `tradingresult`. The response does not echo the symbol; the requested
-canonical path code is the identity key. It is a possible **whole-result fallback**, not a
-second segment to stitch. The client paginates newest-first until the requested start is
-passed, filters locally, and fails if the page ceiling is exceeded. Its lack of a server-side
-date bound makes it more expensive and less desirable than `tradingresult`.
+dates checked against `tradingresult`. The response does **not** echo a symbol. The requested
+path token proves only what the client asked for, not what the server returned, so this route
+fails the hard response-identity invariant and is **removed from the candidate chain**. It must
+not be used as a fallback, whole-result or otherwise, unless first-party evidence adds a
+response-backed symbol identity and the source gate is reopened. Its lack of a server-side date
+bound is an additional operational concern.
 
 ### 3.5 Legal and operational status
 
@@ -195,17 +202,20 @@ date bound makes it more expensive and less desirable than `tradingresult`.
   attribution, or redistribution terms were found in the inspected official pages/API
   document.
 * No API key, bearer token, login, or `Authorization` header was used in the successful probe.
-  No published request-rate limit was located. v1 should default to sequential single-symbol
-  paging, max four concurrent bulk workers, no automatic retry storm, and no persistent cache.
+  No published request-rate limit was located. Any future client must default to sequential
+  single-symbol/bulk paging; concurrency above one is explicit opt-in only after written provider
+  terms authorize it, with a hard maximum of four, a shared request/page/attempt budget, bounded
+  retries, and no persistent cache.
 * Intermittent HTTP 500 responses were observed on oversized/less stable route probes and by an
   independent official-source verification; retry only bounded transient failures and preserve
   every attempt in diagnostics. There is no SLA evidence.
-* **Legal status: FAIL/UNKNOWN / permission required.** The paid fee schedule is strong
+* **Legal status: LEGAL_UNRESOLVED_PERMISSION_REQUIRED.** The paid fee schedule is strong
   evidence that the same class of data is commercially supplied; it is not by itself a
-  prohibition on public web retrieval, but it prevents an OSS redistribution claim. Until HOSE
-  confirms terms, package only the parser contract and synthetic fixtures; do not bundle
-  responses, persist a dataset, or claim an open-data licence. Runtime attribution should name
-  HOSE and the exact dataset/endpoint once an implementation is authorized.
+  prohibition on public web retrieval, but it does not grant OSS runtime or redistribution
+  rights. This report is evidence only: no parser, adapter, public model, facade, runtime
+  request, cache, fixture containing provider rows, or default source chain is authorized while
+  terms remain unresolved. Runtime attribution and retention rules can be recorded only after
+  the owner supplies written terms for the exact dataset/endpoint.
 
 ## 4. HNX and UPCoM official source
 
@@ -230,6 +240,22 @@ pRecordOnPage    = 50
 pIsSearch        = 1
 ```
 
+The sanitized form shapes for the two official routes are distinct and must remain distinct in
+any future probe or adapter specification:
+
+```text
+POST /ModuleReportStockETFs/Report_MD_TradingResult/ListData_Listed
+p_keysearch=dd/mm/yyyy|0|0|SYMBOL|0|ALL|dd/mm/yyyy
+pColOrder=col_a&pOrderType=ASC&pCurrentPage=1&pRecordOnPage=50&pIsSearch=1
+
+POST /ModuleReportStockETFs/Report_MD_TradingResult/ListData_UPCoM
+p_keysearch=dd/mm/yyyy|0|0|SYMBOL|0|ALL|dd/mm/yyyy|
+pColOrder=col_a&pOrderType=ASC&pCurrentPage=1&pRecordOnPage=50&pIsSearch=1
+```
+
+The final date token is an input shape only. It is not accepted as the response session date
+without an authoritative returned marker.
+
 The VND unit is explicit. The volume label is quantity-like (and the Vietnamese table uses
 `KL`), but neither the HTML nor the response provides a machine-readable “shares” unit; a
 provider confirmation is required before a future adapter makes `volume_unit="shares"` a
@@ -247,9 +273,11 @@ months of the most recent transactions. A direct listed request for 2026-08-21 r
 records. The same POST with the requested date `01/03/2018` and the final `default-date` token
 also set to `01/03/2018` returned 385 records; `01/03/2019` returned 378 records. Additional
 independent probes covered the same shape on dates in 2020–2026. Keeping the final token at
-the current page date instead returned an empty historical result, so the date-token coupling
-must be documented if this seam is ever approved. This is technical evidence for an HNX
-listed-history candidate, not proof of a stable archive or end-to-end completeness.
+the current page date instead returned an empty historical result. The response itself did not
+contain an authoritative session-date marker that could distinguish a requested date from a
+server-selected date. The date-token coupling is therefore **response-date identity unresolved**,
+not an identity contract; the seam cannot be an enabled adapter without owner evidence or a
+returned date field.
 
 The UPCoM endpoint returned 821 current records for 2026-08-21, 2018-08-01, and 2000-01-01,
 with identical response bytes in the probe—even when the final date token was changed. It is
@@ -260,8 +288,9 @@ The reports are technically reachable without credentials and provide the requir
 buy/sell volume/value plus ISIN. The listed HNX route is a per-session HTML report, not a
 server-side date-range API: a 2018–current history would require one request per candidate
 trading date and local filtering/pagination. The endpoints provide no documented machine-
-readable licence or published rate limit. The direct POST is an undocumented web seam and must
-not be treated as a durable OSS source without provider confirmation.
+readable licence or published rate limit. The direct POST is an undocumented web seam with
+unresolved response-date identity and must not be treated as a durable OSS source without
+provider confirmation.
 
 ### 4.2 Aggregate HNX evidence is not a substitute
 
@@ -290,10 +319,11 @@ delivery/technical specifications. References:
 
 Direct report responses carried `Cache-Control: private`; no public caching grant was found.
 The official hosts did not expose a usable robots policy or open-data licence in this round,
-and HNX pages/PDFs identify HNX copyright. **Legal status is FAIL/UNKNOWN / permission or a
-licensing contract required.** HNX listed history and UPCoM current data remain out of the v1
-enabled chain until reuse terms, endpoint stability, rate limits, and UPCoM history are
-resolved.
+and HNX pages/PDFs identify HNX copyright. **Legal status is
+`LEGAL_UNRESOLVED_PERMISSION_REQUIRED`.** HNX listed history remains both technically
+undocumented and response-date-identity unresolved; UPCoM remains a historical-coverage
+failure. Neither is enabled until reuse terms, endpoint stability, rate limits, identity
+semantics, and UPCoM history are resolved.
 
 ## 5. Regulator and other official candidates
 
@@ -316,28 +346,205 @@ resolved.
 
 ## 6. Build-vs-source-gap conclusion
 
-| Requirement | HOSE official API | HNX listed report | UPCoM report | v1 disposition |
+| Requirement | HOSE official API | HNX listed report | UPCoM report | source-gap disposition |
 |---|---|---|---|---|
-| Per-symbol buy/sell volume | Yes, component fields | Yes, current page | Yes, current snapshot | Normalize; do not mix sources in one result |
-| Per-symbol buy/sell VND value | Yes, component fields | Yes, explicitly VND | Yes, explicitly VND | Normalize whole VND values; no scale guessing |
-| Daily identity/date | `reportDate` + `symbol` | request date + symbol/ISIN | request page + symbol/ISIN | Validate and fail closed |
-| HOSE/HNX/UPCoM target boards | HOSE only | HNX only | UPCoM only | HOSE-first; HNX legal/operational gate; UPCoM source-gap |
-| 2018-current date filter | Technically observed for samples | Historical samples work through a date-coupled per-session POST; no range API | date ignored/current snapshot | Do not promise all-board history |
+| Per-symbol buy/sell volume | Component fields observed; raw scale unresolved | Rows observed on current/historical probes; volume scale unresolved | Current snapshot rows | No implementation until unit evidence is written |
+| Per-symbol buy/sell VND value | Field labels observed; raw scale unresolved | Explicit VND label | Explicit VND label | No implementation until source contract is approved |
+| Daily identity/date | `reportDate` + `symbol` returned, but epoch/session semantics unresolved | Requested date plus rows; authoritative returned session marker absent | Requested page plus rows; date ignored | Require response-backed identity and exact date semantics |
+| HOSE/HNX/UPCoM target boards | HOSE only | HNX only | UPCoM only | No cross-board fallback or stitching |
+| 2018-current date filter | Technically sampled for three names | Date-coupled per-session observation, no range API or completeness proof | Date ignored/current snapshot | Historical coverage remains unapproved |
 | No-auth request | Observed | Observed | Observed | No-auth is not a licence |
-| Open licence/redistribution | Paid-data schedule; no OSS grant found | Paid package catalogue; no OSS grant; copyright signal | Paid package catalogue; no OSS grant; copyright signal | Legal gate before code/ship |
-| Published rate limits | Not found | Not found | Not found | Conservative bounded client |
+| Open licence/redistribution | Paid-data schedule; no OSS grant found | Paid package catalogue; no OSS grant; copyright signal | Paid package catalogue; no OSS grant; copyright signal | `LEGAL_UNRESOLVED_PERMISSION_REQUIRED` |
+| Published rate limits | Not found | Not found | Not found | No runtime fan-out until provider terms authorize it |
 
-The lawful implementation boundary is consequently:
+The candidate boundary is consequently **pending source-owner clearance**:
 
-1. **Design now:** define a source-neutral immutable contract, source provenance, failover
-   diagnostics, and a bulk API that can honestly represent unsupported boards and per-symbol
-   failures.
-2. **First implementation candidate:** HOSE `tradingresult` with the same-host `foreign`
-   fallback, subject to written terms/permission. A source success is one complete source
-   result; never append HNX/UPCoM rows to it.
-3. **HNX:** retain the listed per-session endpoint as a technical candidate, but keep it
-   disabled until HNX confirms that the undocumented route and/or a licensed package may be
-   used by the OSS client. Do not call the current page a documented archive.
-4. **UPCoM:** keep explicitly unavailable until an archival per-symbol source and rights
-   evidence are found. Do not reconstruct from index/industry aggregates or use the current
-   snapshot as historical data.
+1. **No source is enabled:** no parser, adapter, public model, facade, runtime request, cache,
+   fixture containing provider rows, push, or issue close is authorized by this report.
+2. **Reopen only with owner evidence:** the source owner must provide written permission and
+   technical terms for no-paid automated runtime use, exact units, response identity/date,
+   field stability, publication cadence/lag, rate limits, caching/retention, attribution, and
+   downstream redistribution. The full checklist is in Section 7.
+3. **HNX:** retain the listed POST only as a research lead with unresolved response-date identity;
+   do not label it a historical archive or use request-date coupling as proof.
+4. **UPCoM:** keep explicitly unavailable until an archival per-symbol source and rights evidence
+   are found. Do not reconstruct from index/industry aggregates or use the current snapshot as
+   historical data.
+
+## 7. Source-gap closure and reopen criteria
+
+### 7.1 Status vocabulary
+
+The report uses independent axes rather than collapsing evidence into one ambiguous combined
+status:
+
+* `PASS` means the specific property was positively evidenced for the stated route and probe;
+* `FAIL` means the probe demonstrated that the property does not hold (for example, UPCoM
+  historical date inputs were ignored);
+* `UNRESOLVED` means evidence is absent or insufficient, not that a legal prohibition was proved;
+* `SAMPLED_ONLY` means observations are not a market-wide or completeness guarantee;
+* `DISABLED` is the current engineering disposition, not a source fact.
+
+The current disposition is `DISABLED` for every candidate. A candidate can be reopened only when
+all applicable technical, semantic, coverage, operational, and legal axes below are evidenced
+for the same endpoint/dataset. No-auth reachability, a public UI, a permissive robots file, or a
+paid fee schedule is not owner permission.
+
+### 7.2 Owner/contact path
+
+The owner path must be first-party and must identify the exact dataset rather than relying on a
+general website contact:
+
+| Candidate | Owner | Official contact/data-service path |
+|---|---|---|
+| HOSE `tradingresult/{code}` | Ho Chi Minh Stock Exchange (HOSE/HSX) market-information/data-service owner | [HOSE data-feed page](https://www.hsx.vn/vi/data-feed) and the [official information-service tariff](https://staticfile.hsx.vn/Uploads/UploadDocuments/2406142/Bieu%20gia%20dich%20vu%20cung%20cap%20tin.pdf) |
+| HNX listed report | Hanoi Stock Exchange (HNX) information-service/data owner | [HNX listed-data catalogue](https://www.hnx.vn/dich-vu-cctt/du-lieu-cung-cap-list.html) and [technical-requirements page](https://www.hnx.vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html) |
+| HNX UPCoM report | Hanoi Stock Exchange (HNX) information-service/data owner | [HNX UPCoM catalogue](https://www.hnx.vn/dich-vu-cctt/du-lieu-cung-cap-up.html) and [technical-requirements page](https://www.hnx.vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html) |
+
+No individual contact is inferred from a web page. A reopen packet must record the official
+contact/channel, request date, responding owner/team, written artifact or reference number, and
+the exact endpoint/dataset covered by the response.
+
+### 7.3 Conjunctive reopen evidence
+
+At least one candidate must obtain written owner evidence for every applicable item:
+
+1. No-paid automated OSS runtime use, including whether the public frontend/API/XHR route is
+   intended for automated clients rather than only interactive UI use.
+2. Exact endpoint, dataset/version, supported boards, and whether rows may be redistributed by a
+   downstream open-source package.
+3. Raw volume multiplier and an explicit statement that volume means shares; exact value meaning,
+   raw scale, currency, and whether VND values are whole VND or displayed units.
+4. `reportDate` epoch convention, timezone, exchange-session-date mapping, and an authoritative
+   returned date marker. A request parameter or path token alone never proves response identity.
+5. Response-backed canonical symbol/ISIN identity, including invalid-symbol, empty, error, and
+   schema-drift response shapes. The requested path token is not a substitute for a returned
+   identity field.
+6. Stable JSON/HTML field names, field definitions, component/total arithmetic, and a change
+   notification or versioning policy.
+7. Dataset inception, per-symbol listing/delisting, symbol rename, board transfer, and corporate-
+   action identity rules; no assumption that a symbol's 2018 row exists.
+8. Publication cadence, current-session availability, end-of-day publication lag, historical
+   retention floor, and whether missing sessions are expected or represent an outage.
+9. Pagination limits, request-rate/concurrency limits, retry guidance, caching/retention/replay
+   permission, attribution, trademark/use-of-name constraints, and downstream redistribution.
+10. An official written artifact plus an official-host-only opt-in probe reproducing the contract;
+    sanitized counts/digests may be committed, but raw provider rows remain untracked.
+
+Only after all required axes for one candidate are `PASS`/approved may a new correction packet
+request a design gate. The next gate must explicitly re-check the exact owner evidence, source
+identity tuple, unit proof, coverage proof, request budget, and synthetic verification matrix.
+
+## 8. Reproducible official-host-only probe procedure
+
+This appendix is opt-in research tooling, not a CI test or an implementation recipe. The only
+allowlisted hosts are `api.hsx.vn` and `hnx.vn`; redirects are rejected. It uses no credentials,
+cookies, bearer headers, third-party hosts, or persistent cache. Raw responses must stay under
+`/tmp/vnfin-201-probes/` (or another ignored directory) and must never be committed. The manifest
+records only client/package/repository versions, timestamp/timezone, exact method/URL/query/body,
+actually sent non-secret headers, explicit absence of Cookie/Authorization/API-key material,
+HTTP status, content type, cache-control, byte count, a canonical SHA-256 digest of sanitized
+aggregate metadata, row count, date bounds, and whether response-backed identity/date fields are
+present.
+
+```bash
+set -eu
+out=/tmp/vnfin-201-probes/$(date +%Y%m%d-%H%M%S)
+mkdir -p "$out"
+date '+%d/%m/%Y - %A %H:%M %z' > "$out/manifest.txt"
+python --version >> "$out/manifest.txt"
+curl --version | sed -n '1p' >> "$out/manifest.txt"
+git -C /home/hungson175/dev/vnfin-oss rev-parse HEAD >> "$out/manifest.txt"
+python - <<'PY' >> "$out/manifest.txt"
+try:
+    from importlib.metadata import version
+    print("vnfin_version=" + version("vnfin"))
+except Exception:
+    print("vnfin_version=uninstalled-or-local-checkout")
+PY
+printf '%s\n' \
+  'sent_headers=Accept,Content-Type(where form),User-Agent only' \
+  'cookie=absent' 'authorization=absent' 'api_key=absent' >> "$out/manifest.txt"
+
+# Official HOSE route; no Authorization, Cookie, or API key.
+curl --fail --silent --show-error --max-redirs 0 --max-time 25 \
+  --header 'Accept: application/json' \
+  --header 'User-Agent: vnfin-201-probe/1' \
+  -D "$out/hose.headers" \
+  'https://api.hsx.vn/mk/api/v1/market/securities/tradingresult/FPT?fromDate=2018-01-01&toDate=2026-08-21&pageIndex=1&pageSize=20' \
+  -o "$out/hose.json"
+
+# Official HNX listed report; the final date token is recorded as an input only,
+# never accepted as response identity without an authoritative returned marker.
+curl --fail --silent --show-error --max-redirs 0 --max-time 25 \
+  --header 'Accept: text/html' \
+  --header 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
+  --header 'User-Agent: vnfin-201-probe/1' \
+  -D "$out/hnx.headers" \
+  -X POST 'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_Listed' \
+  --data-urlencode 'p_keysearch=01/03/2018|0|0|FPT|0|ALL|01/03/2018' \
+  --data-urlencode 'pColOrder=col_a' \
+  --data-urlencode 'pOrderType=ASC' \
+  --data-urlencode 'pCurrentPage=1' \
+  --data-urlencode 'pRecordOnPage=50' \
+  --data-urlencode 'pIsSearch=1' \
+  -o "$out/hnx.html"
+
+# Official HNX UPCoM report; retain a separate route and complete form shape.
+curl --fail --silent --show-error --max-redirs 0 --max-time 25 \
+  --header 'Accept: text/html' \
+  --header 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
+  --header 'User-Agent: vnfin-201-probe/1' \
+  -D "$out/upcom.headers" \
+  -X POST 'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_UPCoM' \
+  --data-urlencode 'p_keysearch=01/03/2018|0|0|FPT|0|ALL|01/03/2018|' \
+  --data-urlencode 'pColOrder=col_a' \
+  --data-urlencode 'pOrderType=ASC' \
+  --data-urlencode 'pCurrentPage=1' \
+  --data-urlencode 'pRecordOnPage=50' \
+  --data-urlencode 'pIsSearch=1' \
+  -o "$out/upcom.html"
+
+sha256sum "$out/hose.json" "$out/hnx.html" "$out/upcom.html" >> "$out/manifest.txt"
+awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|content-type:|cache-control:)/ {print}' \
+  "$out/hose.headers" "$out/hnx.headers" "$out/upcom.headers" >> "$out/manifest.txt"
+wc -c "$out/hose.json" "$out/hnx.html" "$out/upcom.html" >> "$out/manifest.txt"
+
+# Emit only a canonical, sanitized aggregate; never print or hash raw provider rows as a
+# committed artifact. The HNX booleans/counts are shape checks, not response identity proof.
+python - "$out" <<'PY'
+import hashlib, json, pathlib, re, sys
+
+out = pathlib.Path(sys.argv[1])
+hose = json.loads((out / "hose.json").read_text())
+rows = ((hose.get("data") or {}).get("list") or [])
+aggregate = {
+    "hose_success": hose.get("success"),
+    "hose_row_count": len(rows),
+    "hose_fields": sorted({k for row in rows if isinstance(row, dict) for k in row}),
+    "hose_has_symbol": all(isinstance(row, dict) and "symbol" in row for row in rows),
+    "hose_has_reportDate": all(isinstance(row, dict) and "reportDate" in row for row in rows),
+    "hnx_shape": {},
+}
+for name in ("hnx", "upcom"):
+    html = (out / f"{name}.html").read_text(errors="replace")
+    aggregate["hnx_shape"][name] = {
+        "bytes": len(html.encode()),
+        "row_like_tags": len(re.findall(r"<tr\b", html, re.I)),
+        "has_security_code": bool(re.search(r"security\s+code", html, re.I)),
+        "has_isin": bool(re.search(r"isin", html, re.I)),
+        "has_buy_volume": bool(re.search(r"buy\s+volume", html, re.I)),
+        "has_sell_volume": bool(re.search(r"sell\s+volume", html, re.I)),
+    }
+canonical = json.dumps(aggregate, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+(out / "sanitized-aggregate.json").write_text(canonical + "\\n")
+(out / "sanitized-aggregate.sha256").write_text(
+    hashlib.sha256(canonical.encode()).hexdigest() + "\\n"
+)
+PY
+cat "$out/sanitized-aggregate.sha256" >> "$out/manifest.txt"
+```
+
+The procedure must be rerun only after a source-owner response or a materially changed official
+contract. A successful HTTP response is recorded as reachability evidence only; it does not
+promote a candidate, authorize reuse, or establish unit/date/identity semantics.
