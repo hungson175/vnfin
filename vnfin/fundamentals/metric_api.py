@@ -971,12 +971,16 @@ def _validate_metric_reports(
     try:
         from .client import _fundamental_unit, _validate_fundamental_result
 
-        chain_unit = _fundamental_unit(source)
-        # Metrics consume raw statement money.  A source that omits its unit is
-        # kept compatible with the fundamentals client, while malformed report
-        # currencies still fail against the canonical VND metric contract.
-        if chain_unit is None:
-            chain_unit = "VND"
+        declared_unit = _fundamental_unit(source)
+        # Metrics consume raw VND statement money, not merely any homogeneous
+        # unit accepted by the generic fundamentals client.  An undeclared unit
+        # remains compatible for legacy injected doubles; an explicit non-VND
+        # declaration fails closed before the report can be published.
+        if declared_unit is not None and (
+            type(declared_unit) is not str or declared_unit != "VND"
+        ):
+            return False
+        chain_unit = "VND"
         reason = _validate_fundamental_result(
             reports,
             symbol=symbol,

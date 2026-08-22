@@ -439,9 +439,8 @@ def test_metrics_rejects_a_source_that_declares_non_vnd_statement_units():
             for statement, reports in source.per_statement.items()
         }
         kwargs = {"source": source} if selection == "direct" else {"sources": [source]}
-        report = metrics("TESTCO", period="annual", is_bank=False, **kwargs)[0]
-        income = _status_by_statement(report.statement_sources)[StatementType.INCOME]
-        assert income.status is StatementCoverageStatus.SOURCE_ERROR
+        with pytest.raises(EmptyData, match=r"^no usable annual fiscal periods"):
+            metrics("TESTCO", period="annual", is_bank=False, **kwargs)
         coverage = explain_metric_coverage(
             "TESTCO", period="annual", is_bank=False, **kwargs
         )
