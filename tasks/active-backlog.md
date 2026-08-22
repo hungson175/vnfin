@@ -609,17 +609,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `2026-08-22T09:45:15Z`. New C1-C3 chain remains empty/disabled; legacy C4 remains active and
   non-authoritative; no new production capability or reliable corporate-action claim. #204 separate.
 
-- **#204 — fundamentals SSI/TCX source/design gate (SOURCE-GATED; final B3 docs correction required,
-  2026-08-22).** Packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/204-fundamentals-ssi-tcx-spec.md`
-  at reviewer `802e518`; exact builder anchor `aab752fbc76cdff0861692c94453d6629e5db3a1` received
-  **B3 CLOSURE BLOCK** from reviewer `8c718a1` in
-  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608221806-issue204-b3-closure-rereview.md`.
-  One docs-only correction: preserve source-wins precedence; scope the exact empty-chain
-  `VnfinError("sources must contain at least one source")` to `source is None` plus empty effective
-  sources; and parameterize malicious source/provenance RED tests across missing, raising,
-  non-string/unhashable, empty/whitespace/case-mismatch, unknown, URL, and overlong values.
-  Preserve the SSI/TCX chain empty and `NET_INCOME` blocked; no production code, push, or close
-  before design PASS.
+- **#204 — fundamentals SSI/TCX TDD implementation (ACTIVE after DESIGN PASS, 2026-08-22).** Packet
+  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/204-fundamentals-ssi-tcx-spec.md`; exact design
+  anchor `9360d43d244094c0a4c08c68898db6733d0e7fa4` received **DESIGN PASS** from reviewer `d6abf1c`
+  in `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608221818-issue204-final-design-pass.md`.
+  Proceed RED-first, then implement only the approved diagnostics/routing/docs/build contracts;
+  keep the SSI/TCX source chain empty and `NET_INCOME` blocked. Request exact-SHA code review before
+  push; no push or close.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
@@ -993,9 +989,7 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- **#204 — B3 CLOSURE BLOCK (reviewer `8c718a1`, exact `aab752f`).** Docs-only source-precedence
-  and sanitization-matrix correction is required before final design review; preserve the empty
-  source chain, blocked `NET_INCOME`, and no-code/no-push/no-close gate.
+_None._
 
 ## Poller triage (newly triaged)
 
