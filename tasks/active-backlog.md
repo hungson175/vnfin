@@ -1023,14 +1023,14 @@ _None._
 
 ## Next
 
-- **#205 — quarterly operating-profit/ratio triage (SPEC_DRAFTING; reviewer-owned, 2026-08-22).**
-  Reviewer ACK `#3835ac37` says the full tech-lead packet and source/design gate are still pending.
-  Separate follow-on queue packet:
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/205-quarterly-operating-profit-ratio-triage.md`.
-  Hold all production code, push, and close until that packet and gate are delivered. Do not
-  expand #204's exact `0951fbc` design review or implement #205 now. Preserve
-  `operating_profit=BLOCKED` and zero-ratio-fetch until a later source/template/API packet proves
-  exact quarterly identity; the 18/30 breadth target remains caller-side.
+- **#205 — quarterly operating-profit/ratio triage (SPEC_SENT; design-only, 2026-08-22).**
+  Reviewer packet `tasks/205-quarterly-operating-profit-ratio-spec.md` at `19de874`; public
+  spec receipt `issuecomment-5380386366`. Prepare only the docs/source design: 12-cell
+  SSI/TCX × VNDirect/CafeF × statement matrix, exact operating-profit identity,
+  template/cadence/unit/legal proof, quarterly discrete-vs-YTD lineage, derived-input gaps,
+  and qualified/partial/source-gap disposition. Preserve the 26-metric API, zero ratio calls,
+  code `14000` negative, and fail-closed 89/90/91. No production code, push, or close before
+  exact-SHA design PASS; the 18/30 breadth target remains caller-side.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
