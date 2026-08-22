@@ -58,31 +58,47 @@ All three vendors also lack an explicit licence permitting the library's automat
 retrieval plus caller-facing redistribution. The correct current status is therefore
 `SOURCE-GAP CLOSURE`, not “qualified for TDD.”
 
+The table is not a mix-and-match matrix. Each qualification unit is one named provider
+plus its exact history route and same-provider metadata route (or the documented absence
+of one). Legal permission, selector identity, fixed-window/date quality, points/RAW
+semantics, and aligned volume must all pass for that one unit before it can produce a
+result. VPS permission cannot qualify SSI rows; SSI metadata or volume cannot repair a
+VPS or VNDirect history response.
+
 ## 3. Registry and interval guard (future design, not implemented)
 
-Use a private registry-level capability predicate, not a one-line allow-list edit and
-not a public-API branch:
+Use two private capability predicates, not a one-line allow-list edit and not a
+public-API branch:
 
 1. Add exactly one member, `VNFIN`, to `_VALUE_HISTORY_INDICES`. The set union keeps
    `VNFIN` in `_KNOWN_INDEX_IDENTIFIERS`, so `prices.history("VNFIN", ...)` remains a
    typed zero-network rejection.
 2. Normalize once with `canonical_security_symbol`: `" vnfin "` and `"vnfin"` become
    `VNFIN`; malformed/non-string/punctuation selectors fail before network.
-3. Resolve the interval before `apply_interval`. For canonical `VNFIN`, only
+3. Define request capability as `(normalized symbol, interval)`. Resolve the interval
+   before `apply_interval`. For canonical `VNFIN`, only
    `Interval.D1` is capable. Reject every intraday member (`M1/M5/M15/M30/H1`) and
    every coarser/resampled member (`W1/MN1/Q1/Y1`) with one stable typed
    `UnsupportedInterval` diagnostic that states D1-only and zero network calls.
-4. Do not alter headline-index native intraday or coarser-resampling behavior. The
+4. Define separate per-source capability as `(source role, normalized symbol, interval)`.
+   Apply it after request capability and before transport for the default chain and for
+   every injected source chain. A role that cannot enforce the exact VNFIN D1
+   history/metadata route pair is skipped, makes zero physical calls, consumes no
+   `max_attempts` slot, and creates no `SourceAttempt`; request capability alone must
+   not make every source role capable.
+5. Do not alter headline-index native intraday or coarser-resampling behavior. The
    guard must run before the current `apply_interval` branch, otherwise a VNFIN W1
    request could fetch D1 and a VNFIN intraday request could reach inherited adapter
    capabilities.
-5. Keep `index_history_stitched("VNFIN", ..., interval=Interval.D1)` opt-in only. It
+6. Keep `index_history_stitched("VNFIN", ..., interval=Interval.D1)` opt-in only. It
    may pass the registry because its existing public method is already D1-only, but
    it must never be used by strict `index_history` to fill a source gap.
 
-The private predicate must be covered by zero-network tests for all non-D1 intervals,
+The two predicates must be covered by zero-network tests for all non-D1 intervals,
 malformed selectors, padded/lowercase normalization, stock-price denial, the exact
-one-member allow-list delta, and unchanged deny-only/headline behavior.
+one-member allow-list delta, unchanged deny-only/headline behavior, default-chain
+incapable roles, and injected incapable roles. The latter must assert zero calls, no
+attempt-budget consumption, and no fabricated `SourceAttempt`.
 
 ## 4. Strict source/failover contract
 
@@ -101,12 +117,24 @@ supported. For the current evidence:
   skipped before transport and therefore contributes no fabricated `SourceAttempt`.
 
 For an authorized implementation, one logical `index_history` call makes at most one
-bounded full-window history request per capable source. `max_attempts` remains a
-positive per-call budget and counts actual source calls in deterministic order; a
-capability skip does not consume it. A recoverable source failure causes the next
-source to receive the **same** requested range. The first accepted result owns the
-whole series. There is no per-date merge, retry storm, stitching, forward-fill,
+bounded adapter attempt per capable source. `max_attempts` remains a positive per-call
+budget and counts adapter attempts in deterministic order; a capability skip does not
+consume it and creates no attempt record. A recoverable source failure causes the next
+capable source to receive the **same** requested range. The first accepted result owns
+the whole series. There is no per-date merge, retry storm, stitching, forward-fill,
 backfill, interpolation, or hidden fallback to `index_history_stitched()`.
+
+The SSI adapter's one attempt has an independent physical-call budget of exactly two:
+it first calls `/statistics/charts/symbol?symbol=VNFIN`, then calls the history route
+only after metadata succeeds. Metadata must match `code=SUCCESS`, `status=ok`,
+`symbol=ticker=name=VNFIN`, `exchange=listed_exchange=HOSE`, `type=Chỉ số`,
+`timezone=Asia/Ho_Chi_Minh`, `has_daily=true`, and `has_no_volume=false`. Metadata
+transport/HTTP/schema/identity failure ends the attempt without a history call;
+history transport/HTTP/schema/identity/coverage/quality failure ends the attempt after
+the second call. There is no retry, hidden parallel call, cookie/session retention, or
+reuse. Injected HTTP stubs count route invocations while preserving their existing
+string-returning arity. `max_attempts` counts this one adapter attempt, not its two
+physical subrequests.
 
 Every accepted result must satisfy:
 
@@ -115,17 +143,42 @@ Every accepted result must satisfy:
   "points"`, `proxy_for is None`;
 - non-empty, ascending, unique VN-local dates with timezone-aware `PriceBar.time`;
 - finite positive OHLC, `low <= open/close <= high`, and point scale 1.0;
-- integer, non-negative provider volume; and
+- raw volume validated as an aligned non-string `list`/`tuple` of finite,
+  non-negative `int` values excluding `bool`; and
 - bounded sanitized `warnings` and exact ordered `SourceAttempt` records, with no
   URL, response body, credential, raw exception, or unbounded provider text.
 
-Range acceptance is exact for this requested batch: both `2020-05-11` and
-`2026-08-19` must be present in the winning source. Actual internal dates are
-preserved; an unexplained missing date is a diagnostic/source failure, never a
-synthetic bar. Existing `partial_start_coverage`, `partial_end_coverage`,
-`quarantined_invalid_bars`, and duplicate warnings remain explicit if a later design
-chooses a partial capability, but this issue's requested full-span winner cannot
-hide them.
+The fixed-window qualification observation is exact for this batch: both literal
+`2020-05-11` and `2026-08-19` were observed at the endpoints of a candidate response,
+but that does not require those dates for every caller range. Runtime acceptance for
+arbitrary ranges is a separate future contract. It must either name an official
+trading calendar and supported horizon, compare first/last expected trading days plus
+internal expected dates, and test weekend/holiday boundaries, or retain honest
+partial/calendar-horizon diagnostics until that calendar gate is designed. Calendar
+year segments used by `index_history_stitched()` may begin/end on non-trading literal
+dates; their seams must be checked without fabricating endpoint bars. Actual internal
+dates are preserved and an unexplained missing date is a diagnostic/source failure,
+never a synthetic bar. The fixed observation, arbitrary ranges, and stitched segments
+must never be presented as one coverage claim.
+
+Public diagnostic fields are mechanically bounded. `SourceAttempt.reason` and each
+`warnings` entry must be an ASCII token matching
+`^[a-z][a-z0-9_]{0,31}$` (maximum 32 characters) from the exact allow-list
+`ok`, `transport_error`, `invalid_data`, `empty_data`, `identity_mismatch`,
+`metadata_mismatch`, `coverage_gap`, `coverage_partial`, `calendar_horizon`,
+`volume_missing`, `volume_invalid`, `duplicate_conflict`, `unsupported_source`,
+`budget_exhausted`, `body_invalid`, `conflicts_many`, `gaps_many`,
+`source_failures_many`, and `diagnostics_truncated`. No colon suffix, URL, query
+string, response body, cookie, credential, raw exception, date sample, or
+provider/source free text may be copied. Public `SourceAttempt.name` is one of the
+finite role tokens `vps_index`, `ssi_index`, `vndirect_index`, or `custom`; an
+oversized injected name maps to `custom`. Keep at most 8 attempts and 16
+warning tokens in deterministic order. Internal conflict/gap counts are count-only
+and capped at `9999`; above that threshold emit a corresponding `*_many` token rather
+than a number or sample. If more than 15 warnings or 8 attempts would be emitted,
+retain the deterministic prefix and append `diagnostics_truncated` within the cap.
+Large conflict/gap sets and oversized source text must have RED coverage for caps and
+complete text sanitization.
 
 ## 5. Volume contract
 
@@ -134,43 +187,65 @@ declared `has_no_volume=false`. The current shared UDF parser nevertheless turns
 absent or null `v` into zeroes. That shortcut is unsafe for VNFIN and is not part of
 this design.
 
-The future VNFIN-specific parser seam is fail-loud:
+The future VNFIN-specific parser seam is one total fail-loud contract, before the
+shared parser can erase field presence:
 
-- missing `v` → `InvalidData`, recorded as a recoverable source attempt;
-- `v is None` → `InvalidData`, recorded as a recoverable source attempt;
-- non-list, misaligned, fractional, negative, non-finite, or malformed volume →
-  `InvalidData`/quarantine according to the approved row contract, never a zero;
-- a present provider-reported integer zero remains `0`; and
-- a qualified result documents that its volume is provider-reported and does not
-  silently represent missing volume.
+- raw `v` must be present and be a non-string `list` or `tuple` of exactly
+  `len(t)` elements;
+- every element must be a finite, non-negative `int` that is not `bool`;
+- missing, `None`, wrong container type, wrong length, bool, fractional/float,
+  negative, non-finite, or malformed volume raises `InvalidData` for the entire
+  source attempt, records one recoverable failed attempt, and cannot publish any
+  shortened or quarantined VNFIN series; and
+- a genuinely present provider-reported integer zero remains `0` and is not treated
+  as missing.
 
-No optional `volume`, `NaN`, sentinel zero, constructor migration, or public snapshot
-change is authorized. If later evidence proves that the only legally qualified source
+This identical rule applies to direct and default failover paths. A qualified result
+documents that its volume is provider-reported and does not silently represent missing
+volume. No optional `volume`, `NaN`, sentinel zero, row-level quarantine, constructor
+migration, or public snapshot change is authorized.
+
+If later evidence proves that the only legally qualified source
 does not provide volume, stop and open a separate additive typed missing-volume design.
 
 ## 6. Legal/runtime and reopen gate
 
-No-auth access is only a transport observation. It is not a licence. Current legal
-status is `LEGAL_GAP` for VPS, SSI, and VNDirect: the provider terms either restrict
-copying/reproduction/distribution or provide no affirmative route-specific API/data
-reuse grant. The runtime posture remains no cache, no bundled rows, no archive, no
-bulk export, and no public live-value examples.
+No-auth access is only a transport observation. It is not a licence. The bounded probe
+used the repository's desktop-Chrome `User-Agent`
+(`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36`)
+because the provider routes may reject an ordinary client; this browser-UA dependency
+is an access/transport axis, not evidence of public automation permission, and remains
+part of the legal/provider gap. No credential, login, cookie/session reuse, browser automation, challenge-solving,
+proxy bypass, or private route was used. Current legal status is `LEGAL_GAP` for VPS,
+SSI, and VNDirect: the provider terms either restrict copying/reproduction/distribution
+or provide no affirmative route-specific API/data reuse grant. The runtime posture
+remains no cache, no bundled rows, no archive, no bulk export, and no public live-value
+examples.
 
 Reopen to TDD only when all gates below are evidenced in a new review packet:
 
-1. Written provider permission/licence names automated retrieval and explicitly covers
-   OSS use, caller-facing return/redistribution, storage/caching, attribution,
-   rate-limit policy, and commercial restrictions.
-2. A named source binds the requested selector in the response or in a documented
-   same-owner metadata contract that the runtime adapter can enforce without an
-   unbounded hidden request. VNDirect needs a new identity route or equivalent
-   provider-backed contract.
-3. The same source gives exact requested boundaries and a documented/officially
-   accounted internal date set; no conflicting duplicates or invalid OHLC rows are
-   accepted as a clean full-span winner.
-4. The same source returns aligned non-null volume on every successful response.
-5. The registry, strict failover, budget, warning sanitization, public compatibility,
-   offline synthetic fixtures, docs, and full merged-tree gates pass.
+1. One named provider `P` and its exact history/metadata route pair have written
+   permission/licence covering automated retrieval, OSS use, caller-facing
+   return/redistribution, storage/caching, attribution, rate-limit policy, and
+   commercial restrictions. Permission for another provider cannot qualify `P`.
+2. That same `P` route pair binds the requested selector in the response or in a
+   documented same-owner metadata contract that the runtime adapter can enforce with
+   the bounded SSI-style route order. VNDirect needs a new identity route or
+   equivalent provider-backed contract.
+3. For the fixed reviewed observation, that same `P` gives the exact boundaries and a
+   documented/officially accounted internal date set; no conflicting duplicates or
+   invalid OHLC rows are accepted as a clean full-span winner. This does not by itself
+   qualify arbitrary caller ranges or stitched calendar-year segments.
+4. A separate runtime range contract names the official calendar and supported
+   horizon, or explicitly retains partial/calendar-horizon diagnostics. Weekend and
+   holiday boundaries plus stitched year seams are tested without requiring
+   non-trading literal endpoints or fabricating bars.
+5. That same `P` route pair returns aligned non-null volume on every successful
+   response under the total fail-loud contract above; a violation fails the whole
+   attempt and a present integer zero is preserved.
+6. The request/per-source registry guards, strict failover, SSI two-call physical
+   budget, adapter-attempt budget, warning/attempt sanitization caps, public
+   compatibility, offline synthetic fixtures, docs, and full merged-tree gates pass.
 
 ## 7. TDD matrix after a future design PASS only
 
@@ -180,18 +255,37 @@ gate passes, the first code commit must begin with synthetic RED tests for:
 1. baseline VNFIN D1 zero-network rejection, then exact one-member allow-list delta;
 2. lowercase/padded normalization and malformed zero-network failure;
 3. all non-D1 zero-network failures with unchanged headline behavior;
-4. VPS/SSI direct success contracts with fabricated boundaries, points/RAW metadata,
-   exact provider identity, VN timezone, and aligned integer volume;
-5. VNDirect explicit incapable/identity-gap behavior;
-6. primary success, primary recoverable failure then SSI fallback, all-source failure,
-   exact bounded ordered attempts, and no per-date source mixing;
-7. response identity mismatch, metadata absence, malformed envelopes, wrong MIME/body,
+4. direct-success only for a synthetic source whose **same-provider route unit** has
+   passed the written-permission, response-identity, coverage/quality, points/RAW,
+   and total-volume gates. The SSI success fixture must perform metadata then history
+   in that order and stay within two physical calls. The observed VPS duplicate/
+   quality fixture remains fail-closed; it is not a direct-success fixture merely
+   because its transport returned HTTP 200;
+5. default and injected per-source capability skips for VNDirect/other incapable roles,
+   proving zero physical calls, no attempt-budget consumption, and no fabricated
+   `SourceAttempt`;
+6. SSI metadata mismatch/transport failure with zero history call, history failure after
+   metadata, exact two-call ceiling, no retry, no cookie/session reuse, and preserved
+   injected string-stub arity;
+7. primary success, primary recoverable failure then SSI fallback, all-source failure,
+   exact bounded ordered adapter attempts, separate SSI physical-call accounting, and
+   no per-date source mixing;
+8. response identity mismatch, metadata absence, malformed envelopes/body,
    misaligned arrays, invalid OHLC, duplicate/conflicting dates, and out-of-range
-   padding;
-8. missing/null/fractional/negative volume versus present integer zero;
-9. exact boundary coverage, no fill/reconstruction, warning disclosure, and strict
-   versus stitched separation; and
-10. API/docs/build/blacklist/secret/diff gates on the merged tree.
+   padding. MIME is **not** an enforceable VNFIN runtime invariant in this design:
+   injected transport returns body text and preserves its existing string-stub API, so
+   no wrong-MIME assertion is made. A future response-metadata seam would require a
+   separate compatibility review;
+9. missing/null/wrong-type/misaligned/bool/fractional/negative/non-finite/malformed
+   volume all fail the entire source attempt, while a present integer zero remains 0;
+10. fixed-window endpoint and internal-gap checks separately from arbitrary caller
+    ranges, weekend/holiday boundaries, calendar-horizon diagnostics, and stitched
+    calendar-year seams; no fill/reconstruction and strict versus stitched separation;
+11. warning/attempt token grammar, 8-attempt/16-warning caps, `9999` count cap and
+    `*_many` overflow token, deterministic truncation, oversized source text, and
+    large conflict/gap sets with complete URL/body/cookie/credential/exception
+    sanitization; and
+12. API/docs/build/blacklist/secret/diff gates on the merged tree.
 
 This document itself requests only source/design review. It does not authorize TDD,
 production code, push, or issue closure.
