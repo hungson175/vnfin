@@ -601,21 +601,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#203 — corporate-action seed discovery (ACCEPTED, source-gated, 2026-08-22).** Reviewer packet
-  `tasks/203-corp-action-seed-discovery-spec.md` at reviewer commit `c75a86e`. Design/source gate is
-  limited to official VSDC-owned no-login routes with the mandatory repository blacklist applied:
-  prove response-backed issuer identity, legal/runtime/redistribution posture, bounded discovery/
-  crawl/retry budgets, and no-false-absence diagnostics. **No production code, push, or close before
-  design PASS.**
-  **Design BLOCK at `fa8a05a`** (`reviews/review-202608221623-issue203-design-source-gate.md`,
-  reviewer `f2e9e51`): correction is docs-only. Record legacy C4 scan as active, keep the new C1-C3
-  discovery chain empty, remove speculative public/bulk API and changed `max_fetch` semantics, and
-  make transport/identity/outcome/logical-vs-physical gaps conjunctive reopen evidence. No code,
-  push, or close.
-  **Corrected re-review BLOCK at `2291eee`** (`reviews/review-202608221634-issue203-source-gap-correction-rereview.md`,
-  reviewer `0d9c705`): one docs-only wording round remains. Scope NO_SOURCE/NO_RUNTIME/empty-chain
-  claims to new C1-C3; remove the residual 250ms/25s/one-retry policy; call probe ceilings bounded
-  observations; state no working new reliable C1-C3 implementation. No code, push, or close.
+- **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
+  `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
+  `cfb9ebebdf2f035874b41c48cab13dc8252044d4..45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`.
+  `origin/master` is verified at the exact anchor; changed paths are only research/design/backlog.
+  Public resolution `issuecomment-5379610246`; issue re-read `CLOSED`/`COMPLETED` at
+  `2026-08-22T09:45:15Z`. New C1-C3 chain remains empty/disabled; legacy C4 remains active and
+  non-authoritative; no new production capability or reliable corporate-action claim. #204 separate.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
