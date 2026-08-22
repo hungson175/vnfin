@@ -605,7 +605,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   Reviewer tech-lead packet `tasks/201-vn-equity-foreign-flow-spec.md` at reviewer commit
   `62e1e32`; public triage `issuecomment-5378368603`. Research lawful no-auth daily sources for
   HOSE/HNX/UPCoM, record source/legal/coverage evidence and exact single-symbol + bulk API design,
-  then request reviewer design gate. **No production code, push, or close before PASS.**
+  then request reviewer design gate. **No production code, push, or close before PASS.** Reviewer
+  design BLOCK at `e5ed626` (`reviews/review-202608221350-issue201-design-gate.md`): correction round
+  must become source-gap closure unless written owner permission exists; remove the response-unidentified
+  HOSE fallback, downgrade HNX response-date identity, label API future/non-authoritative, and correct
+  status axes, signed-net, coverage, VN30 context, request budget, and verification/reopen contracts.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
