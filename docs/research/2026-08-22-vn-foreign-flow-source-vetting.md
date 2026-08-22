@@ -473,9 +473,10 @@ raw-response hash; raw output remains ignored and private.
 For HNX and UPCoM, body acceptance is route-specific: after exact MIME normalization to the lower-
 case media type before any `;` parameters, one report table must contain one heading row with all
 six exact normalized fields (`Security code`, `ISIN code`, `Buy volume`, `Buy value`, `Sell volume`,
-`Sell value`) and a distinct data row with at least six data cells. A generic document, maintenance
-page, unrelated table, off-table field phrases, or MIME such as `text/htmlx` is rejected and
-produces no payload observations.
+`Sell value`) and a distinct non-heading `td` row with non-empty values at those six mapped
+columns. A generic document, maintenance page, unrelated table, off-table field phrases, or MIME
+such as `text/htmlx` is rejected and produces no payload observations. A valid report table nested
+inside layout HTML is allowed when this table-local contract passes.
 
 ```bash
 set -euo pipefail
@@ -662,15 +663,31 @@ parser.close()
 
 def report_table_ok(table):
     for heading_index, heading_row in enumerate(table["rows"]):
-        heading_cells = {cell for _tag, cell in heading_row}
-        if not REQUIRED_HEADINGS.issubset(heading_cells):
+        heading_positions = {}
+        duplicate_heading = False
+        for column, (_tag, cell) in enumerate(heading_row):
+            if cell in REQUIRED_HEADINGS:
+                if cell in heading_positions:
+                    duplicate_heading = True
+                heading_positions[cell] = column
+        if duplicate_heading or set(heading_positions) != REQUIRED_HEADINGS:
             continue
         for data_index, data_row in enumerate(table["rows"]):
             if data_index == heading_index:
                 continue
-            data_cells = [cell for tag, cell in data_row if tag == "td"]
-            if len(data_cells) >= len(REQUIRED_HEADINGS):
-                return True
+            if any(tag != "td" for tag, _cell in data_row):
+                continue
+            if max(heading_positions.values()) >= len(data_row):
+                continue
+            data_values = {
+                heading: data_row[column][1]
+                for heading, column in heading_positions.items()
+            }
+            if any(not value for value in data_values.values()):
+                continue
+            if any(data_values[heading] == heading for heading in REQUIRED_HEADINGS):
+                continue
+            return True
     return False
 
 shape_ok = not parser.invalid and not parser.table_stack and any(
@@ -874,5 +891,8 @@ The offline mock gate includes a generic HNX/UPCoM maintenance body such as
 outside that table, and wrong media types `text/htmlx`, `text/html:evil`, and
 `application/json:evil`; each must retain `transport_accepted=true` only when its HTTP envelope is
 otherwise valid, but set `body_accepted=false`, `accepted=false`, and emit no report-field
-observations. A single table containing the exact heading row and distinct data row is the only
-HTML body accepted by this probe sketch.
+observations. The same-table negatives also include six empty `td` cells, whitespace-only cells,
+heading labels repeated as a `td` row, and populated cells shifted away from the required heading
+columns. A valid report table nested inside layout HTML remains an accepted positive when its
+mapped cells are populated. A single table containing the exact heading row and distinct data row
+is the only HTML body accepted by this probe sketch.
