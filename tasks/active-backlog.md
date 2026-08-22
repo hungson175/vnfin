@@ -624,6 +624,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `e365b14` resolves the substantive contracts, but one minimal docs-only correction remains for
   route-specific HNX/UPCoM report-shape plus exact normalized MIME rejection, and runtime tuple-of-
   strings warning input with empty derived-prefix rejection. **No code, push, or close.**
+  Exact closure BLOCK at reviewer `4d91560` (`reviews/review-202608221518-issue201-exact-closure-review.md`):
+  two minimal docs-only fixes remain—bind all six exact headings plus a distinct data row to one
+  report table, and parse the complete `Content-Type` value after its first colon so colon-suffixed
+  MIME values fail closed. **Keep the empty chain and no-code/no-push/no-close gate.**
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
