@@ -214,10 +214,11 @@ bound is an additional operational concern.
   attribution, or redistribution terms were found in the inspected official pages/API
   document.
 * No API key, bearer token, login, or `Authorization` header was used in the successful probe.
-  No published request-rate limit was located. Any future client must default to sequential
-  single-symbol/bulk paging; concurrency above one is explicit opt-in only after written provider
-  terms authorize it, with a hard maximum of four, a shared request/page/attempt budget, bounded
-  retries, and no persistent cache.
+  No published request-rate limit was located. This packet authorizes only strict sequential
+  single-symbol/bulk paging (`max_concurrency=1`); it makes no concurrency-above-one promise.
+  Parallel execution requires written provider terms and a separately reviewed deterministic
+  wave/barrier contract, with a shared request/page/attempt ledger, bounded retries, and no
+  persistent cache.
 * Intermittent HTTP 500 responses were observed on oversized/less stable route probes and by an
   independent official-source verification; retry only bounded transient failures and preserve
   every attempt in diagnostics. There is no SLA evidence.
@@ -462,13 +463,15 @@ manifest. Strict TLS is mandatory; no `--insecure` or `-k` flag is permitted.
 
 The sanitized manifest records client/package/repository versions, timestamp/timezone, the exact
 method/URL/query/form/body/header request shape, explicit absence of Cookie/Authorization/API-key
-material, curl exit code, accepted HTTP status, effective URL, redirect rejection, content type,
-cache-control, byte count, a canonical SHA-256 digest of sanitized aggregate metadata, row count,
-raw date bounds where available, and whether response-backed identity/date markers were observed.
-It contains no raw-response hash; raw output remains ignored and private.
+material, curl exit code, HTTP status, effective URL, redirect rejection, expected content type,
+`transport_accepted`, `body_accepted`, final `accepted`, cache-control, byte count, a canonical
+SHA-256 digest of sanitized aggregate metadata, row/field observations only after acceptance,
+date-bound computation status, and syntactic versus authoritative date-marker status. The complete
+sanitized aggregate is embedded in `manifest.txt` between explicit delimiters. It contains no
+raw-response hash; raw output remains ignored and private.
 
 ```bash
-set -u
+set -euo pipefail
 out=/tmp/vnfin-201-probes/$(date +%Y%m%d-%H%M%S)
 mkdir -p "$out"
 manifest="$out/manifest.txt"
@@ -520,28 +523,82 @@ cat > "$out/requests.json" <<'JSON'
 JSON
 cat "$out/requests.json" >> "$manifest"
 
-printf 'name\tcurl_exit_code\thttp_status\teffective_url\taccepted\tredirect_rejected\n' > "$out/status.tsv"
+printf 'name\tcurl_exit_code\thttp_status\teffective_url\tredirect_rejected\tcontent_type\texpected_content_type\tbody_bytes\ttransport_accepted\tbody_accepted\taccepted\n' > "$out/status.tsv"
 
 record_status() {
   name="$1"
   requested_url="$2"
-  curl_exit_code="$3"
+  output_file="$3"
+  expected_content_type="$4"
+  curl_exit_code="$5"
   http_status=000
   effective_url=not_observed
   if IFS=$'\t' read -r observed_status observed_url < "$out/$name.transport"; then
-    [ -n "${observed_status:-}" ] && http_status="$observed_status"
-    [ -n "${observed_url:-}" ] && effective_url="$observed_url"
+    if [ -n "${observed_status:-}" ]; then
+      http_status="$observed_status"
+    fi
+    if [ -n "${observed_url:-}" ]; then
+      effective_url="$observed_url"
+    fi
+  fi
+  body_bytes=0
+  if [ -f "$out/$output_file" ]; then
+    body_bytes=$(wc -c < "$out/$output_file")
+  fi
+  content_type=$(awk -F: 'BEGIN{IGNORECASE=1} /^content-type:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}' "$out/$name.headers")
+  redirect_rejected=false
+  case "$http_status" in 3??) redirect_rejected=true ;; esac
+  if [ "$effective_url" != "$requested_url" ]; then redirect_rejected=true; fi
+  if [ "$curl_exit_code" -eq 47 ]; then redirect_rejected=true; fi
+  transport_accepted=false
+  if [ "$curl_exit_code" -eq 0 ] \
+     && [ "$http_status" -eq 200 ] \
+     && [ "$effective_url" = "$requested_url" ] \
+     && [ "$redirect_rejected" = false ]; then
+    transport_accepted=true
+  fi
+  body_accepted=false
+  if [ "$transport_accepted" = true ] \
+     && [ "$body_bytes" -gt 0 ] \
+     && [[ "$content_type" == "$expected_content_type"* ]]; then
+    case "$name" in
+      hose)
+        if python -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p.get("success") is True and isinstance((p.get("data") or {}).get("list"), list)' "$out/$output_file"; then
+          body_accepted=true
+        fi
+        ;;
+      hnx|upcom)
+        if python - "$out/$output_file" <<'PY'
+from html.parser import HTMLParser
+import pathlib
+import sys
+
+class ShapeParser(HTMLParser):
+    route_tags = 0
+
+    def handle_starttag(self, tag, _attrs):
+        if tag.lower() in {"html", "body", "table", "tr"}:
+            self.route_tags += 1
+
+parser = ShapeParser()
+parser.feed(pathlib.Path(sys.argv[1]).read_text(errors="replace"))
+parser.close()
+raise SystemExit(0 if parser.route_tags else 1)
+PY
+        then
+          body_accepted=true
+        fi
+        ;;
+    esac
   fi
   accepted=false
-  case "$http_status" in
-    2??)
-      [ "$curl_exit_code" -eq 0 ] && [ "$effective_url" = "$requested_url" ] && accepted=true
-      ;;
-  esac
-  redirect_rejected=false
-  [ "$curl_exit_code" -eq 47 ] && redirect_rejected=true
-  printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
-    "$name" "$curl_exit_code" "$http_status" "$effective_url" "$accepted" "$redirect_rejected" \
+  if [ "$transport_accepted" = true ] && [ "$body_accepted" = true ]; then
+    accepted=true
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$name" "$curl_exit_code" "$http_status" "$effective_url" "$redirect_rejected" \
+    "$content_type" "$expected_content_type" "$body_bytes" "$transport_accepted" \
+    "$body_accepted" "$accepted" \
     >> "$out/status.tsv"
 }
 
@@ -549,24 +606,29 @@ run_probe() {
   name="$1"
   requested_url="$2"
   output_file="$3"
-  shift 3
+  expected_content_type="$4"
+  shift 4
   : > "$out/$name.headers"
   : > "$out/$name.transport"
   : > "$out/$name.stderr"
-  curl --proto '=https' --proto-redir '=https' --fail --silent --show-error \
+  if curl --proto '=https' --proto-redir '=https' --fail --silent --show-error \
     --max-redirs 0 --max-time 25 \
     "$@" -D "$out/$name.headers" \
     --write-out '%{http_code}\t%{url_effective}\n' \
     "$requested_url" -o "$out/$output_file" \
-    > "$out/$name.transport" 2> "$out/$name.stderr"
-  curl_exit_code=$?
-  record_status "$name" "$requested_url" "$curl_exit_code"
+    > "$out/$name.transport" 2> "$out/$name.stderr"; then
+    curl_exit_code=0
+  else
+    curl_exit_code=$?
+  fi
+  record_status "$name" "$requested_url" "$output_file" "$expected_content_type" "$curl_exit_code"
 }
 
 # Official HOSE route; no Authorization, Cookie, or API key.
 run_probe hose \
   'https://api.hsx.vn/mk/api/v1/market/securities/tradingresult/FPT?fromDate=2018-01-01&toDate=2026-08-21&pageIndex=1&pageSize=20' \
   hose.json \
+  application/json \
   --header 'Accept: application/json' \
   --header 'User-Agent: vnfin-201-probe/1'
 
@@ -575,6 +637,7 @@ run_probe hose \
 run_probe hnx \
   'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_Listed' \
   hnx.html \
+  text/html \
   --header 'Accept: text/html' \
   --header 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
   --header 'User-Agent: vnfin-201-probe/1' \
@@ -590,6 +653,7 @@ run_probe hnx \
 run_probe upcom \
   'https://hnx.vn/ModuleReportStockETFs/Report_MD_TradingResult/ListData_UPCoM' \
   upcom.html \
+  text/html \
   --header 'Accept: text/html' \
   --header 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
   --header 'User-Agent: vnfin-201-probe/1' \
@@ -628,63 +692,70 @@ def read_json(path: pathlib.Path):
 def status_rows():
     rows = {}
     for line in (out / "status.tsv").read_text().splitlines()[1:]:
-        name, rc, http, effective, accepted, redirect = line.split("\t", 5)
+        name, rc, http, effective, redirect, content_type, expected_content_type, body_bytes, transport, body, accepted = line.split("\t", 10)
         rows[name] = {
             "curl_exit_code": int(rc),
             "http_status": int(http),
             "effective_url": effective,
-            "accepted": accepted == "true",
             "redirect_rejected": redirect == "true",
+            "content_type": content_type,
+            "expected_content_type": expected_content_type,
+            "body_bytes": int(body_bytes),
+            "transport_accepted": transport == "true",
+            "body_accepted": body == "true",
+            "accepted": accepted == "true",
         }
     return rows
 
 statuses = status_rows()
-hose = read_json(out / "hose.json") or {}
+accepted_hose = statuses["hose"]["accepted"]
+hose = read_json(out / "hose.json") if accepted_hose else None
+hose = hose if isinstance(hose, dict) else {}
 rows = ((hose.get("data") or {}).get("list") or [])
-report_dates = [
-    row.get("reportDate")
-    for row in rows
-    if isinstance(row, dict)
-    and isinstance(row.get("reportDate"), int)
-    and not isinstance(row.get("reportDate"), bool)
-]
 
 aggregate = {
     "probe_status": statuses,
     "hose_success": hose.get("success"),
     "hose_row_count": len(rows),
     "hose_fields": sorted({k for row in rows if isinstance(row, dict) for k in row}),
-    "hose_has_symbol": bool(rows) and all(isinstance(row, dict) and "symbol" in row for row in rows),
-    "hose_has_reportDate": bool(rows) and all(isinstance(row, dict) and "reportDate" in row for row in rows),
-    "hose_reportDate_raw_bounds": (
-        {"min": min(report_dates), "max": max(report_dates)} if report_dates else None
+    "hose_has_symbol": accepted_hose and bool(rows) and all(isinstance(row, dict) and "symbol" in row for row in rows),
+    "hose_has_reportDate": accepted_hose and bool(rows) and all(isinstance(row, dict) and "reportDate" in row for row in rows),
+    "hose_reportDate_token_count": sum(
+        isinstance(row, dict) and isinstance(row.get("reportDate"), int)
+        and not isinstance(row.get("reportDate"), bool)
+        for row in rows
     ),
+    "hose_returned_date_bounds": "not_computed_owner_semantics_unresolved",
     "hose_reportDate_semantics": "observed_integral_or_epoch_like_unresolved",
     "hnx_shape": {},
 }
 for name in ("hnx", "upcom"):
     path = out / f"{name}.html"
-    html = path.read_text(errors="replace") if path.is_file() and path.stat().st_size else ""
+    accepted_html = statuses[name]["accepted"]
+    html = path.read_text(errors="replace") if accepted_html and path.is_file() and path.stat().st_size else ""
     hnx_status = statuses[name]
     marker = (
-        "not_observed_tls_chain_failure"
-        if not html and hnx_status["curl_exit_code"] == 60
-        else "not_observed_no_body"
-        if not html
+        "not_observed_transport_rejected"
+        if not hnx_status["transport_accepted"]
+        else "not_observed_empty"
+        if hnx_status["body_bytes"] == 0
+        else "not_observed_body_rejected"
+        if not hnx_status["body_accepted"]
         else "present"
         if re.search(r"(?:sessionDate|tradingDate|data-session-date)", html, re.I)
         else "absent"
     )
     aggregate["hnx_shape"][name] = {
         "bytes": len(html.encode()),
-        "row_like_tags": len(re.findall(r"<tr\b", html, re.I)),
+        "row_like_tags": len(re.findall(r"<tr\b", html, re.I)) if accepted_html else 0,
         "has_security_code": bool(html) and bool(re.search(r"security\s+code", html, re.I)),
         "has_isin": bool(html) and bool(re.search(r"isin", html, re.I)),
         "has_buy_volume": bool(html) and bool(re.search(r"buy\s+volume", html, re.I)),
         "has_sell_volume": bool(html) and bool(re.search(r"sell\s+volume", html, re.I)),
-        "returned_date_bounds": None,
-        "authoritative_session_date_marker": marker,
-        "identity_assertion": "not_applicable_unfiltered_probe",
+        "returned_date_bounds": "not_computed_owner_semantics_unresolved",
+        "syntactic_date_marker": marker,
+        "authoritative_date_marker": "unresolved_owner_evidence",
+        "identity_assertion": "not_applicable_unfiltered_probe" if accepted_html else "not_observed_rejected_body",
     }
 canonical = json.dumps(aggregate, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
 (out / "sanitized-aggregate.json").write_text(canonical + "\n")
@@ -692,9 +763,15 @@ canonical = json.dumps(aggregate, ensure_ascii=True, sort_keys=True, separators=
     hashlib.sha256(canonical.encode()).hexdigest() + "\n"
 )
 PY
-printf 'sanitized_aggregate_sha256=%s\n' "$(cat "$out/sanitized-aggregate.sha256")" >> "$manifest"
+printf '[sanitized-aggregate]\n' >> "$manifest"
+cat "$out/sanitized-aggregate.json" >> "$manifest"
+printf '\n[/sanitized-aggregate]\n' >> "$manifest"
+printf 'sanitized_aggregate_sha256=%s\nmanifest_complete=true\n' \
+  "$(cat "$out/sanitized-aggregate.sha256")" >> "$manifest"
 ```
 
 The procedure must be rerun only after a source-owner response or a materially changed official
-contract. A successful HTTP response is recorded as reachability evidence only; it does not
-promote a candidate, authorize reuse, or establish unit/date/identity semantics.
+contract. A transport/body-accepted response is recorded as reachability and shape evidence only; a
+2xx status other than the exact required `200` (including an empty `204`) is transport-rejected, and
+a rejected transport or body produces no payload observations. Neither outcome promotes a
+candidate, authorizes reuse, or establishes unit/date/identity semantics.

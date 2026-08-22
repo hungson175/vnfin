@@ -1,8 +1,8 @@
 # #201 design note — Vietnamese equity foreign-investor daily flow
 
-**Status:** `BLOCKED — source-gap closure; no source enabled; final precision round pending re-review`
-**Reviewer gate:** correction re-gate BLOCK at reviewer commit `8136dcf`; report
-`reviews/review-202608221418-issue201-design-regate.md`
+**Status:** `BLOCKED — source-gap closure; no source enabled; final consistency round pending re-review`
+**Reviewer gate:** final design BLOCK at reviewer commit `1fadc58`; report
+`reviews/review-202608221438-issue201-final-design-review.md`
 **Issue:** #201; public triage `issuecomment-5378368603`
 **Research evidence:** `docs/research/2026-08-22-vn-foreign-flow-source-vetting.md`
 **Clean-room:** primary official exchange/regulator pages and first-party UI/Swagger inspection only; the mandatory repository blacklist was applied to every search and no excluded material was opened or used.
@@ -101,8 +101,8 @@ Preflight rules, before any network call:
    `ForeignFlowCoverageError(code="exchange_unavailable")` naming the board and evidence-backed
    gap; it never falls through to another exchange. `coverage_gap` is reserved for an attempted
    source that cannot satisfy the requested coverage.
-6. `max_source_attempts` and `max_transport_retries` are positive bounded integers; their
-   diagnostics are distinct and redacted.
+6. `max_source_attempts` is an integer in `1..2`; `max_transport_retries` is an integer in
+   `0..1`. Their diagnostics are distinct and redacted.
 
 The result is immutable, one-source homogeneous, and never fills non-trading dates, invents
 listing history, or merges source segments.
@@ -141,7 +141,7 @@ class ForeignFlowClient:
         *,
         exchange: Exchange | None = None,  # only when every input carries its own exchange
         require_full: bool = False,
-        max_concurrency: int = 1,
+        max_concurrency: Literal[1] = 1,
         max_symbols: int = 100,
         max_total_source_attempts: int = 100,
         max_total_pages: int = 5_000,
@@ -164,7 +164,7 @@ def foreign_flow_bulk(
     timeout: float = 25.0,
     max_source_attempts: int = 2,
     max_transport_retries: int = 1,
-    max_concurrency: int = 1,
+    max_concurrency: Literal[1] = 1,
     max_symbols: int = 100,
     max_total_source_attempts: int = 100,
     max_total_pages: int = 5_000,
@@ -202,9 +202,10 @@ the requested exchange and units:
   is never a quality tie-break.
 * `require_full=True` rejects all partial results with `coverage_gap`. No source rows
   are stitched, appended, or used to repair another source.
-* Attempt statuses are retained in lowercase: `disabled`, `transport_failed`,
-  `schema_rejected`, `identity_rejected`, `units_rejected`, `empty`, `coverage_rejected`,
-  `valid_partial`, or `valid_full`.
+* Attempt statuses are retained in lowercase: `transport_failed`, `schema_rejected`,
+  `identity_rejected`, `units_rejected`, `empty`, `coverage_rejected`, `valid_partial`, or
+  `valid_full`. A disabled or capability-incompatible source is not an attempt and is omitted from
+  the attempt tuple.
 * If all compatible sources fail, raise the one public flow exception,
   `ForeignFlowCoverageError(code="all_sources_failed")`, carrying immutable, redacted attempts.
   An unsupported board never falls through to another board.
@@ -227,9 +228,14 @@ class ForeignFlowSource(Protocol):
         exchange: Exchange,
         interval: Interval,
         require_full: bool,
-        request_budget: RequestBudget,
+        budget_ledger: RequestBudgetLedger,
     ) -> ForeignFlowHistory: ...
 ```
+
+`budget_ledger` is the single invocation-owned ledger created by the bulk scheduler and passed
+unchanged to every compatible source. A source must use it for every discovered logical page and
+physical transport call; it may not copy limits into a private budget or maintain an unshared retry
+counter.
 
 > **Future, non-authoritative design sketch — not approved for implementation.** Every type alias,
 > model, field, warning token, exception, dataset identifier, and invariant below is provisional
@@ -376,23 +382,35 @@ class ForeignFlowCoverage:
     internal_gap_count: int | None
     internal_gap_status: Literal["none", "known", "unobservable"]
     publication_cutoff: date | None
+    publication_lag_status: Literal["confirmed", "unresolved"]
 ```
 
 `reasons` is deduplicated and sorted by `CoverageReasonOrder`; `complete_requested_sessions` is
 the only reason allowed on a `full` result. `served_session_count == len(rows)` always. A `full`
 result requires `expected_session_count` to be known, `served_session_count` equal to it,
 `uncovered_session_count == 0`, no missing or internal-gap dates, `internal_gap_count == 0`, and a
-publication check that proves the requested end is not beyond the owner-confirmed cutoff. A
-`partial_known` result requires a non-null expected and uncovered count, at least one reason other
-than `coverage_unverified`, and `uncovered_session_count == expected_session_count -
-served_session_count`; `missing_session_dates` contains exactly the known uncovered dates. A
-`partial_unknown` result has valid rows but cannot prove complete session coverage, so both expected
-and uncovered counts are `None`, and `coverage_unverified` is present. No status may contain a
+publication check with `publication_lag_status == "confirmed"`, a non-null
+`publication_cutoff`, and `requested_end <= publication_cutoff`. A `partial_known` result requires
+a non-null expected and uncovered count, `internal_gap_status` of `none` or `known`, a non-null
+internal-gap count, at least one reason other than `coverage_unverified`, and
+`uncovered_session_count == expected_session_count - served_session_count`.
+`missing_session_dates` contains exactly the known uncovered dates: it is sorted and unique and
+`len(missing_session_dates) == uncovered_session_count`; `internal_gap_dates` is also sorted and
+unique and is a subset of `missing_session_dates`. A `partial_unknown` result has valid rows but
+cannot prove complete session coverage, so both expected and uncovered counts are `None`,
+`missing_session_dates == ()`, and `coverage_unverified` is present. It may report an
+approved-calendar internal gap only under the same `internal_gap_status == "known"`/count/date
+invariant; an observed no-gap calendar uses `"none"` with zero and empty dates, and an
+unobservable calendar uses `"unobservable"` with a null count and empty dates. These fields do not
+enter ranking while the expected count is unknown.
+Unresolved publication lag is represented explicitly by `publication_lag_status == "unresolved"`
+with `publication_cutoff is None`. A confirmed lag status requires a non-null cutoff;
+`publication_lag` as a reason is allowed only with confirmed status. No status may contain a
 negative count or duplicate date. `internal_gap_status == "known"` requires a non-null
 `internal_gap_count == len(internal_gap_dates)`; `"none"` requires zero and an empty tuple; and
-`"unobservable"` requires a null count and an empty tuple. `publication_cutoff` is required when
-`publication_lag` is a reason. A page-budget stop is a typed failure, not a partial result. An
-approved calendar treats weekends/holidays as non-sessions, never as missing rows.
+`"unobservable"` requires a null count and an empty tuple, so it is never legal on `partial_known`.
+A page-budget stop is a typed failure, not a partial result. An approved calendar
+treats weekends/holidays as non-sessions, never as missing rows.
 
 The deterministic ranking key is larger-is-better and uses a lower configured integer as the
 higher source priority:
@@ -413,8 +431,11 @@ def coverage_rank(coverage: ForeignFlowCoverage, source_priority: int) -> tuple[
 ```
 
 The publication cutoff is the latest owner-confirmed complete session. A request ending after it
-may be `partial_known` with `publication_lag`; it may not be `full` merely because a response is
-non-empty. Missing dates are never filled or silently converted into an internal-gap count.
+may be `partial_known` with `publication_lag`; an unresolved cutoff remains `partial_unknown` and
+may not be presented as a known lag date. Every successfully returned partial history contains
+exactly one corresponding coverage warning: `coverage_partial_known` for `partial_known` or
+`coverage_partial_unknown` for `partial_unknown`; other bounded orthogonal warnings may coexist.
+Missing dates are never filled or silently converted into an internal-gap count.
 
 ```python
 ForeignFlowWarning = Literal[
@@ -460,7 +481,7 @@ symbol, exchange, interval, frequency, source, dataset_id, source_type,
 requested_start, requested_end, served_start, served_end,
 coverage_status, coverage_reasons, expected_session_count, served_session_count,
 uncovered_session_count, missing_session_dates, internal_gap_dates, internal_gap_count,
-internal_gap_status, publication_cutoff,
+internal_gap_status, publication_cutoff, publication_lag_status,
 volume_unit, value_unit, currency, fetched_at_utc
 ```
 
@@ -478,7 +499,7 @@ row stitching is forbidden.
 
 ```python
 ForeignFlowAttemptStatus = Literal[
-    "disabled", "transport_failed", "schema_rejected", "identity_rejected",
+    "transport_failed", "schema_rejected", "identity_rejected",
     "units_rejected", "empty", "coverage_rejected", "valid_partial", "valid_full",
 ]
 
@@ -508,10 +529,11 @@ class ForeignFlowSourceAttempt:
 `source_attempt_number` counts candidate source selections. `transport_requests` counts
 actual HTTP requests, including bounded retries. They are never conflated. Transport errors,
 HTTP statuses, URLs, symbols, and provider messages are redacted to bounded public error codes.
-All status literals are lowercase. A failed/disabled/empty/rejected attempt has one
-`ForeignFlowFailureCode`; `valid_partial` must use `accepted_partial` and `valid_full` must use
-`accepted_full`. Capability skips may use `None` and consume no budget. A success never carries a
-failure code, and a failure never carries a success reason.
+All status literals are lowercase. Every recorded attempt has one non-null reason code: a
+failed/empty/rejected attempt has one `ForeignFlowFailureCode`; `valid_partial` must use
+`accepted_partial` and `valid_full` must use `accepted_full`. A capability-incompatible or disabled
+candidate is omitted before attempt construction, consumes no budget, and has no reason code. A
+success never carries a failure code, and a failure never carries a success reason.
 
 The future public coverage error is named and bounded:
 
@@ -522,12 +544,15 @@ class ForeignFlowCoverageError(VnfinError):
     requested_start: date
     requested_end: date
     code: ForeignFlowFailureCode
+    attempts: tuple[ForeignFlowSourceAttempt, ...]
 ```
 
 `ForeignFlowCoverageError` is the one public domain exception for this future flow. Its bounded
 codes are `exchange_unavailable` when a valid board has no enabled source, `coverage_gap` when an
 attempted source is insufficient or `require_full=True` rejects a partial, `all_sources_failed`
 when compatible candidates all fail structurally, and the dimension-specific budget codes below.
+`attempts` is the immutable, canonical-order tuple used to explain the error; it is empty for
+`exchange_unavailable` because no source was eligible to run.
 Invalid/omitted/conflicting board input raises shared preflight `InvalidData` before any budget or
 HTTP. Internal source failures are normalized into attempt codes rather than exposing a competing
 public exception vocabulary. Per-symbol bulk handling catches only `ForeignFlowCoverageError` and
@@ -539,7 +564,7 @@ Failure and warning mapping is deterministic and finite:
 | Situation | Public result | Attempt/failure code | Warning tokens |
 |---|---|---|---|
 | Invalid, omitted, or conflicting board | whole-call preflight `InvalidData`; zero HTTP | none | none |
-| Valid board with no enabled compatible source | `ForeignFlowCoverageError` | `exchange_unavailable` | none; source-gap evidence remains in the message code only |
+| Valid board with no enabled compatible source | `ForeignFlowCoverageError` | `exchange_unavailable` | none; source-gap evidence is represented by the bounded code only |
 | Compatible source attempted but rows/coverage cannot satisfy the request, or `require_full=True` rejects a partial | item failure or `ForeignFlowCoverageError` | `coverage_gap` | `coverage_partial_known` or `coverage_partial_unknown` only when a partial result is retained for diagnostics |
 | All compatible sources structurally fail | `ForeignFlowCoverageError` | `all_sources_failed` | none; immutable attempts carry the bounded reasons |
 | `as_of is None` membership context | successful bulk context or item result | none | exactly one `current_snapshot_only` |
@@ -552,12 +577,16 @@ The limits are immutable, but each bulk invocation owns a mutable, atomic ledger
 shared across client calls or persisted between invocations:
 
 ```python
+ForeignFlowSourceKey = tuple[Exchange, str, ForeignFlowSourceName]
+ForeignFlowPageKey = tuple[Exchange, str, ForeignFlowSourceName, int]
+ForeignFlowRequestKey = tuple[ForeignFlowPageKey, int]
+
 @dataclass(frozen=True)
 class RequestBudget:
     max_source_attempts: int = 100
     max_pages: int = 5_000
     max_requests: int = 6_000
-    max_transport_retries_per_request: int = 1
+    max_transport_retries_per_page: int = 1
 
 
 @dataclass
@@ -566,28 +595,42 @@ class RequestBudgetLedger:
     used_source_attempts: int = 0
     used_pages: int = 0
     used_requests: int = 0
-    used_retries: int = 0
+    reserved_source_attempts: set[ForeignFlowSourceKey]
+    reserved_pages: set[ForeignFlowPageKey]
+    reserved_requests: set[ForeignFlowRequestKey]
     # One lock/transaction protects every check-and-increment operation.
     _atomic_reservation_lock: Lock
 
-    def reserve_source_attempt(self, key: ForeignFlowKey, source: ForeignFlowSourceName) -> None: ...
-    def reserve_page(self, key: ForeignFlowKey, source: ForeignFlowSourceName, page: int) -> None: ...
-    def reserve_request(self, retry: bool) -> None: ...
+    def reserve_source_attempt(self, source_key: ForeignFlowSourceKey) -> None: ...
+    def reserve_page(self, page_key: ForeignFlowPageKey) -> None: ...
+    def reserve_request(self, page_key: ForeignFlowPageKey, retry_number: int) -> None: ...
 ```
 
 Each reservation is an atomic check-and-increment transaction. A source-attempt reservation is
 made exactly once for a canonical `(exchange, symbol, source)` selection, before that source is
 selected/invoked; retries and pages never increment it. A logical-page reservation is made once
 before page `N` is transmitted for the first time; retries of that same page do not reserve another
-page. Every physical transport call reserves one request immediately before transmission. A retry
-also reserves one retry quota and one request; failure to reserve either means no call is issued.
-Capability-incompatible sources are skipped without an attempt reservation.
+page. Every physical transport call reserves one request immediately before transmission with a
+`retry_number`: `0` is the initial call and `1..max_transport_retries_per_page` are retries.
+The ledger records retry numbers by canonical `(exchange, symbol, source, logical_page)` and rejects
+a duplicate retry number, a retry beyond the per-page limit, or a retry that is not exactly one
+greater than the largest already reserved number for that page. `retry_number=0` is legal only for
+the first request of a reserved page; `retry_number > 0` is legal only after the preceding request
+number is reserved. The scheduler calls a retry reservation only after that preceding call returns
+a bounded retryable transport failure. A retry reservation consumes one retry quota and one
+request; failure to reserve either means no call is issued. Capability-incompatible sources are
+skipped without an attempt reservation.
 
-The scheduler materializes and canonicalizes input in first-seen order, then creates reservation
-tickets ordered by `(input_position, source_priority, page_number, retry_number)`. Even if a later
-future implementation uses workers, workers may execute only tickets already issued by this
-canonical queue; no worker may reserve a later ticket first. Thus the same invocation limits always
-assign the same keys and sources, independent of concurrency. Completed items stay completed;
+The source-gap scheduler is an exact sequential state machine: `max_concurrency` is the literal
+value `1`, canonical symbols are processed in first-seen order, sources in configured priority
+order, pages in ascending order, and retries immediately after their failed page call. Its barriers
+are strict: no input item `N+1` starts before item `N` is finalized; no lower-priority source starts
+before the prior source is finalized; no page `N+1` starts before page `N` and all of its permitted
+retries are finalized; and no retry `N+1` is reserved before retry `N` has a bounded retryable
+failure. A source receives the same shared ledger and performs its own page loop through that
+ledger; the scheduler does not pre-create page-2 tickets or speculate about later input positions.
+Parallel scheduling is deferred until owner rate terms and a separately executable wave/barrier
+design pass; no parallel-concurrency promise exists in this contract. Completed items stay completed;
 current and queued items receive one failure record rather than being dropped.
 
 Reservation exhaustion is dimension-specific: failure of a source ticket emits
@@ -598,6 +641,21 @@ actual exhausted dimension, never default every stop to request exhaustion. With
 default and 100 source-attempt default, every canonical item has one first-source ticket; a caller
 may raise the attempt limit to the 200 hard cap when two-source failover for all 100 items is
 needed, or lower it deliberately.
+
+| Reservation point | Exhaustion code | Effect |
+|---|---|---|
+| Source key, per-item or invocation cap | `attempt_budget_exhausted` | No source invocation |
+| New logical-page key | `page_budget_exhausted` | No physical request |
+| `(page_key, retry_number)` request key with total request cap | `request_budget_exhausted` | No physical request |
+| Retry number beyond the per-page quota or non-sequential/duplicate retry key | `transport_retry_exhausted` | No retry request |
+
+The RED cases must exercise the shared ledger identity, not only aggregate counters: two sources
+must receive the same ledger object; page 1 retry 1 and page 2 retry 1 are both legal; page 1 retry
+2 is rejected when the per-page maximum is 1; duplicate source/page/request reservations are
+rejected atomically; the observed call sequence is input → source → page → retry; a
+`max_concurrency=2` preflight makes zero calls; and every exhausted reservation dimension makes
+zero calls for the rejected ticket. These checks are the executable contract for the scheduler,
+including lazy page discovery and no speculative future reservations.
 
 > **Future, non-authoritative design sketch — not approved for implementation.** Bulk behavior,
 > membership propagation, and budget values below are correction targets only.
@@ -619,19 +677,56 @@ class ForeignFlowMembershipContext:
     provider_group: str | None
     fetched_at_utc: datetime | None
     as_of: datetime | None
-    warnings: tuple[ForeignFlowWarning, ...]
+    membership_warnings: tuple[str, ...]                 # exact upstream descriptions
+    membership_warning_prefixes: tuple[str, ...]         # first-seen unique colon prefixes
+    flow_warnings: tuple[ForeignFlowWarning, ...]        # bounded normalized flow tokens
 
 ForeignFlowKey = tuple[Exchange | None, str]
 ```
 
 `foreign_flow_bulk(members, ...)` accepts one `IndexConstituents` object directly; a raw symbol
-iterable and typed constituent input are mutually exclusive. It copies
-`index`, `source`, `provider_group`, `fetched_at_utc`, `as_of`, and `warnings` into the immutable
-`ForeignFlowMembershipContext`; it never fabricates `as_of`. At bulk normalization, if
-`as_of is None` and the input warning tuple omits the existing stable `current_snapshot_only`
-token, normalization appends that token exactly once before scheduling any item. If it is already
-present, it is not duplicated. Thus a directly constructed `IndexConstituents(as_of=None)` cannot
-produce a bulk result that omits the invariant warning; no new date is inferred.
+iterable and typed constituent input are mutually exclusive. It copies `index`, `source`,
+`provider_group`, `fetched_at_utc`, and `as_of` into the immutable
+`ForeignFlowMembershipContext`; it never fabricates `as_of` and it preserves
+`IndexConstituents.warnings` byte-for-byte as `membership_warnings`. For every non-empty upstream
+warning, normalization derives the first colon-delimited prefix with
+`warning.split(":", 1)[0].strip()` and stores first-seen unique values in
+`membership_warning_prefixes`; an empty warning or prefix is preflight `InvalidData`. Descriptive
+prefixes such as `weights_not_available` and `current_snapshot_only` remain membership metadata,
+not new `ForeignFlowWarning` values.
+
+The normalized bounded `flow_warnings` are a separate tuple. A recognized
+`current_snapshot_only` prefix contributes one `current_snapshot_only` flow token. If `as_of is
+None` and that prefix is absent upstream, normalization adds the existing prefix to
+`membership_warning_prefixes` and exactly one `current_snapshot_only` token to `flow_warnings`; if
+it is already present, neither semantic value is duplicated. Thus a directly constructed
+`IndexConstituents(as_of=None)` cannot produce a bulk result that omits the invariant warning, no
+upstream description is rewritten, and no new date is inferred.
+
+The normalization is deliberately executable rather than a name-based cast of the live model:
+
+```python
+def normalize_membership_warnings(
+    constituents: IndexConstituents,
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[ForeignFlowWarning, ...]]:
+    raw = tuple(constituents.warnings)  # IndexConstituents.warnings: tuple[str, ...]
+    if any(not isinstance(warning, str) or not warning.strip() for warning in raw):
+        raise InvalidData("membership warning must be a non-empty string")
+    prefixes = list(dict.fromkeys(warning.split(":", 1)[0].strip() for warning in raw))
+    flow: list[ForeignFlowWarning] = []
+    if "current_snapshot_only" in prefixes:
+        flow.append("current_snapshot_only")
+    if constituents.as_of is None and "current_snapshot_only" not in prefixes:
+        prefixes.append("current_snapshot_only")
+        flow.append("current_snapshot_only")
+    return raw, tuple(prefixes), tuple(flow)
+```
+
+The returned triple maps to `membership_warnings`, `membership_warning_prefixes`, and
+`ForeignFlowMembershipContext.flow_warnings`; `ForeignFlowBulk.warnings` and the
+`membership_flow_warnings` dataframe attr expose the last tuple. The raw warning tuple is never
+assigned to the bounded flow-warning field, so descriptive text remains losslessly recoverable
+without widening the public warning registry.
 
 An `IndexMember` preserves its optional exchange. A plain-string iterable requires the explicit
 `exchange=...` argument; omitting it is a whole-call preflight `InvalidData`, not board inference.
@@ -660,6 +755,10 @@ must all carry the exact stable token, and the result must never claim that retu
 belonged to the basket throughout the requested history. Passing `members.symbols` is a lossy
 escape hatch and is not the documented VN30 path because it discards that context.
 
+`ForeignFlowBulk.warnings` contains the deduplicated bounded `flow_warnings`; its dataframe attrs
+also expose `membership_warnings`, `membership_warning_prefixes`, and `membership_flow_warnings`
+so the exact upstream descriptions and their semantic projection are both recoverable.
+
 ### 3.2 Bulk result, failures, and request budget
 
 ```python
@@ -668,7 +767,6 @@ class ForeignFlowFailure:
     symbol: str
     exchange: Exchange | None
     code: ForeignFlowFailureCode
-    message: str                    # bounded/redacted, never raw provider text
     attempts: tuple[ForeignFlowSourceAttempt, ...]
 
 @dataclass(frozen=True)
@@ -723,26 +821,32 @@ Its summary dataframe has one row per item, a stable `request_key` index
 (`"{exchange or '?'}:{symbol}"`), the columns above, and attrs for
 `requested_symbols`, `requested_keys`, `requested_start`, `requested_end`, `interval`,
 `membership_context`, `membership_index`, `membership_source`, `membership_provider_group`,
-`membership_fetched_at_utc`, `membership_as_of`, `membership_warnings`, `current_snapshot_only`,
+`membership_fetched_at_utc`, `membership_as_of`, `membership_warnings`,
+`membership_warning_prefixes`, `membership_flow_warnings`, `current_snapshot_only`,
 `fetched_at_utc`, and total source-attempt,
 logical-page, physical-request, and retry counts. `status` is only `"success"` or `"failure"`;
-failure rows use a bounded `failure_code`, and successful rows expose source/dataset, row count,
-and served bounds. Successful histories remain the only row-level data view.
+failure rows use a bounded `failure_code` and immutable attempts; no free-form provider or
+generated `message` is part of the public failure model. A caller may render a fixed, static
+code-to-template diagnostic outside the data model. Successful rows expose source/dataset, row
+count, and served bounds. Successful histories remain the only row-level data view.
 
 Exact budget rules:
 
 1. `max_symbols` is lowering-only: `1 <= max_symbols <= 100`; values above the hard cap reject
    before network. An input exceeding the selected ceiling is rejected, never silently truncated;
    the parameter cannot raise the safety ceiling.
-2. `max_total_source_attempts` defaults to 100 so a 100-symbol request has one source-selection
-   ticket per canonical symbol; it may be lowered, or raised only to the hard cap of 200 when
-   two-source failover is required. `max_total_pages` is lowering-only from 5,000;
+2. `max_total_source_attempts` accepts `1..200` and defaults to 100, so a 100-symbol request has
+   one source-selection ticket per canonical symbol; it may be lowered, or raised only to the hard
+   cap of 200 when two-source failover is required. `max_total_pages` is lowering-only from 5,000;
    `max_total_requests` is lowering-only from 6,000. Pages count logical pages and requests count
    every physical page request, initial and retry, across symbols and sources.
-3. Per-symbol `max_source_attempts=2` counts source selections; `max_transport_retries=1` counts
-   retries of one page. They are reported separately and never multiplied invisibly.
-4. `max_concurrency` accepts 1–4 but defaults to 1. No parallel fan-out is authorized until a
-   source owner supplies rate/concurrency terms and a later gate approves it.
+3. Per-symbol `max_source_attempts` accepts `1..2` and defaults to `2`; it counts source
+   selections. `max_transport_retries` accepts `0..1` and defaults to `1`; it counts sequential
+   retries of one logical page. They are reported separately and never multiplied invisibly.
+4. `max_concurrency` is exactly `1`; any other value is preflight `InvalidData`. No parallel
+   fan-out is part of this source-gap contract. It can be reconsidered only after a source owner
+   supplies rate/concurrency terms and a later gate approves a separately specified wave/barrier
+   scheduler.
 5. A source has a hard page ceiling of 250. A ceiling hit is `page_budget_exhausted` when the
    invocation ledger cannot reserve the next logical page; a source that returns a bounded but
    incomplete result without a budget stop is `coverage_gap` when full coverage is required. A
@@ -759,11 +863,11 @@ Exact budget rules:
 
 ### 4.1 Technical-candidate table (no enabled chain)
 
-| Source | Official route | Request shape | Source type/dataset | Current status |
+| Source | Official route | Request shape | source_type / dataset_id | Current status |
 |---|---|---|---|---|
-| `hsx_market_tradingresult_v1` | `/mk/api/v1/market/securities/tradingresult/{code}` | GET `fromDate`, `toDate`, `pageIndex`, observed `pageSize=20` | official JSON / `hsx.market.securities.tradingresult.v1.0` | reachability pass; semantics/legal unresolved; disabled |
-| `hnx_report_ny_v1` | `Report_MD_TradingResult/ListData_Listed` | POST one requested date; `default-date` coupling observed; HTML pagination | official HTML / `hnx.report.stocketfs.tradingresult.listed.v1` | technical candidate; response date identity/legal unresolved; disabled |
-| `hnx_report_uc_v1` | `Report_MD_TradingResult/ListData_UPCoM` | POST report; historical date ignored in probe | official HTML / `hnx.report.stocketfs.tradingresult.upcom.v1` | historical coverage fail/legal unresolved; disabled |
+| `hsx_market_tradingresult_v1` | `/mk/api/v1/market/securities/tradingresult/{code}` | GET `fromDate`, `toDate`, `pageIndex`, observed `pageSize=20` | `official_exchange` / `hsx.market.securities.tradingresult.v1.0` | reachability pass; semantics/legal unresolved; disabled |
+| `hnx_report_ny_v1` | `Report_MD_TradingResult/ListData_Listed` | POST one requested date; `default-date` coupling observed; HTML pagination | `official_exchange` / `hnx.report.stocketfs.tradingresult.listed.v1` | technical candidate; response date identity/legal unresolved; disabled |
+| `hnx_report_uc_v1` | `Report_MD_TradingResult/ListData_UPCoM` | POST report; historical date ignored in probe | `official_exchange` / `hnx.report.stocketfs.tradingresult.upcom.v1` | historical coverage fail/legal unresolved; disabled |
 
 There is no default source chain. The rejected HOSE `foreign/{code}` route is intentionally absent
 because it does not return the requested symbol. No source row may be stitched with another board
@@ -891,14 +995,14 @@ provider rows or bundled datasets are permitted. Live endpoint tests are opt-in 
 | Pagination | total-count arithmetic, total-pages arithmetic, repeated/missing/early-empty pages, page-index/page-size drift, ceiling boundary, zero/nonzero truncation both fail, no partial on truncation |
 | Identity/date | missing/blank/aggregate/cross-symbol response identity, mismatch, observed integral/epoch-like `reportDate`, owner-confirmed unit/timezone/session mapping only, UTC/Vietnam boundary RED cases, unresolved mapping stays unresolved, out-of-range rows, row exchange mismatch |
 | HNX | malformed HTML, request-date coupling rejected without returned marker, missing/renamed/wrong-type/schema-drift fields, current snapshot cannot satisfy historical request |
-| Coverage | executable full/partial-known/partial-unknown field invariants, reason ordering, uncovered/internal-gap counts and dates, publication cutoff, calendar unknown, publication lag, pre-listing, stale end, `require_full`, no synthesized dates |
-| Failover | partial continues to compatible source, full outranks partial, exact `coverage_rank()` tuple/tie-break, deterministic `exchange_unavailable`/`coverage_gap`/`all_sources_failed`, no stitching, fallback remains disabled/rejected, disabled/identity/unit/schema attempts retained |
-| Attempts | lowercase status/reason invariant, bounded success reasons, source attempts versus transport retries, capability skips consume no budget, global request accounting, dimension-specific budget codes, caught-exception set, redacted diagnostics |
-| Bulk input | iterable materialization, typed `IndexConstituents` context, missing-token append/no duplication, `current_snapshot_only`, `as_of=None`, mixed-board `(exchange,symbol)`, duplicate/empty/string rejection |
-| Bulk budget | atomic ledger, canonical reservation queue under concurrency, one source/page reservation versus physical requests/retries, 100 default/200 hard-cap source attempts, 5,000-page/6,000-request boundaries, dimension-specific queued failures, no silent drop |
+| Coverage | executable full/partial-known/partial-unknown field invariants, sorted unique missing/internal-gap dates and subset/count relations, reason ordering, confirmed/unresolved publication lag and cutoff, calendar unknown, pre-listing, stale end, matching partial warning, `require_full`, no synthesized dates |
+| Failover | partial continues to compatible source, full outranks partial, exact `coverage_rank()` tuple/tie-break, deterministic `exchange_unavailable`/`coverage_gap`/`all_sources_failed`, immutable error attempts, no stitching, capability-incompatible sources omitted, identity/unit/schema attempts retained |
+| Attempts | lowercase status/reason invariant, bounded success reasons, capability skips omitted with zero budget, source attempts versus per-page retry ledger, global request accounting, dimension-specific budget codes, caught-exception set, redacted diagnostics |
+| Bulk input | iterable materialization, typed `IndexConstituents` context, exact upstream warning preservation, colon-prefix projection, missing-token append/no duplication, separate bounded flow warnings, `current_snapshot_only`, `as_of=None`, mixed-board `(exchange,symbol)`, duplicate/empty/string rejection |
+| Bulk budget | atomic ledger passed to sources, strict sequential scheduler, one source/page reservation versus per-page physical requests/retries, 100 default/200 hard-cap source attempts, 5,000-page/6,000-request boundaries, dimension-specific queued failures, no silent drop |
 | Bulk result | XOR item invariant (both-null/both-present reject), stable order, bounded failure codes, full `TimeSeriesResult` mixin fields/index/attrs |
 | Dataframe | exact row/summary columns, origin columns, attrs, units/source/coverage, duplicate-index backstop |
-| Probe reproducibility | official-host-only opt-in command, no-secret headers/redirect allowlist, client/repo version, sanitized status/digest/count manifest, raw output untracked |
+| Probe reproducibility | official-host-only opt-in command, `set -euo pipefail` with explicit curl-failure capture, exact 200/effective-URL/redirect/body gates, payload observations gated on accepted transport/body, syntactic-only date markers, sanitized aggregate embedded in manifest, nonzero aggregation/manifest failures, raw output untracked |
 | Public/release | docs contract, API snapshot, source/API/architecture docs, AI guidance, skill, changelog, build/wheel/archive inspection, clean-install import smoke |
 
 A future implementation must run focused tests RED-first, then the full merged offline suite before
@@ -909,8 +1013,8 @@ clean-install smoke. No such implementation or test claim is made by this correc
 ## 7. Re-review request
 
 This correction round is deliberately source-gap closure, not a proposal to choose between HOSE
-and HNX. Please review this note and the research report against B1–B5 in
-`reviews/review-202608221418-issue201-design-regate.md`. At handoff, the reviewer should spawn
+and HNX. Please review this note and the research report against B1–B4 in
+`reviews/review-202608221438-issue201-final-design-review.md`. At handoff, the reviewer should spawn
 three parallel sub-agents: source/legal/reopen evidence, API/identity/coverage semantics, and
 bulk/budget/verification adversarial review.
 
