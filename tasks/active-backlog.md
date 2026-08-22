@@ -616,6 +616,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   coverage/attempt/error/warning/exact-integer contracts; atomic deterministic budget reservations;
   probe sample/empty-identity/redirect/date/manifest claims; and the VN30 warning invariant. **No code
   is authorized; request final re-review before any implementation, push, or close.**
+  Final design review BLOCK at `1fadc58` (`reviews/review-202608221438-issue201-final-design-review.md`):
+  one more docs-only correction is required for live `IndexConstituents` warning-prefix compatibility,
+  coverage and attempt/error typing, a shared per-page retry ledger with deterministic scheduling, and
+  fail-closed probe/manifest semantics. **Production code, push, and close remain paused.**
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
