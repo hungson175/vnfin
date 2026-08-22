@@ -609,7 +609,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `2026-08-22T09:45:15Z`. New C1-C3 chain remains empty/disabled; legacy C4 remains active and
   non-authoritative; no new production capability or reliable corporate-action claim. #204 separate.
 
-- **#204 — fundamentals SSI/TCX TDD implementation (CORRECTION RE-REVIEW REQUESTED, 2026-08-22).** Packet
+- **#204 — DONE/CLOSED 2026-08-22: fundamentals SSI/TCX TDD implementation.** Packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/204-fundamentals-ssi-tcx-spec.md`; exact design
   anchor `9360d43d244094c0a4c08c68898db6733d0e7fa4` received **DESIGN PASS** from reviewer `d6abf1c`
   in `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608221818-issue204-final-design-pass.md`.
@@ -626,7 +626,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   RED `806c43b` exposed one additional declared-non-VND homogeneity edge; exact fix `acbe78e`
   requires metric sources to declare only `None`/`VND` and validates all report currencies as
   canonical VND. Merged-tree `pytest -q` and `uv build` are green; source chain remains empty and
-  SSI/TCX `NET_INCOME` stays blocked. Request exact-SHA re-review at `acbe78e`; no push or close.
+  SSI/TCX `NET_INCOME` stays blocked. Exact correction review **APPROVED** at reviewer `4b76972`
+  in `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608221905-issue204-correction-final.md`.
+  Merged gates reran green; exact `bd836c1243720003689bb4c4e547634f4617803b` was pushed to
+  `origin/master` (remote HEAD/ancestry/paths verified). Resolution comment:
+  `issuecomment-5380343399`; issue re-read `CLOSED`/`COMPLETED` at
+  `2026-08-22T12:06:57Z`. No SSI/TCX production-data claim or new source capability; #205 remains
+  separate.
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
