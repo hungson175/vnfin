@@ -27,7 +27,7 @@ anti-bot bypass, or third-party fixture was used.
 | Runtime target | Qualified | Partial runtime cell | Current disposition |
 |---|---:|---:|---|
 | `operating_profit` | 0 | 0 | `BLOCKED` / source-gap closure |
-| `gross_margin` | 0 | 0 | `BLOCKED` until template/entity and basis are qualified; B02-CTCK gross-profit candidate is not applicable only after that template is bound |
+| `gross_margin` | 0 | 0 | `BLOCKED`; template applicability is unresolved and no `NOT_APPLICABLE` result is emitted at this anchor |
 | `net_margin` | 0 | 0 | `BLOCKED` because net-income and revenue identities are not qualified for these streams |
 | `operating_cash_flow_margin` | 0 | 0 | `BLOCKED`; CafeF is not served and the VNDirect cashflow stream is foreign/unqualified |
 
@@ -95,14 +95,18 @@ The future identity key must be the full tuple:
 
 ```text
 (source namespace, statement=income, provider template/model, entity scope,
- cadence, exact item code or exact same-report formula, currency, flow basis)
+ cadence, exact source-namespaced item code, currency, flow basis)
 ```
 
-A provider label is provenance only. A positive mapping requires the exact code/formula to agree
-with the issuer concept, sign, raw-VND scale, consolidation scope, and fiscal date for at least
-two periods and at least two issuers using the same non-symbol-specific template. The issuer
-documents above prove the accounting concept across two issuers, but no named provider response
-proves this complete tuple. No `operating_profit` code is therefore authorized.
+A provider label is provenance only. Because the existing `operating_profit` metric is
+`RAW_MAPPED`, a positive runtime mapping requires one non-empty, exact, source-namespaced provider
+item code. The issuer row-70 formula above is an accounting identity cross-check only; it cannot
+construct or substitute a raw-mapped runtime value. A calculated operating-profit metric would
+need a separately reviewed metric kind and API design. The exact item code must agree with the
+issuer concept, sign, raw-VND scale, consolidation scope, and fiscal date for at least two periods
+and at least two issuers using the same non-symbol-specific template. The issuer documents prove
+the accounting concept across two issuers, but no named provider response proves this complete
+tuple. No `operating_profit` code is therefore authorized.
 
 **Explicit negative:** `14000` is the existing owners'-equity balance code. Its appearance in a
 foreign VNDirect balance stream is not operating profit and must remain a RED test, never a
@@ -134,25 +138,68 @@ Notation used below:
 * The final disposition is one of the packet's allowed cell outcomes; secondary gaps are listed
   in the evidence column and do not become a positive claim.
 
+### 5.1 Canonical routes and raw-versus-typed outcomes
+
+The exact canonical request routes used by the named adapters are fixed below. `effective` is the
+observed final scheme/host/path after the HTTP client completed the request; it matched the
+canonical route and `redirected=no` for every request in this bounded observation. Query parameters
+shown in the matrix are part of the route evidence, not a future API promise.
+
+| Named adapter | Canonical route | Observed effective route |
+|---|---|---|
+| `vndirect` statements | `https://api-finfo.vndirect.com.vn/v4/financial_statements` | same HTTPS host/path; `redirected=no` |
+| `cafef` statements | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx` | same HTTPS host/path; `redirected=no` |
+
+Each matrix row separates the **raw route observation** (HTTP/envelope/body shape) from the
+**typed named-adapter outcome**. A raw `200` or non-empty envelope is not a typed success. For the
+current CafeF statement adapter, quarterly row tags `H` and `QUY` are accepted individually;
+`N` and `K` fail closed when present in a quarterly statement payload; `NAM` is an annual tag that
+is skipped for a quarterly request. The observed SSI payload had the marker set `H,N`, so the direct typed income and balance
+calls terminate as `InvalidData` despite the raw `Success=true` envelope. The observed TCX
+payloads had marker `N`, so those direct typed calls also terminate as `InvalidData`. CafeF
+cashflow has a static no-capability contract: a direct typed call terminates as `EmptyData`/
+`NOT_SERVED` with zero physical HTTP calls; its separately issued diagnostic `Type=3` raw route
+returned an empty `Value` and is not an absence oracle. None of these typed outcomes qualifies a
+source cell or establishes historical absence.
+
+The six CafeF matrix rows expand to these exact route/outcome pairs; this table is part of the
+matrix contract and not a second source observation:
+
+| Cell | Exact canonical request route and effective route | Raw route observation | Typed named-adapter outcome |
+|---|---|---|---|
+| `SSI · cafef · income` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx?Type=1&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; effective host/path identical; `redirected=no` | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=41`, 32 returned objects; envelope marker `H`, period marker set `H,N` | Direct quarterly call ends `InvalidData` on `N`. `H` and `QUY` are accepted individually; `N` is rejected. |
+| `SSI · cafef · balance` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx?Type=2&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; effective host/path identical; `redirected=no` | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=41`, 32 returned objects; envelope marker `H`, period marker set `H,N` | Direct quarterly call ends `InvalidData` on `N`; `H`/`QUY` accepted individually. |
+| `SSI · cafef · cashflow` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx?Type=3&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; effective host/path identical; `redirected=no` | Diagnostic only: HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=41`, `Value=[]` | Static named capability ends `EmptyData` / `NOT_SERVED` and performs zero physical HTTP calls. |
+| `TCX · cafef · income` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx?Type=1&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; effective host/path identical; `redirected=no` | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=7`, 7 returned objects; marker set `N` | Direct quarterly call ends `InvalidData` on `N`; `N` is rejected. |
+| `TCX · cafef · balance` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx?Type=2&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; effective host/path identical; `redirected=no` | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=7`, 7 returned objects; marker set `N` | Direct quarterly call ends `InvalidData` on `N`; `N` is rejected. |
+| `TCX · cafef · cashflow` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx?Type=3&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; effective host/path identical; `redirected=no` | Diagnostic only: HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=7`, `Value=[]` | Static named capability ends `EmptyData` / `NOT_SERVED` and performs zero physical HTTP calls. |
+
+For the complete CafeF tag boundary, `K` is an invalid quarterly tag and raises `InvalidData`;
+`NAM` is a valid annual tag but is skipped for a quarterly request, yielding `EmptyData` if no
+quarterly row remains. Neither boundary is a historical-absence claim. The raw SSI/TCX rows
+remain identity/unit/basis/legal gaps even where an individual `H` marker is parser-accepted.
+
 | Cell | Request, access, redirect, and bounded budget | Transport/application result | Response identity, template/entity, dates, unit, and target codes | Legal and disposition |
 |---|---|---|---|---|
-| `SSI · vndirect · income` | `financial_statements`; `code:SSI~reportType:QUARTER~modelType:{2,102}`; `size=640&page=1`; no auth/cookie/session; redirect=no; 2 candidate requests | Both candidates: HTTP `200`, `application/json`, empty `data`, provider totals zero; typed result `EmptyData` | No accepted row, so no returned symbol/statement/date/unit. Supplementary `modelType=90` page-one rows had `code=SSI`, `reportType=QUARTER`, exact `fiscalDate` fields, and target-like codes `21001,23000,23003,23100,23800`, but the model is foreign to the current contract and has no entity/unit/basis semantics. | VNDirect terms do not grant structured-data reuse. `IDENTITY_GAP` (also legal and period-basis gaps); no target metric is qualified |
-| `SSI · vndirect · balance` | `financial_statements`; `code:SSI~reportType:QUARTER~modelType:{1,101}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=89` rows had `code=SSI`, `reportType=QUARTER`, fiscal dates, and observed `14000`; this is an unqualified foreign balance stream and is explicitly **not** operating profit. No unit/scope/basis proof. | `IDENTITY_GAP`; balance is not a target input, but the negative `14000` boundary is preserved |
-| `SSI · vndirect · cashflow` | `financial_statements`; `code:SSI~reportType:QUARTER~modelType:{3,103}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=91` rows had `code=SSI`, `reportType=QUARTER`, fiscal dates, and observed `32000`; stream semantics, unit, entity scope, and discrete/YTD basis remain unresolved. | `IDENTITY_GAP`; `operating_cash_flow_margin` stays `BLOCKED` |
-| `TCX · vndirect · income` | `financial_statements`; `code:TCX~reportType:QUARTER~modelType:{2,102}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=90` rows had `code=TCX`, `reportType=QUARTER`, fiscal dates, and observed `21001,23000,23003,23100,23800`; no qualified template/entity/unit/basis. | `IDENTITY_GAP`; no target metric is qualified |
-| `TCX · vndirect · balance` | `financial_statements`; `code:TCX~reportType:QUARTER~modelType:{1,101}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=89` rows had `code=TCX`, `reportType=QUARTER`, fiscal dates, and observed `14000`; foreign/unqualified balance evidence only. | `IDENTITY_GAP`; `14000` remains a negative operating-profit fixture |
-| `TCX · vndirect · cashflow` | `financial_statements`; `code:TCX~reportType:QUARTER~modelType:{3,103}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=91` rows had `code=TCX`, `reportType=QUARTER`, fiscal dates, and observed `32000`; no unit/entity/basis proof. | `IDENTITY_GAP`; `operating_cash_flow_margin` stays `BLOCKED` |
-| `SSI · cafef · income` | `FinanceReport.ashx`; `Type=1&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; no auth/cookie/session; redirect=no; 1 request | HTTP `200`, `text/plain; charset=utf-8`, JSON envelope `Success=true`; `Count=41`, returned 32 period objects | `identity=absent`; no model discriminator; page markers include `Time=Q2-2026`, `Year=2026`, `Quater=2`, response `ReportType=H`; observed codes `DTTBHCCDV,LNTC,TotalProfit,LNSTTNDN,NetIncome,LNK`; no exact row 70, no explicit unit/scale, scope, or flow basis. `H` is not promoted to cadence. | `IDENTITY_GAP` (also unit, basis, and legal gaps); no target metric is qualified |
-| `SSI · cafef · balance` | `FinanceReport.ashx`; `Type=2&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; same access/redirect/budget | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`; `Count=41`, returned 32 period objects | `identity=absent`; no model discriminator; page markers include Q2-2026 and response `ReportType=H`; observed codes `ShortTermFloatingCapital,TotalAsset,TotalShortTermDebt,TotalDebt,TotalOwnerCapital`; no target metric input, unit/scale, scope, or flow basis is qualified. | `IDENTITY_GAP`; balance is not target evidence |
+| `SSI · vndirect · income` | `https://api-finfo.vndirect.com.vn/v4/financial_statements`; `code:SSI~reportType:QUARTER~modelType:{2,102}`; `size=640&page=1`; no auth/cookie/session; redirect=no; 2 candidate requests | Both candidates: HTTP `200`, `application/json`, empty `data`, provider totals zero; typed result `EmptyData` | No accepted row, so no returned symbol/statement/date/unit. Supplementary `modelType=90` page-one rows had `code=SSI`, `reportType=QUARTER`, exact `fiscalDate` fields, and target-like codes `21001,23000,23003,23100,23800`, but the model is foreign to the current contract and has no entity/unit/basis semantics. | VNDirect terms do not grant structured-data reuse. `IDENTITY_GAP` (also legal and period-basis gaps); no target metric is qualified |
+| `SSI · vndirect · balance` | `https://api-finfo.vndirect.com.vn/v4/financial_statements`; `code:SSI~reportType:QUARTER~modelType:{1,101}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=89` rows had `code=SSI`, `reportType=QUARTER`, fiscal dates, and observed `14000`; this is an unqualified foreign balance stream and is explicitly **not** operating profit. No unit/scope/basis proof. | `IDENTITY_GAP`; balance is not a target input, but the negative `14000` boundary is preserved |
+| `SSI · vndirect · cashflow` | `https://api-finfo.vndirect.com.vn/v4/financial_statements`; `code:SSI~reportType:QUARTER~modelType:{3,103}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=91` rows had `code=SSI`, `reportType=QUARTER`, fiscal dates, and observed `32000`; stream semantics, unit, entity scope, and discrete/YTD basis remain unresolved. | `IDENTITY_GAP`; `operating_cash_flow_margin` stays `BLOCKED` |
+| `TCX · vndirect · income` | `https://api-finfo.vndirect.com.vn/v4/financial_statements`; `code:TCX~reportType:QUARTER~modelType:{2,102}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=90` rows had `code=TCX`, `reportType=QUARTER`, fiscal dates, and observed `21001,23000,23003,23100,23800`; no qualified template/entity/unit/basis. | `IDENTITY_GAP`; no target metric is qualified |
+| `TCX · vndirect · balance` | `https://api-finfo.vndirect.com.vn/v4/financial_statements`; `code:TCX~reportType:QUARTER~modelType:{1,101}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=89` rows had `code=TCX`, `reportType=QUARTER`, fiscal dates, and observed `14000`; foreign/unqualified balance evidence only. | `IDENTITY_GAP`; `14000` remains a negative operating-profit fixture |
+| `TCX · vndirect · cashflow` | `https://api-finfo.vndirect.com.vn/v4/financial_statements`; `code:TCX~reportType:QUARTER~modelType:{3,103}`; same access/redirect/budget | Both candidates: HTTP `200`, `application/json`, empty `data`; typed `EmptyData` | No accepted row. Supplementary `modelType=91` rows had `code=TCX`, `reportType=QUARTER`, fiscal dates, and observed `32000`; no unit/entity/basis proof. | `IDENTITY_GAP`; `operating_cash_flow_margin` stays `BLOCKED` |
+| `SSI · cafef · income` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx`; `Type=1&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; no auth/cookie/session; redirect=no; 1 request | HTTP `200`, `text/plain; charset=utf-8`, JSON envelope `Success=true`; `Count=41`, returned 32 period objects | `identity=absent`; no model discriminator; page markers include `Time=Q2-2026`, `Year=2026`, `Quater=2`, response `ReportType=H`; observed codes `DTTBHCCDV,LNTC,TotalProfit,LNSTTNDN,NetIncome,LNK`; no exact row 70, no explicit unit/scale, scope, or flow basis. `H` is parser-accepted but does not prove cadence. | `IDENTITY_GAP` (also unit, basis, and legal gaps); no target metric is qualified |
+| `SSI · cafef · balance` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx`; `Type=2&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; same access/redirect/budget | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`; `Count=41`, returned 32 period objects | `identity=absent`; no model discriminator; page markers include Q2-2026 and response `ReportType=H`; observed codes `ShortTermFloatingCapital,TotalAsset,TotalShortTermDebt,TotalDebt,TotalOwnerCapital`; no target metric input, unit/scale, scope, or flow basis is qualified. | `IDENTITY_GAP`; balance is not target evidence |
 | `SSI · cafef · cashflow` | Direct diagnostic only: `Type=3&Symbol=SSI&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; no auth/cookie/session; redirect=no; 1 diagnostic request | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=41`, `Value=[]`; named adapter makes zero HTTP calls for this cell | No returned symbol, date, code, unit, or basis; current static capability says cashflow is not served. | `NOT_SERVED`; do not reclassify the empty diagnostic as historical absence |
-| `TCX · cafef · income` | `FinanceReport.ashx`; `Type=1&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; same access/redirect/budget | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`; `Count=7`, returned 7 period objects | `identity=absent`; no model discriminator; page markers include Q2-2026, `Year=2026`, `Quater=2`, response `ReportType=N`; observed codes `DTTBHCCDV,LNTC,TotalProfit,LNSTTNDN,NetIncome,LNK`; no exact row 70, explicit unit/scale, entity scope, or flow basis. `N` is not promoted to cadence. | `IDENTITY_GAP` (also unit, basis, and legal gaps); no target metric is qualified |
-| `TCX · cafef · balance` | `FinanceReport.ashx`; `Type=2&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; same access/redirect/budget | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`; `Count=7`, returned 7 period objects | `identity=absent`; no model discriminator; page markers include Q2-2026 and response `ReportType=N`; observed codes `ShortTermFloatingCapital,TotalAsset,TotalShortTermDebt,TotalDebt,TotalOwnerCapital`; no target metric input, unit/scale, scope, or flow basis is qualified. | `IDENTITY_GAP`; balance is not target evidence |
+| `TCX · cafef · income` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx`; `Type=1&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; same access/redirect/budget | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`; `Count=7`, returned 7 period objects | `identity=absent`; no model discriminator; page markers include Q2-2026, `Year=2026`, `Quater=2`, response `ReportType=N`; observed codes `DTTBHCCDV,LNTC,TotalProfit,LNSTTNDN,NetIncome,LNK`; no exact row 70, explicit unit/scale, entity scope, or flow basis. `N` is rejected by typed quarterly parsing. | `IDENTITY_GAP` (also unit, basis, and legal gaps); no target metric is qualified |
+| `TCX · cafef · balance` | `https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx`; `Type=2&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; same access/redirect/budget | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`; `Count=7`, returned 7 period objects | `identity=absent`; no model discriminator; page markers include Q2-2026 and response `ReportType=N`; observed codes `ShortTermFloatingCapital,TotalAsset,TotalShortTermDebt,TotalDebt,TotalOwnerCapital`; no target metric input, unit/scale, scope, or flow basis is qualified. | `IDENTITY_GAP`; balance is not target evidence |
 | `TCX · cafef · cashflow` | Direct diagnostic only: `Type=3&Symbol=TCX&TotalRow=32&EndDate=3-2026&ReportType=QUY&Sort=DESC`; no auth/cookie/session; redirect=no; 1 diagnostic request | HTTP `200`, `text/plain; charset=utf-8`, `Success=true`, `Count=7`, `Value=[]`; named adapter makes zero HTTP calls for this cell | No returned symbol, date, code, unit, or basis; current static capability says cashflow is not served. | `NOT_SERVED`; `operating_cash_flow_margin` remains `BLOCKED` |
 
 The VNDirect foreign observations are three **independent** streams. They are not a universal
 securities template, and one stream may not borrow another stream's item meanings. The CafeF
 `ReportType` response markers `H`, `N`, and the previously observed annual `K` are recorded as
-provider markers only; they are not silently treated as the requested `QUY`/`NAM` cadence.
+provider markers. The current parser accepts `H`/`QUY` for quarterly calls, rejects `N`/`K`, and
+skips `NAM` as an annual row on a quarterly call; parser acceptance still does not prove source
+cadence or identity.
 The non-empty quarterly probes included the latest provider date marker `2026-06-30` (CafeF
 `Time=Q2-2026`, `Year=2026`, `Quater=2`; VNDirect `fiscalDate=2026-06-30`). This is a
 response-backed date observation, not proof that the flow values are discrete rather than YTD.
@@ -170,8 +217,14 @@ rows supply `fiscalDate` and `reportType=QUARTER`, but no basis or period start/
 source research also records a distinct VNDirect `QUARTER2` cumulative stream; it must never be
 relabeled as `QUARTER` ([prior source note](2026-06-18-vn-fundamental-data-sources.md)).
 
-Before any implementation, the additive immutable report/lineage slice must carry these fields,
-appended after all existing fields so old positional constructors remain valid:
+The following is a **provisional future-reopen design**, not an approved implementation contract.
+No field, enum, parser propagation, DataFrame lineage, public export, or constructor change is
+authorized by this source-gap round. A fresh design must first define the typed enum/export
+locations, reconcile provider `template_id` with existing `FinancialReport.model_type`, make
+consolidation scope typed rather than free-form, specify malformed/mismatch validation, and bind
+every parser, `MetricInput`, DataFrame, constructor, and public-snapshot compatibility seam.
+Only then could defaulted fields be considered, appended after all existing fields so old
+positional constructors remain valid:
 
 ```python
 class FlowBasis(str, Enum):
@@ -182,15 +235,15 @@ class FlowBasis(str, Enum):
     INSTANT = "instant"
     UNKNOWN = "unknown"
 
-# defaulted fields on FinancialReport and MetricInput, after current fields
+# unresolved future fields on FinancialReport and MetricInput; not current API
 period_start: date | None = None
 period_end: date | None = None
 flow_basis: FlowBasis = FlowBasis.UNKNOWN
-template_id: str | None = None
-consolidation_scope: str = "unknown"  # only qualified values: consolidated/separate/unknown
+template_id: FutureTypedTemplate | None = None
+consolidation_scope: FutureTypedScope = FutureTypedScope.UNKNOWN
 ```
 
-Required invariants:
+The future-reopen requirements are:
 
 1. Income/cashflow flow rows may enter a requested quarter only with
    `period_end == fiscal_date`, a real `period_start`, and `flow_basis=quarter_only`.
@@ -200,10 +253,14 @@ Required invariants:
    No adjacent-quarter subtraction is allowed without a separate reviewed restatement contract.
 4. `gross_margin` and `net_margin` join numerator and denominator from the same qualified income
    report, symbol, scope, template, fiscal date, unit, and flow basis.
-5. `operating_cash_flow_margin` additionally requires the cashflow and income reports to share
-   the same qualified discrete-quarter basis and scope. End-date equality alone does not pass.
-6. Template/model, scope, period bounds, and basis propagate into `MetricInput` lineage and are
-   validated before calculation. Unknown or mismatched values fail closed as `BLOCKED`.
+5. `operating_cash_flow_margin` additionally requires exact equality of the normalized tuple
+   `(period_start, period_end, flow_basis, consolidation_scope)` across cashflow and income,
+   alongside the same normalized symbol, template, currency, unit, and requested cadence.
+   End-date or basis-label equality alone does not pass.
+6. Template/model, scope, period bounds, and basis must eventually propagate into `MetricInput`
+   lineage and be validated before calculation. Unknown or mismatched values fail closed as
+   `BLOCKED`; the exact propagation and public compatibility contract belongs to the future
+   reopen design.
 
 ## 7. Four-metric derived-input gap analysis
 
@@ -212,12 +269,12 @@ corporate slots are evidence boundaries, not permission to apply them to a forei
 
 | Input/metric | Existing generic code contract | SSI/TCX source result | Honest future classification |
 |---|---|---|---|
-| `operating_profit` | No corporate code; exact row 70 identity required | No provider code/template/period-basis tuple | `BLOCKED` until a qualified source-specific mapping or formula |
-| `gross_margin` | `gross_profit=23100` divided by `net_revenue=21001`, same income report/date/basis | B02-CTCK has no generic gross-profit row; current provider cells do not bind to B02-CTCK or prove discrete basis | `NOT_APPLICABLE` is allowed only after an exact B02-CTCK template is bound; at this source-gap anchor it is `BLOCKED` |
+| `operating_profit` | Existing `RAW_MAPPED` metric requires one exact source-namespaced item code; issuer row-70 formula is cross-check evidence only | No provider code/template/period-basis tuple | `BLOCKED` until a qualified source-specific raw mapping |
+| `gross_margin` | `gross_profit=23100` divided by `net_revenue=21001`, same income report/date/basis | B02-CTCK has no generic gross-profit row; current provider cells do not bind to B02-CTCK or prove discrete basis | Applicability selector is not defined; `NOT_APPLICABLE` cannot be emitted and this anchor remains `BLOCKED` |
 | `net_margin` | `net_income=23003` divided by `net_revenue=21001`, same income report/date/basis | Foreign VNDirect `90` contains target-like codes but no qualified semantics; CafeF has `LNSTTNDN`/`NetIncome` and no qualified net-revenue identity | `BLOCKED`; never infer `MISSING` from empty or rejected rows |
-| `operating_cash_flow_margin` | `operating_cash_flow=32000` divided by `net_revenue=21001`, same discrete flow basis across cashflow/income | CafeF cashflow is `NOT_SERVED`; foreign VNDirect `91` contains `32000` but no qualified statement/unit/basis identity | `BLOCKED` until both statement inputs are qualified with common discrete basis |
+| `operating_cash_flow_margin` | `operating_cash_flow=32000` divided by `net_revenue=21001`, with exact normalized `(period_start, period_end, flow_basis, consolidation_scope)` equality across cashflow/income | CafeF cashflow is `NOT_SERVED`; foreign VNDirect `91` contains `32000` but no qualified statement/unit/basis identity | `BLOCKED` until both statement inputs are qualified with the exact common interval tuple |
 
-For every symbol and requested quarter, the future implementation must report each input as
+For every symbol and requested quarter, a future qualified implementation must report each input as
 `AVAILABLE`, `MISSING`, `BLOCKED`, or `NOT_APPLICABLE`, while retaining statement-level
 `SOURCE_ERROR`/`NOT_SERVED` diagnostics. A qualified mapping with an absent line may be
 `MISSING`; an unqualified template, code, scope, unit, or basis is `BLOCKED`. No percentage,
@@ -239,28 +296,35 @@ statement, template, and metric scope; one passing axis cannot compensate for an
 4. CafeF proves the meaning of `H`, `N`, `K`, and `QUY`/`NAM` separately, exposes or authorizes
    response identity, and proves source unit/scale and consolidation scope. Type 3 remains
    `NOT_SERVED` unless a separately documented capability is approved.
-5. The exact operating-profit row/code or same-report formula is cross-checked against official
-   issuer filings for at least two periods and two issuers on the same template, including sign,
-   raw VND scale, scope, and date. A code that merely resembles `14000` or a provider label is
-   rejected.
+5. The exact source-namespaced operating-profit item code is cross-checked against official issuer
+   filings for at least two periods and two issuers on the same template, including sign, raw VND
+   scale, scope, and date. The issuer row-70 formula is cross-check evidence only, never a
+   `RAW_MAPPED` fallback. A code that merely resembles `14000` or a provider label is rejected.
 6. Annual and quarterly behavior are both proven wherever the mapping is not explicitly
    cadence-qualified. Every quarterly flow has immutable start/end and `quarter_only` basis;
    YTD/annual/trailing/unknown responses remain blocked.
-7. The four target metrics have complete, source-namespaced input lineage. Gross-profit absence
-   is `NOT_APPLICABLE` only for a proven securities-company template; all economically meaningful
-   but unverified inputs remain `BLOCKED`.
+7. The four target metrics have complete, source-namespaced input lineage. A future fresh design
+   must define and type an exact template-applicability selector before it can emit
+   `NOT_APPLICABLE`; the current `is_bank` boolean is insufficient. Gross-profit absence may be
+   `NOT_APPLICABLE` only after that selector proves the securities-company template. All
+   economically meaningful but unverified inputs remain `BLOCKED`.
 8. A deterministic future request plan is approved before code: one atomic reservation per
    logical cell, a fixed page ceiling and fixed retry ledger, retry only for explicitly allowed
    transport statuses, no retry on identity/schema failures, and a terminal diagnostic that
    distinguishes transport, empty, malformed, identity, basis, legal, and not-served outcomes.
    The present evidence budget is observation-only and is not a runtime quota promise.
-9. The implementation begins with RED tests using synthetic fixtures only, including direct/chain
-   parity, zero ratio calls, `14000`, all foreign `89/90/91`, CafeF `K/H/QUY` boundaries,
-   discrete/YTD mismatches, unit/scope mismatches, and no physical CafeF cashflow call.
+9. Only a later, separately approved `QUALIFIED FOR TDD` design begins with RED tests using
+   synthetic fixtures, including direct/chain parity, zero ratio calls, `14000`, all foreign
+   `89/90/91`, CafeF `H/N/K/QUY/NAM` boundaries, discrete/YTD mismatches, unit/scope mismatches,
+   and no physical CafeF cashflow call.
 
 Until all nine criteria are evidenced and reviewed, the only permitted change is another
-docs/source-gap correction. No production code, API expansion, push, or issue close is authorized
-by this note.
+docs/source-gap correction. Before an exact design PASS, no production code, push, or issue close
+is authorized. If this source-gap design receives PASS, its single transition is: rerun the
+merged docs/full/build/blacklist/secret/diff gates; push the exact approved research/design/
+backlog anchor; verify remote ancestry and changed paths; post the clean source-gap resolution;
+and close and re-read #205. That PASS never authorizes TDD. TDD is permitted only after all nine
+reopen criteria are evidenced and a fresh `QUALIFIED FOR TDD` design gate passes.
 
 ## 9. Compatibility boundary
 
