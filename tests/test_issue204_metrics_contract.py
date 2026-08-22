@@ -426,6 +426,30 @@ def test_direct_and_explicit_chain_accept_the_same_valid_report_contract():
         assert aggregate_income.source == "vndirect"
 
 
+def test_metrics_rejects_a_source_that_declares_non_vnd_statement_units():
+    for selection in ("direct", "chain"):
+        source = _source_with_income_payload(
+            (_report(StatementType.INCOME, "vndirect"),)
+        )
+        source.unit = "USD"
+        source.per_statement = {
+            statement: tuple(
+                replace(report, currency="USD") for report in reports
+            )
+            for statement, reports in source.per_statement.items()
+        }
+        kwargs = {"source": source} if selection == "direct" else {"sources": [source]}
+        report = metrics("TESTCO", period="annual", is_bank=False, **kwargs)[0]
+        income = _status_by_statement(report.statement_sources)[StatementType.INCOME]
+        assert income.status is StatementCoverageStatus.SOURCE_ERROR
+        coverage = explain_metric_coverage(
+            "TESTCO", period="annual", is_bank=False, **kwargs
+        )
+        assert _status_by_statement(coverage.statement_fetches)[
+            StatementType.INCOME
+        ].status is StatementCoverageStatus.SOURCE_ERROR
+
+
 def test_heading_contract_rejects_every_noncanonical_89_90_91_template_for_ssi_and_tcx():
     for symbol_input, canonical_symbol in ((" ssi ", "SSI"), ("tcx", "TCX")):
         for model_type in (89, 90, 91):
