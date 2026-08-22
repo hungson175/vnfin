@@ -1023,13 +1023,16 @@ _None._
 
 ## Next
 
-- **#206 — VNFIN sector-index history (SOURCE_DESIGN; builder active, 2026-08-23).**
+- **#206 — VNFIN sector-index history (DESIGN_REVIEW_REQUESTED; builder waiting reviewer, 2026-08-23).**
   Reviewer packet `tasks/206-vnfin-sector-index-history-spec.md` at reviewer `bd0a501`; public
-  triage receipt `issuecomment-5382313915`. Current builder anchor is local `89bad16` (the
-  published `origin/master` remains `b90e924`). Prepare docs/source design only: direct VPS/SSI/
-  VNDirect VNFIN D1 identity, exact `2020-05-11..2026-08-19` coverage, vendor/legal posture,
-  daily-only registry guard, strict single-source failover, and no silent missing-volume zero.
-  No production code, push, or close before exact-SHA design PASS; actor is `vnfin-oss` builder.
+  triage receipt `issuecomment-5382313915`. Docs/source design anchor is exact `07145cc`
+  (`docs/research/2026-08-23-vnfin-sector-index-history-source-vetting.md` and
+  `tasks/206-design-note.md`); published `origin/master` remains `b90e924`. The note records
+  direct VPS/SSI/VNDirect VNFIN D1 identity, exact `2020-05-11..2026-08-19` observations,
+  vendor/legal gaps, the daily-only registry guard, strict single-source failover, and no
+  silent missing-volume zero. Merged gates: docs contract 37 passed, full suite 4021 passed,
+  isolated sdist/wheel build passed, `git diff --check` passed. No production code, push, or
+  close before exact-SHA design PASS; actor is `vnfin-oss` builder.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
