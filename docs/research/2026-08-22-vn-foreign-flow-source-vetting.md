@@ -474,9 +474,11 @@ For HNX and UPCoM, body acceptance is route-specific: after exact MIME normaliza
 case media type before any `;` parameters, one report table must contain one heading row with all
 six exact normalized fields (`Security code`, `ISIN code`, `Buy volume`, `Buy value`, `Sell volume`,
 `Sell value`) and a distinct non-heading `td` row with non-empty values at those six mapped
-columns. A generic document, maintenance page, unrelated table, off-table field phrases, or MIME
-such as `text/htmlx` is rejected and produces no payload observations. A valid report table nested
-inside layout HTML is allowed when this table-local contract passes.
+columns. Every mapped data value must also be outside `REQUIRED_HEADINGS`, regardless of its column;
+this rejects a cyclic or otherwise permuted heading-only row. A generic document, maintenance page,
+unrelated table, off-table field phrases, or MIME such as `text/htmlx` is rejected and produces no
+payload observations. A valid report table nested inside layout HTML is allowed when this table-local
+contract passes.
 
 ```bash
 set -euo pipefail
@@ -685,7 +687,7 @@ def report_table_ok(table):
             }
             if any(not value for value in data_values.values()):
                 continue
-            if any(data_values[heading] == heading for heading in REQUIRED_HEADINGS):
+            if any(value in REQUIRED_HEADINGS for value in data_values.values()):
                 continue
             return True
     return False
@@ -892,7 +894,10 @@ outside that table, and wrong media types `text/htmlx`, `text/html:evil`, and
 `application/json:evil`; each must retain `transport_accepted=true` only when its HTTP envelope is
 otherwise valid, but set `body_accepted=false`, `accepted=false`, and emit no report-field
 observations. The same-table negatives also include six empty `td` cells, whitespace-only cells,
-heading labels repeated as a `td` row, and populated cells shifted away from the required heading
-columns. A valid report table nested inside layout HTML remains an accepted positive when its
-mapped cells are populated. A single table containing the exact heading row and distinct data row
-is the only HTML body accepted by this probe sketch.
+heading labels repeated as a `td` row, a cyclic/permuted heading-only `td` row (for example,
+`ISIN code`, `Buy volume`, `Buy value`, `Sell volume`, `Sell value`, `Security code`), and populated
+cells shifted away from the required heading columns. The parser must reject any mapped value that
+belongs to `REQUIRED_HEADINGS`, even when it appears under a different heading. A valid report table
+nested inside layout HTML remains an accepted positive when its mapped cells are populated. A single
+table containing the exact heading row and distinct data row is the only HTML body accepted by this
+probe sketch.

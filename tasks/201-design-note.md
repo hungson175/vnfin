@@ -1,8 +1,8 @@
 # #201 design note — Vietnamese equity foreign-investor daily flow
 
-**Status:** `BLOCKED — source-gap closure; no source enabled; data-row closure round pending re-review`
-**Reviewer gate:** data-row closure BLOCK at reviewer commit `87d7dd3`; report
-`reviews/review-202608221531-issue201-data-row-closure-review.md`
+**Status:** `BLOCKED — source-gap closure; no source enabled; heading-permutation closure round pending re-review`
+**Reviewer gate:** heading-permutation closure BLOCK at reviewer commit `f158e0d`; report
+`reviews/review-202608221540-issue201-heading-permutation-review.md`
 **Issue:** #201; public triage `issuecomment-5378368603`
 **Research evidence:** `docs/research/2026-08-22-vn-foreign-flow-source-vetting.md`
 **Clean-room:** primary official exchange/regulator pages and first-party UI/Swagger inspection only; the mandatory repository blacklist was applied to every search and no excluded material was opened or used.
@@ -1011,7 +1011,7 @@ provider rows or bundled datasets are permitted. Live endpoint tests are opt-in 
 | Bulk budget | atomic ledger passed to sources, strict sequential scheduler, one source/page reservation versus per-page physical requests/retries, 100 default/200 hard-cap source attempts, 5,000-page/6,000-request boundaries, dimension-specific queued failures, no silent drop |
 | Bulk result | XOR item invariant (both-null/both-present reject), stable order, bounded failure codes, full `TimeSeriesResult` mixin fields/index/attrs |
 | Dataframe | exact row/summary columns, origin columns, attrs, units/source/coverage, duplicate-index backstop |
-| Probe reproducibility | official-host-only opt-in command, `set -euo pipefail` with explicit curl-failure capture, exact 200/effective-URL/redirect/body gates, complete `Content-Type` parsing after its first colon, exact normalized MIME (media type before `;`), one-table HNX/UPCoM exact heading-column map plus distinct populated non-heading `td` row, empty/whitespace/repeated-heading/shifted-cell negatives, nested valid-table positive, colon-suffixed MIME negatives, payload observations gated on accepted transport/body, syntactic-only date markers, sanitized aggregate embedded in manifest, nonzero aggregation/manifest failures, raw output untracked |
+| Probe reproducibility | official-host-only opt-in command, `set -euo pipefail` with explicit curl-failure capture, exact 200/effective-URL/redirect/body gates, complete `Content-Type` parsing after its first colon, exact normalized MIME (media type before `;`), one-table HNX/UPCoM exact heading-column map plus distinct populated non-heading `td` row, empty/whitespace/repeated-heading/shifted-cell/cyclic-or-permuted-heading-only negatives, reject any mapped value in `REQUIRED_HEADINGS` regardless of column, nested valid-table positive, colon-suffixed MIME negatives, payload observations gated on accepted transport/body, syntactic-only date markers, sanitized aggregate embedded in manifest, nonzero aggregation/manifest failures, raw output untracked |
 | Public/release | docs contract, API snapshot, source/API/architecture docs, AI guidance, skill, changelog, build/wheel/archive inspection, clean-install import smoke |
 
 A future implementation must run focused tests RED-first, then the full merged offline suite before
@@ -1022,10 +1022,10 @@ clean-install smoke. No such implementation or test claim is made by this correc
 ## 7. Re-review request
 
 This correction round is deliberately source-gap closure, not a proposal to choose between HOSE
-and HNX. Please review this note and the research report against B1 in
-`reviews/review-202608221531-issue201-data-row-closure-review.md`. At handoff, the reviewer should spawn
-parallel sub-agents for table-local heading/data-row binding; all previously accepted MIME, warning,
-empty-chain, and source-gap gates must remain unchanged.
+and HNX. Please review this note and the research report against the heading-permutation predicate in
+`reviews/review-202608221540-issue201-heading-permutation-review.md`. At handoff, the reviewer should
+spawn parallel sub-agents for table-local heading/data-row binding and heading-value membership; all
+previously accepted MIME, warning, empty-chain, and source-gap gates must remain unchanged.
 
 The required decision is whether the packet now precisely documents the gap and conjunctive reopen
 criteria. No parser, adapter, public model, facade, source chain, production code, push, or issue
