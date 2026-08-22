@@ -619,7 +619,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   Final design review BLOCK at `1fadc58` (`reviews/review-202608221438-issue201-final-design-review.md`):
   one more docs-only correction is required for live `IndexConstituents` warning-prefix compatibility,
   coverage and attempt/error typing, a shared per-page retry ledger with deterministic scheduling, and
-  fail-closed probe/manifest semantics. **Production code, push, and close remain paused.**
+  fail-closed probe/manifest semantics. **Production code, push, and close remain paused.** Closure
+  review BLOCK at reviewer `ab9167c` (`reviews/review-202608221506-issue201-closure-review.md`):
+  `e365b14` resolves the substantive contracts, but one minimal docs-only correction remains for
+  route-specific HNX/UPCoM report-shape plus exact normalized MIME rejection, and runtime tuple-of-
+  strings warning input with empty derived-prefix rejection. **No code, push, or close.**
 
 - **#199 + #200 — native international-index source/design batch (PO handoff 2026-07-25 17:26, ACCEPTED).**
   Reviewer triage commits `465d905` (#199 Bangladesh DSEX/DS30/DSES) + `e2cab7a` (#200 Canada macro +
