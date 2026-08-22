@@ -1023,18 +1023,7 @@ _None._
 
 ## Next
 
-- **#205 — quarterly operating-profit/ratio triage (DESIGN_REVIEW_REQUESTED; corrected docs-only round, 2026-08-22).**
-  Reviewer packet `tasks/205-quarterly-operating-profit-ratio-spec.md` at `19de874`; public
-  spec receipt `issuecomment-5380386366`. Exact block report
-  `reviews/review-202608221944-issue205-design-source-gate.md` at reviewer `73e077c`, against
-  anchor `b42fb7c`. Correction commit `0ff5e56` records CafeF raw-vs-typed outcomes and exact
-  canonical routes; makes source-gap PASS lead only to docs publication/resolution/close, never
-  TDD; requires an item code for `RAW_MAPPED`; keeps template applicability blocked and requires
-  exact cross-statement interval equality; reframes provisional lineage as future reopen design;
-  and binds the complete packet section 6 RED/release matrix. Preserve the empty source chain,
-  26-metric API, zero ratio calls, code `14000` negative, fail-closed 89/90/91, and no production
-  code, push, or close. Merged focused/full pytest, docs, diff, import/version, no-secrets, and
-  isolated sdist/wheel build gates are green; request narrow exact-SHA re-review now.
+_None._
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
@@ -1051,6 +1040,14 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#205 — DONE/CLOSED (2026-08-22), documentation-only source-gap closure.** Exact approved
+  `origin/master` anchor `b90e924df3bd747f0d98d763b4c1a26b3b8f8e4f` published only the approved
+  research/design/backlog paths. Clean no-capability resolution `issuecomment-5380573610`; GitHub
+  re-read `CLOSED`/`COMPLETED` (`closedAt=2026-08-22T13:07:09Z`). No TDD, production code, new
+  source, or capability claim. Design PASS report:
+  `reviews/review-202608222004-issue205-corrected-design-pass.md` at reviewer `1fc4712`.
+  Local closure receipt commit is intentionally unpushed; remote remains exact `b90e924`.
 
 - **#201 — DONE/CLOSED (2026-08-22), documentation-only source-gap closure.** Published exact
   approved range `fd675cf76d3ce860c148bf9cfd013349659b6722..cfb9ebebdf2f035874b41c48cab13dc8252044d4`
