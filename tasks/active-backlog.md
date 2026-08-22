@@ -1023,18 +1023,16 @@ _None._
 
 ## Next
 
-- **#206 — VNFIN sector-index history (DESIGN_REVIEW_REQUESTED; builder waiting reviewer, 2026-08-23).**
+- **#206 — VNFIN sector-index history (DESIGN_CORRECTION_IN_PROGRESS; builder applying B1-B7, 2026-08-23).**
   Reviewer packet `tasks/206-vnfin-sector-index-history-spec.md` at reviewer `bd0a501`; public
-  triage receipt `issuecomment-5382313915`. Docs/source design anchor is exact `dd9093b`
-  (`docs/research/2026-08-23-vnfin-sector-index-history-source-vetting.md` and
-  `tasks/206-design-note.md`); precision correction from `07145cc` removes short live-payload
-  digest prefixes that tripped the repository secret scan; published `origin/master` remains
-  `b90e924`. The note records
-  direct VPS/SSI/VNDirect VNFIN D1 identity, exact `2020-05-11..2026-08-19` observations,
-  vendor/legal gaps, the daily-only registry guard, strict single-source failover, and no
-  silent missing-volume zero. Merged gates: docs contract 37 passed, full suite 4021 passed,
-  isolated sdist/wheel build passed, `git diff --check` passed. No production code, push, or
-  close before exact-SHA design PASS; actor is `vnfin-oss` builder.
+  triage receipt `issuecomment-5382313915`. Exact design anchor `dd9093b` was BLOCKED by
+  reviewer report `6446dbf` at
+  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608230322-issue206-design-source-gate.md`.
+  Apply one docs-only B1-B7 correction: browser-UA dependency, single-provider route binding,
+  per-source capability/SSI physical budget, fixed-window versus arbitrary/stitched coverage,
+  total fail-loud volume, bounded diagnostics, and executable direct-success/MIME TDD. Preserve
+  the empty chain and `SOURCE-GAP CLOSURE`; published `origin/master` remains `b90e924`.
+  No production code, push, or close before exact-SHA design PASS; actor is `vnfin-oss` builder.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
