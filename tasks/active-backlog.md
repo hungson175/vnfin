@@ -1023,7 +1023,7 @@ _None._
 
 ## Next
 
-- **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
+- **#208 — annual operating profit (DESIGN_REVIEW_PENDING; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
   `docs/research/2026-08-23-annual-operating-profit-source-vetting.md` and `tasks/208-design-note.md`.
@@ -1031,10 +1031,11 @@ _None._
   `NOT_APPLICABLE`, quarterly source-gap, zero ratio calls, and tagged-v0.2.0 distinction. Actor is
   `vnfin-oss` builder. Docs commit `5d2c3d763a5b5eec7f6eff4afe5c35a45d37cb87`; merged gates are
   green (focused/full offline tests, diff/blacklist/secret/import/catalog/build). Reviewer report
-  `reviews/review-202608230935-issue208-design-source-gate.md` at commit `31a6f5f` blocks B1-B5:
-  audited/identity disposition, 16-call/rights ledgers, provider-conditional reopen and docs-only
-  close transition, response-tag/public-lineage/mapped-code seams, and packet/bank-14000/source-doc
-  corrections. Apply one docs-only correction; no RED tests, production code, push, or close.
+  `reviews/review-202608230935-issue208-design-source-gate.md` at commit `31a6f5f` was addressed
+  in docs correction `f692e7f2cf3b7b9ab4cb2aa0fe69bd8da8772e1f`: audited/identity disposition,
+  complete 16-call and rights ledgers, provider-conditional reopen/close transition,
+  response-tag/public-lineage/mapped-code seams, and packet/bank-14000/source-doc fixes. Request
+  exact-SHA re-review; no RED tests, production code, push, or close.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
