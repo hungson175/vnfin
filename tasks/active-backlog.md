@@ -1061,6 +1061,13 @@ _None._
   Use SOURCE-GAP if no single no-login unit qualifies. No RED/model/accessor/code/push/close before
   exact-SHA design PASS.
 
+- **#217 — QUEUED_AFTER_#215 (2026-08-23), source/design only.** Actor `vnfin-oss-reviewer`; next
+  action `SOURCE_DESIGN_AFTER_#215`. Authoritative packet
+  `tasks/217-daily-cnyvnd-fx-history-spec.md`, reviewer packet anchor `4159d74`, public receipt
+  `issuecomment-5385114544`. Scope is direct daily CNY/VND only: prove exact basis, coverage, and
+  legal provenance. Exclude USD cross-synthesis, annual/spot substitution, and VN30F signal.
+  Do not interrupt active #215 exact review. No RED/code/push/close before exact-SHA design PASS.
+
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
