@@ -602,41 +602,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#223 — DESIGN_BLOCK (2026-08-24).** Actor `vnfin-oss-reviewer`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `6939ba4` for
+- **#223 — EXACT_SHA_DESIGN_REREVIEW (2026-08-24, clean-line lifecycle correction).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `6939ba4` for
   `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
-  Corrected handoff `567460afb29e7dcdc096e60256829806354c50db` is blocked by report
+  BLOCK at `567460afb29e7dcdc096e60256829806354c50db` is recorded in
   `reviews/review-202608240040-issue223-corrected-design-rereview.md` at reviewer `ab2c9ba`.
-  Apply only the lifecycle wording fix: restore #222 DONE/CLOSED facts on the clean line and
-  remove excluded-receipt wording from the research boundary. Preserve #223 reviewer ownership,
-  SOURCE-GAP/empty chain, #224/#225 queue, and no probe, RED, code, push, or close.
-
-- **#222 — EXACT_SHA_DESIGN_REREVIEW (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `001ad85` for
-  `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
-  BLOCK record `de8d7196db7a25f911c93573fbc54da8b42dcce5` binds reviewed `77083c1` to report
-  `reviews/review-202608232350-issue222-design-source-review.md` at reviewer `5a554b7`.
-  Corrected artifact anchor `7e4047da5ba42a9dbcb605082d65330ce08fc9ec` repairs the transparent HOSE
-  owner landing citation, strictly-positive OHLC/current-volume carrier gate, explicit wrong-index
-  aliases, shared identity/history ledger charging, and the complete existing stitched RED matrix.
-  Preserve SOURCE-GAP CLOSURE, empty VN100 chain, current strict/stitched zero-network guard, and
-  #223/#224/#225 queue. #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
-  `0d7977a21386acd754d3fa220b040fa1d89b03c7`; its clean resolution is `issuecomment-5387072621`.
-  No proxy, basket, downstream observable, probe, RED/code, push, or close before exact-SHA design
-  PASS.
-  New BLOCK at exact `4e7c5f2b35f98a4e46b3fbea8e4f5109c2374e7f`, receipt `9187a237`, and report
-  `reviews/review-202608240000-issue222-corrected-design-rereview.md` at reviewer `4ad08c8`.
-  Actor `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. R1-R4 require removal
-  of unsupported Decision 747/date attribution, VN100 identity-mismatch rather than public-request
-  rejection framing for served indices, an executable aggregate `fetched_at_utc` rule, and a later
-  local-only exact-SHA handoff receipt. Preserve the empty chain and queue; no probe, RED, code, push,
-  or close.
-  The narrow correction handoff removes the unsupported attribution, scopes wrong-index fixtures to
-  VN100 identity qualification while preserving current served selectors, and binds stitched
-  `fetched_at_utc` to the validated UTC-aware segment maximum with atomic negatives. After the
-  corrected merged handoff, a separate local-only backlog receipt must bind its exact SHA and remain
-  unpushed/outside any publish range.
-
+  The clean-line correction restores verified #222 DONE/CLOSED facts and removes excluded-receipt
+  wording; substantive B1-B5 source/design contracts remain unchanged. Preserve SOURCE-GAP/empty
+  chain and #224/#225 queue; no probe, RED, code, push, or close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1109,6 +1082,14 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#222 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `c3921a1a7a31c5de8b21f838173fd1c288b0e698` to `origin/master`; the approved three
+  research/design/backlog paths and clean ancestry were verified. Resolution
+  `issuecomment-5387257982`; GitHub re-read `CLOSED`/`COMPLETED` at `2026-08-23T17:11:38Z`.
+  The VN100 source chain remains empty; no provider route, probe, RED, production code, source
+  registration, proxy/basket, downstream observable, or runtime capability was added. #223 is the
+  active reviewer-owned source/design handoff above; #224/#225 remain queued.
+
 - **#220 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `0d7977a21386acd754d3fa220b040fa1d89b03c7` to `origin/master`; base
   `e478f4ff0e6ad846e31dbf6a5412c16e8382a768` is an ancestor and exactly the three approved
@@ -1119,7 +1100,7 @@ _None._
   coverage, lawful bounded runtime, and redistribution together; the new source chain remains
   empty, current `Period.UNKNOWN` and the 26-metric zero-ratio behavior are unchanged, and no RED,
   production code, source registration, runtime capability, derivation, substitution, or coverage
-  claim was added. #222 is activated above for independent VN100 source/design only.
+  claim was added. #222 was later verified `DONE/CLOSED` at exact `c3921a1`; #223 is active above.
 
 - **#219 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `e478f4ff0e6ad846e31dbf6a5412c16e8382a768` to `origin/master`; remote HEAD,
@@ -1129,8 +1110,8 @@ _None._
   `2026-08-23T15:59:21Z`. The official-source review did not qualify a direct no-login national
   monthly IIP YoY provider; the new source chain remains empty, current runtime is unchanged,
   and no enum, API, data capability, RED test, or downstream signal was added. #220 was activated
-  above for independent annual-ROE source/design only and is now `DONE/CLOSED`; #222 is active
-  above for its independent VN100 source/design.
+  above for independent annual-ROE source/design only and is now `DONE/CLOSED`; #222 was later
+  verified `DONE/CLOSED` at exact `c3921a1`; #223 is active above for independent VNCOND source/design.
 
 - **#221 — DONE/CLOSED (2026-08-23), approved Fmarket runtime disable.** Published exact approved
   anchor `a69f3c5901f97e95f1c183c64792f933a82cf7a6` to `origin/master`; remote HEAD is exact,

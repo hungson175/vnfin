@@ -47,8 +47,9 @@ The clean production boundary for this review is `origin/master` at:
 c3921a1a7a31c5de8b21f838173fd1c288b0e698
 ```
 
-The local backlog receipts after that base record #222 completion and #223 activation only; they
-do not change the registry, source chain, or runtime behavior. On the clean base,
+The clean base is the published #222 completion; this #223 source/design handoff is a
+docs/backlog-only descendant and does not change the registry, source chain, or runtime behavior.
+On the clean base,
 `VNCOND` is present in `_KNOWN_INDEX_IDENTIFIERS` but absent from
 `_VALUE_HISTORY_INDICES` in `vnfin/_contracts/index_registry.py`. The guard in both
 `index_history` and `index_history_stitched` runs before the failover chain, so a recognized
