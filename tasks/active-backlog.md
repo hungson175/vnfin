@@ -601,9 +601,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#213 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), active with independent #214 batch.**
-  Actor `vnfin-oss`; next action `AWAIT_EXACT_SHA_DESIGN_VERDICT`. Final local docs anchor
-  `72ab675` (clean `origin/master` ancestry at `4c85fbc`; terminal budget contract correction);
+- **#213 — DESIGN_REVIEW_BLOCKED (2026-08-23), combined docs correction with independent #214.**
+  Correction actor `vnfin-oss`; next action `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`.
+  Current merged head `af70154`; prior artifact anchor `72ab675`; synthesized report
+  `reviews/review-202608231438-issues213-214-design-source-gate.md` at reviewer `d5dff00`;
   reviewer packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/213-vnreal-index-history-source-spec.md`,
   packet commit `bc37f58`, delivery receipt `c1ce4913`. Qualify fresh VPS/SSI/VNDirect VNREAL D1
@@ -612,10 +613,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   with #214 but keep symbols, artifacts, anchors, and receipts independent. No RED tests,
   production code, push, or close before exact-SHA design PASS.
 
-- **#214 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), active independent companion to #213.**
-  Actor `vnfin-oss`; next action `AWAIT_EXACT_SHA_DESIGN_VERDICT`. Final local docs anchor
-  `c302948` (clean `origin/master` ancestry at `4c85fbc`; terminal budget contract correction;
-  supersedes isolated `b8d3aeb`); reviewer packet
+- **#214 — DESIGN_REVIEW_BLOCKED (2026-08-23), independent companion in the combined correction.**
+  Correction actor `vnfin-oss`; next action `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`.
+  Current merged head `af70154`; prior artifact anchor `c302948` (supersedes isolated `b8d3aeb`);
+  synthesized report `reviews/review-202608231438-issues213-214-design-source-gate.md` at reviewer
+  `d5dff00`; reviewer packet
   `tasks/214-vnmid-index-history-source-spec.md`, packet commit `bd4038e`, public receipt
   `issuecomment-5384680920`. Qualify VNMID independently using the shared batch methodology but
   separate artifacts/anchors/receipts: VPS/SSI/VNDirect identity, D1 points/volume/time, exact
