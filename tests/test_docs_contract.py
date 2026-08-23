@@ -315,29 +315,35 @@ def test_fmarket_transition_docs_reject_completed_state_contradictions():
     assert "the fmarket source is implemented and remains disabled" in terms_audit.casefold()
 
 
+_APPROVED_CURRENT_FAIL_CLOSED_SENTENCES = tuple(
+    re.sub(r"\s+", " ", sentence.casefold())
+    for sentence in (
+        "Current valid calls do not build request bodies, enter cache lookup, dispatch, parse, "
+        "or produce `EmptyData`.",
+        "current valid calls fail before request-body construction, cache lookup, transport "
+        "dispatch, response parsing, or public `EmptyData` production.",
+        "no current valid call reaches that parser or produces `EmptyData`, and this closure "
+        "invents no enum, exception, or result carrier.",
+        # The ETF compatibility table has this exact bounded fail-before clause before its
+        # semicolon-delimited historical fundAssetTypes note.
+        "current valid calls fail before request-body construction",
+    )
+)
+
+_CURRENT_FMARKET_CALL_SUBJECT = r"current(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?"
+_CURRENT_FMARKET_UNSAFE_MARKER = (
+    r"(?:fundassett?ypes|cache(?:d)?|cache\s+(?:lookup|text|hit)|"
+    r"parse(?:d|s|ing)?|response|payloads?|rows?|row|emptydata|"
+    r"request(?:[-\s]?body)?|construct(?:ed|ion|ing)?|dispatch)"
+)
+
+# Scan one bounded current-call sentence/cell rather than trying to model every English verb.
+# The only removed text is an exact reviewed fail-closed sentence/clause above; every other
+# current API/Fmarket-call sentence containing an unsafe marker is rejected.
 _CURRENT_FMARKET_CONTRADICTION_PATTERNS = (
     re.compile(
-        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b(?!\s+do\s+not\b)"
-        r"(?:\s+[a-z0-9_`-]+){0,8}\s+parse(?:d|s)?\s+(?:provider\s+)?(?:response|payload|rows?|row)\b",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b(?!\s+do\s+not\b)"
-        r"(?:\s+[a-z0-9_`-]+){0,8}\s+(?:can|may|will)?\s*"
-        r"(?:forward|send|include)\b[^.!?\n]{0,180}\bfundassett?ypes\b",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b(?!\s+do\s+not\b)"
-        r"(?:\s+[a-z0-9_`-]+){0,8}\s+(?:can|may|will|return|serve|use|hit|read|cache)\b"
-        r"[^.!?\n]{0,180}\b(?:cache(?:d|\s+lookup|\s+text)?|emptydata)\b",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b"
-        r"[^.!?\n]{0,180}\bdo\s+not\b[^.!?\n]{0,180}\b(?:instead|but|yet|however)\b"
-        r"[^.!?\n]{0,120}\b(?:return|serve|use|hit|parse|produce|yield)\b"
-        r"[^.!?\n]{0,180}\b(?:cache(?:d|\s+text)?|emptydata|response|payload|row)\b",
+        rf"\b{_CURRENT_FMARKET_CALL_SUBJECT}\b[^.!?\n|]*"
+        rf"\b{_CURRENT_FMARKET_UNSAFE_MARKER}\b",
         re.IGNORECASE,
     ),
 )
@@ -345,6 +351,10 @@ _CURRENT_FMARKET_CONTRADICTION_PATTERNS = (
 
 def _assert_no_current_fmarket_contradictions(text: str) -> None:
     normalized = re.sub(r"\s+", " ", text.casefold())
+    # Replace only exact approved fail-closed text. A reworded or extended sentence remains in
+    # the bounded scan and is rejected by the marker matcher.
+    for sentence in _APPROVED_CURRENT_FAIL_CLOSED_SENTENCES:
+        normalized = normalized.replace(sentence, " ")
     for pattern in _CURRENT_FMARKET_CONTRADICTION_PATTERNS:
         assert not pattern.search(normalized), pattern.pattern
 
@@ -362,6 +372,15 @@ def _assert_no_current_fmarket_contradictions(text: str) -> None:
         "Current calls use cached response text.",
         "Current valid calls may parse provider payloads and produce `EmptyData`.",
         "Current valid calls do not fail before cache and instead return cached text.",
+        "Current calls parse the provider response rows.",
+        "Current API calls parse provider payloads.",
+        "Current calls parse cached response text.",
+        "Current Fmarket calls produce EmptyData.",
+        "Current valid API calls yield EmptyData.",
+        "Current calls do not fail before cache and return cached text.",
+        "Current calls do not fail before cache; they return cached text.",
+        "Current calls do not fail before cache, returning cached text instead.",
+        "Current calls do not fail before cache; instead cached text is returned.",
     ),
 )
 def test_fmarket_contradiction_matcher_covers_modal_and_short_forms(contradiction):
@@ -415,12 +434,31 @@ _FMARKET_EVIDENCE_PATHS = (
     )
 
 _FMARKET_EVIDENCE_KNOWN_FORMS = (
-    ("VEOF", 0), ("VCBF", 0), ("VCBFBCF", 0), ("VFMVF1", 0), ("RVPF24", 0),
-    ("baf126003", 1), ("id=20", 2), ("product_id=20", 2), ("product id 51", 2), ("id27", 2),
+    ("VEOF", 0), ("VESAF", 0), ("VFF", 0), ("VIBF", 0), ("SSISCA", 0), ("BVPF", 0),
+    ("VLBF", 0), ("VCBF", 0), ("VCBFBCF", 0), ("VFMVF1", 0), ("RVPF24", 0),
+    ("VNDAF", 0), ("ASBF", 0), ("DCBF", 0), ("baf126003", 1),
+    ("id=20", 2), ("id=21", 2), ("id=27", 2), ("id=38", 2), ("id=51", 2),
+    ("id 20", 2), ("id 21", 2), ("id 27", 2), ("id 38", 2), ("id 51", 2),
+    ("id = 20", 2), ("id = 21", 2), ("id = 27", 2), ("id = 38", 2), ("id = 51", 2),
+    ("product_id=20", 2), ("product_id=21", 2), ("product_id=27", 2),
+    ("product_id=38", 2), ("product_id=51", 2),
+    ("product_id 20", 2), ("product_id 21", 2), ("product_id 27", 2),
+    ("product_id 38", 2), ("product_id 51", 2),
+    ("product_id = 20", 2), ("product_id = 21", 2), ("product_id = 27", 2),
+    ("product_id = 38", 2), ("product_id = 51", 2),
+    ("product id=20", 2), ("product id=21", 2), ("product id=27", 2),
+    ("product id=38", 2), ("product id=51", 2),
+    ("product id 20", 2), ("product id 21", 2), ("product id 27", 2),
+    ("product id 38", 2), ("product id 51", 2),
+    ("product id = 20", 2), ("product id = 21", 2), ("product id = 27", 2),
+    ("product id = 38", 2), ("product id = 51", 2),
     ("21/65", 3), ("all 65 funds", 4), ("65 funds", 5), ("total=65", 6), ("total:65", 6),
-    ("1729 rows", 7), ("1267", 8), ("2025-12-05", 9), ("2014-07-01", 9),
+    ("1729 rows", 7), ("1729 row", 7), ("1317 rows", 7), ("1317 row", 7),
+    ("1267 rows", 7), ("1267 row", 7), ("1267", 8),
+    ("2025-12-05", 9), ("2018-07-31", 9), ("2017-01-31", 9), ("2014-07-01", 9),
     ("1781802000000", 10), ("1761537393929", 11), ("~8 such funds", 12),
-    ("~8 defensive-credit", 12), ("15091", 13), ("15120", 13), ("15105.5", 13),
+    ("~8 defensive-credit", 12), ("15091", 13), ("15091.0", 13), ("15120", 13),
+    ("15120.0", 13), ("15105.5", 13),
     ("7.99", 13), ("25.2", 13), ("11.59", 13), ("97.44", 13), ("33.36", 13),
     ("19626.37", 13), ("34942.66", 13), ("33779.47", 13), ("43503.81", 13),
     ("36153.51", 13), ("res/products/20", 14),
