@@ -639,12 +639,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   BLOCK was recorded before edits at this backlog commit. Apply one narrow exhaustive RED-first
   guard correction only; no runtime/probe/push/close/#219 activation.
   The final exhaustive RED-first guard/content correction is
-  `83720c9656438a5df909483d2bb56c37bf157b95`: the F1 scanner now normalizes bounded current-call
-  cells, removes only exact approved fail-closed sentences, and rejects every other unsafe current
-  API/Fmarket-call marker; all nine reported parser, `EmptyData`, and compound-negation counterexamples
-  are positive rejection fixtures. The F2 matrix now pins every listed fund token, ID value/separator
-  spelling, row count, date, and integer/float spelling while retaining the exact 14-path assertion
-  and clean-corpus scan. This is test-only guard correction; no runtime/probe/source capability changed.
+  `83720c9656438a5df909483d2bb56c37bf157b95`, with exact-unit allow-list hardening in
+  `e56a048b55cb413102f13b44d54c1922e262eb6d`: the F1 scanner now normalizes bounded current-call
+  cells, allows only entire exact approved fail-closed sentences/cells, and rejects every other
+  unsafe current API/Fmarket-call marker; all nine reported parser, `EmptyData`, and compound-negation
+  counterexamples are positive rejection fixtures. The F2 matrix now pins every listed fund token,
+  ID value/separator spelling, row count, date, and integer/float spelling while retaining the exact
+  14-path assertion and clean-corpus scan. This is test-only guard correction; no runtime/probe/source
+  capability changed.
   This lifecycle receipt is the exact final review handoff. Actor is `vnfin-oss-reviewer`; next action
   `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve `DISABLE_PENDING_PERMISSION`, no runtime/probe/push/
   resolution/close, no #219 activation, and queued #219/#220/#222; exclude local queue receipts
