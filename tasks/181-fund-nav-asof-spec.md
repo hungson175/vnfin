@@ -3,7 +3,7 @@
 **Worktree:** `/home/hungson175/dev/vnfin-oss-wt-181` (branch `issue-181-fund-nav-asof`, off master). Work ONLY in this worktree. TDD: failing tests FIRST, then the minimum field+parse, then refactor on green. Scope is DELIBERATELY SMALL — one additive field. Do NOT add a warning, a token, or a staleness diagnostic (that was SPLIT into a deferred follow-up).
 
 ## What & why (probe-confirmed, reviewer-approved)
-The Fmarket filter row already carries a per-fund NAV date — nested at **`row["extra"]["lastNAVDate"]`**, an epoch-**millisecond** value at VN-local midnight (e.g. `1781802000000` → a VN calendar date). It pairs with `extra.lastNAV`/`extra.currentNAV`, which equal the top-level `nav` we already parse. Today `Fund.nav` has no as-of date — callers can't tell if a NAV is fresh. Add the provider's OWN date as an additive optional field; never fabricate.
+The Fmarket filter row already carries a per-fund NAV date — nested at **`row["extra"]["lastNAVDate"]`**, an epoch-**millisecond** value at VN-local midnight (represented in this spec only by fabricated epoch fixtures). It pairs with `extra.lastNAV`/`extra.currentNAV`, which equal the top-level `nav` we already parse. Today `Fund.nav` has no as-of date — callers can't tell if a NAV is fresh. Add the provider's OWN date as an additive optional field; never fabricate.
 
 **Use ONLY `extra.lastNAVDate`.** IGNORE the distractors: top-level `row["updateAt"]` (fund-record edit time; varies 2024–2026) and `row["productNavChange"]["updateAt"]` (nav-stats compute time; ~today for all funds). Neither is the NAV date.
 

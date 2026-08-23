@@ -112,8 +112,9 @@ count**, emit as **literal stems at a `warnings=` sink** so #188 forward-discove
 **REUSE** accessors — extend `holdings()`/`asset_allocation()`, do NOT add a clashing
 `fund_detail`/`allocation` name.
 
-**Live-probe outcome (reviewer-authorized, opt-in, ran 2026-06-21 on id=38 equity + id=21 bond; values
-NOT committed, fixtures stay synthetic):** of the 6 probe-gated fields, **2 confirmed with exact paths →
+**Live-probe outcome (reviewer-authorized, opt-in, ran 2026-06-21 on one equity-shaped and one
+bond-shaped product; provider IDs and values NOT committed, fixtures stay synthetic):** of the 6
+probe-gated fields, **2 confirmed with exact paths →
 LAND; 4 deferred:**
 - ✅ `inception_date` ← `data.firstIssueAt` (int **epoch-ms**, parse exactly like `nav_as_of` from
   `extra.lastNAVDate`, `fmarket.py:511`) → `Optional[date]`.

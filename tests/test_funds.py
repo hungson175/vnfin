@@ -427,7 +427,7 @@ def _fund_row_with_extra(extra="__omit__"):
         # and a productNavChange.updateAt (nav-stats compute time). Neither is the
         # NAV date; if either were used the asserted nav_as_of would be wrong.
         "updateAt": 1700000000000,  # 2023-11-14 UTC -> would give a 2023 VN date
-        "productNavChange": {"updateAt": 1781802000000},  # ~today-ish distractor
+        "productNavChange": {"updateAt": 1700000000000},  # fabricated distractor
     }
     if extra != "__omit__":
         row["extra"] = extra
@@ -473,7 +473,7 @@ def test_list_funds_nav_as_of_absent_lastnavdate_is_none():
 
 @pytest.mark.parametrize(
     "bad",
-    [None, 0, -1, -1781802000000, "1781802000000", "garbage", float("nan"), True, False, 1781802000000.5],
+    [None, 0, -1, -1700000000000, "1700000000000", "garbage", float("nan"), True, False, 1700000000000.5],
     ids=["null", "zero", "neg", "neg_epoch", "str_num", "str", "nan", "true", "false", "frac_float"],
 )
 def test_list_funds_nav_as_of_garbage_is_none(bad):
@@ -1283,7 +1283,7 @@ def test_holdings_bond_only_fund_parses_bond_list():
     # A pure BOND fund: equity list empty, bond list populated. Today this returns
     # bare EmptyData (category-wide blind spot); option A must parse the bond list.
     bond = [
-        {"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "industry": "Fake bond industry", "type": "BOND", "price": None},
+        {"stockCode": "ZZZBOND1", "netAssetPercent": 12.34, "industry": "Fake bond industry", "type": "BOND", "price": None},
         {"stockCode": "ZZZBOND2", "netAssetPercent": 12.17, "industry": "Fake bond industry", "type": "BOND", "price": None},
     ]
     holds = _src(
@@ -1294,7 +1294,7 @@ def test_holdings_bond_only_fund_parses_bond_list():
     assert all(h.instrument_type == "BOND" for h in holds)
     assert all(h.price_raw is None and h.price_unit is None for h in holds)
     by_code = {h.stock_code: h for h in holds}
-    assert by_code["ZZZBOND1"].weight_pct == pytest.approx(11.59)
+    assert by_code["ZZZBOND1"].weight_pct == pytest.approx(12.34)
     assert by_code["ZZZBOND2"].weight_pct == pytest.approx(12.17)
 
 
@@ -1357,7 +1357,7 @@ def test_holdings_unlisted_bond_type_parsed():
     # {STOCK,BOND} whitelist hard-failed (InvalidData) several synthetic provider-shaped cases; the granular
     # tag must now be accepted and carried (listed vs unlisted is a credit-risk
     # distinction worth keeping).
-    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "type": "UNLISTED_BOND", "price": None}]
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 12.34, "type": "UNLISTED_BOND", "price": None}]
     holds = _src(
         _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
     ).holdings(FAKE_ID_A)
@@ -1560,7 +1560,7 @@ def test_holdings_dedup_stock_code_across_lists_raises_invalid():
 
 
 def test_holdings_bond_only_uses_id_in_path_and_identity_preserved():
-    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "type": "BOND"}]
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 12.34, "type": "BOND"}]
     get = _capture_get(
         _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
     )
@@ -1570,7 +1570,7 @@ def test_holdings_bond_only_uses_id_in_path_and_identity_preserved():
 
 def test_holdings_bond_only_rejects_mismatched_detail_id():
     # #21 identity guard still gates the bond-only path.
-    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "type": "BOND"}]
+    bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 12.34, "type": "BOND"}]
     with pytest.raises(InvalidData):
         _src(
             _holdings_payload_with(id=9999, productTopHoldingList=[], productTopHoldingBondList=bond)

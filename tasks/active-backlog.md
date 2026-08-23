@@ -97,8 +97,9 @@ state/ left to the reviewer (owns watermark).
 > Reviewer-routed poller intake; **triage = ACCEPTED** (trusted vf-advisor↔vnfin reporter, clean repro, no
 > untrusted code). Real degrade-not-fabricate / never-silent defect: `funds.source().nav_history()` hard-raises
 > `InvalidData` on ONE conflicting `navDate` (`vnfin/funds/fmarket.py:356-373`, the #158 hard-raise) → nukes a
-> fund's whole multi-year series; **21/65 VN funds lose all NAV** over one bad date (repro `nav_history(21)` VFF
-> 2018-07-31 / 2017-01-31). Fix = **port the #186 VN-Index quarantine** to the Fmarket NAV parser: conflicting
+> fund's whole multi-year series; historical provider impact and date examples are intentionally redacted
+> (synthetic fixtures preserve the parser contract). Fix = **port the #186 VN-Index quarantine** to the Fmarket
+> NAV parser: conflicting
 > navDate → quarantine the date + never-silent warning + return the rest; identical-dup → dedup keep-first;
 > **threshold guard preserved** (`max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION×n)` → systematically-broken
 > still raises); **NEVER average**. **DESIGN-NOTE-FIRST → reviewer gate before any code.** 3 gate questions
@@ -619,7 +620,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   evidence remains outside the bounded redaction scan. Actor is `vnfin-oss`; next action
   `RED_FIRST_FINAL_R1_R2_DOCS_FIXTURE_LIFECYCLE_CORRECTION`. Preserve `DISABLE_PENDING_PERMISSION`,
   no runtime/probe/push/resolution/close, no #219 activation, and queued #219/#220/#222; exclude
-  local queue receipts `65d6ac6` and `0fd103d`.
+  local queue receipts `65d6ac6` and `0fd103d`. BLOCK recorded at `fd5a828`.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
@@ -935,9 +936,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     (review-202606201534, all 4 conditions verified). Suite 2871 green; cov TOTAL 95% / fmarket.py 97%;
     gate-trio green; clean-room + diff --check clean; 8 fail-first tests. (Watermark: reviewer owns it —
     I restored last_seen.txt, left state/ to reviewer; see memory.) N1 snapshot regen at release.
-    Gated live probe (2026-06-20 ~15:12) RULED OUT truncation/pagination: all 65 funds' wide
-    `nav_history` ends uniformly at 2025-12-05, per-fund row counts vary 110→1267, first-dates track
-    each inception → array complete inception→provider cutoff = genuine systemic provider staleness
+    Gated historical evidence (exact provider cutoff/counts redacted) RULED OUT truncation/pagination:
+    the wide `nav_history` ends uniformly at a provider cutoff, per-fund row counts vary across the
+    observed cohort, and first-dates track each inception → array complete inception→provider cutoff
+    = genuine systemic provider staleness
     (not a request/array-cap bug). Contract: track max navDate over ALL rows via `_nav_row_date`
     BEFORE the lo/hi skip (NO #21/#158/value guards on out-of-window rows); post-filter points empty
     AND window start `lo` given AND `max_navdate < lo` → `StaleData` msg `"fmarket: NAV history for
@@ -961,17 +963,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
       gate-trio+clean-room+diff-check clean. Implements reviewer option (i) (relax non-equity stock_code,
       equities strict); refinements (a) fail-closed-on-garbage + (b) caller-gate docstring satisfied; new
       `enum_tag_or_other` helper (unknown stringlike type→OTHER, malformed→InvalidData). Original bug:
-      my fail-closed `{STOCK,BOND}` whitelist hard-failed ~8
-      UNLISTED-bond funds (defensive-credit sleeve = core use case): bond `type` is `BOND` **or**
-      `UNLISTED_BOND` (ASBF id51 / VFF id21 / DCBF id27); my `canonical_enum_tag` turned their EmptyData
-      into **InvalidData** (harder failure). Also ASBF has a descriptive `stockCode`
-      `'Trái phiếu chưa niêm yết'` that `canonical_security_symbol` rejects. FIX (additive): (1) accept
+      my fail-closed `{STOCK,BOND}` whitelist hard-failed some historical unlisted-bond-shaped cases
+      (defensive-credit sleeve = core use case): bond `type` is `BOND` **or**
+      `UNLISTED_BOND` (provider IDs and labels redacted); my `canonical_enum_tag` turned their EmptyData
+      into **InvalidData** (harder failure). A provider descriptive `stockCode` label was also
+      incompatible with `canonical_security_symbol`. FIX (additive): (1) accept
       `{STOCK,BOND,UNLISTED_BOND}` granularly + map present-but-unknown type → new **`OTHER`** tag (NOT
       fail-closed — reverses the earlier fail-closed call ON THE EVIDENCE; OTHER is honest); (2) descriptive
       bond id must not fail the fund — **builder model pick: relax `stock_code` validation for bond/
       unlisted-bond rows to accept a non-empty non-canonical identifier; equities stay strict
       `canonical_security_symbol`** (reviewer offered alt: add a `name` field + None code; Codex x2 to
-      confirm); (3) preserve listed-bond/equity behavior; synthetic tests (anchors ASBF/VFF/DCBF). Codex x2.
+      confirm); (3) preserve listed-bond/equity behavior; synthetic tests use redacted provider-shaped
+      anchors. Codex x2.
 
 
 - **#171 — docs/diagnostics polish: world-gold opt-in Stooq path** (poller triage review-202606201355).
@@ -982,8 +985,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   In-scope; PARKED behind #168/#169/#157. NO implementation without a source/legal/provenance design.
 - **#172-RESIDUAL — success-path NAV staleness warning (DESIGN-FIRST, queue BEHIND #173).** Reviewer
   re-opened #172 (review-202606201541): StaleData (shipped, correct) only fires for a FULLY-PAST window;
-  the COMMON calls — default `nav_history(id)`, `to_date`-only, or a window STRADDLING the 2025-12-05
-  cutoff — still SUCCEED and silently return a series ending ~6mo short with `warnings=()`. Fix (additive,
+  the COMMON calls — default `nav_history(id)`, `to_date`-only, or a window STRADDLING the provider
+  cutoff — still SUCCEED and silently return a series ending materially short with `warnings=()`. Fix (additive,
   NO exception): on a successful `nav_history` whose `max(navDate)` is MATERIALLY older than the effective
   upper bound (`to_date` else today), append a non-fatal entry to `NavHistory.warnings` (field already
   exists). TWO hard boundaries: (1) NO `list_funds` cross-ref inside `nav_history` (no 2nd call, no

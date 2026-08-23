@@ -174,11 +174,11 @@ or lawful mode exists, a later design review may choose `REMOVE_SOURCE`.
 ## Historical transition contract and current implementation boundary
 
 At the design anchor, the exact lifecycle was **design PASS → fresh RED-first implementation/API
-packet → exact-SHA code review → publish/close**. That historical gate has now authorized the
-implementation line, while the current exact-SHA code review remains open for bounded B1-B4
-corrections. No push, resolution, close, or #219 activation is authorized until code PASS and
-merged-tree verification. Activate #219 only after verified #221 closure; #220 only after verified
-#219 closure; and #222 only after verified #220 closure.
+packet → exact-SHA code review → publish/close**. That lifecycle is a completed historical receipt
+through the B1-B4 implementation review. The Fmarket source is implemented and remains disabled
+before cache/network while this final R1-R2 documentation/fixture/lifecycle correction is reviewed.
+No push, resolution, close, or #219 activation is authorized until this final review and merged-tree
+verification; #219 remains behind verified #221 closure, followed by #220 and #222 in queue order.
 
 The approved implementation boundary is:
 
@@ -224,11 +224,12 @@ The diagnostics contract is frozen rather than conditional. The current
 `instruments=("VN open-ended mutual fund metadata",)`, `granularity="snapshot"`,
 `coverage_start=None`, `coverage_end=None`, `is_default=False`, `is_opt_in=False`,
 `is_single_source=True`, `limitations=("SOURCE_DISABLED_PENDING_PERMISSION",)`, and
-`suggested_action=None`. The future `explain_fund_coverage()` must return
+`suggested_action=None`. The current `explain_fund_coverage()` returns
 `status="source_disabled_pending_permission"`, that exact one-record `sources` tuple,
 `notes=("SOURCE_DISABLED_PENDING_PERMISSION; no provider call.",)`, and
-`suggested_actions=()`. It makes no availability claim or source-call suggestion. The approved RED
-and implementation tests cover this complete record and the `tests/test_diagnostics.py:257-282`
+`suggested_actions=()`. It makes no availability claim or source-call suggestion. The approved current
+diagnostic returns this record, and the RED/implementation tests cover it together with the
+`tests/test_diagnostics.py:257-282`
 expectations together with the four route calls.
 
 The release handoff must name three exact values: `APPROVED_ANCHOR` (the final reviewed docs+RED+
@@ -252,21 +253,20 @@ The matrix must assert exact routes, all four operation outcomes, direct/factory
 behavior, direct-only positive cache/retry cross-product, exact exception/message, exact diagnostics
 registry/export record, import/model/signature compatibility, full offline tests, and isolated
 wheel/sdist build. At the design anchor, this audit and its correction did not authorize any RED
-test, production code, source registration, probe, push, or close; the approved implementation now
-exists on the separate code-review line.
+test, production code, source registration, probe, push, or close. Those gates have since been
+completed for the implementation; the current final R1-R2 correction remains docs/fixture/lifecycle
+only and makes no provider request or capability claim.
 
 At the design anchor, this section was documentation-only. The approved implementation now exists
-on the separate code-review line; this audit remains historical source/legal evidence and does not
+and the source remains disabled; this audit remains historical source/legal evidence and does not
 describe a permission to call Fmarket.
 
 ## Reopen and review gates
 
-Before design PASS, this audit remains documentation-only: no Fmarket probe, RED test, production
-code, push, or close is authorized, and the source remains `DISABLE_PENDING_PERMISSION`. After design
-PASS, absent permission is itself sufficient to start the authorized
-`RED_FIRST_IMPLEMENTATION_AND_API_REVIEW`; owner evidence is not a prerequisite for the fail-closed
-disable transition. The source must still fail before cache/network while that implementation is
-reviewed.
+At the design anchor, before design PASS, this audit was documentation-only and no Fmarket probe,
+RED test, production code, push, or close was authorized. Design PASS and the RED-first implementation
+review have since occurred. The Fmarket source is implemented and remains disabled before
+cache/network while permission is absent; the current final review changes no runtime behavior.
 
 Fresh official evidence or a written owner response may reopen the **source/legal disposition**
 before that transition. Such evidence must be conjunctive across route applicability, all four
@@ -294,5 +294,6 @@ parameters, headers, cookies, tokens, or correspondence.
 `DISABLE_PENDING_PERMISSION` is the only defensible current design disposition. The terms' public
 website right and current technical reachability do not establish lawful automated collection or
 caller-facing reuse for any of listing, NAV history, holdings, or allocation. Written owner coverage
-may reopen that disposition; absent it, complete the separately reviewed fail-before-network
-transition. Do not silently continue or add a fallback.
+may reopen that disposition; absent it, the implemented fail-before-network transition remains
+disabled. No transition remains to complete in this docs-only correction. Do not silently continue or
+add a fallback.

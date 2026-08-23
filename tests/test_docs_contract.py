@@ -304,7 +304,7 @@ def test_fmarket_transition_docs_reject_completed_state_contradictions():
     ):
         assert phrase not in terms_audit
     assert "The current `explain_fund_coverage()` returns" in terms_audit
-    assert "the Fmarket source is implemented and remains disabled" in terms_audit
+    assert "the fmarket source is implemented and remains disabled" in terms_audit.casefold()
 
 
 def test_fmarket_correction_lifecycle_has_reviewer_verdict_owner():

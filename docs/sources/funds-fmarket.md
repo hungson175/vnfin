@@ -143,16 +143,16 @@ sorted ascending by date.
     "code": "DEMO1",
     "nav": 12345.67,
     "productTopHoldingList": [
-      {"stockCode": "DEMO", "netAssetPercent": 7.99, "industry": "Synthetic industry", "price": 25.2, "type": "STOCK", "updateAt": 1700000000000}
+      {"stockCode": "DEMO", "netAssetPercent": 12.34, "industry": "Synthetic industry", "price": 234.56, "type": "STOCK", "updateAt": 1700000000000}
     ],
     "productTopHoldingBondList": [
-      {"stockCode": "SYNTHBOND", "netAssetPercent": 11.59, "industry": "Synthetic bond", "price": null, "type": "BOND", "updateAt": 1700000000000}
+      {"stockCode": "SYNTHBOND", "netAssetPercent": 23.45, "industry": "Synthetic bond", "price": null, "type": "BOND", "updateAt": 1700000000000}
     ],
     "productAssetHoldingList": [
-      {"assetType": {"code": "STOCK"}, "assetPercent": 97.44, "updateAt": 1700000000000}
+      {"assetType": {"code": "STOCK"}, "assetPercent": 45.67, "updateAt": 1700000000000}
     ],
     "productIndustriesHoldingList": [
-      {"industry": "Synthetic industry", "assetPercent": 33.36}
+      {"industry": "Synthetic industry", "assetPercent": 6.78}
     ]
   }
 }

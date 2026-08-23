@@ -73,8 +73,9 @@ _NAV_END_GAP_SINGLE_POINT_DAYS = 14     # single-point fallback (cadence unknown
 _NAV_END_GAP_CADENCE_WINDOW = 8         # most-recent diffs feeding the cadence median (all if fewer)
 
 # Issue #194: quarantine-and-warn for a conflicting navDate (same date, two DIFFERENT
-# NAV values) instead of aborting the fund's ENTIRE series (~21/65 VN funds lost all NAV
-# over one bad date). Mirrors the #186 VN-Index quarantine: DROP the conflicting date
+# NAV values) instead of aborting the fund's ENTIRE series. Historical affected counts and
+# provider identities are intentionally redacted; synthetic fixtures define the contract.
+# Mirrors the #186 VN-Index quarantine: DROP the conflicting date
 # entirely (never pick, never average), serve the rest, disclose via this never-silent
 # token. A systematically-conflicting feed still fails over (threshold below). The #186
 # constants are reused UNCHANGED (no funds-specific magic numbers), but the bad UNIT is the
@@ -785,8 +786,8 @@ class FmarketFundSource(HttpDataSource):
         # STRICT — a present blank or malformed non-blank shape (internal space /
         # punctuation / digit-first) fails closed via canonical_security_symbol
         # (strip().upper() then [A-Z][A-Z0-9]*). For bond / unlisted-bond / other
-        # rows it is RELAXED: a real Fmarket unlisted-bond row may carry a
-        # descriptive phrase (e.g. 'Trái phiếu chưa niêm yết') instead of a
+        # rows it is RELAXED: a historical provider row may carry a
+        # descriptive phrase (represented by a synthetic label in fixtures) instead of a
         # canonical code, which must NOT hard-fail the fund. The key must still be
         # present and a non-empty string (present-null / blank / missing still fail
         # closed); it is stripped and stored verbatim (no upper-case, no grammar).

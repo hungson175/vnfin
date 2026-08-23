@@ -325,18 +325,21 @@ Reopen requires one owner and one approved bounded route set to provide all of t
    cadence, non-publication, and revision semantics for `2018-01-01..2026-08-19`; and
 7. owner-approved finite scheduler/byte/diagnostic values and no-partial behavior.
 
-A future docs-only PASS must use published base `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`, name
-the exact range `8d1490f..<approved-anchor>`, and list exactly these three paths:
+### Historical #218 docs-release receipt and current boundary
+
+The #218 docs-only source-gap release is complete historical evidence: design/base `8d1490f`,
+approved/published anchor `c646c37ca948a1747d3483d9b40c296263b85496`, and the three paths below were
+verified on the approved range before #218 was re-read `CLOSED`/`COMPLETED`:
 
 - `docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md`
 - `tasks/218-design-note.md`
 - `tasks/active-backlog.md`
 
-The release sequence is: rerun merged gates; push only the approved anchor; verify remote exact HEAD,
-base ancestry, and the three paths; post a clean no-capability `SOURCE-GAP` resolution; close and
-re-read #218; only then activate #221. Keep #219 queued until #221's exact source/design handoff
-and verified close, then activate #219; keep #220 behind #219. No implementation, RED, model/accessor,
-source registration, or runtime capability is authorized by this docs pass.
+The #221 activation that followed that verified #218 closure is also a completed historical
+transition receipt. Current #221 work is a separate implementation-line review: the Fmarket source
+remains disabled, no ETF capability was added, and #219/#220 remain queue-gated behind verified #221
+closure. This receipt is not a future workflow instruction and does not authorize implementation,
+RED, model/accessor, source registration, or runtime capability for #218.
 
 If a later fresh design PASS authorizes implementation, the separate release matrix must explicitly
 cover the packet's fund API, source, diagnostics, tutorial/agent-facing AI docs, maintainer skill,
