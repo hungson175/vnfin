@@ -638,7 +638,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   the F2 known-form matrix sampled pattern indexes without exhaustively covering listed alternatives.
   BLOCK was recorded before edits at this backlog commit. Apply one narrow exhaustive RED-first
   guard correction only; no runtime/probe/push/close/#219 activation.
-  The final exhaustive RED-first guard/content correction is
+  Final RED tests are at `83720c9656438a5df909483d2bb56c37bf157b95`; final test/docs correction
+  content anchors are `9a09bf080491a1bf8d12d430cd6a0cda62b58bdd` and
+  `e56a048b55cb413102f13b44d54c1922e262eb6d`. The exhaustive RED-first guard/content correction is
   `83720c9656438a5df909483d2bb56c37bf157b95`, with exact-unit allow-list hardening in
   `e56a048b55cb413102f13b44d54c1922e262eb6d`: the F1 scanner now normalizes bounded current-call
   cells, allows only entire exact approved fail-closed sentences/cells, and rejects every other
