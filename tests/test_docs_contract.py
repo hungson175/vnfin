@@ -304,6 +304,12 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
         "15091.0",
         "15120.0",
         "15105.5",
+        "2018-07-31",
+        "19626.37",
+        "34942.66",
+        "33779.47",
+        "43503.81",
+        "36153.51",
         "1729 rows",
         "1317 rows",
         "1267 rows",
@@ -313,9 +319,13 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
         "VNDAF 19630.53",
         "productId=20",
         "id=20",
-        "~8",
+        "~8 such funds",
+        "~8 defensive-credit",
         "~21/65",
         "total=65",
+        "total:65",
+        "All 65",
+        "res/products/20",
     )
     affected = (
         "tests/test_funds.py",
@@ -329,6 +339,7 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
     )
     for path in affected:
         text = _read(path)
+        assert any(marker in text.lower() for marker in ("synthetic", "redact")), path
         for token in forbidden:
             assert token not in text, f"{path} retains live-derived token {token!r}"
 

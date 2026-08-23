@@ -38,9 +38,9 @@ def _constructors(http_get):
     "operation",
     (
         ("list_funds", lambda src: src.list_funds()),
-        ("nav_history", lambda src: src.nav_history(20)),
-        ("holdings", lambda src: src.holdings(20)),
-        ("asset_allocation", lambda src: src.asset_allocation(20)),
+        ("nav_history", lambda src: src.nav_history(9001)),
+        ("holdings", lambda src: src.holdings(9001)),
+        ("asset_allocation", lambda src: src.asset_allocation(9001)),
     ),
 )
 def test_disabled_valid_operation_fails_before_transport(operation):
@@ -137,7 +137,7 @@ def test_direct_positive_cache_entry_is_not_returned_when_disabled():
                 "data": {
                     "rows": [
                         {
-                            "id": 20,
+                            "id": 9001,
                             "code": "FAKE",
                             "name": "Fabricated test fund",
                             "nav": 10000,
@@ -212,7 +212,7 @@ def test_direct_positive_retry_budget_is_not_attempted_when_disabled():
         sleep=sleeps.append,
     )
     with pytest.raises(SourceUnavailable) as exc_info:
-        src.nav_history(20)
+        src.nav_history(9001)
     assert str(exc_info.value) == DISABLED
     assert calls == []
     assert sleeps == []

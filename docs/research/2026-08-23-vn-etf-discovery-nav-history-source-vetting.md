@@ -70,7 +70,7 @@ axis; no value series is bundled.
 permission to automate was not established. It is not a successful response, timeout, 404, or proof
 of absence. `UNKNOWN` means the official evidence reviewed does not prove the field.
 
-## 3. Current repository comparison and real compatibility seams
+## 3. Current disabled boundary and pre-#221 compatibility evidence
 
 The exact `v0.2.0` tree and pre-#221 published tree were compared. They are **not identical**:
 the pre-#221 tree contains additive mutual-fund metadata changes, while #218 changes none of them.
@@ -85,10 +85,16 @@ documentation and does not reopen that source.
 | `NavHistory` | Existing product-ID history, `value_unit="VND/unit"`, optional `code` | Same public shape with current diagnostics/window behavior | No ETF `code` provenance is inferred or changed |
 | `vnfin.funds.source()` | Returns the Fmarket source | Still returns the lazy named source; valid calls disabled pending permission | Preserve |
 | `list_funds.search` | Free-text search input | Still free text; it is not a code grammar or selector proof | Preserve; no local fuzzy matching |
-| `list_funds.asset_type` | Provider asset-class filter string | Forwarded as `fundAssetTypes`; no official `ETF` token/product-type proof | Do not map, broaden, or call it an ETF selector |
+| `list_funds.asset_type` | Provider asset-class filter string | Current valid calls fail before request-body construction; pre-#221 forwarding as `fundAssetTypes` is historical parser evidence only | Do not map, broaden, or call it an ETF selector |
 | `nav_history(product_id, ...)` | Existing mutual-fund product-ID history | Pre-#221 historical behavior used a broad provider request plus client-side date filtering; current valid calls fail closed before it | Preserve schema/parser compatibility; no ETF call |
 | `canonical_fund_code` | Existing helper was not an ETF contract | Current response-code helper uses the unbounded current `[A-Z][A-Z0-9]*` shape after normalization | Preserve response compatibility; no new ETF ceiling |
 | Repository routes | Mutual-fund baseline only | `/res/products/filter`, `/res/products/{id}`, `/res/product/get-nav-history` | No new route or request mapping |
+
+The current-vs-historical boundary is strict: current valid calls fail before request-body
+construction, cache lookup, transport dispatch, response parsing, or public `EmptyData` production.
+Any row or paragraph below that describes provider forwarding, response parsing, or historical
+`EmptyData` behavior is pre-#221 compatibility evidence only; it is not a current runtime seam or
+an availability claim.
 
 The future compatibility sketch below is deliberately **not current capability**:
 
@@ -99,11 +105,11 @@ history = src.nav_history(product_id, from_date="2018-01-01", to_date="2026-08-1
 ```
 
 It does not authorize a new token, parameter, model, or call. There is no new ETF code grammar in
-this source-gap closure. The real current seams are free-text `search`, provider-asset-class
-`fundAssetTypes`, and response-side `canonical_fund_code`; any normalized ETF selector,
-provider translation, or future `NavHistory.code` provenance requires source proof and a fresh
-RED/API design. Legacy mutual-fund asset strings and current response-code behavior remain
-compatibility-sensitive.
+this source-gap closure. The historical compatibility seams are free-text `search`, the provider
+asset-class `fundAssetTypes` translation, and response-side `canonical_fund_code`; none is reached
+by a current valid call. Any normalized ETF selector, provider translation, or future
+`NavHistory.code` provenance requires source proof and a fresh RED/API design. Legacy mutual-fund
+asset strings and current response-code behavior remain compatibility-sensitive historical evidence.
 
 ## 4. Official source matrix
 
@@ -234,8 +240,9 @@ exists. `UNSERVED`, `UNVERIFIED_SELECTOR`, `CONFIRMED_EMPTY`, and `UNKNOWN` rema
 future outcomes; no new public enum is added here. For each of these four outcomes, the future public
 carrier—typed empty result versus typed error, exact error type, and exact public message—is
 explicitly deferred until one source qualifies and a fresh qualified-source API design PASS occurs
-before RED. Current mutual-fund `EmptyData` behavior is preserved; this closure invents no enum,
-exception, or result carrier.
+before RED. Pre-#221 parser EmptyData behavior remains private historical evidence only; no current
+valid call reaches that parser or produces `EmptyData`, and this closure invents no enum, exception,
+or result carrier.
 
 ## 7. Legal posture and the separate existing-runtime risk
 

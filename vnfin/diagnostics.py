@@ -94,7 +94,7 @@ class RequestDiagnostic:
     domain: str
     endpoint: str
     request: dict
-    status: str  # "ok" | "coverage_gap" | "partial_coverage" | "window_too_wide" | "single_source" | "unsupported_pair" | "unsupported_frequency" | "unknown"
+    status: str  # "ok" | "coverage_gap" | "partial_coverage" | "window_too_wide" | "single_source" | "unsupported_pair" | "unsupported_frequency" | "source_disabled_pending_permission" | "unknown"
     sources: tuple[SourceCapability, ...]
     notes: tuple[str, ...] = ()
     suggested_actions: tuple[str, ...] = field(default=())

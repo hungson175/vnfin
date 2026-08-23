@@ -2,9 +2,9 @@
 
 **Issue:** `vnfin.funds.source().nav_history(product_id)` raises `InvalidData` and aborts a fund's
 ENTIRE NAV series on a SINGLE conflicting `navDate` (same date, two different NAV values).
-Repro: product 21 (VFF) → `InvalidData: fmarket: conflicting navDate 2018-07-31 ... (15091.0 vs
-15120.0)`. Reporter says ~21/65 VN funds are affected (VFF, VEOF, VESAF, SSISCA, VFMVF1/4, MAFBAL,
-MAFEQI, VCBFFIF/TBF/BCF, BVPF, KSIF, VBIF, LPLF, ABEF, LHFCF, USIF, MBBOND, SSIBF, VFMVFC, …).
+The redacted historical repro is represented by a synthetic `FAKE_ID_A` row pair on
+`2024-01-02` with `(10100.0 vs 10300.0)`. Historical provider identities, affected counts, and
+raw rows are not retained; this design binds only synthetic fixtures and the parser invariant.
 
 **Disposition (reviewer triage, ACCEPTED):** mirror the #186 VN-Index quarantine — quarantine the
 conflicting date, emit a never-silent warning, return the rest; keep the threshold guard so a
@@ -110,10 +110,10 @@ not two physical rows. Then:
 - `bad = len(poisoned)` = number of distinct quarantined dates.
 - `if considered and bad > max(_QUARANTINE_ABS_FLOOR, _QUARANTINE_FRACTION * considered): raise`.
 
-Consequence: **any fund with ≤ 3 conflicting dates always serves** (floor 3), and a long feed needs
-> 10 % of its dates conflicting to abort — VFF's 2 conflicts serve regardless of series length, while a
-genuinely-broken feed still fails over. This keeps the constants identical to #186 (the triage's stated
-preference) AND makes short/new funds safe, which a raw `+2` port would not.
+Consequence: **any synthetic series with ≤ 3 conflicting dates always serves** (floor 3), and a long
+feed needs > 10 % of its dates conflicting to abort. A genuinely-broken feed still fails over. This
+keeps the constants identical to #186 (the triage's stated preference) AND makes short/new funds
+safe, which a raw `+2` port would not.
 
 *Implementation sketch (illustrative — binding behavior is the bullets above, not this code):*
 ```python
@@ -197,8 +197,9 @@ All NAV rows are **synthetic** (no real issuer rows as fixtures). Each test is f
    **4** conflicting dates → RAISES. Pins the floor.
 4. **Identical-value duplicate** (same date, same NAV) → keep-first, emits `deduped_duplicate_nav_rows`,
    NO quarantine token, date present. (regression — behavior unchanged)
-5. **Never-averages** → with conflict (15091 vs 15120) the result contains NO point equal to (or near) the
-   mean 15105.5 for that date; the date is simply absent. Asserts degrade-not-fabricate.
+5. **Never-averages** → with synthetic conflict (10100 vs 10300) the result contains NO point equal to
+   (or near) the synthetic mean 10200.0 for that date; the date is simply absent. Asserts
+   degrade-not-fabricate.
 6. **Two distinct conflicting dates under threshold** (long series) → both dropped, rest served, warning
    lists BOTH dates (sorted).
 7. **Conflict-vs-dedup precedence on the same date** → an identical dup AND a conflicting row on one date

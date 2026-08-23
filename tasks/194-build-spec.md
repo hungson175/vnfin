@@ -25,8 +25,10 @@ run `scripts/dump_api_surface.py`; do NOT regen `tests/snapshots/public_api_v0_2
 
 `vnfin/funds/fmarket.py :: nav_history()` parse loop (`:355-369`): a single conflicting `navDate`
 (same date, two DIFFERENT NAV values) raises `InvalidData` and aborts the fund's ENTIRE series.
-Repro: `vnfin.funds.source().nav_history(21)` (VFF) → `InvalidData: fmarket: conflicting navDate
-2018-07-31 ... (15091.0 vs 15120.0)`. ~21/65 VN funds lose all NAV over one bad date.
+The redacted historical repro is represented here by the synthetic fixture
+`vnfin.funds.source().nav_history(FAKE_ID_A)` with a conflicting `2024-01-02` pair
+`(10100.0 vs 10300.0)`. Historical provider identities, affected counts, and raw rows are not
+retained; the implementation contract is defined only by synthetic fixtures.
 
 The window-filter (`:342-343`, skip out-of-window rows), productId guard (`:349-354`), and the
 identical-value dedup keep-first + `deduped_duplicate_nav_rows` token are CORRECT — keep them.
@@ -151,8 +153,8 @@ implementing — report the red-first evidence (the exact assertion/exception ea
    - 4 conflicting dates + 4 clean (`poisoned=4, considered=8`): `4 > max(3,0.8)=3` → RAISES. Pins floor=3.
 4. **Identical-value duplicate (regression, behavior UNCHANGED)** → same date, same NAV → keep-first, emits
    `deduped_duplicate_nav_rows`, NO quarantine token, the date is PRESENT in points.
-5. **Never-averages** → conflict (15091.0 vs 15120.0) → NO point in the result equals or is near the mean
-   15105.5 for that date; the date is simply absent. (degrade-not-fabricate)
+5. **Never-averages** → synthetic conflict (10100.0 vs 10300.0) → NO point in the result equals or is
+   near the synthetic mean 10200.0 for that date; the date is simply absent. (degrade-not-fabricate)
 6. **Two distinct conflicting dates UNDER threshold (long series)** → e.g. 2 conflicts + many clean → both
    dropped, the rest served, the warning lists BOTH dropped dates (sorted).
 7. **Conflict beats dedup on the same date (Note 1)** → one date has an identical dup AND a conflicting row

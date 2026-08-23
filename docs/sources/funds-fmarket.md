@@ -125,7 +125,7 @@ closed feed is distinguishable from a genuinely-empty / pre-inception result.
 {
   "status": 200,
   "data": [
-  {"id": 1, "createdAt": 1761537393929, "nav": 10000.0, "navDate": "2014-07-01", "productId": 999}
+  {"id": 1, "createdAt": 1700000000000, "nav": 10000.0, "navDate": "2024-01-02", "productId": 999}
   ]
 }
 ```

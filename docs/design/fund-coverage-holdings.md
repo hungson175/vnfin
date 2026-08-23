@@ -27,8 +27,8 @@ does the #144 fix: it requests the **wide** window (`isAllData=1, fromDate=_DEFA
 toDate=today`) and filters the caller's bounds **client-side**. It raises `EmptyData` in two places:
 (a) the provider returns zero rows; (b) zero rows fall inside the caller's window.
 
-**Bug:** when the provider's history endpoint is **stale** (e.g. latest `navDate` is in 2025) while
-`list_funds()` shows a fresher 2026 NAV, a bounded **recent** window (2026) hits case (b) → a silent
+**Bug:** when the provider's history endpoint is **stale** (e.g. latest `navDate` predates the
+current list snapshot), a bounded **recent** window hits case (b) → a silent
 `EmptyData` that is indistinguishable from "this fund has no data" — blocking YTD/drawdown/compare.
 
 ### Root-cause investigation (the implementing fork must determine which, with synthetic fixtures)
@@ -55,14 +55,14 @@ After a correct wide fetch, classify a bounded request with **zero in-window poi
 gap. (B annotated-empty rejected as misuse-prone; C `explain_fund_nav_coverage` deferred — not needed
 to fix the bug, adds a public function now.)
 
-**Probe result (gated live, 2026-06-20 ~15:12 — truncation RULED OUT).** All 65 funds' wide
-`nav_history` fetch ends uniformly at **2025-12-05**, while per-fund row counts vary widely
-(110→1267) and first-dates track each fund's true inception (ENF 2014 … EVESG 2024). A flat-array
-cap/pagination would show a *constant* row count and a uniform first-date; instead the array is
-**complete from inception to a provider-wide cutoff**. So the wide fetch is correct and the staleness
-is genuine systemic provider lag (the `get-nav-history` endpoint has no `page`/`pageSize`), not a
-request/array-cap bug. `list_funds` shows current NAVs (e.g. VNDAF 19630.53) while history ends
-2025-12-05 — exactly the silent-`EmptyData` scenario. → implement `StaleData`.
+**Probe result (gated live, 2026-06-20 ~15:12 — truncation RULED OUT).** The historical wide
+`nav_history` observations ended at a provider-wide cutoff while per-fund row counts and first
+dates varied. Exact counts, product identities, dates, and current NAV values are redacted from this
+repository. A flat-array cap/pagination would show a *constant* row count and a uniform first-date;
+instead the retained observation supported a complete inception-to-cutoff interpretation. The
+staleness conclusion is therefore preserved as historical evidence, not as a current availability
+claim: the `get-nav-history` endpoint had no `page`/`pageSize` in the reviewed shape, and the
+`StaleData` behavior was implemented against synthetic fixtures.
 
 **Conditions of approval (fold into the coder spec):**
 1. **Compute latest navDate from the PRE-window-filter row set** — track `max(_nav_row_date(r))` over
@@ -80,8 +80,8 @@ this keeps pre-inception windows and the sparse/weekend straddle (`lo <= max_nav
 
 ### #172 tests (synthetic, offline)
 
-- stale history (rows end 2025) + bounded 2026 window → the chosen staleness signal (not bare `EmptyData`).
-- correct wide request returns 2026 rows → bounded 2026 call returns them.
+- stale history (rows end before a bounded recent window) → the chosen staleness signal (not bare `EmptyData`).
+- correct wide request returns in-window rows → the bounded call returns them.
 - genuinely pre-inception window → `EmptyData` (unchanged).
 - #144/#158/#21 preserved: out-of-window rows/dups skipped before fatal guards; in-window conflict → `InvalidData`.
 
@@ -102,8 +102,9 @@ The earlier recon premise ("no per-bond list; bond funds expose only a BOND allo
 A reviewer live-probe of `/res/products/{id}` showed the detail payload carries **a fourth array**:
 
 - `productTopHoldingList` — **equity** rows (`stockCode`, `netAssetPercent`, `industry`, `price`, `type`, `updateAt`)
-- **`productTopHoldingBondList`** — **per-bond** rows with the SAME shape (`stockCode` = bond code e.g.
-  `BAF126003`, `netAssetPercent`, `industry`, `price` null, `type:"BOND"`, `updateAt`)
+- **`productTopHoldingBondList`** — **per-bond** rows with the SAME shape (`stockCode` = a
+  provider bond-code field, exact historical values redacted, `netAssetPercent`, `industry`, `price`
+  null, `type:"BOND"`, `updateAt`)
 - `productAssetHoldingList` — **asset-class split** (`assetType.code` ∈ {STOCK, CASH, BOND}, `assetPercent`)
 - `productIndustriesHoldingList` — sector split
 
@@ -124,13 +125,13 @@ former name. The full typed per-security model (Option A) is therefore buildable
    a mislabel). A present-*malformed* `type` (non-string / blank) is still a data-quality error and
    **fails closed**. An absent `type` falls back to the per-list default (equity list → STOCK, bond
    list → BOND).
-   - **#173 residual (re-open):** the original `{STOCK, BOND}` fail-closed whitelist hard-failed ~8
-     real unlisted-bond funds (ASBF id 51, VFF id 21, DCBF id 27 carry `type="UNLISTED_BOND"`),
-     regressing them from `EmptyData` to `InvalidData`. Additionally, `stock_code` validation is
-     **strict (`[A-Z][A-Z0-9]*`) only for equities**; for bond / unlisted-bond / other rows it is
-     relaxed (required present + non-empty, stripped, stored verbatim) so a descriptive provider
-     identifier like `'Trái phiếu chưa niêm yết'` no longer fails the fund. Dedup still spans the
-     resolved `stock_code` across both lists.
+   - **#173 residual (re-open):** the original `{STOCK, BOND}` fail-closed whitelist rejected
+     historical unlisted-bond-shaped cases, regressing them from `EmptyData` to `InvalidData`.
+     Additionally, `stock_code` validation is **strict (`[A-Z][A-Z0-9]*`) only for equities**; for
+     bond / unlisted-bond / other rows it is relaxed (required present + non-empty, stripped, stored
+     verbatim) so a descriptive provider identifier can be retained without failing the fund. Dedup
+     still spans the resolved `stock_code` across both lists. Exact historical IDs, labels, and rows
+     are redacted; executable fixtures use fabricated values.
 3. **`FundHolding.as_of_utc`** (appended, default `None`) carries the provider's per-row `updateAt`
    (epoch-**ms** → tz-aware UTC; absent/malformed → `None`, never a fabricated `now()`), so a holdings
    tuple is no longer freshness-blind.

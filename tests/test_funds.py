@@ -1354,7 +1354,7 @@ def test_holdings_present_unknown_type_maps_to_other():
 def test_holdings_unlisted_bond_type_parsed():
     # #173 residual (synthetic unlisted-bond fixture ids): historical unlisted-bond shapes
     # report type="UNLISTED_BOND" on their unlisted-bond rows. The old
-    # {STOCK,BOND} whitelist hard-failed (InvalidData) ~8 such funds; the granular
+    # {STOCK,BOND} whitelist hard-failed (InvalidData) several synthetic provider-shaped cases; the granular
     # tag must now be accepted and carried (listed vs unlisted is a credit-risk
     # distinction worth keeping).
     bond = [{"stockCode": "ZZZBOND1", "netAssetPercent": 11.59, "type": "UNLISTED_BOND", "price": None}]
@@ -1457,8 +1457,8 @@ def test_holdings_bond_missing_code_still_raises():
 def test_holdings_end_to_end_unlisted_bond_fund_populated_not_raising():
     # End-to-end regression: a whole fund whose bond list carries an UNLISTED_BOND
     # row with a descriptive stockCode now returns a POPULATED tuple instead of
-    # raising InvalidData (the #173 residual that hard-failed ~8 defensive-credit
-    # funds — synthetic fixture variants). Drives holdings() through the detail/HTTP layer with
+    # raising InvalidData (the #173 residual that hard-failed several synthetic defensive-credit
+    # variants — synthetic fixture variants). Drives holdings() through the detail/HTTP layer with
     # a synthetic payload.
     bond = [
         {"stockCode": "Synthetic unlisted bond label", "netAssetPercent": 30.0, "type": "UNLISTED_BOND"},
@@ -2105,19 +2105,19 @@ def test_nav_history_inverted_window_rejected():
 
 
 def test_nav_history_stale_window_raises_staledata():
-    full = [_nav_row("2025-11-28"), _nav_row("2025-12-05")]
+    full = [_nav_row("2024-11-28"), _nav_row("2024-12-05")]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     with pytest.raises(StaleData) as exc:
         src.nav_history(FAKE_ID_A, date(2026, 1, 1), date(2026, 6, 20))
     msg = str(exc.value)
-    assert "ends at 2025-12-05" in msg
+    assert "ends at 2024-12-05" in msg
     assert "before requested 2026-01-01..2026-06-20" in msg
 
 
 def test_nav_history_staledata_is_emptydata_subclass():
     # Backward compatible: existing `except EmptyData` callers still catch the stale case.
     assert issubclass(StaleData, EmptyData)
-    full = [_nav_row("2025-12-05")]
+    full = [_nav_row("2024-12-05")]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     with pytest.raises(EmptyData):
         src.nav_history(FAKE_ID_A, date(2026, 1, 1), date(2026, 6, 20))
@@ -2125,7 +2125,7 @@ def test_nav_history_staledata_is_emptydata_subclass():
 
 def test_nav_history_fresh_window_returns_rows_not_stale():
     # When the provider DOES return in-window 2026 rows, the bounded call returns them.
-    full = [_nav_row("2025-12-30"), _nav_row("2026-02-02"), _nav_row("2026-03-03")]
+    full = [_nav_row("2024-12-30"), _nav_row("2026-02-02"), _nav_row("2026-03-03")]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     hist = src.nav_history(FAKE_ID_A, date(2026, 1, 1), date(2026, 6, 20))
     assert [p.date for p in hist.points] == [date(2026, 2, 2), date(2026, 3, 3)]
@@ -2154,9 +2154,9 @@ def test_nav_history_stale_ignores_out_of_window_guard_rows():
     # conflicting duplicate must NOT fail the request; the max-navDate scan runs no
     # guards on out-of-window rows, so a stale recent window still yields StaleData.
     full = [
-        _nav_row("2025-12-04", pid=9999),       # wrong productId, but out of window
-        _nav_row("2025-12-05", nav=100.0),
-        _nav_row("2025-12-05", nav=200.0),      # conflicting dup, but out of window
+        _nav_row("2024-12-04", pid=9999),       # wrong productId, but out of window
+        _nav_row("2024-12-05", nav=100.0),
+        _nav_row("2024-12-05", nav=200.0),      # conflicting dup, but out of window
     ]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     with pytest.raises(StaleData):
@@ -2166,20 +2166,20 @@ def test_nav_history_stale_ignores_out_of_window_guard_rows():
 def test_nav_history_open_ended_from_only_stale_uses_today_end():
     # from_date only (to_date defaulted to today) on stale history -> StaleData; the
     # message names a concrete end bound (today), never an empty/None end.
-    full = [_nav_row("2025-12-05")]
+    full = [_nav_row("2024-12-05")]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     with pytest.raises(StaleData) as exc:
         src.nav_history(FAKE_ID_A, from_date=date(2026, 1, 1))
-    assert "ends at 2025-12-05" in str(exc.value)
+    assert "ends at 2024-12-05" in str(exc.value)
     assert "before requested 2026-01-01.." in str(exc.value)
 
 
 def test_nav_history_full_history_call_on_stale_data_returns_all():
     # No window -> no coverage check; the full stale history is returned (no exception).
-    full = [_nav_row("2025-11-28"), _nav_row("2025-12-05")]
+    full = [_nav_row("2024-11-28"), _nav_row("2024-12-05")]
     src = FmarketFundSource(http_get=_window_aware_get(full, []))
     hist = src.nav_history(FAKE_ID_A)
-    assert [p.date for p in hist.points] == [date(2025, 11, 28), date(2025, 12, 5)]
+    assert [p.date for p in hist.points] == [date(2024, 11, 28), date(2024, 12, 5)]
     # #172-RESIDUAL: the returned NavHistory now carries an end-gap warning — this
     # fixture's tail is years before any live today, so a 'nav_end_gap'-prefixed
     # warning is always present (presence-only assertion, robust to live-today).
