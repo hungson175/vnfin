@@ -602,21 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#220 — DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
-  `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for
-  `tasks/220-annual-roe-ratio-history-spec.md`, public receipt `issuecomment-5385517511`.
-  Correction content anchor is `a11d4b895c2f8bb4e8bc5507cdaebbe8ad4ed7ea`; prior reviewed exact handoff
-  was `6de4877be85a83100ef7d3a40debac001681d4c5`; prior content anchor was
-  `4c84c2dfc04a9702c85244616730c62367b4a5df`; BLOCK-before-correction receipt is
-  `640d2683ff228e67e9fb14be7b9f2c684fb00491`; BLOCK report is
-  `reviews/review-202608232327-issue220-corrected-design-rereview.md` at reviewer `967b04c`.
-  Both `FULL` contracts now say fewer than eight is not `FULL`; the declared-boundary `PARTIAL`
-  rule and all prior B1-B7 gates remain unchanged. Merged docs/path, diff, blacklist/secret/query,
-  pytest, build, and queue-preservation gates are rerun on the final tree. The reviewer-owned exact
-  handoff is returned with this request; the content anchor is not relabeled as that HEAD. Preserve
-  `SOURCE-GAP CLOSURE`, the empty source chain, current `Period.UNKNOWN` and 26-metric behavior,
-  no RED/code/push/close, and queued #222/#223/#224/#225.
+- **#222 — ACTIVE SOURCE_DESIGN (2026-08-23).** Actor `vnfin-oss`; next action
+  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor `001ad85` for
+  `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
+  #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
+  `0d7977a21386acd754d3fa220b040fa1d89b03c7`; its clean resolution is
+  `issuecomment-5387072621`. Prepare fresh VN100-specific VPS/SSI/VNDirect source/design evidence
+  only; exact v0.2.0 predates the current registry guard. No proxy, basket, downstream observable,
+  probe, RED/code, push, or close before exact-SHA design PASS. #223, #224, and #225 remain queued
+  behind #222.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
@@ -1043,14 +1037,6 @@ _None._
 
 ## Next
 
-- **#222 — QUEUED_AFTER_#220 (2026-08-23).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_220_CLOSURE`; packet anchor `001ad85` for
-  `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
-  Prepare fresh VN100-specific VPS/SSI/VNDirect source/design evidence first; exact v0.2.0 predates
-  the current registry guard. No proxy, basket, downstream observable, probe, RED/code, push, or
-  close before exact-SHA design PASS. Keep queued behind #220; queue order remains #220 → #222 →
-  #223 → #224 → #225 and do not interrupt active #220.
-
 - **#223 — QUEUED_AFTER_#222 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_222_CLOSURE`; packet anchor `6939ba4` for
   `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
@@ -1105,6 +1091,18 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#220 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `0d7977a21386acd754d3fa220b040fa1d89b03c7` to `origin/master`; base
+  `e478f4ff0e6ad846e31dbf6a5412c16e8382a768` is an ancestor and exactly the three approved
+  research/design/backlog paths were verified. Final approval is
+  `reviews/review-202608232329-issue220-final-design-approval.md` at reviewer `92380ee`; clean
+  resolution `issuecomment-5387072621`; GitHub re-read `CLOSED`/`COMPLETED` at
+  `2026-08-23T16:31:04Z`. No candidate proved the requested annual fiscal ROE identity, eight-period
+  coverage, lawful bounded runtime, and redistribution together; the new source chain remains
+  empty, current `Period.UNKNOWN` and the 26-metric zero-ratio behavior are unchanged, and no RED,
+  production code, source registration, runtime capability, derivation, substitution, or coverage
+  claim was added. #222 is activated above for independent VN100 source/design only.
+
 - **#219 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `e478f4ff0e6ad846e31dbf6a5412c16e8382a768` to `origin/master`; remote HEAD,
   approved ancestry, and exactly the three research/design/backlog paths were verified. Final
@@ -1112,8 +1110,9 @@ _None._
   clean resolution `issuecomment-5386927683`; GitHub re-read `CLOSED`/`COMPLETED` at
   `2026-08-23T15:59:21Z`. The official-source review did not qualify a direct no-login national
   monthly IIP YoY provider; the new source chain remains empty, current runtime is unchanged,
-  and no enum, API, data capability, RED test, or downstream signal was added. #220 is activated
-  above for independent annual-ROE source/design only.
+  and no enum, API, data capability, RED test, or downstream signal was added. #220 was activated
+  above for independent annual-ROE source/design only and is now `DONE/CLOSED`; #222 is active
+  above for its independent VN100 source/design.
 
 - **#221 — DONE/CLOSED (2026-08-23), approved Fmarket runtime disable.** Published exact approved
   anchor `a69f3c5901f97e95f1c183c64792f933a82cf7a6` to `origin/master`; remote HEAD is exact,
