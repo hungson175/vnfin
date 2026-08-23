@@ -602,22 +602,24 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#220 — DESIGN_CORRECTION_READY (2026-08-23).** Actor `vnfin-oss`; next action
-  `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_DESIGN_REVIEW`; packet anchor
+- **#220 — DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
   `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for
   `tasks/220-annual-roe-ratio-history-spec.md`, public receipt `issuecomment-5385517511`.
-  Reviewed exact merged head was `8dfc9fc2b9e03c86bfec536a1c95298bb8c71a6b`; prior docs content anchor
-  was `e0949e103b7df6c90d5ef7a27dde5dfa5f2c2d14`; BLOCK-before-correction receipt is
+  Correction content anchor is `4c84c2dfc04a9702c85244616730c62367b4a5df`; prior reviewed merged head
+  was `8dfc9fc2b9e03c86bfec536a1c95298bb8c71a6b`; prior docs content anchor was
+  `e0949e103b7df6c90d5ef7a27dde5dfa5f2c2d14`; BLOCK-before-correction receipt is
   `72d47b370ec7c779eb67b2867d85dc2f255ca938`; BLOCK report is
   `reviews/review-202608232313-issue220-design-source-review.md` at reviewer `405f990`.
-  The docs-only correction binds a complete transport ledger with explicit `NOT_RETAINED` fields and
-  no unsupported global/category total, separates caller-selected categories from response-backed
+  The correction binds a complete transport ledger with explicit `NOT_RETAINED` fields and no
+  unsupported global/category total, separates caller-selected categories from response-backed
   templates, marks `/v4/ratios/latest` and TCInvest semantics `NOT_PROBED`, requires all eight
   periods for `FULL`, adds absent/present-null cadence and publication/as-of no-fabrication REDs,
-  and removes Markdown trailing whitespace. The corrected docs are in this commit; the final
-  reviewer-owned handoff will bind its exact merged HEAD separately. Preserve `SOURCE-GAP CLOSURE`,
-  the empty source chain, current `Period.UNKNOWN` and 26-metric behavior, no RED/code/push/close,
-  and queued #222/#223/#224.
+  and removes Markdown trailing whitespace. Merged ancestry/path, artifact, blacklist/secret/query,
+  pytest, build, and diff gates pass. The final merged-handoff HEAD is returned with this reviewer
+  request; the content anchor is not relabeled as that HEAD. Preserve `SOURCE-GAP CLOSURE`, the
+  empty source chain, current `Period.UNKNOWN` and 26-metric behavior, no RED/code/push/close, and
+  queued #222/#223/#224.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
