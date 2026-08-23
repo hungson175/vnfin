@@ -1029,8 +1029,10 @@ _None._
   `docs/research/2026-08-23-daily-usdvnd-fx-history-source-vetting.md` and
   `tasks/207-design-note.md`. Disposition is SOURCE-GAP CLOSURE: annual World Bank behavior is
   preserved; SBV remains blocked on reuse rights, bounded pagination/WAF reliability, and rate
-  policy. No RED tests, production code, push, or close before exact-SHA design review.
-  Actor is `vnfin-oss` builder; review requested at this anchor.
+  policy. Exact design review `reviews/review-202608230822-issue207-source-design-gate.md`
+  (reviewer `a8910c5`) is BLOCKED on docs-only B1-B6 precision; no RED tests, production code,
+  push, or close before exact-SHA re-review. Actor is `vnfin-oss` builder; one correction round
+  pending.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
