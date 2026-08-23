@@ -601,48 +601,23 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#209 — DESIGN_REVIEW_BLOCKED (2026-08-23), combined with #210 as the historical VN cash M1
-  source-depth batch.** Phase/transition: `EXACT_SHA_DESIGN_REVIEW` at anchor
-  `782341caf0644816a1871d9044bf538955b264ff`; expected actor/reviewer `vnfin-oss-reviewer`;
-  correction actor `vnfin-oss`; next action
-  `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`. Reviewer report commit: `e18e13d`; verified
-  handoff delivery receipt: `ff817c87`; latest BLOCK delivery receipt: `99d313b4`. Reviewer packet
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/209-210-historical-vn-cash-intraday-spec.md`,
-  triage receipts `5384151534` and `5384151605`. Apply only the typed budget-terminal and
-  lifecycle-mirror correction; preserve SOURCE-GAP and the empty new qualified chain. No RED
-  tests, production code, push, or close.
-
-- **#210 — DESIGN_REVIEW_BLOCKED (2026-08-23), combined with #209 as the historical VN cash M5
-  source-depth batch.** Phase/transition: `EXACT_SHA_DESIGN_REVIEW` at anchor
-  `782341caf0644816a1871d9044bf538955b264ff`; expected actor/reviewer `vnfin-oss-reviewer`;
-  correction actor `vnfin-oss`; next action
-  `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`. Reviewer report commit: `e18e13d`; verified
-  handoff delivery receipt: `ff817c87`; latest BLOCK delivery receipt: `99d313b4`. Same reviewer
-  packet and triage receipts. Apply only the typed budget-terminal and lifecycle-mirror
-  correction; preserve independent M5 coverage, SOURCE-GAP, and the empty new qualified chain.
-  No M1-to-M5 synthesis, RED tests, production code, push, or close.
-
-- **#211 — SPEC_SENT (2026-08-23), queued after the #209+#210 exact design handoff.** Actor
-  `vnfin-oss`; next action `SOURCE_DESIGN_AFTER_209_210_REVIEW_HANDOFF`. Reviewer packet
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/211-vn-company-news-source-spec.md`, triage
-  receipt `5384197053`. Preserve Alpha Vantage BYOK/default behavior; later scope is metadata-only
-  provider sentiment with no bodies, archive, signal, or automatic fallback. No RED tests,
-  production code, push, or close before review.
-
-- **#212 — SPEC_SENT (2026-08-23), queued after #211.** Actor `vnfin-oss`; next action
-  `SOURCE_DESIGN_AFTER_211`. Reviewer packet
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/212-fmarket-asset-allocation-other-spec.md`,
-  packet commit `9f94335`, delivery receipt `ef86be0a`. Preserve `OTHER`; require typed empty
-  allocation with the exact warning and strict unknown/malformed failures. RED-first only after
-  its queue turn and exact-SHA design review; no code, push, or close now.
-
-- **#213 — SPEC_SENT (2026-08-23), queued after #212.** Actor `vnfin-oss`; next action
-  `SOURCE_DESIGN_AFTER_212`. Reviewer packet
+- **#213 — SOURCE_DESIGN_ACTIVE (2026-08-23), active with independent #214 batch.** Actor
+  `vnfin-oss`; next action `RETURN_EXACT_SHA_DESIGN_REVIEW`. Reviewer packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/213-vnreal-index-history-source-spec.md`,
   packet commit `bc37f58`, delivery receipt `c1ce4913`. Qualify fresh VPS/SSI/VNDirect VNREAL D1
   evidence independently for strict versus stitched identity, points, volume, coverage, global
-  budget, provenance, and rights; use SOURCE-GAP CLOSURE if none qualifies. No RED tests,
-  production code, push, or close before its queue turn and exact-SHA design PASS.
+  budget, provenance, and rights; use SOURCE-GAP CLOSURE if none qualifies. Share methodology
+  with #214 but keep symbols, artifacts, anchors, and receipts independent. No RED tests,
+  production code, push, or close before exact-SHA design PASS.
+
+- **#214 — SOURCE_DESIGN_ACTIVE (2026-08-23), active independent companion to #213.** Actor
+  `vnfin-oss`; next action `RETURN_EXACT_SHA_DESIGN_REVIEW`. Reviewer packet
+  `tasks/214-vnmid-index-history-source-spec.md`, packet commit `bd4038e`, public receipt
+  `issuecomment-5384680920`. Qualify VNMID independently using the shared batch methodology but
+  separate artifacts/anchors/receipts: VPS/SSI/VNDirect identity, D1 points/volume/time, exact
+  `2018-08-13..2026-08-19` coverage, bounded global budget, and rights; SOURCE-GAP if no single unit
+  qualifies. Preserve deny-only zero-network behavior; no proxy/basket/downstream signal/RED/code,
+  push, or close before exact-SHA design PASS. #213/#214 remain a shared methodology batch only.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1066,6 +1041,15 @@ _None._
 
 ## Next
 
+- **#215 — SOURCE_DESIGN_QUEUED (2026-08-23), queued after active #213/#214.** Actor
+  `vnfin-oss`; next action `SOURCE_DESIGN_AFTER_213_214_REVIEW_HANDOFF`. Authoritative packet
+  `tasks/215-stock-bonus-distributions-source-spec.md`, reviewer packet anchor `4a6780b`, public
+  receipt `issuecomment-5384790949`. Preserve the current cash-only VSDC surface; independently
+  prove stock-dividend versus bonus kind, response-backed ex/effective dates, shares-per-100 units,
+  event/revision identity, exact coverage/pagination, bounded budgets, and legal/redistribution.
+  Use SOURCE-GAP if no single no-login unit qualifies. No RED/model/accessor/code/push/close before
+  exact-SHA design PASS.
+
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
@@ -1098,6 +1082,35 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#212 — DONE/CLOSED (2026-08-23), approved Fmarket runtime correction.** Published exact approved
+  anchor `4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f` to `origin/master`; approved range was
+  `a1410be39105bd02e09bccf9c7ea83e79a049eb6..4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f`
+  (RED `095bf89`, implementation `279ef74`, correction `4c85fbc`). Remote HEAD, ancestry, and
+  12 approved paths were verified. Final approval `reviews/review-202608231410-issue212-final-code-approval.md`
+  at reviewer `71907f3`; resolution `issuecomment-5384775032`; GitHub re-read `CLOSED`/`COMPLETED`.
+  Full 4,033-test suite, focused/build/API/blacklist/secret/diff gates passed. No unrelated source,
+  endpoint, credential, or capability was added; #213/#214 now active for source-design only.
+
+- **#211 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact approved
+  anchor `a1410be39105bd02e09bccf9c7ea83e79a049eb6` to `origin/master` from clean `a4df33f` ancestry;
+  published paths were limited to `docs/research/2026-08-23-vn-company-news-source-vetting.md` and
+  `tasks/211-design-note.md`. Final approval:
+  `reviews/review-202608231343-issue211-final-design-approval.md` at reviewer `a963fda`; resolution
+  `issuecomment-5384676658`; GitHub re-read `CLOSED`/`COMPLETED`. Empty new source chain and Alpha
+  Vantage BYOK/default remain unchanged; no RED tests, production code, provider token, or company-news
+  capability was added. Local backlog receipts remain intentionally unpushed.
+
+- **#209 + #210 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published
+  exact approved range `5f9c4d6f2536b7d0b3f2ad72360ea7194c369591..a4df33f42244ea501a43bdc24cb6d41dcf4bd525`;
+  remote `origin/master` is exactly `a4df33f42244ea501a43bdc24cb6d41dcf4bd525`, with only the
+  approved research/design/backlog paths. Resolution comments: #209
+  `issuecomment-5384427351`; #210 `issuecomment-5384427434`. GitHub re-read both as
+  `CLOSED`/`COMPLETED` (#209 `2026-08-23T05:32:45Z`; #210 `2026-08-23T05:32:47Z`).
+  Design approval: `reviews/review-202608231230-issue209-210-design-approve.md`; local lifecycle
+  receipt `74d9c538e70ff66ba180b2c1fcf90c0e0e2a6645` remains intentionally unpushed. M1 and M5
+  remain independently SOURCE-GAP with an empty qualified chain; no RED tests, production code,
+  runtime/deep-history capability, or coverage claim.
 
 - **#207 — DONE/CLOSED (2026-08-23), documentation-only source-gap closure.** Published exact
   approved `origin/master` anchor `81baabc909c5d11f2be814644363decd3283c60e` with approved
