@@ -1050,16 +1050,16 @@ _None._
 
 ## Next
 
-- **#215 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), source/design artifacts prepared after #213/#214 exact publication.** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`. Handoff anchor is published
-  exact `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; local design/source anchor is
-  `645c8868b8c1c5a3b147341a4c135830d1337de7`; exact final route/contract anchor; authoritative packet
-  `tasks/215-stock-bonus-distributions-source-spec.md`, reviewer packet anchor `4a6780b`, public
-  receipt `issuecomment-5384790949`. Preserve the current cash-only VSDC surface; independently
-  prove stock-dividend versus bonus kind, response-backed ex/effective dates, shares-per-100 units,
-  event/revision identity, exact coverage/pagination, bounded budgets, and legal/redistribution.
-  Use SOURCE-GAP if no single no-login unit qualifies. No RED/model/accessor/code/push/close before
-  exact-SHA design PASS.
+- **#215 — DESIGN_BLOCKED (2026-08-23), exact-SHA source/design gate.** Actor `vnfin-oss-reviewer`;
+  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Published handoff anchor is exact
+  `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; reviewed docs anchor is
+  `645c8868b8c1c5a3b147341a4c135830d1337de7`; reviewed lifecycle HEAD is
+  `565d3944c11a62c2b4dece899e5960bba428f8d2`. BLOCK receipt `cdfdc853`, reviewer report
+  `reviews/review-202608231546-issue215-design-source-gate.md` at `b1ef2ed`. Correct B1-B6 in one
+  docs/backlog-only round: exact v0.2.0/current boundary and probe ledger, publish/close/path
+  lifecycle, deferred non-authoritative model/coverage/diagnostic contract, one-source atomic
+  future budget invariants, and clean diff. Preserve current cash-only VSDC, empty new chain, and
+  queued #217. No RED/model/accessor/code/push/close before exact-SHA design PASS.
 
 - **#217 — QUEUED_AFTER_#215 (2026-08-23), source/design only.** Actor `vnfin-oss-reviewer`; next
   action `SOURCE_DESIGN_AFTER_#215`. Authoritative packet
