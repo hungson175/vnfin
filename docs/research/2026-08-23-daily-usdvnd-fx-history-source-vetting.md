@@ -1,8 +1,8 @@
 # #207 daily USD/VND history — source vetting
 
-**Date:** 2026-08-23 (UTC+7)  
-**Packet:** `tasks/207-daily-usdvnd-fx-history-spec.md` (reviewer packet `3d60102`)  
-**Requested window:** inclusive `2018-08-01..2026-08-19`  
+**Date:** 2026-08-23 (UTC+7)
+**Packet:** `tasks/207-daily-usdvnd-fx-history-spec.md` (reviewer packet `3d60102`)
+**Requested window:** inclusive `2018-08-01..2026-08-19`
 **Decision:** **SOURCE-GAP CLOSURE** — no daily capability, production code, RED tests, or
 source-backed API claim is authorized by this note.
 
@@ -62,7 +62,7 @@ repository. The nine HTTP calls were bounded as follows:
 
 | Candidate | Calls | Route/observation | Sanitized result |
 | --- | ---: | --- | --- |
-| SBV | 3 | Headless structured-content route: page 0, page 1, and a date-filter variant; `pageSize=100` | All were HTTP 200, `text/html; charset=utf-8`, no redirect, 246-byte HTML `Request Rejected` pages; no JSON envelope or rows. |
+| SBV | 3 | Headless structured-content route: a deliberately negative wire `page=0`, wire `page=1`, and a date-filter variant; `pageSize=100` | All were HTTP 200, `text/html; charset=utf-8`, no redirect, 246-byte HTML `Request Rejected` pages; no JSON envelope or rows. |
 | BIS | 2 | Official SDMX `WS_XRU`: `M.VN.VND.E` and the explicit daily key `D.VN.VND.E` | Monthly route was HTTP 200 CSV; daily key was HTTP 404 XML. |
 | Federal Reserve | 1 | Official H.10 current release/country table | HTTP 200 HTML; the table had 23 bilateral currency rows plus index rows and no VND/Vietnam row. |
 | Vietcombank | 2 | Official `api/exchangerates?date=` at `2018-08-01` and `2020-01-02` | HTTP 200 JSON envelope with `Count`, `Data`, `Date`, `UpdatedDate`; both `Data` arrays were empty. This is not proof of historical absence. |
@@ -70,9 +70,9 @@ repository. The nine HTTP calls were bounded as follows:
 
 The official ECB page was inspected once through its published currency roster rather than crawled.
 No per-date fan-out was attempted for Vietcombank or the repository currency CDN. The prior SBV
-intake observation in the packet remains relevant: `totalCount=1947` was seen, but full pagination
-was not completed and later pages produced HTTP-200 HTML WAF pages. That observation is not treated
-as a successful coverage proof.
+intake observation in the packet remains relevant: `totalCount=1947` was seen on the requested-window
+date-filtered query, but full pagination was not completed and later pages produced HTTP-200 HTML
+WAF pages. That observation is not treated as a successful coverage proof or an unfiltered count.
 
 ## 4. Candidate matrix
 
@@ -87,7 +87,7 @@ proven; and `BASIS_GAP` means the quote is economically different from the reque
 | **State Bank of Vietnam (SBV)**, `sbv.gov.vn` | Official central USD/VND concept; route is `/o/headless-delivery/v1.0/content-structures/137473/structured-contents`; fields named by the packet include `NgayBatDau`, `NgayBanHanh`, `TyGiaSo`, `TyGiaChu`, `SoVanBan`. | No response-backed identity or dates in the fresh probe: every request was an HTML WAF rejection. Prior `totalCount=1947`/20-page observation was not reconciled. | No API automation, rate, caching, storage, or redistribution permission was found. The official publication duty is not a licence. | `LEGAL_GAP` + `CALL_BUDGET_GAP` + `TRANSPORT_INCONCLUSIVE`; **not TDD-qualified**. |
 | **BIS**, `stats.bis.org`, `WS_XRU` | Official CSV proved Vietnam/VND, USD bilateral, monthly **end-of-period** series (`FREQ=M`, 833 distinct periods, 1957-01 through 2026-05). | `D.VN.VND.E` returned 404. BIS documentation says daily exists only for a subset of economies; it cannot promote Vietnam's monthly series to daily. | Statistics terms permit reuse with BIS attribution and no misleading endorsement; API terms are separately as-is and may be limited/suspended. | `NOT_SERVED` for daily; monthly end-of-period is a different frequency/basis. |
 | **Federal Reserve H.10**, `federalreserve.gov` | Current official table publishes bilateral rates for its listed currencies and separate indexes. | The current country table had no Vietnam/VND row. A guessed FRED identifier was not used as evidence. | Official public table, but no requested VND series was served by the inspected H.10 route. | `NOT_SERVED`. |
-| **Vietcombank**, `vietcombank.com.vn` | First-party route/documentation describes `cash`, `transfer`, and `sell` bank quotes, not an SBV central reference rate; the page says “for reference only”. | Bounded calls at the 2018 boundary and a 2020 date returned empty `Data`; intake found no 2018 rows and did not establish a complete start. A one-date-per-request crawl would require thousands of calls and violates the published five-minute cadence. | No open-data licence; public access and “for reference only” do not authorize automated history retrieval or redistribution. | `COVERAGE_GAP` + `BASIS_GAP` + `LEGAL_GAP`. |
+| **Vietcombank**, `vietcombank.com.vn` | First-party route/documentation describes `cash`, `transfer`, and `sell` bank quotes, not an SBV central reference rate; the page says “for reference only”. | Bounded calls at the 2018 boundary and a 2020 date returned empty `Data`; intake found no 2018 rows and did not establish a complete start. A one-date-per-request crawl would require thousands of calls, while the date API's own rate policy is unknown. | No open-data licence; public access and “for reference only” do not authorize automated history retrieval or redistribution. | `COVERAGE_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `CALL_BUDGET_GAP`. |
 | **World Bank WDI**, `api.worldbank.org` | `PA.NUS.FCRF` is official exchange rate, LCU per US$, **annual period average**. VNM maps to VND/USD; current library behavior is already qualified for annual history. | WDI catalogue metadata says annual periodicity; it cannot serve the requested daily observations. | CC BY 4.0 with attribution; existing library remains runtime-fetch-only with no bundled rows. | `NOT_SERVED` for daily; preserve as the annual source. |
 | **ECB / Frankfurter** | ECB reference rates are EUR-base working-day information rates and the official published roster does not include VND. Frankfurter cannot create an independent owner, VND series, or licence. | No official VND daily series was found in the roster; no cross-quote or facade was used as a history oracle. | ECB page is informational and does not supply the requested VND basis; a facade cannot repair that source gap. | `NOT_SERVED` + `BASIS_GAP`. |
 | **open.er-api** | Repository source note documents `latest/USD`, current/spot only, approximately daily refresh; no historical endpoint. | No historical route or full-span coverage. | Terms prohibit raw-data redistribution; caching is allowed under the provider terms, but this does not authorize a new daily-history product. | `NOT_SERVED` + `LEGAL_GAP`; never backfill history. |
@@ -107,14 +107,15 @@ coverage oracle. “Requested first/last” means the literal first/last dates i
 | SBV headless | `sbv.gov.vn`; no redirect in 3 probes | No credential supplied; explicit desktop-Chrome UA; no cookie/session; expected JSON but observed HTML; 3 physical calls, no successful page | Intended fields are named in the packet, but no response-backed item identity, count, page, reference date, requested first/last, or numeric field was available | `TRANSPORT_INCONCLUSIVE`, not provider non-publication | No numeric parse, unit, publication timestamp, calendar, revision, or update lag can be asserted; all remain reopen evidence |
 | BIS `WS_XRU` | `stats.bis.org`; no redirect | No auth; direct SDMX/CSV; 2 physical calls | Response-backed `VN`/`VND`/USD identity, `FREQ=M`, 833 distinct periods, overall first/last `1957-01..2026-05`; requested daily first/last unserved | Daily 404 means this exact daily key is `NOT_SERVED`; it does not prove every BIS dataflow lacks daily VND | End-of-period monthly basis, provider observations only; official docs describe source provenance and multiple frequency semantics; revisions follow BIS updates |
 | Fed H.10 | `www.federalreserve.gov`; no redirect | No auth; direct HTML; 1 physical call | Current table identity is the Fed's listed bilateral rows and indexes; no VND row; requested first/last unserved | Current catalogue/table `NOT_SERVED`; no historical absence inference beyond that inspected release | H.10's own daily-bilateral publication cadence is distinct from a VND qualification; no VND numeric/revision contract |
-| Vietcombank API | `www.vietcombank.com.vn`; no redirect | No auth; direct JSON; no cookie/session; 2 physical calls; no bulk crawl | Envelope identity only (`Count`, `Data`, `Date`, `UpdatedDate`); `Data` empty for both probes; requested first/last unproven | Empty response is unresolved historical coverage, not proof of no rows; intake evidence still says 2018 boundary was not established | Cash/transfer/sell bank quote; provider update time is not observation/publication proof; five-minute cadence and revisions require owner terms |
+| Vietcombank API | `www.vietcombank.com.vn`; no redirect | No auth; direct JSON; no cookie/session; 2 physical calls; no bulk crawl | Envelope identity only (`Count`, `Data`, `Date`, `UpdatedDate`); `Data` empty for both probes; requested first/last unproven | Empty response is unresolved historical coverage, not proof of no rows; intake evidence still says 2018 boundary was not established | Cash/transfer/sell bank quote; provider update time is not observation/publication proof; date-API rate policy, retention, and revisions are unknown. The XML feed's five-minute statement is not transferred. |
 | World Bank WDI | `api.worldbank.org`; no redirect | No auth; direct JSON; 1 physical call | `VNM`/`PA.NUS.FCRF` metadata and observations; bounded probe returned five annual rows, overall probe dates `2021..2025`; requested daily first/last unserved | `NOT_SERVED` because catalogue periodicity is annual, not because a daily response was empty | Annual period-average LCU/USD, CC BY 4.0, runtime fetch; annual behavior is already qualified and must not be relabeled |
 | ECB reference rates | `www.ecb.europa.eu`; public page; no redirect asserted from page inspection | No auth; one page inspection; no API crawl | EUR-base published roster had no VND; requested daily USD/VND first/last unserved | `NOT_SERVED`/`BASIS_GAP`; no synthetic cross-quote | Working-day reference information only; TARGET closing-day rule and ECB update time do not establish VND daily availability or publication knowability |
 | open.er-api / CDN | Provider route or repository adapter as documented; no owner redirect probe needed | open.er-api no-key current route; CDN no-key date fan-out; no historical call made | No historical response-backed identity or requested first/last; CDN has a documented 1,100-day cap and approximate 2024-03-02 lower boundary | Current-only/over-cap are bounded negative facts, not a missing-row fill instruction | open.er-api terms prohibit raw redistribution; CDN has no stronger official full-span/legal contract |
 
 For the rows that did not serve the requested daily cell, numeric type/finiteness/positivity,
 rounding/scale, provisional status, publication time, and revision behavior are deliberately
-`unproven`; the future gate must obtain them from one qualified provider response. No provider
+`unproven`; the future gate must obtain them from one successful response family in a fully
+reconciled retrieval. No provider
 response is used as an absence oracle merely because it is empty, 404, or blocked.
 
 ## 5. Detailed source records
@@ -155,18 +156,26 @@ following from the same response family:
    page sum, and the filtered result is complete. A page that returns HTML with HTTP 200 fails the
    whole retrieval; it is not an empty page and cannot produce a coverage warning.
 
-**Bounded pagination and WAF policy.** The intake count and `pageSize=100` imply a minimum of 20
-   pages for the observed unfiltered count. A future implementation may not silently grow this
-   budget:
+**Bounded pagination and WAF policy.** Liferay's documented query contract is one-based: wire
+`page=1` is the first page and `page=20` is the twentieth. The official query documentation is
+<https://learn.liferay.com/w/dxp/integration/headless-apis/using-liferay-as-a-headless-platform/consuming-apis/api-query-parameters>.
+The unverified intake observation was `totalCount=1947` from the requested-window date-filtered
+query, and `pageSize=100` implies a minimum of 20 wire pages for that observation. A future
+implementation may use internal zero-based slots only with the explicit mapping
+`logical_slot 0..19 -> wire page 1..20`; it must never send `page=0` under this contract. Page base,
+`lastPage`, total/count fields, and the exact successful envelope remain qualification evidence to
+re-prove from owner documentation and a successful response family. The budget must not silently
+grow:
 
 | Counter | Exact future ceiling | Meaning |
 | --- | ---: | --- |
 | logical source attempts | 1 | SBV is one candidate; no incompatible failover. |
-| logical page slots | 20 | Pages `0..19`; a reconciled count needing page 20 is `CALL_BUDGET_GAP`. |
+| logical page slots | 20 | Internal slots `0..19`, mapped to wire pages `1..20`; a reconciled count needing wire page 21 is `CALL_BUDGET_GAP`. |
 | physical HTTP requests | 40 | At most one initial request plus one explicitly reserved retry per page; retries are included in this total. |
 | retries per page | 1 | No hidden transport-library retries, backoff loops, or concurrent duplicate pages. |
 
-The deterministic scheduler processes pages in ascending page order. Before every HTTP call it
+The deterministic scheduler processes internal slots in ascending order and requests wire pages
+`slot + 1`. Before every HTTP call it
 atomically reserves `(page, retry_index)` and one physical budget unit. A failed reservation makes
 no HTTP call. A WAF HTML response consumes the reserved unit, is recorded as
 `TRANSPORT_INCONCLUSIVE`, and can receive only the one reserved retry. Exhaustion stops the run,
@@ -176,13 +185,51 @@ claimed until SBV supplies an owner-approved rate policy. A future runtime must 
 the source without that policy, rather than invent a delay or claim that the existing five-minute
 cadence applies to SBV.
 
-**Coverage and calendar.** A qualifying response must contain both literal requested endpoints
-`2018-08-01` and `2026-08-19` as provider reference dates. Both are ordinary weekdays, but the
-library must not assume that every weekday is published. Weekend/holiday omissions may be omitted
-only when SBV supplies a provider calendar/status explanation. An unexplained internal gap, duplicate,
-out-of-window row, empty result, or partial first/last boundary fails the source or returns a
-bounded coverage warning according to the approved implementation. No weekend row, zero, forward
-fill, backfill, interpolation, annual expansion, or current-spot substitution is allowed.
+**Transport outcome and retry contract.** This table is a future design rule, not a live capability
+claim. It makes the one reserved retry executable and keeps deterministic validation failures out
+of retry loops. Redirects are not followed; the effective host/path must remain the canonical route.
+
+| Outcome | Internal result | May consume the one page retry? | Public result |
+| --- | --- | --- | --- |
+| Strict HTTP 200, normalized MIME exactly `application/json`, non-empty body, valid envelope | `ok` | No | Continue page reconciliation. |
+| HTTP 200 HTML matching the observed WAF/challenge signature | `waf_html` / `transport_inconclusive` | Yes, once, only if owner pacing is authorized and a reservation succeeds | Never an empty page or coverage claim. |
+| HTTP 200 with empty body, `204`, non-JSON/XML/other MIME, or malformed `Content-Type` | `empty_body`, `no_content`, or `mime_mismatch` | No | Fail the whole retrieval; no partial result. |
+| Any `3xx`, redirect, or effective-host/path mismatch | `redirect` / `effective_route_mismatch` | No | Fail closed; no follow-up route or source identity inference. |
+| `429` or `5xx` | `rate_limited` / `server_error` | Once, only if owner pacing is authorized and a reservation succeeds | On exhaustion, `transport_inconclusive`; no partial result. |
+| Timeout, TLS, connection, or other transport exception | `timeout`, `tls_error`, or `transport_error` | Once, only if owner pacing is authorized and a reservation succeeds | On exhaustion, `transport_inconclusive`; no partial result. |
+| JSON parse, schema, identity, numeric, duplicate, count/page, endpoint, or gap validation failure | Corresponding deterministic failure token | No | Fail the whole retrieval; never retry a bad deterministic payload. |
+
+MIME normalization is strict: parse the complete `Content-Type` value, lower-case and trim its
+media-type portion, and require exactly `application/json`; parameters do not turn HTML/XML into
+JSON. Every retry consumes a reserved physical unit before transport. The runtime must refuse to
+schedule any source request without owner-approved pacing, so this table does not invent a delay.
+
+The three diagnostic layers are separate:
+
+1. **Offline `RequestDiagnostic.status`:** no network is performed; current daily status remains
+   `unsupported_frequency`. A future additive daily registry may use only reviewed statuses such
+   as `source_gap`, `coverage_gap`, or `ok`, with a typed `rate_basis` on each capability; transport
+   exceptions never appear in an offline result.
+2. **Successful `FXHistory.warnings`:** only provider-calendar/time caveats can accompany a
+   successful fully reconciled history: `provider_nonpublication`, `holiday_gap`,
+   `publication_time_unavailable`, and `revision_or_release_lag`. The maximum is four tokens;
+   deduplicate first, then emit in that canonical order, never caller/order/provider-text order.
+3. **Internal/failure reasons:** only the finite tokens in the transport table and the coverage
+   tokens `source_gap`, `coverage_gap`, `provider_nonpublication`, `holiday_gap`,
+   `unexplained_gap`, and `call_budget_gap` may be retained. No raw URL, body, exception, cookie,
+   credential, provider text, or live rate is public. A failed retrieval returns no `FXHistory`.
+
+**Coverage and calendar.** A qualifying result must be one **fully reconciled retrieval from one
+qualified source**, not one wire response: every required wire page succeeds, page/count metadata
+reconciles, and all accepted rows are unique, in-window, and identity-valid. That retrieval must
+contain both literal requested endpoints `2018-08-01` and `2026-08-19` as provider reference dates.
+Both are ordinary weekdays, but the library must not assume that every weekday is published.
+Incomplete pages/totals, a missing requested endpoint, an unexplained internal gap, duplicate,
+out-of-window row, empty result, or partial first/last boundary fails the entire source and returns
+no partial `FXHistory`. Only provider-owned calendar/status evidence may justify an absent
+weekend/holiday/non-publication date; those accepted absences use the exact bounded warning tokens
+defined below. No weekend row, zero, forward fill, backfill, interpolation, annual expansion, or
+current-spot substitution is allowed.
 
 **Legal and reuse.** The SBV portal's statutory/publication role proves ownership and source
 identity, not permission to automate, cache, store, redistribute, or return raw data to callers.
@@ -203,7 +250,9 @@ The explicit daily key
 [`D.VN.VND.E`](https://stats.bis.org/api/v1/data/WS_XRU/D.VN.VND.E?format=csvfile)
 returned HTTP 404 XML. The BIS documentation says daily series exist for approximately 80
 economies, while lower-frequency histories are broader; that dataset-wide fact is not evidence
-that Vietnam has daily data.
+that Vietnam has daily data. The official [WS_XRU availability enumeration](https://data.bis.org/topics/XRU/BIS%2CWS_XRU%2C1.0)
+records the Vietnam/VND cell under annual, monthly, and quarterly frequencies, not daily; the
+guessed daily-key 404 is only corroborating evidence.
 
 BIS statistics terms permit use with BIS attribution, no misleading endorsement/affiliation, and
 no added charge to users of a commercial product. The API is as-is, may be updated or suspended,
@@ -232,9 +281,11 @@ The official API shape is `GET https://www.vietcombank.com.vn/api/exchangerates?
 The bounded calls returned a stable JSON envelope (`Count`, `Data`, `Date`, `UpdatedDate`) with an
 empty `Data` array for both tested dates. That response is not treated as proof that rows do not
 exist historically. The provider documentation and existing source note describe cash, transfer,
-and sell quotes, no central-rate identity, “for reference only”, and a self-declared one-request-
-per-five-minutes cadence. A full-span daily history would require a large date fan-out and would
-not meet the bounded runtime contract. The cell remains `COVERAGE_GAP` + `BASIS_GAP` + `LEGAL_GAP`.
+and sell quotes, no central-rate identity, and “for reference only”. The five-minute statement in
+the checked-in note belongs to the distinct current XML feed; no provider-owned rate policy was
+found for this date API, so its date-API rate policy is **unknown**. A full-span daily history would
+require a large date fan-out and remains `CALL_BUDGET_GAP` in addition to its coverage, basis, and
+legal gaps.
 
 Sources: [Vietcombank rate page](https://vietcombank.com.vn/en/To-Chuc/SMEs/KHTC---Ti-gia---SMEs),
 [Vietcombank API route](https://www.vietcombank.com.vn/api/exchangerates?date=2020-01-02), and
@@ -297,6 +348,29 @@ rate_basis = "official_annual_period_average"
 frequency  = Frequency.ANNUAL
 ```
 
+The future public model contract is a trailing, compatibility-safe typed field:
+
+```python
+FXHistory.rate_basis: str | None = None
+```
+
+The only accepted non-`None` values in this design are
+`official_annual_period_average` and `official_daily_central_rate`. The future annual factory
+must populate the first token; the future daily adapter must validate and populate the second.
+`FXHistory.to_dataframe()` must always put the same value in
+`DataFrame.attrs["rate_basis"]`. A separately reviewed additive `SourceCapability.rate_basis:
+str | None = None` field must carry the same token for the annual and daily capability entries;
+the current annual capability entry is not silently changed in this source-gap commit. If the
+implementation chooses a different typed alternative, that alternative must be reviewed before
+reopening and must provide the same constructor, DataFrame, diagnostic, snapshot, repr/equality,
+and serialization guarantees.
+
+Adding the trailing field keeps existing positional constructors valid, but it is still a reviewed
+public model change: the public API snapshot, dataclass field list, repr/equality expectations,
+serialization shape, docs contract, and CHANGELOG/release note must be updated together. Annual
+routing, validation, values, exact lookups, and diagnostics remain unchanged; this is the precise
+compatibility promise, not a claim of byte-for-byte object identity after the additive field.
+
 No source may be admitted merely because its numeric values have the same VND/USD scale. If only
 SBV later qualifies, daily history is a single-source path and must expose no fabricated failover
 attempts. A chain may be added only after at least two independent sources qualify for the same
@@ -310,7 +384,7 @@ After a future design PASS and a separate TDD authorization:
 - `history(..., frequency=Frequency.DAILY)` would require plain `date` `start` and `end`, both
   inclusive, and validate pair, frequency, bounds, and budget before network;
 - the requested proof window would be exactly `2018-08-01..2026-08-19`, with both literal
-  boundaries present in one qualified provider response;
+  boundaries present in one fully reconciled retrieval from one qualified provider;
 - output would contain provider observations only, strictly ascending and unique, with no weekend/
   holiday fabrication, fill, interpolation, nearest match, annual expansion, current-spot backfill,
   or cross-provider stitching;
@@ -352,10 +426,12 @@ publication_time_unavailable
 `source_gap`, `transport_inconclusive`, `schema_error`, `identity_mismatch`, and `call_budget_gap`
 are not coverage claims. An empty body, HTML WAF page, timeout, incomplete page reconciliation,
 or unproven route is an unresolved/transport outcome. `coverage_gap` is allowed only after a
-qualified response and provider calendar/status account for the missing date. No warning may
-contain a URL, query, response body, raw exception, cookie, credential, provider free text, or live
-rate. Counts are non-negative integers bounded by the ceilings above; warnings are a fixed-size
-tuple of allow-listed tokens.
+qualified response and provider calendar/status account for the missing date. A successful
+`FXHistory.warnings` tuple may contain at most four deduplicated tokens, in this exact order:
+`provider_nonpublication`, `holiday_gap`, `publication_time_unavailable`,
+`revision_or_release_lag`. No warning may contain a URL, query, response body, raw exception,
+cookie, credential, provider free text, or live rate. Counts are non-negative integers bounded by
+the ceilings above.
 
 The annual `explain_fx_coverage()` capability registry stays unchanged. A later additive daily
 capability entry must say `is_single_source=True`, exact source/basis, requested-span boundary,
@@ -378,13 +454,18 @@ source/design review. One failed item keeps the chain empty and daily capability
    basis, numeric type/positivity/scale, document identity, and UTC-to-`Asia/Ho_Chi_Minh` effective
    date conversion are response-backed and represented by synthetic RED cases.
 4. **Pagination and coverage:** total/page reconciliation completes within the exact budget, with
-   no duplicates or overlaps; both requested endpoint dates are present; provider calendar/status
-   accounts for every internal gap; no partial/empty response is accepted as success.
+   no duplicates or overlaps; both requested endpoint dates are present in one fully reconciled
+   retrieval; provider calendar/status accounts for every accepted absence; incomplete pages,
+   totals, endpoints, or unexplained internal gaps fail the source and return no partial history.
 5. **Time semantics:** observation/reference date, publication date if any, retrieval time,
    revision behavior, and strict-prior limitation are documented separately. `fetched_at_utc` is
    never used as a knowability oracle.
-6. **Compatibility:** annual World Bank behavior, default frequency, zero-network unsupported
-   frequencies, model construction, DataFrame provenance, and diagnostics remain compatible.
+6. **Typed basis and compatibility:** the reviewed trailing public `FXHistory.rate_basis` field (or
+   an explicitly reviewed typed alternative) uses the exact annual/daily tokens, populates annual
+   and daily results, appears in `DataFrame.attrs`, `SourceCapability`/diagnostics, public
+   snapshots, repr/equality/serialization, docs contracts, and release notes. Annual World Bank
+   routing, validation, values, exact lookups, default frequency, zero-network unsupported
+   frequencies, and annual diagnostics remain unchanged.
 7. **Reviewer transition:** the exact two-doc source/design range receives design PASS first. Only
    a later explicit authorization can start RED-first synthetic tests and production TDD; this
    source-gap commit itself never authorizes either.
