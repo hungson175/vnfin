@@ -601,16 +601,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#217 — DESIGN_BLOCKED (2026-08-23), docs-only correction required.** Expected actor `vnfin-oss`;
-  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Reviewed exact anchor
-  `55f0b1b4d46ece6cab30b647d4c443a4cc3338d6`; BLOCK report
-  `reviews/review-202608231638-issue217-design-source-gate.md` at reviewer `4c317f5`, delivery
-  `9f667c3b`. Correct only B1-B5: split VCB field/basis cells and exact logical/physical/retry/status/
-  MIME/route totals; inspect current Frankfurter v2 as its own candidate; make model, bounds, and
-  confirmed non-publication outcomes total; defer unqualified numeric budgets/API names or repair
-  their byte/retry/status/diagnostic seams; and correct source-gap close/path plus existing-spot legal
-  scope. Preserve SOURCE-GAP CLOSURE, empty daily chain, annual World Bank behavior, and queued #218.
-  No RED/model/accessor/source-registration/code/push/close before exact-SHA design PASS.
+- **#217 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), corrected source-gap handoff.**
+  Expected actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`. Correction
+  anchor is the commit containing this record; publish range is
+  `8350329d3d881e34df62937aacf7ea4d74f99f91..this-anchor`. Addressed BLOCK report
+  `reviews/review-202608231638-issue217-design-source-gate.md` at reviewer `4c317f5`: split all
+  six VCB cells and exact probe ledger; evaluate current Frankfurter v2; make model, bounds, and
+  confirmed non-publication behavior total; defer unqualified numeric budgets/public diagnostics
+  while repairing byte/retry/status seams; and correct lifecycle/path plus existing-spot legal
+  scope. Artifacts are exactly the research note, `tasks/217-design-note.md`, and this backlog;
+  SOURCE-GAP/empty daily chain, annual World Bank, and queued #218 are preserved. No RED,
+  model/accessor/source-registration/code/push/close before exact-SHA design PASS.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range

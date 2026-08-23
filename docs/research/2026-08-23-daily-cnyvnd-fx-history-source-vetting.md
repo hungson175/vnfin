@@ -2,14 +2,16 @@
 
 **Date:** 2026-08-23 (UTC+7)
 **Packet:** `tasks/217-daily-cnyvnd-fx-history-spec.md` (reviewer packet `4159d74`)
+**Reviewed block:** exact `55f0b1b4d46ece6cab30b647d4c443a4cc3338d6`; report
+`reviews/review-202608231638-issue217-design-source-gate.md` at reviewer `4c317f5`
 **Requested window:** inclusive `2018-01-01..2026-08-19`
 **Decision:** **SOURCE-GAP CLOSURE** — no daily CNY/VND capability, RED tests, production
 code, source registration, or source-backed daily API claim is authorized by this report.
 
-The requested economic series is exact `CNY` base / `VND` quote: **VND per 1 CNY**.  A
+The requested economic series is exact `CNY` base / `VND` quote: **VND per 1 CNY**. A
 USD/VND value, a CNY/USD value, a current quote, a bank quote with a different basis, a
-midpoint, or a cross-derived value is not a substitute.  The existing annual World Bank
-USD/VND behavior remains unchanged.
+midpoint, or a cross-derived value is not a substitute. Existing annual World Bank USD/VND
+behavior remains unchanged.
 
 ## 1. Disposition and hard boundary
 
@@ -29,339 +31,364 @@ Therefore:
   current quote, a search result, or an empty response;
 - no raw response, live rate, cookie, header, query-bearing URL, or live fixture is
   retained in this repository; and
-- a later implementation requires a fresh design/implementation authorization.  This
+- a later implementation requires a fresh design/implementation authorization. This
   report is not a production capability.
 
 ## 2. Clean-room and research protocol
 
-Before this task I read `docs/vnstock-blacklist.md`.  Every search used this exclusion:
+Before this correction I read `docs/vnstock-blacklist.md`. Every search used this exclusion:
 
 ```text
 -vnstock -"VNStock" -vnstocks.com -"thinh-vu/vnstock" -vnstock-hq -"vnstock-agent"
 ```
 
 No prohibited source, derivative artifact, endpoint map, schema, code, test, notebook,
-package, or behavior was opened, cited, compared, or used.  Evidence below is limited to
-owner-operated official portals/APIs, official provider terms, and the repository's
-already-reviewed annual FX source notes.  Public reachability is recorded separately from
-permission to automate, cache, return, or redistribute data.
+package, or behavior was opened, cited, compared, or used. Evidence below is limited to
+owner-operated official portals/APIs, official provider terms, current Frankfurter-owned
+v2 documentation, and the repository's already-reviewed annual FX source notes. Public
+reachability is recorded separately from permission to automate, cache, return, or
+redistribute data.
 
-The direct probe clock was recorded first as `23/08/2026 - Sunday 16:17:20 +0700`.
-Probes used a fresh process, no credentials, no cookie jar, no browser session, no proxy,
-IPv4, a 5-second connect timeout, a 15-second total timeout, no automatic retry, and an
-explicit desktop User-Agent.  The User-Agent was a normal request header, not challenge
-solving or browser automation.  One bounded manual repeat was made for the Vietcombank
-2018 date route after a DNS timeout; it is identified as a repeat rather than a hidden
-library retry.  Only status, complete MIME, effective host/path, envelope shape, counts,
-dates, and legal statements were retained.
+The initial direct-probe session used a fresh process, no credentials, no cookie jar, no
+browser session, no proxy, IPv4, a 5-second connect timeout, a 15-second total timeout, no
+automatic retry, and an explicit desktop User-Agent. One bounded manual repeat was made for
+the Vietcombank 2018 date route after a DNS timeout; it is recorded as retry `1`, not a
+hidden library retry. The correction session repeated the same bounded policy and added
+current Frankfurter v2 and BIS v2 probes with redirect following disabled. Only status,
+complete MIME, effective host/path, envelope shape, counts, dates, and legal statements
+were retained. Query-bearing date/format parameters were used only during probes and are
+not written below or committed; canonical route references are path-only.
 
-Query-bearing date parameters were used only during bounded live probes and are not written
-below or committed.  Canonical route references are path-only.
+## 3. Exact bounded probe accounting
 
-## 3. Bounded probe ledger
+A **logical target** is one unique route plus date/key intent. A provider field observed in
+the same response does not multiply calls. A **physical call** is one actual HTTP dispatch.
+A **retry** reuses an existing logical target after its first physical dispatch. `complete
+MIME` means the complete `Content-Type` value after the first colon, including parameters;
+`effective route` is the final host/path with redirect following disabled. `NONE_BEFORE_RESPONSE`
+means a timeout occurred before a response. `NOT_RETAINED` is used only for two earlier BIS
+exploratory probes and is never used as qualification evidence.
 
-The ledger counts direct no-auth HTTP attempts where a route was probed.  A page inspection
-from an official portal is marked separately; it is not represented as a successful data
-retrieval.  An HTTP 200 with HTML, an empty envelope, a timeout, or a 404 is never treated as
-historical absence unless the provider's own product/calendar metadata supplies that meaning.
+### 3.1 Direct dispatch ledger
 
-| Owner/unit | Canonical route (no query) | Bounded observation | Identity/coverage result | Disposition |
-| --- | --- | --- | --- | --- |
-| Vietcombank dated quote API | [`www.vietcombank.com.vn/api/exchangerates`](https://www.vietcombank.com.vn/api/exchangerates) | 4 direct date attempts: 2018 boundary repeat ended HTTP 200 `application/json; charset=utf-8`, 2026-08-19 ended HTTP 200 with no redirect; one 2020 attempt and the first 2018 attempt timed out during DNS | 2018 response had `Count=0` and an empty `Data`; 2026 response had `Count=20`, `Data` length 20, `Date`, `UpdatedDate`, and one CNY object with `cash`, `transfer`, and `sell` fields. No full-span, unit, rate-policy, or reuse contract | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| Vietcombank XML quote feed | [`portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx`](https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx) | 1 direct HTTP 200, complete MIME `text/xml; charset=utf-8`, no redirect | Root `ExrateList`; 20 `Exrate` nodes; CNY node has provider fields `Buy`, `Transfer`, `Sell`; response is current/spot, not a dated historical series. The response itself says it is for reference only and limits requests to one every five minutes | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` |
-| Vietcombank public quote page | [`www.vietcombank.com.vn/KHCN/Cong-cu-tien-ich/Ty-gia`](https://www.vietcombank.com.vn/KHCN/Cong-cu-tien-ich/Ty-gia) | 1 official page inspection | Page lists CNY and labels the three columns as cash purchase, transfer purchase, and sale; it says the table is for reference only. These labels do not grant historical automation or select a future field | `BASIS_GAP` + `LEGAL_GAP` |
-| State Bank of Vietnam (SBV) rate pages | [`sbv.gov.vn/vi/trang-chu`](https://www.sbv.gov.vn/vi/trang-chu) links to `dttktt.sbv.gov.vn/TyGia/faces/TyGiaSGD.jspx`, `TyGiaCheo.jspx`, and `TyGiaTrungTam.jspx` | 3 direct route attempts, all connection timeouts; official portal navigation to the three routes also timed out | The portal proves that official reference, cross-rate, and central-rate products are separate surfaces. No response-backed CNY/VND row, field, unit, date, page count, calendar, or reuse contract was obtained. The central USD/VND concept cannot be converted into CNY/VND | `TRANSPORT_INCONCLUSIVE` + `IDENTITY_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP`
-| PBOC / CFETS | [`pbc.gov.cn` RMB-rate announcement](https://www.pbc.gov.cn/zhengcehuobisi/125207/125217/125925/2025122609114878612/index.html); [`CFETS spot instruments`](https://www.chinamoney.com.cn/english/prdfsmrfs/) | 1 official PBOC announcement inspection and 1 official CFETS product-page inspection | The PBOC announcement identifies PBOC authorization of CFETS and lists its direct RMB parity currencies without VND. CFETS's spot instrument list also omits VND. CFETS states that market-data use requires written authorization | `NOT_SERVED` + `LEGAL_GAP`
-| BIS bilateral rates | [`BIS VND/USD page`](https://data.bis.org/topics/XRU/BIS%2CWS_XRU%2C1.0/M.VN.VND.E) and [`BIS documentation`](https://www.bis.org/statistics/xrusd/xrusd_doc.pdf) | 2 bounded API-route probes were made for USD-bilateral daily/monthly keys without credentials; both returned typed 404 XML. The owner data page and documentation were used for semantics, not the failed key as an absence oracle | BIS documents the dataset as nominal rates against USD; the Vietnam page is VND/USD at monthly frequency. ECB-derived or USD-derived arithmetic would violate direct-pair identity | `NOT_SERVED` + `BASIS_GAP`
-| ECB reference rates | [`ECB reference-rate roster`](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html); [`ECB CNY page`](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-cny.en.html) | 2 official page inspections; no date fan-out | CNY is listed against EUR; VND is not in the published roster. The rates are information-only working-day reference rates, not a direct CNY/VND product | `NOT_SERVED` + `BASIS_GAP`
-| World Bank WDI | [`World Bank WDI API family`](https://api.worldbank.org/v2/country/VNM/indicator/PA.NUS.FCRF) and [`WDI catalogue`](https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators) | 1 direct HTTP 200 JSON probe | `PA.NUS.FCRF` returned six annual observations for the bounded 2020–2025 check and identifies official exchange rate, LCU per US$, period average. It is the existing annual USD/VND source, not daily CNY/VND | `NOT_SERVED` for this request; annual behavior preserved |
-| Federal Reserve H.10 / FRED | [`Federal Reserve H.10 current release`](https://www.federalreserve.gov/releases/h10/current/); [`FRED DEXCHUS`](https://fred.stlouisfed.org/series/DEXCHUS) | 1 direct H.10 HTTP 200 HTML probe and 1 official FRED series inspection | H.10 current table had no Vietnam/VND row. FRED's concrete daily CNY series is CNY/USD, not CNY/VND; converting it with another series is forbidden | `NOT_SERVED` + `BASIS_GAP`
-| Current open-rate API | [`ExchangeRate-API open endpoint`](https://open.er-api.com/v6/latest/USD) and [`terms`](https://www.exchangerate-api.com/terms) | No history probe; repository source note and provider terms were checked | The no-key endpoint is current/spot only and has no historical retention contract. Its raw-data redistribution restriction independently disqualifies it from a new historical product | `NOT_SERVED` + `LEGAL_GAP`
+The following table is the complete **reproducible publishable** dispatch accounting for the
+source/design packet. Two earlier exploratory BIS requests did not retain full
+MIME/effective-route evidence; they are explicitly retired, excluded from this total, and
+not used to make an absence or qualification claim. The exact v2 correction rows supersede
+them.
 
-The failed/empty rows above do not prove that a historical observation never existed. They
-only identify what the bounded route could and could not establish. No date-by-date crawl was
-attempted.
+| Dispatch group | Canonical route/path | Logical targets | Physical calls | Retry reservations | Status / complete MIME / effective route |
+| --- | --- | ---: | ---: | ---: | --- |
+| VCB dated: 2018 initial + repeat, 2020, 2026-08-19 | `www.vietcombank.com.vn/api/exchangerates` | 3 | 4 | 1 | 2 × HTTP 200 / `application/json; charset=utf-8` / canonical path; 2 × timeout / `NONE_BEFORE_RESPONSE` / `NONE_BEFORE_RESPONSE` |
+| VCB XML current quote | `portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx` | 1 | 1 | 0 | HTTP 200 / `text/xml; charset=utf-8` / canonical path |
+| SBV SGD, cross-rate, central-rate routes | `dttktt.sbv.gov.vn/TyGia/faces/` route family | 3 | 3 | 0 | 3 × timeout / `NONE_BEFORE_RESPONSE` / `NONE_BEFORE_RESPONSE` |
+| World Bank WDI annual probe | `api.worldbank.org/v2/country/VNM/indicator/PA.NUS.FCRF` | 1 | 1 | 0 | HTTP 200 / `application/json;charset=utf-8` / canonical path |
+| Federal Reserve H.10 page dispatch | `www.federalreserve.gov/releases/h10/current/` | 1 | 1 | 0 | HTTP 200 / `text/html` / canonical path; HTML is not a data response |
+| BIS v2 daily average key | `stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/D.VN.VND.A` | 1 | 1 | 0 | HTTP 404 / `application/xml;charset=UTF-8` / canonical path |
+| BIS v2 monthly average key | `stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/M.VN.VND.A` | 1 | 1 | 0 | HTTP 200 / `text/csv;charset=UTF-8` / canonical path; monthly VND/USD, not direct CNY/VND |
+| BIS v2 daily end-period key | `stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/D.VN.VND.E` | 1 | 1 | 0 | HTTP 404 / `application/xml;charset=UTF-8` / canonical path |
+| BIS v2 monthly end-period key | `stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/M.VN.VND.E` | 1 | 1 | 0 | HTTP 200 / `text/csv;charset=UTF-8` / canonical path; monthly VND/USD, not direct CNY/VND |
+| Frankfurter v2 direct pair | `api.frankfurter.dev/v2/rate/CNY/VND` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path; response keys `base,date,quote,rate`, no provider/basis field |
+| Frankfurter v2 CNY metadata | `api.frankfurter.dev/v2/currency/CNY` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path |
+| Frankfurter v2 VND metadata | `api.frankfurter.dev/v2/currency/VND` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path |
+| Frankfurter v2 provider catalogue | `api.frankfurter.dev/v2/providers` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path |
+| **Reproducible publishable dispatches** | — | **17** | **18** | **1** | **11 × HTTP 200, 2 × HTTP 404, 5 × timeout; 13 complete MIME values retained** |
+
+The exact publishable ledger therefore reports **17 logical targets, 18 physical calls, and
+one explicit retry**. The 11 HTTP 200 rows include current/annual/page data and do not imply
+a qualified daily pair. The two exact BIS v2 404s are not absence oracles; the two successful
+BIS v2 rows prove only that the available VND series in those keys is monthly VND/USD. No
+body or live rate is stored. The two retired exploratory dispatches are outside the evidence
+total by design.
+
+### 3.2 Non-dispatch source and legal inspections
+
+These are page/document inspections, not successful retrievals and not rows in the direct
+ledger: the Vietcombank quote page; the SBV home/menu; the PBOC RMB-parity announcement;
+CFETS spot-instrument and market-data-terms pages; BIS data/methodology/legal/API pages;
+ECB reference-rate roster; the World Bank catalogue; FRED's DEXCHUS page; the repository's
+open.er-api source note and terms; and the Frankfurter v2, CNY, VND, provider, and underlying
+provider-terms pages. A timeout while navigating an official menu is reported in the SBV
+candidate record, not converted into a successful route response.
 
 ## 4. Candidate records and source/legal axes
 
-### 4.1 Vietcombank — current CNY identity, but no qualified historical unit
+### 4.1 Vietcombank — six independent field/basis cells
 
-The owner page is useful evidence that Vietcombank currently displays CNY and separates cash
-purchase, transfer purchase, and sale. The dated API's response envelope also returned a CNY
-object with these three fields for the bounded recent-date probe. This is **not** enough to
-choose one historical field:
+The current page and dated response show bank-side CNY columns, but each field is a separate
+candidate unit. The response does not state a stable base/quote, scale, historical retention,
+publication time, or revision rule. The 2018 empty envelope is not historical absence and the
+2020 timeout is transport-unknown.
 
-1. the response has no explicit machine-readable `base`, `quote`, scale, or economic-basis
-   contract;
-2. the page's labels establish bank-side transaction direction, but do not establish a
-   stable `VND per 1 CNY` historical series, publication time, or revision policy;
-3. the 2018 response is an empty envelope with zero placeholder dates. It is not a proof of
-   no historical data, and the 2020 timeout is transport-unknown;
-4. the API's request/rate policy, retention, pagination/bulk behavior, and automation rights
-   are not published in the inspected owner materials; and
-5. the XML route is current/spot only. Its provider comment says “for reference only” and
-   “only one request every five minutes”; that statement is not silently transferred to the
-   dated API.
+| Candidate unit | Response-backed observation | Missing for qualification | Disposition |
+| --- | --- | --- | --- |
+| VCB dated `cash` | Recent CNY object contains `cash`; page labels cash purchase | Direct CNY/VND direction, scale, economic basis, historical coverage, revisions, rate policy, caller/storage/redistribution rights | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `transfer` | Recent CNY object contains `transfer`; page labels transfer purchase | Same independent axes; no averaging or substitution with another field | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `sell` | Recent CNY object contains `sell`; page labels sale | Same independent axes; bank sale is not central parity or a midpoint | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Buy` | Current CNY `Buy` node field; complete XML response | Current/spot only, no dated-history identity, selected economic basis, retention, or reuse permission | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` |
+| VCB XML `Transfer` | Current CNY `Transfer` node field; complete XML response | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` |
+| VCB XML `Sell` | Current CNY `Sell` node field; complete XML response | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` |
 
-The three bank fields are mutually exclusive qualification bases. A future implementation
-must select exactly one only after the same provider route and written provider semantics
-prove direction, unit, date, scale, revisions, and legal/runtime rights. It must never average
-the fields into a midpoint or use the XML spot route to fill the dated API.
+The dated fields share the VCB dated ledger rows but do not share qualification. The XML
+fields share one current response but do not become historical candidates. No field is
+averaged, inverted, midpointed, or used to fill another field.
 
-**Legal axes recorded independently:**
+**VCB legal axes:** owner identity is visible; automated access, caller-facing return,
+storage/cache, redistribution/commercial use, attribution, dated-route rate/retry/WAF
+policy, and revision/publication semantics are not granted by a public page or “for reference
+only” text. The XML comment's one-request-per-five-minutes statement is not silently applied
+to the dated route. A future VCB unit needs written permission or exact terms for the exact
+field, route, request pattern, storage, and downstream use.
 
-| Axis | Observed VCB posture | Required before qualification |
-| --- | --- | --- |
-| Owner/source identity | Vietcombank owner pages and hosts | Keep exact owner route and stable provider token |
-| Automated access | Public route reachable in some probes; no automation grant found | Written owner permission or explicit terms for the exact route and request pattern |
-| Caller-facing return | Not granted by “for reference only” | Explicit permission to return normalized historical observations |
-| Storage/cache | Not stated for the dated API | Explicit retention/cache permission and duration |
-| Redistribution/commercial | Not stated | Explicit permission or licence covering the library's use and downstream context |
-| Attribution | Not stated beyond owner branding | Exact attribution requirement |
-| Rate/retry | XML says one request per five minutes; dated API is unknown | Route-specific request budget, retry, and WAF policy |
-| Revisions/publication | `Date`/`UpdatedDate` exist in one response but semantics are unproven | Provider-defined observation date, publication/update, and revision behavior |
+### 4.2 State Bank of Vietnam — route identities remain unresolved
 
-Overall VCB is not `PARTIAL`: the response-backed CNY row is useful discovery evidence, but
-identity/basis, full historical coverage, and legal/runtime axes are not a qualification unit.
+The official home separates central rate, reference rates, and cross-rate surfaces. The
+three direct routes timed out before a response, so this report does not assert a schema,
+CNY row, unit, scale, date, pagination, retention, calendar, or count. The central USD/VND
+concept cannot be converted into CNY/VND. SBV ownership is not a licence for automation,
+cache, caller return, redistribution, rate, or retry.
 
-### 4.2 SBV — official rate surfaces, no response-backed CNY/VND proof
+### 4.3 PBOC / CFETS — no direct public pair and licence gate
 
-The SBV official home page separates: central rate, reference rates at the Foreign Exchange
-Management Department, and VND cross rates for tax calculation. The linked routes are kept as
-independent candidates:
+The official PBOC announcement and CFETS spot list inspected do not show VND among the shown
+direct RMB instruments. CFETS market-data terms require written authorization and restrict
+copying, transmitting, saving, using, publishing, selling, or processing without it. A hidden
+instrument, guessed endpoint, or regional-pair substitution is not used. Even written
+permission would still need exact CNY/VND identity, date/scale/coverage, and bounded runtime.
 
-- `https://dttktt.sbv.gov.vn/TyGia/faces/TyGiaTrungTam.jspx`
-- `https://dttktt.sbv.gov.vn/TyGia/faces/TyGiaSGD.jspx`
-- `https://dttktt.sbv.gov.vn/TyGia/faces/TyGiaCheo.jspx`
+### 4.4 BIS — published USD bilateral data is the wrong identity
 
-All three direct route attempts timed out before a response. Consequently this report does
-not assert a JSON/XML schema, CNY row, unit, scale, effective date, pagination, historical
-retention, or count. The official central-rate USD/VND concept is a wrong-basis boundary for
-this task; no conversion through it is allowed. A cross-rate page or a reference page would
-need a fresh response-backed direct CNY/VND product before it could be considered.
+The BIS data page and methodology describe nominal rates against USD; the Vietnam series is
+VND/USD and the v2 probes above confirm monthly keys while daily keys returned typed 404
+responses. The dataset also combines sources for consistency and may be cross-calculated.
+That is not a direct CNY/VND unit. BIS terms permit use with attribution subject to their
+conditions, but legal permissiveness cannot repair the wrong pair, frequency, or identity.
 
-SBV's publication role establishes ownership, not a licence for automated retrieval, caching,
-caller-facing return, redistribution, rate, or retry. Those rights remain `LEGAL_GAP` until
-the owner documents them or grants written permission.
+### 4.5 ECB and current Frankfurter v2 — current facade evidence, not a qualified unit
 
-### 4.3 PBOC / CFETS — no public direct pair and explicit data-licence gate
+This correction does not inherit the old ECB-v1 “no VND” conclusion. The official Frankfurter
+v2 documentation is a distinct candidate source. It states that the no-key public API tracks
+daily rates from many central banks, supports historical/range routes, blends providers by
+default, permits a `providers` filter, and exposes provider attribution with an expansion
+option. The current V2 probes returned:
 
-The official PBOC announcement says PBOC authorizes CFETS to publish RMB central parity and
-lists the currencies in that announcement; VND is not present. The official CFETS spot-product
-page lists the supported RMB/FX instruments and also omits VND. These observations dispose of
-the public direct-pair candidate as `NOT_SERVED`; they do not authorize a guessed instrument,
-hidden endpoint, or regional-pair substitution.
+- the direct route response had `base=CNY`, `quote=VND`, a provider-free `date`, and one
+  `rate`; the observed date was `2026-08-21`, outside the requested end date;
+- CNY metadata reported a provider catalogue and observed bounds, while VND metadata reported
+  `1998-07-07..2026-08-21` and 23 providers; the public VND page labels its shown dataset
+  “Monthly dataset”;
+- the provider catalogue had 84 entries; the default pair response did not identify one
+  owner field/basis, and the provider list alone does not prove that every provider supplies
+  a direct CNY/VND rate; and
+- the owner FAQ says the API is free for commercial use but directs users to each underlying
+  provider's terms, and says requests are rate-limited to prevent abuse without publishing
+  a route-specific retry/cache/redistribution contract for this library.
 
-CFETS's [market-data service terms](https://www.chinamoney.com.cn/english/svcmds/) state that
-an institution or individual needs written CFETS authorization and may not copy, transmit,
-save, use, publish, sell, or process CFETS market data without that permission. A no-login
-page is therefore not a lawful reusable source for this library. Even written permission would
-still need exact CNY/VND identity, date/scale/coverage, and bounded API evidence; it would not
-make a CNY/USD or other pair qualify.
+Therefore Frankfurter v2 is **not** a qualified direct source. It is a multi-provider facade
+with response-backed pair syntax but unresolved one-owner identity, economic basis, exact
+requested-span coverage, underlying terms, and bounded reuse posture. It is recorded as
+`IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP`, not as an
+ECB-v1 absence and not as a route to implement. Provider filtering and attribution would
+need a fresh owner/provider-specific qualification; no cross-provider blending is allowed.
 
-### 4.4 BIS — direct USD bilateral data is not direct CNY/VND
-
-BIS documents its nominal bilateral exchange-rate data as rates against USD and explains that
-some series are calculated from national-currency/EUR and EUR/USD cross rates. The official
-Vietnam page is a VND/USD page at monthly frequency. This is a wrong frequency/basis and,
-where cross-calculated, a wrong direct-identity model for #217. BIS terms may permit reuse with
-attribution and restrictions, but a permissive legal posture cannot repair the missing direct
-CNY/VND unit.
-
-### 4.5 ECB / Frankfurter — CNY exists, VND and direct pair do not
-
-The ECB roster is explicitly EUR-base and lists CNY but not VND. The CNY page exposes a
-working-day EUR/CNY reference series and an SDMX download, not CNY/VND. ECB's information-only
-reference-rate language and working-day calendar do not establish a VND daily series or
-same-day availability. Frankfurter is a consumer facade over reference data; it cannot become
-the owner, direct-pair identity, retention contract, or licence oracle. No ECB/Frankfurter
-cross-rate is used.
+ECB's own roster remains EUR-base and does not provide a direct CNY/VND unit. No ECB or
+Frankfurter cross-rate is used.
 
 ### 4.6 World Bank — preserve annual USD/VND only
 
 The official WDI indicator `PA.NUS.FCRF` is annual official exchange rate in local currency
 per US dollar, period average. It is the existing `vnfin.fx.history()` source and remains
-untouched. It cannot be stamped daily, converted into CNY/VND, or used as a fallback for the
-new request. Its public WDI terms/attribution do not change this frequency and pair boundary.
+untouched. It cannot be stamped daily, converted into CNY/VND, or used as a fallback. Its
+terms/attribution do not change this frequency and pair boundary.
 
 ### 4.7 H.10 / FRED / current open endpoints
 
-The Federal Reserve H.10 current release does not list Vietnam/VND. FRED's concrete daily CNY
-series is CNY/USD and identifies H.10 as its source; it is not a direct CNY/VND series.
-No arithmetic combination of these datasets is permitted.
+The Federal Reserve H.10 page is HTML and has no Vietnam/VND row. FRED's concrete daily
+series is **USD base / CNY quote** (CNY per 1 USD), not CNY base / VND quote. No arithmetic
+combination is permitted. The existing open.er-api note remains a current/spot source with
+no historical retention contract and restrictive raw-data redistribution terms.
 
-The repository's existing open.er-api source note records a no-key current/spot endpoint,
-approximately daily refresh, no historical endpoint, and provider terms prohibiting raw-data
-redistribution. It remains a spot source only. A current quote cannot prove historical
-retention or fill any date in the requested span.
+### 4.8 Existing spot legal scope is unchanged
 
-## 5. Exact future retrieval and coverage contract
+The VCB XML and open.er-api findings above concern only a possible **new historical CNY/VND
+use**. #217 changes neither active spot adapter, source registration, endpoint, credential,
+cache policy, nor caller-facing spot contract, and it grants no new legal clearance to those
+existing adapters. “Legal gap” here means the source cannot be promoted for #217 history; it
+is not a retroactive invalidation or expansion of the current spot behavior.
 
-This section is a design boundary for a future, separately authorized implementation. It does
-not change current runtime behavior.
+## 5. Future contract — non-authoritative until a qualified source exists
 
-### 5.1 Qualification unit and direct identity
+This section is a design boundary only. It deliberately does not freeze numeric budgets,
+new public error names, a public `rate_basis` field, or a runtime API.
 
-One unit is exactly:
+### 5.1 Qualification and identity
 
-```text
-provider_token
-+ canonical route/version (query template excluded from public provenance)
-+ response-backed base=CNY and quote=VND
-+ one provider-observed numeric field and one economic basis token
-+ provider reference-date convention and revision convention
-+ one scale proven by owner response/documentation
-+ one coverage/calendar contract and one legal/runtime contract
-```
-
-The normalized value must be **VND per 1 CNY**. A provider value quoted per 100 CNY may be
-divided by 100 only when the same owner response/documentation proves that scale; ambiguous
-scale is `BASIS_GAP`, never a guessed normalization. Reversed direction, CNY/USD, USD/VND,
-EUR/CNY, a central-rate conversion, a midpoint, and any stitched cross are rejected.
-
-The provider basis must be a finite closed token, not free text. Candidate tokens are
-illustrative only and are not published now; examples include `bank_transfer_buy` or
-`official_daily_central_parity` only if a future owner response proves the exact meaning.
-
-### 5.2 Coverage accounting
-
-Full qualification is for the literal inclusive bounds `2018-01-01..2026-08-19`.
-
-- Input bounds are plain `datetime.date` values and are validated before network.
-- Returned observations are provider observations, ascending, unique, finite, positive,
-  non-boolean, inside the requested bounds, and never forward-filled, backfilled,
-  interpolated, resampled, or nearest-matched.
-- A provider-declared weekend/holiday non-publication may explain a missing calendar date
-  only when the same provider supplies the calendar/status evidence. A nearest business day
-  is never silently substituted.
-- Every page/cursor is successful and accounted for. A page that returns no rows before its
-  provider count/page/cursor ledger is reconciled is `COVERAGE_UNKNOWN`/`COVERAGE_GAP`, not a
-  successful empty page. A truncated or unreconciled page fails the entire retrieval.
-- A `FULL` result requires provider total = reconciled row total, distinct-date count = row
-  count, no unexplained internal gaps, observed bounds covering the requested contract, and
-  an explicit revision/update rule.
-- `PARTIAL` is allowed only for a single independently qualified unit whose provider-declared
-  observed bounds and page reconciliation pass. Its diagnostics must expose exact observed
-  bounds and must not call the requested full span complete.
-- An empty response is a typed unknown/transport/coverage outcome unless provider metadata
-  explicitly declares non-publication. It is never a false-absence oracle.
-
-### 5.3 Global deterministic budget
-
-The future request owns one ledger; per-source budgets are not additive and cannot reset the
-global budget. The exact finite ceilings are:
-
-| Counter | Ceiling | Rule |
-| --- | ---: | --- |
-| logical source attempts | 4 | deterministic candidate order; capability skips consume zero |
-| logical page/cursor dispatches | 64 | one reservation per page/cursor; no per-day fan-out |
-| total retry reservations | 32 | at most one retry for a given page/cursor |
-| physical HTTP calls | 96 | every initial/retry call reserves one unit before dispatch |
-| redirect hops | 0 | a 3xx response is a typed transport failure; no host change or follow |
-| response body bytes | 64 MiB total and 8 MiB per response | bounded streaming/decompression; overflow fails closed |
-
-The scheduler is sequential and deterministic. Each reservation atomically checks and updates
-the global tuple `(source_attempts, page_dispatches, retries, physical_calls, response_bytes_total)`.
-If any check fails, it returns `FX_CALL_BUDGET_GAP` and performs no HTTP call. A retry reserves
-both its page identity and its retry slot; it cannot be created after exhaustion. A capability
-skip records no attempt and no call. HTTP status, complete MIME, redirect, WAF/HTML, parse,
-and body-size failures consume the reservation actually dispatched. Budget exhaustion returns
-no partial `FXHistory` and is never reported as provider absence. The library must not claim a
-numeric delay/rate policy unless the provider supplies one; an unknown provider rate policy is
-`FX_RATE_POLICY_GAP`, not an invented sleep.
-
-Each dispatched page/cursor has one ledger row containing only typed fields:
-`provider_token`, logical page/cursor, retry index, dispatch status, complete MIME, row count,
-and provider total/page/cursor metadata. The row is reserved before dispatch and finalized
-once; a retry uses the same logical page with retry index one. Missing, duplicate, or
-unreconciled rows fail the source attempt as a whole. No later source may reuse those rows.
-
-### 5.4 Status axes and sanitized diagnostics
-
-Coverage, attempt, and transport are separate axes. They must not be collapsed into a single
-empty result:
+One future candidate is one same-provider tuple:
 
 ```text
-coverage_status = FULL | PARTIAL | UNKNOWN | NOT_SERVED
-attempt_status  = SKIPPED | STARTED | SUCCEEDED | FAILED | BUDGET_EXHAUSTED
-transport_status = NOT_RUN | SUCCESS | TIMEOUT | HTTP_ERROR | MIME_ERROR | REDIRECT
-                  | BODY_LIMIT | PARSE_ERROR | WAF_OR_HTML
+provider_token + exact owner route/version + response-backed CNY/VND
++ one provider field/basis + VND per 1 CNY scale
++ observation/publication/revision semantics + coverage/calendar contract
++ lawful automated-access, caller-return, storage, redistribution, and runtime contract
 ```
 
-Only HTTP 200 with an exact allow-listed complete MIME can be a successful data response.
-Every 3xx (redirect disabled), 204, 4xx, and 5xx response is `FX_HTTP_STATUS_UNEXPECTED`;
-it is never an empty successful page. DNS, connection, TLS, and timeout failures map to the
-single finite offline token `FX_OFFLINE`. HTML/challenge/WAF bodies map to `FX_WAF_OR_HTML`;
-a complete MIME mismatch maps to `FX_MIME_MISMATCH`. No raw status code, response body, or
-exception text is public.
+A value quoted per 100 CNY may be divided by 100 only when the same response or owner
+documentation proves that scale. Reversal, midpoint, interpolation, fill, resampling,
+nearest-date matching, and cross-rate arithmetic are rejected. Provider names, URLs,
+response prose, and arbitrary basis strings are not public values. A future source-specific
+basis vocabulary is chosen only after a provider qualifies; no basis token or public field
+is published by #217.
 
-The closed public error tokens are:
+### 5.2 Validation ownership and model compatibility
+
+The future design must validate at every public construction seam without changing the
+current annual contract:
+
+1. **Input/facade boundary:** `start` and `end` are exact plain `datetime.date` objects;
+   `datetime`, timezone-bearing input, malformed pair, and unsupported frequency fail before
+   network. Only normalized `(base=CNY, quote=VND, frequency=daily)` can enter a source.
+2. **Adapter boundary:** response identity, selected field, basis, scale, date meaning,
+   complete MIME, page/cursor/count, and revision metadata are validated before an
+   `FXPoint` is constructed.
+3. **Model boundary:** a future daily construction seam defensively rejects any point that
+   is not an exact plain date; any rate that is boolean, non-numeric, non-finite, zero, or
+   negative; any non-ascending or duplicate point; any base/quote/unit/value-unit mismatch;
+   and any non-UTC `fetched_at_utc`. The observation date is not a timestamp. If retrieval
+   time is exposed, it is a timezone-aware UTC datetime and never publication time.
+4. **Facade/result boundary:** the final result rechecks the same invariants and preserves
+   one source, one basis, exact dates, and sanitized diagnostics. Existing annual
+   `FXHistory` construction, repr, equality, serialization, DataFrame columns, Jan-1
+   period-average semantics, `rate_on()`, `rate_for_year()`, and source token remain byte
+   compatible.
+
+The current public `FXPoint`/`FXHistory` shape has no `rate_basis` field. #217 does not add or
+populate one, and annual history is not relabeled. A future qualified-source design must
+separately choose a compatibility-safe carrier and prove field flags/property/versioning,
+repr/equality, serialization, DataFrame, snapshots, and positional construction before
+any public basis metadata is authorized.
+
+### 5.3 Total coverage and non-publication behavior
+
+The future coverage record keeps three different bounds:
 
 ```text
-FX_UNSUPPORTED_PAIR
-FX_UNSUPPORTED_FREQUENCY
-FX_SOURCE_GAP
-FX_IDENTITY_GAP
-FX_BASIS_GAP
-FX_COVERAGE_GAP
-FX_COVERAGE_UNKNOWN
-FX_TRANSPORT_INCONCLUSIVE
-FX_OFFLINE
-FX_HTTP_STATUS_UNEXPECTED
-FX_MIME_MISMATCH
-FX_WAF_OR_HTML
-FX_RESPONSE_INVALID
-FX_BODY_LIMIT
-FX_CALL_BUDGET_GAP
-FX_RATE_POLICY_GAP
-FX_LEGAL_GAP
+requested_start / requested_end  = caller's inclusive request
+served_start / served_end        = provider-declared archive/service bounds
+observed_start / observed_end    = first/last actual returned observations
 ```
 
-The closed warning tokens are finite and non-sensitive:
+- Every required page/cursor must reconcile provider totals, rows, cursors, and complete
+  response bodies. A no-row or malformed page before reconciliation is a failure, never a
+  zero contribution or absence oracle.
+- `FULL` means the provider-served bounds cover the request, all pages reconcile, returned
+  dates are distinct/ordered/in-range, and every non-publication hole is explained by the
+  provider's own calendar/status. Actual observation bounds remain separately exposed.
+- `PARTIAL` is allowed only when the same provider declares narrower `served_start/end`, all
+  pages reconcile, and exact `observed_start/end` are reported. It never claims the requested
+  span and never switches source.
+- If provider metadata confirms a weekend/holiday or other non-publication date, that date
+  is accounted rather than filled. For a range containing both observations and confirmed
+  non-publication dates, the typed result contains only actual points plus one finite
+  non-publication warning. If every requested date is confirmed non-publication, the typed
+  result is empty with `points=()`, `latest() is None`, a full evaluated-coverage status,
+  and the same warning. `rate_on(d)` remains exact-match-only and raises for that date; it
+  never returns zero, a prior point, or a nearest date.
+- A no-row page without provider confirmation is `UNKNOWN`/coverage failure and returns no
+  history. Timeout, HTML/WAF, redirect, 404, truncation, invalid MIME, budget exhaustion,
+  and unreconciled pages never become confirmed non-publication.
+
+The exact public carrier for coverage status, served/observed bounds, and finite warnings is
+not frozen until a source qualifies. It must preserve the total behavior above and current
+annual API compatibility.
+
+### 5.4 Sequential budget and byte/retry mechanics
+
+No numeric ceiling is frozen before a provider supplies route, pagination, body, rate, and
+retry evidence. The future request nevertheless has these non-negotiable invariants:
+
+- one request-scoped, sequential ledger; no per-source reset, date fan-out, cross-source
+  row stitch, or accidental partial result;
+- atomic pre-dispatch reservation for source/page/retry/physical counters; a failed
+  reservation performs no network call;
+- response bytes are not pre-reserved from an unknown `Content-Length`; while streaming and
+  decompressing, each chunk is atomically charged to both the response and global byte
+  counters; overflow aborts before the cap, retains the physical-call charge, and cannot
+  fabricate a successful empty page;
+- a retry reuses the same logical page/cursor, validates its existing ledger row, increments
+  only retry and physical counters, and cannot reserve a second logical page for the same
+  cursor;
+- capability selection and a source-level skip consume no dispatch budget and create no
+  dispatch attempt record; budget exhaustion is a pre-dispatch source outcome. Dispatch
+  records exist only after a real reservation, so no `SKIPPED` or budget-exhausted phantom
+  attempt is emitted; and
+- every real dispatch records status, complete MIME, effective route, row count, and
+  provider cursor/total once. Missing, duplicate, or unreconciled rows fail the source as a
+  whole. Public diagnostic names and exact numeric ceilings are deferred to a qualified
+  source plus a compatibility review.
+
+Only HTTP 200 with an exact source-approved complete MIME may be data-success. A complete
+MIME is parsed after the first colon; 3xx is not followed, and 204/4xx/5xx, DNS/connection/
+TLS/timeout, HTML/WAF, parse, and body-limit outcomes remain distinct internal categories.
+Raw status codes, URLs, query strings, headers, bodies, cookies, credentials, provider
+prose, and exception text never cross the public boundary.
+
+## 6. Legal/runtime gate and conjunctive reopen
+
+These rights are separate decisions, not one `public=true` shortcut:
 
 ```text
-FX_PARTIAL_PROVIDER_BOUNDS
-FX_PROVIDER_NONPUBLICATION
-FX_REVISION_POSSIBLE
-FX_RETRIEVAL_TIME_ONLY
+owner_identity
+automated_access
+caller_facing_return
+storage_or_cache
+redistribution
+attribution
+commercial_use
+rate_and_retry
+revision_and_correction
 ```
 
-Diagnostics may expose only typed tokens, canonical provider tokens, integer counts, plain
-ISO dates, exact coverage statuses, and UTC retrieval time. They must not expose URLs/query
-strings, response text, headers, cookies, credentials, raw exceptions, live rates, or provider
-prose. An attempt record, if added later, must use the canonical provider token rather than
-the route URL and must be emitted only for a real reserved dispatch; no fabricated “empty
-attempt” or “diagnostics truncated” attempt is allowed.
+Every required axis must be granted or covered by an explicit licence for the exact route
+and use. “Public page”, “reference only”, publication duty, no-key access, and a facade are
+not grants. Login, paid keys, broker credentials, browser automation, challenge solving,
+proxy bypass, cookie reuse, and private endpoints remain excluded.
 
-## 6. Conjunctive reopen evidence
+The source gap can be reopened only when all gates pass for one same provider/route/basis:
 
-The source gap can be reopened only when **all** gates below pass for one same provider/route/
-basis unit. Evidence from different providers cannot be combined.
+1. owner response has an exact approved complete MIME, effective route, bounded body, and
+   no unapproved redirect/WAF/challenge;
+2. response plus owner documentation prove direct CNY/VND, VND per 1 CNY, one field/basis,
+   scale, observation/publication/revision semantics;
+3. requested or provider-declared partial bounds, actual observation bounds, pages/cursors,
+   counts, calendar/non-publication status, and duplicates/internal gaps reconcile;
+4. owner-approved rate, retry, pagination, body, and runtime behavior fits one atomic
+   sequential ledger without date fan-out;
+5. all nine legal/reuse axes are explicit; and
+6. a compatibility design preserves annual behavior and defines the future diagnostics
+   carrier, with a fresh RED-first implementation review only after this design PASS.
 
-1. **Owner response and transport:** a no-login owner response is obtained with complete
-   `Content-Type` parsed after the first colon; the normalized MIME is an exact allow-list
-   member; HTML/WAF/challenge/redirect/truncated body is rejected.
-2. **Direct identity and basis:** the response and owner documentation prove `CNY` base,
-   `VND` quote, VND per 1 CNY direction, one selected field/basis, scale, date convention,
-   and revision semantics without a cross-rate or midpoint.
-3. **Coverage:** the requested inclusive bounds are covered or the provider-declared bounded
-   `PARTIAL` contract is independently useful; counts/pages/cursors reconcile; rows are
-   distinct and complete; provider calendar/status explains any non-publication; no empty or
-   unreconciled page is treated as absence.
-4. **Runtime budget/rate:** provider API pagination, rate, retry, body, and WAF policy is
-   documented and fits the single atomic global ledger above; no date fan-out is needed.
-5. **Legal/reuse:** written permission or an explicit licence covers automated access,
-   caller-facing return, storage/cache, redistribution, attribution, commercial use, and
-   rate/retry behavior. Public access alone is insufficient.
-6. **Compatibility:** a later implementation plan preserves annual USD/VND byte compatibility,
-   rejects unsupported pairs/frequencies before network, carries one typed basis, preserves
-   exact observation dates, and emits sanitized diagnostics. A fresh RED-first implementation
-   review is still required after this design gate.
+Evidence from another provider, a facade's blended rate, a current spot response, an empty
+response, or a search snippet cannot satisfy a missing gate. Until this conjunction passes,
+the chain remains empty and the disposition remains `SOURCE-GAP CLOSURE`.
 
-Until all six are demonstrated, the chain remains empty and the disposition remains
-`SOURCE-GAP CLOSURE`.
+## 7. Documentation-only lifecycle and publish boundary
 
-## 7. Sources
+A source-gap closure has no implementation step. After a final docs-only design PASS:
+
+1. publish exactly the three paths `docs/research/2026-08-23-daily-cnyvnd-fx-history-source-vetting.md`,
+   `tasks/217-design-note.md`, and `tasks/active-backlog.md` from the clean published base
+   `8350329d3d881e34df62937aacf7ea4d74f99f91` through the exact correction anchor returned
+   with the handoff;
+2. verify remote HEAD, ancestry, exact paths, diff, blacklist/secret, offline tests,
+   import/version, and isolated build;
+3. post a clean `SOURCE-GAP`/no-capability resolution and close/re-read #217; and
+4. leave #218 queued and untouched.
+
+Only if a future source qualifies does a fresh source design plus implementation review
+become necessary. No later implementation, model/accessor, source registration, code, RED,
+push, or close is authorized by this correction.
+
+## 8. Sources
 
 - [SBV official home and rate menu](https://www.sbv.gov.vn/vi/trang-chu)
 - [Vietcombank rate page](https://www.vietcombank.com.vn/KHCN/Cong-cu-tien-ich/Ty-gia)
@@ -370,9 +397,15 @@ Until all six are demonstrated, the chain remains empty and the disposition rema
 - [CFETS RMB/FX spot instruments](https://www.chinamoney.com.cn/english/prdfsmrfs/)
 - [CFETS market-data service and written-licence terms](https://www.chinamoney.com.cn/english/svcmds/)
 - [BIS Vietnam VND/USD data page](https://data.bis.org/topics/XRU/BIS%2CWS_XRU%2C1.0/M.VN.VND.E)
+- [BIS SDMX API documentation](https://stats.bis.org/api-doc/v2/)
 - [BIS USD bilateral-rate documentation](https://www.bis.org/statistics/xrusd/xrusd_doc.pdf)
 - [BIS permitted-use/API terms](https://data.bis.org/help/legal)
 - [ECB reference-rate roster](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)
+- [Frankfurter v2 API documentation](https://frankfurter.dev/)
+- [Frankfurter currency catalogue](https://frankfurter.dev/currencies/)
+- [Frankfurter CNY coverage page](https://frankfurter.dev/currencies/cny/)
+- [Frankfurter VND coverage page](https://frankfurter.dev/currencies/vnd/)
+- [Frankfurter provider catalogue](https://frankfurter.dev/providers/)
 - [World Bank WDI catalogue](https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators)
 - [Federal Reserve H.10](https://www.federalreserve.gov/releases/h10/current/)
-- [FRED CNY/USD series](https://fred.stlouisfed.org/series/DEXCHUS)
+- [FRED USD/CNY series](https://fred.stlouisfed.org/series/DEXCHUS)
