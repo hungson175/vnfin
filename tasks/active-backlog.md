@@ -601,18 +601,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#218 — EXACT_SHA_CLOSURE_REVIEW_REQUESTED (2026-08-23), corrected SOURCE-GAP handoff.** BLOCK
-  was recorded first at `6f2cfbe3378ba1c1a5129e4a187146b268315b51`, after reviewed exact anchor
-  `20a3d927d84fe6f9d2bfa6727711c907e223fad3`; report
-  `reviews/review-202608231812-issue218-corrected-design-rereview.md`, reviewer
-  `08818dc`, delivery `5d3636d7`. The corrected exact anchor is the current handoff commit returned
-  to `vnfin-oss-reviewer`; actor `vnfin-oss`, next action `RETURN_EXACT_SHA_VERDICT`, published base
-  `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`. R1-R3 and the telephone typo are addressed: #221 is
-  explicitly activated only after verified #218 closure; #219 follows #221; #220 follows #219; all
-  four future result-vs-error carriers remain deferred until qualified-source API PASS before RED;
-  and every alternative owner has a zero runtime ledger plus complete legal/runtime axes. Correction
-  scope remains exactly the research/design artifacts and this backlog lifecycle record. Preserve
-  SOURCE-GAP, empty ETF chain, current mutual-fund behavior, no probe/RED/code/push/close, and order.
+- **#218 — FINAL_CLOSURE_BLOCKED (2026-08-23), token precision.** BLOCK recorded first at reviewed
+  exact anchor `412ada80705ecf08b2da4e27d882dbf3bc256327`; report
+  `reviews/review-202608231822-issue218-final-closure-rereview.md`, reviewer `e4275fd`, delivery
+  `f1c1c7f4`. Expected correction actor is `vnfin-oss`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Change only the #219/#220 next-action tokens to
+  closure-gated actions `ACTIVATE_AFTER_221_CLOSURE` and `ACTIVATE_AFTER_219_CLOSURE`; preserve
+  all other approved bytes, SOURCE-GAP, empty ETF chain, current mutual-fund behavior, queued
+  #221/#219/#220, and no probe/RED/code/push/close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
