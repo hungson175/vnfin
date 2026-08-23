@@ -1,11 +1,11 @@
 # #220 design note — annual ROE ratio history
 
-**Date:** 2026-08-23 (UTC+7)  
+**Date:** 2026-08-23 (UTC+7)
 **Packet:** `tasks/220-annual-roe-ratio-history-spec.md` at
-`314cd53b4a7f3a0c36f6a1bb45efed2611733f4a`  
-**Phase:** `SOURCE_DESIGN` / docs-only  
-**Disposition:** **SOURCE-GAP CLOSURE**  
-**Current source chain:** empty  
+`314cd53b4a7f3a0c36f6a1bb45efed2611733f4a`
+**Phase:** `SOURCE_DESIGN` / docs-only
+**Disposition:** **SOURCE-GAP CLOSURE**
+**Current source chain:** empty
 **Implementation:** no ROE mapping, cadence change, parser, failover, model, RED, API, or runtime
 capability.
 
@@ -45,10 +45,23 @@ scaled, stitched, or substituted.
 | VNDirect `/v4/ratios` corporate/bank | 200 JSON, symbol/`ratioCode`/`itemCode`/`reportDate` shape | no annual marker, fiscal-date/definition/scale/revision/reuse proof | `SOURCE-GAP` |
 | CafeF ratio AJAX corporate/bank | 200 JSON envelope with period fields | `ReportType=NAM` is request-side; nullable/absent cadence tags and current `Period.UNKNOWN` remain | `SOURCE-GAP` |
 | SSI FastConnect/iBoard | official docs and archive | API key/secret/account access; own-use terms restrict third-party publication/reproduction | `SOURCE-GAP` |
-| TCBS/TCInvest | official UI/docs | dashboard transport gate and API key + OTP/JWT; no annual ROE schema or rights | `SOURCE-GAP` |
+| TCBS/TCInvest | official UI/docs | dashboard transport gate and API key + OTP/JWT; no response-backed annual ROE schema, semantics, or rights | `SOURCE-GAP` |
 | Exchange/issuer filings | official annual documents | not a single multi-symbol ROE provider; extraction/derivation is out of scope | `SOURCE-GAP` |
 
 Qualification is conjunctive. No source is registered and no source is added to a failover chain.
+
+The candidate name `/v4/ratios/latest` was not requested and has no retained response or semantic
+evidence; it is `NOT_PROBED`, never a current/latest assertion. The TCInvest URL is likewise only a
+candidate landing page: its retained direct result is 403 HTML, with no retained official text or
+document path proving ROE semantics, so those semantics are `NOT_PROBED`.
+
+The companion report's dated transport ledger is the only retained dispatch accounting. It binds each
+retained ratio cohort to logical/physical counts, method, pages, retries, redirects, status, complete
+and normalized MIME, effective route, UA/session/WAF, and bytes. Missing fields are explicitly
+`NOT_RETAINED`; they are not zeros or inferred successes. The four direct VNDirect/CafeF rows are one
+logical/physical dispatch per caller-selected category, and no global total or per-provider `2+2`
+response count is claimed. Unretained documentation, page, browser, and subresource traffic cannot
+increase coverage, identity, or budget counts.
 
 ## 3. Qualification unit
 
@@ -87,9 +100,10 @@ until a separate compatibility/release review authorizes a public transition.
 ## 5. Coverage and current-VN30 boundary
 
 HOSE's official ground rules define VN30 as 30 constituents, but the dated 2026-08-23 public
-membership snapshot was not retained. A count-only probe covered two corporate-template and two
-bank-template cases for each no-login route family. That proves only route shape and template
-breadth; it does not prove current-VN30 membership, annual completeness, or legal reuse.
+membership snapshot was not retained. A bounded probe covered one caller-selected corporate and one
+caller-selected bank case for each no-login route family. That proves only route shape for those
+caller selections; response-backed template/entity identity, current-VN30 membership, annual
+completeness, and legal reuse remain unknown.
 
 Required future evidence is a dated official membership snapshot plus response-backed symbol identity,
 provider-declared bounds, eight distinct annual reports, page/count/cursor reconciliation,
@@ -106,12 +120,13 @@ COVERAGE_BOUNDARY | NOT_SERVED | TRANSPORT_FAILURE | SCHEMA_DRIFT |
 BUDGET_EXHAUSTED | LEGAL_GAP | IDENTITY_GAP
 ```
 
-`FULL` requires complete provider-declared annual bounds and reconciled pages. `PARTIAL` requires a
-provider-declared supported boundary; an unexplained gap, missing ROE, duplicate/conflict,
-unreconciled page, or truncated transport is failure/unknown. A timeout, WAF/403, empty body, or
-missing page is not published empty or confirmed absence. No error outcome returns a partial
-accumulator or false-empty history. Raw URLs/queries, bodies, headers, cookies, arbitrary provider
-text, and unbounded names never become public diagnostics.
+`FULL` requires exactly all eight requested distinct annual reports, complete provider-declared bounds,
+and reconciled pages. Eight or fewer is not `FULL`; fewer periods can be `PARTIAL` only when the
+provider declares that supported boundary and returned pages reconcile. An unexplained gap, missing
+ROE, duplicate/conflict, unreconciled page, or truncated transport is failure/unknown. A timeout,
+WAF/403, empty body, or missing page is not published empty or confirmed absence. No error outcome
+returns a partial accumulator or false-empty history. Raw URLs/queries, bodies, headers, cookies,
+arbitrary provider text, and unbounded names never become public diagnostics.
 
 ## 7. Atomic budget design
 
@@ -136,7 +151,7 @@ No RED is authorized now. If a source qualifies, RED must cover:
 |---|---|
 | Input | exact annual request, limit, malformed symbol/statement/period, zero-network unsupported input, current quarter compatibility |
 | Identity | symbol/provider symbol, canonical `ROE`, alias binding, wrong/missing/duplicate/conflicting code, mixed entity/template |
-| Cadence/date | annual marker/fiscal end positive; request echo, current, TTM, quarter, publication/retrieval date, inferred date, null/ambiguous date negative |
+| Cadence/date | annual marker/fiscal end positive; absent or present-null annual marker, request echo, current, TTM, quarter, publication/retrieval date, missing publication/as-of metadata, inferred date, null/ambiguous date, and fabricated-date no-fabrication negatives |
 | Semantics | average/ending equity, attributable/total profit, percent/fraction, negative/zero, bool/non-finite/malformed, wrong unit/currency |
 | Coverage | eight reports, newest-first, provider bounds, pages/counts/cursors, `FULL`/declared `PARTIAL`, missing/interior gap/duplicate/unreconciled negative |
 | Atomicity | capability skip, one-source whole request, no stitch, page/retry/redirect/byte/global-budget exhaustion |

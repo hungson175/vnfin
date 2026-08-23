@@ -1,12 +1,12 @@
 # Source vetting — annual ROE ratio history
 
-**Date:** 2026-08-23 (UTC+7)  
-**Issue:** #220  
+**Date:** 2026-08-23 (UTC+7)
+**Issue:** #220
 **Packet:** `tasks/220-annual-roe-ratio-history-spec.md` at reviewer anchor
-`314cd53b4a7f3a0c36f6a1bb45efed2611733f4a`  
-**Phase:** `SOURCE_DESIGN` / documentation only  
-**Disposition:** **SOURCE-GAP CLOSURE**  
-**New source chain:** empty  
+`314cd53b4a7f3a0c36f6a1bb45efed2611733f4a`
+**Phase:** `SOURCE_DESIGN` / documentation only
+**Disposition:** **SOURCE-GAP CLOSURE**
+**New source chain:** empty
 **Runtime status:** unchanged; no ROE mapping, cadence change, parser, failover, model, RED test,
 API, or coverage capability is authorized.
 
@@ -51,7 +51,7 @@ No investigated unit qualifies for TDD:
 | VNDirect `/v4/ratios`, corporate and bank symbol families | Provider symbol, `ratioCode`, `itemCode`, `reportDate`, numeric row shape | No annual request/response marker; `reportDate` is not proven fiscal-year end; definition/scale/revision and redistribution rights are not established | `SOURCE-GAP` |
 | CafeF `GetDataChiSoTaiChinh.ashx`, corporate and bank symbol families | `Data.Value` period objects expose `Time`, `Year`, `Quater`, `ReportType`, and ratio lines | Request `ReportType=NAM` is not response identity; current runtime intentionally returns `Period.UNKNOWN`; null/absent cadence fields are tolerated; exact ROE definition/scale/revision and redistribution rights are not established | `SOURCE-GAP` |
 | SSI FastConnect / iBoard family | Official API documentation and official financial-report archive | API access is account/API-key controlled; official archive is SSI's own reports, not a broad machine-readable annual-ROE route; no no-login VN30 history or redistribution grant | `SOURCE-GAP` |
-| TCBS / TCInvest family | Official TCInvest page explains ROE and official OpenAPI documentation exists | Dashboard is JavaScript/WAF gated in the bounded probe; OpenAPI requires API key plus OTP/JWT; no public annual ROE route/schema/cadence/reuse contract | `SOURCE-GAP` |
+| TCBS / TCInvest family | Official TCInvest landing page and OpenAPI documentation are candidate paths; no response-backed semantics retained | Dashboard is JavaScript/WAF gated in the bounded probe; OpenAPI requires API key plus OTP/JWT; no public annual ROE route/schema/cadence/reuse contract | `SOURCE-GAP` |
 | Official exchange/issuer filings | Annual audited documents can establish an issuer's reported statements in a document | Not a single provider-published, multi-symbol ROE series; extracting or deriving a ratio is outside the requested source unit; no uniform route, pagination, revision, or redistribution contract | `SOURCE-GAP` |
 
 The result is not “no values exist.” It is that no single owner + exact route + exact ROE code and
@@ -89,25 +89,32 @@ retrieval time, or a statement from an unrelated issuer cannot satisfy response 
 
 ## 4. Dated bounded observations
 
-The following observations were made on 2026-08-23 using no credentials and a browser-like User-Agent
-where a provider route was probed. The bodies were discarded after bounded envelope/key inspection;
-no values, raw rows, response digests, cookies, credentials, or query-bearing URLs are committed.
-A physical dispatch means one HTTP request. The byte count below is an observation only, not a future
-library ceiling. `NOT_RETAINED` means the field was not preserved and cannot be used as evidence.
+The following observations were made on 2026-08-23 using no credentials and, only where recorded, a
+browser-like User-Agent. Bodies were discarded after bounded envelope/key inspection; no values, raw
+rows, response digests, cookies, credentials, or query-bearing URLs are committed. A physical dispatch
+means one HTTP request. A byte value is not retained below and is not a future library ceiling.
+`NOT_RETAINED` means that the dimension was not preserved and cannot be used as evidence; it is not a
+success, zero, or inferred value. A caller-selected category is kept separate from response-backed
+template/entity identity.
 
-| Unit | Retained observation | Identity/cadence result | Legal/runtime result | Outcome |
-|---|---|---|---|---|
-| VNDirect ratio route, corporate cohort | 1 logical / 1 physical; HTTP 200; normalized MIME `application/json`; JSON envelope keys `data`, `currentPage`, `size`, `totalElements`, `totalPages`; first row exposed `reportDate` and `ratioCode` | No `reportType`, fiscal-period, annual, revision, or publication field was retained | Browser-like UA was used; no written automation or redistribution grant for this route was found | `IDENTITY_GAP` + `LEGAL_GAP` |
-| VNDirect ratio route, bank cohort | 1 logical / 1 physical; same envelope/key shape | Same missing annual identity; bank/corporate template is not encoded as a ratio cadence contract | Same legal/runtime gap | `IDENTITY_GAP` + `LEGAL_GAP` |
-| CafeF ratio route, corporate cohort | 1 logical / 1 physical; HTTP 200; JSON body with `text/plain; charset=utf-8` MIME; envelope keys `Data`, `Message`, `Success`; first period exposed `Time`, `Year`, `Quater`, `ReportType`, `Value`, `Conten` | Field presence does not prove value semantics; current adapter must tolerate present-null/absent `ReportType` and returns `Period.UNKNOWN` | Browser-like UA was used; no exact-value redistribution grant was found | `IDENTITY_GAP` + `LEGAL_GAP` |
-| CafeF ratio route, bank cohort | 1 logical / 1 physical; same envelope/key shape | Same request-selector versus response-identity gap; no stable annual fiscal/revision contract | Same legal/runtime gap | `IDENTITY_GAP` + `LEGAL_GAP` |
-| TCInvest public dashboard | 1 logical / 1 physical; HTTP 403; HTML MIME; no JSON schema retained | JavaScript/WAF page is not a response-backed annual ROE route | No anonymous machine-readable contract | `TRANSPORT_FAILURE` |
-| TCBS official OpenAPI landing page | 1 logical / 1 physical; HTTP 200 HTML | Official documentation describes market/trading access, not a public annual ROE history schema | API key plus OTP/JWT is required; access is not no-login | `AUTH_GAP` |
-| SSI developer documentation | Official documentation page reachable; API key/secret -> bearer-token flow is documented | No anonymous annual ROE response/schema | Account/API credentials and provider access level control fundamental information | `AUTH_GAP` |
+There is **no global transport total**: the ledger below reports only independently retained rows. The
+four direct ratio observations are one logical/physical dispatch for each VNDirect/CafeF caller-selected
+category; no per-provider `2+2` response total is claimed.
 
-The probe table is deliberately not a coverage claim. It records transport and shape only; no raw
-provider value is committed. The two symbol cohorts are count-only corporate/bank template checks,
-not a hard-coded runtime basket and not proof of current VN30 membership.
+| Unit | Caller-selected category | Method | Logical | Physical | Pages | Retries | Redirects | Status | Complete Content-Type | Normalized MIME | Effective route | UA/session/WAF | Bytes | Response-backed identity | Outcome |
+|---|---|---|---:|---:|---|---|---|---:|---|---|---|---|---|---|---|
+| VNDirect ratio route | corporate | `NOT_RETAINED` | 1 | 1 | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | 200 | `NOT_RETAINED` | `application/json` | `NOT_RETAINED` | browser-like UA; session/WAF `NOT_RETAINED` | `NOT_RETAINED` | symbol/`ratioCode`/`itemCode`/`reportDate` shape only; template/entity and annual identity `UNKNOWN` | `IDENTITY_GAP` + `LEGAL_GAP` |
+| VNDirect ratio route | bank | `NOT_RETAINED` | 1 | 1 | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | 200 | `NOT_RETAINED` | `application/json` | `NOT_RETAINED` | browser-like UA; session/WAF `NOT_RETAINED` | `NOT_RETAINED` | same response shape; template/entity and annual identity `UNKNOWN` | `IDENTITY_GAP` + `LEGAL_GAP` |
+| CafeF ratio route | corporate | `NOT_RETAINED` | 1 | 1 | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | 200 | `text/plain; charset=utf-8` | `text/plain` | `NOT_RETAINED` | browser-like UA; session/WAF `NOT_RETAINED` | `NOT_RETAINED` | period-field/ratio-line shape only; template/entity and annual identity `UNKNOWN` | `IDENTITY_GAP` + `LEGAL_GAP` |
+| CafeF ratio route | bank | `NOT_RETAINED` | 1 | 1 | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | 200 | `text/plain; charset=utf-8` | `text/plain` | `NOT_RETAINED` | browser-like UA; session/WAF `NOT_RETAINED` | `NOT_RETAINED` | same response shape; template/entity and annual identity `UNKNOWN` | `IDENTITY_GAP` + `LEGAL_GAP` |
+| TCInvest public dashboard | `NOT_RETAINED` | `NOT_RETAINED` | 1 | 1 | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | 403 | `text/html` | `text/html` | `NOT_RETAINED` | browser-like UA; WAF/JavaScript gate observed; session `NOT_RETAINED` | `NOT_RETAINED` | no JSON/schema or ROE semantics retained | `TRANSPORT_FAILURE` |
+| TCBS official OpenAPI landing page | `NOT_RETAINED` | `NOT_RETAINED` | 1 | 1 | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | 200 | `text/html` | `text/html` | `NOT_RETAINED` | UA/session/WAF `NOT_RETAINED` | `NOT_RETAINED` | documentation page only; no annual ROE schema retained | `AUTH_GAP` |
+| SSI developer documentation | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | official auth/documentation claims only; no anonymous annual ROE response retained | `AUTH_GAP` |
+
+The ledger is deliberately not a coverage claim. It records transport and shape only; no raw provider
+value, response-backed template, or current-VN30 membership is committed. Documentation/page traffic
+that was not retained is explicitly `NOT_RETAINED` and cannot increase any dispatch, coverage, or
+identity count.
 
 ## 5. Candidate evidence
 
@@ -133,6 +140,10 @@ an exact eight-period history with provider bounds and page reconciliation. The 
 shows VNDIRECT publishes annual financial documents, but an issuer's document archive does not prove
 that the anonymous ratio route serves the same annual identity or grants OSS redistribution of its
 ratio rows.
+
+No request or response for a `/v4/ratios/latest` route was retained. It is not a dated observation,
+canonical retained route, or semantic source in this report; any matrix row for that candidate is
+explicitly `NOT_PROBED` rather than calling it current, latest, or a summary.
 
 **Verdict:** `SOURCE-GAP`. Do not change the existing `Period.UNKNOWN` ratio behavior.
 
@@ -188,12 +199,13 @@ runtime redistribution posture absent written permission.
 - TCInvest analysis page: [`tcinvest.tcbs.com.vn/tc-analysis/dashboard`](https://tcinvest.tcbs.com.vn/tc-analysis/dashboard)
 - Official TCBS annual-report page: [`tcbs.com.vn/quan-he-nha-dau-tu/bao-cao-tai-chinh/cbtt-ve-bao-cao-tai-chinh-va-bao-cao-ty-le-an-toan-tai-chinh-nam-2025-da-duoc-kiem-toan/`](https://www.tcbs.com.vn/quan-he-nha-dau-tu/bao-cao-tai-chinh/cbtt-ve-bao-cao-tai-chinh-va-bao-cao-ty-le-an-toan-tai-chinh-nam-2025-da-duoc-kiem-toan/)
 
-The official TCInvest page describes ROE conceptually, but the bounded direct page request returned
-HTTP 403 HTML and the browser-readable page requires JavaScript. TCBS OpenAPI documentation
-requires an API key and OTP exchange for a JWT; it does not document an anonymous annual ROE
-history route, provider code, fiscal-date field, pagination, or reuse grant. Issuer annual reports
-are not a substitute for a multi-symbol ratio route and deriving ROE from statements is explicitly
-out of scope.
+The TCInvest URL was retained only as a candidate landing page. The bounded direct request returned
+HTTP 403 HTML and the browser-readable page requires JavaScript; no exact official text/document path
+was retained that proves an ROE definition or annual semantics. Those semantics are therefore
+`NOT_PROBED`, not response identity. TCBS OpenAPI documentation requires an API key and OTP exchange
+for a JWT; it does not document an anonymous annual ROE history route, provider code, fiscal-date
+field, pagination, or reuse grant. Issuer annual reports are not a substitute for a multi-symbol ratio
+route and deriving ROE from statements is explicitly out of scope.
 
 **Verdict:** `SOURCE-GAP` / `AUTH_GAP` / `IDENTITY_GAP`.
 
@@ -214,34 +226,35 @@ and equity would be a different source/derivation project and is not allowed her
 
 Each row is a separate provider + route + template/identity unit. `UNKNOWN` is not a pass.
 
-| Cell | Owner/route | Template | Code/identity | Annual fiscal/date | Coverage/runtime | Rights | Total |
-|---|---|---|---|---|---|---|---|
-| VND-01 | VNDirect `/v4/ratios` | corporate | `ratioCode`/`itemCode` and symbol observed; no annual marker | `UNKNOWN` (`reportDate` only) | shape reachable; pages/totals observed but annual rows unreconciled | no exact-route grant | `SOURCE-GAP` |
-| VND-02 | VNDirect `/v4/ratios` | bank | same | `UNKNOWN` | same | same | `SOURCE-GAP` |
-| VND-03 | VNDirect `/v4/ratios/latest` | corporate | route family is current/latest summary, not a retained annual history | `UNKNOWN` | no full-history contract | no grant | `SOURCE-GAP` |
-| VND-04 | VNDirect `/v4/ratios/latest` | bank | same | `UNKNOWN` | no full-history contract | no grant | `SOURCE-GAP` |
-| CFE-01 | CafeF `GetDataChiSoTaiChinh.ashx` | corporate | `Time`/`Year`/`Quater`/`ReportType` field shape observed | request selector not identity; null/absent tag possible | JSON shape reachable; count/revision bounds not proven | no exact-route grant | `SOURCE-GAP` |
-| CFE-02 | CafeF `GetDataChiSoTaiChinh.ashx` | bank | same field shape, template behavior independent | same | same | same | `SOURCE-GAP` |
-| CFE-03 | CafeF company annual data page | corporate | human-readable annual table, not ratio API identity | page labels do not bind machine ROE row | no bounded page/cursor API contract | no grant | `SOURCE-GAP` |
-| CFE-04 | CafeF company annual data page | bank | human-readable annual table, not ratio API identity | same | same | same | `SOURCE-GAP` |
-| SSI-01 | SSI FastConnect | market/fundamentals access | API key/secret and customer access level | no public annual ROE schema | no-login route absent | own-use terms; written consent required for redistribution | `SOURCE-GAP` |
-| SSI-02 | SSI investor-relations archive | SSI issuer | annual reports are documents, not a multi-symbol ROE code | document fiscal period is not API identity | no common machine history | terms restrict third-party reproduction | `SOURCE-GAP` |
-| TCX-01 | TCInvest analysis dashboard | corporate/bank UI | ROE explanation/UI only; no retained JSON identity | no response-backed annual field | direct bounded request 403; JS/WAF | no public reuse grant | `SOURCE-GAP` |
-| TCX-02 | TCBS OpenAPI | API consumer | API documentation, no annual ROE route | no schema | API key + OTP/JWT | account/API terms not OSS redistribution | `SOURCE-GAP` |
+| Cell | Owner/route | Caller-selected category | Response-backed template/entity | Code/identity | Annual fiscal/date | Coverage/runtime | Rights | Total |
+|---|---|---|---|---|---|---|---|---|
+| VND-01 | VNDirect `/v4/ratios` | corporate | `UNKNOWN` (caller label only) | `ratioCode`/`itemCode` and symbol shape; no annual marker | `UNKNOWN` (`reportDate` only) | shape reachable; pages/totals not retained/reconciled | no exact-route grant | `SOURCE-GAP` |
+| VND-02 | VNDirect `/v4/ratios` | bank | `UNKNOWN` (caller label only) | same response shape | `UNKNOWN` | same | no exact-route grant | `SOURCE-GAP` |
+| VND-03 | VNDirect candidate `/v4/ratios/latest` (`NOT_PROBED`) | corporate | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_RETAINED` | `NOT_RETAINED` | `SOURCE-GAP` |
+| VND-04 | VNDirect candidate `/v4/ratios/latest` (`NOT_PROBED`) | bank | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_RETAINED` | `NOT_RETAINED` | `SOURCE-GAP` |
+| CFE-01 | CafeF `GetDataChiSoTaiChinh.ashx` | corporate | `UNKNOWN` (caller label only) | `Time`/`Year`/`Quater`/`ReportType` field shape | request selector not identity; null/absent tag possible | JSON shape reachable; count/revision bounds not proven | no exact-route grant | `SOURCE-GAP` |
+| CFE-02 | CafeF `GetDataChiSoTaiChinh.ashx` | bank | `UNKNOWN` (caller label only) | same field shape | same | same | no exact-route grant | `SOURCE-GAP` |
+| CFE-03 | CafeF company annual data page | corporate | `NOT_PROBED` | human-readable table, not retained ratio API identity | page labels do not bind machine ROE row | no bounded page/cursor API contract | no grant | `SOURCE-GAP` |
+| CFE-04 | CafeF company annual data page | bank | `NOT_PROBED` | same | same | same | no grant | `SOURCE-GAP` |
+| SSI-01 | SSI FastConnect | `NOT_RETAINED` | `NOT_RETAINED` | API key/secret and customer access level | no public annual ROE schema | no-login route absent | own-use terms; written consent required for redistribution | `SOURCE-GAP` |
+| SSI-02 | SSI investor-relations archive | `NOT_RETAINED` | `NOT_RETAINED` | annual reports are documents, not a multi-symbol ROE code | document fiscal period is not API identity | no common machine history | terms restrict third-party reproduction | `SOURCE-GAP` |
+| TCX-01 | TCInvest analysis dashboard | `NOT_RETAINED` | `NOT_PROBED` | no response-backed JSON/ROE identity retained | no response-backed annual field or semantic proof | direct bounded request 403; JS/WAF | no public reuse grant | `SOURCE-GAP` |
+| TCX-02 | TCBS OpenAPI | `NOT_RETAINED` | `NOT_RETAINED` | API documentation only; no annual ROE route | no schema | API key + OTP/JWT | account/API terms not OSS redistribution | `SOURCE-GAP` |
 
 No matrix cell passes all columns. The cells are not failover candidates and must not be combined.
 
 ## 7. Coverage and current-VN30 evidence
 
 The HOSE ground rules establish the index universe as 30 constituents, but the dated current
-membership snapshot was not retained from the public page. A bounded count-only diversity check
-used two corporate-template and two bank-template cases against the two no-login provider route
-families:
+membership snapshot was not retained from the public page. A bounded category-selection check used
+one caller-selected corporate case and one caller-selected bank case against each of the two no-login
+provider route families. These are the four direct ratio rows in the transport ledger; they do not
+establish response-backed template/entity identity:
 
-| Evidence unit | Count-only result | What it proves | What remains unknown |
+| Evidence unit | Retained result | What it proves | What remains unknown |
 |---|---:|---|---|
-| VNDirect ratio route | 2 corporate + 2 bank transport responses | route shape exists for both template families | no current-VN30 membership, annual cadence, eight-period completeness, or rights |
-| CafeF ratio route | 2 corporate + 2 bank transport responses | route envelope/period shape exists for both template families | no current-VN30 membership, annual cadence, revision, or rights |
+| VNDirect ratio route | one corporate and one bank caller-selected observation, each 1 logical/1 physical | route shape was observed for two caller categories | response-backed template/entity, current-VN30 membership, annual cadence, eight-period completeness, or rights |
+| CafeF ratio route | one corporate and one bank caller-selected observation, each 1 logical/1 physical | route envelope/period shape was observed for two caller categories | response-backed template/entity, current-VN30 membership, annual cadence, revision, or rights |
 | HOSE public VN30 universe | 30 constituents under official rules | index definition/count | dated 2026-08-23 symbol list and provider crosswalk were not retained |
 
 Therefore the provider coverage result is `UNKNOWN`, not `FULL`, `PARTIAL`, or `EMPTY`. No hard-coded
@@ -296,8 +309,9 @@ COVERAGE_BOUNDARY | NOT_SERVED | TRANSPORT_FAILURE | SCHEMA_DRIFT |
 BUDGET_EXHAUSTED | LEGAL_GAP | IDENTITY_GAP
 ```
 
-- `FULL` requires eight or fewer complete distinct annual reports, provider-declared bounds, exact
-  fiscal dates, response-backed ROE identity, and reconciled pages/counts/cursors.
+- `FULL` requires exactly all eight requested distinct annual reports, provider-declared bounds, exact
+  fiscal dates, response-backed ROE identity, and reconciled pages/counts/cursors. Eight or fewer is
+  not `FULL`; a provider-declared smaller supported boundary can only be `PARTIAL`.
 - `PARTIAL` requires provider-declared supported bounds and reconciled returned pages. An unexplained
   interior gap, missing ROE, conflicting duplicate, or unreconciled page is failure/unknown.
 - `PUBLISHED_EMPTY`, `NOT_YET_PUBLISHED`, and `COVERAGE_BOUNDARY` require an owner declaration;
@@ -334,7 +348,7 @@ pin a RED-first matrix covering:
 |---|---|
 | Input/API | exact facade/direct-source annual request; `limit`; symbol/statement/period validation; zero-network malformed/unsupported inputs; current `RATIOS + QUARTER` compatibility |
 | Identity | exact symbol, provider symbol, canonical `ROE`, provider-code alias only with owner proof; wrong symbol, missing code, duplicate/conflict, mixed entity/template |
-| Cadence/date | provider annual marker and fiscal end; request echo, current, TTM, quarter, publication/retrieval date, inferred Dec 31, null/ambiguous date all RED |
+| Cadence/date | provider annual marker and fiscal end; absent or present-null annual marker, request echo, current, TTM, quarter, publication/retrieval date, missing publication/as-of metadata, inferred Dec 31, null/ambiguous date, and any fabricated date all RED |
 | Semantics/unit | definition, average/ending equity, attributable/total profit, percent/fraction, valid negative/zero, bool/non-finite/malformed, wrong unit/currency |
 | Coverage | eight distinct reports, newest-first, pages/counts/cursors, provider bounds, `FULL`/declared `PARTIAL`; duplicate period, missing ROE, interior gap, unreconciled/truncated response |
 | Atomicity | one source for whole request; no cross-source stitch; capability skip; retry/page/redirect/byte/global-budget exhaustion discards accumulator |
