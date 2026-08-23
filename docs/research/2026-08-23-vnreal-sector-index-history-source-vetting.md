@@ -24,10 +24,10 @@ every search was:
 
 No prohibited result or derivative material was opened, cited, compared, installed, or
 used. The evidence below is limited to provider-owned VPS, SSI, and VNDirect routes,
-official HOSE material, official provider terms/contact pages, the public UDF protocol,
-and the repository's current clean-room adapter boundary. The prior VNFIN review is
-methodology context only; its data, identity, or permission conclusions are not reused
-for VNREAL.
+official HOSE material, official provider legal/contact URLs with their recorded access
+limitations, the public UDF protocol, and the repository's current clean-room adapter
+boundary. The prior VNFIN review is methodology context only; its data, identity, or
+permission conclusions are not reused for VNREAL.
 
 The bounded observation was run on 2026-08-23 using direct HTTPS GETs, a sequential
 no-login client, no `Authorization` header, no credential, no proxy, no browser
@@ -67,7 +67,8 @@ behavior in a later implementation review.
 
 ## 2. Official identifier evidence
 
-Official HOSE annual reports list `VNREAL` within the exchange's sector-index family.
+The working HOSE 2023 annual report lists `VNREAL` within the exchange's sector-index
+family.
 That establishes the exchange namespace/sector meaning only. It does not bind any
 broker route to HOSE, prove a complete historical archive, or grant permission to
 return provider rows from an OSS API.
@@ -75,8 +76,7 @@ return provider rows from an OSS API.
 - [HOSE 2023 annual report](https://staticfile.hsx.vn/Uploads/UploadDocuments/1896430/B%C3%A1o%20c%C3%A1o%20th%C6%B0%E1%BB%9Dng%20ni%C3%AAn%202023.pdf)
 - [HOSE contact page](https://www1.hsx.vn/vi/lien-he)
 
-Only the working 2023 report and contact path are retained. No dead-link claim or
-unreachable 2024 citation is used in the identity decision. The official material is an
+Only the working 2023 report and contact path are retained. The official material is an
 identifier reference, not a source-selection oracle. No constituent basket, equity proxy,
 ETF, screenshot, search snippet, or cross-provider numeric agreement is used as VNREAL
 identity.
@@ -121,7 +121,7 @@ provider cannot repair a missing axis in that unit.
 |---|---|---|---|---|---|
 | VPS / VPS Securities | History [`/tradingview/history`](https://histdatafeed.vps.com.vn/tradingview/history); identity [`/tradingview/symbols`](https://histdatafeed.vps.com.vn/tradingview/symbols) | `D`; bare UDF object | History and identity: `application/json; charset=utf-8` → `application/json` | HTTP 200 on both; no redirect; no auth challenge; no WAF/interstitial observed; metadata reports `session=0900-1500`; bounded observation used browser-like UA; no no-UA control | No route-specific quota or retry grant established; observation used zero retry; no cache/storage used; [VPS terms](https://vps.com.vn/dieu-khoan-su-dung) do not provide affirmative OSS caller-facing redistribution permission; **LEGAL_GAP + RATE_POLICY_GAP + TRANSPORT_INCONCLUSIVE** |
 | SSI / SSI Securities Corporation | History [`/statistics/charts/history`](https://iboard-api.ssi.com.vn/statistics/charts/history); identity [`/statistics/charts/symbol`](https://iboard-api.ssi.com.vn/statistics/charts/symbol) | `1D`; `{code,data,message,status}` envelope with UDF data inside | History and identity: `application/json; charset=utf-8` → `application/json` | HTTP 200 on both; no redirect; no auth challenge; no WAF/interstitial observed; identity response proves timezone but does not close a stable session contract; `Set-Cookie` observed and discarded; browser-like UA used; no no-UA control | No route-specific quota or permitted retry policy established; observation used zero retry; no cache/storage used; [SSI service terms](https://www.ssi.com.vn/dieu-khoan-dich-vu) do not provide anonymous chart-row redistribution permission; keyed [SSI developer terms](https://developers.ssi.com.vn/docs/getting-started/terms-and-environments) are not a grant for this route; **LEGAL_GAP + RATE_POLICY_GAP + TRANSPORT_INCONCLUSIVE** |
-| VNDirect / VNDIRECT Securities | History [`/dchart/history`](https://dchart-api.vndirect.com.vn/dchart/history); identity [`/dchart/symbol`](https://dchart-api.vndirect.com.vn/dchart/symbol) | `D`; bare UDF object | History: `text/plain;charset=UTF-8` → `text/plain`; identity failure: `application/json` → `application/json` | History HTTP 200, identity HTTP 404; no redirect; no auth challenge or WAF/interstitial observed; no same-owner session metadata; browser-like UA used; no no-UA control | No route-specific quota or permitted retry policy established; observation used zero retry; no cache/storage used; [VNDIRECT terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) provide no affirmative route-specific OSS automation/caching/redistribution grant; [VNDIRECT support](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/) is the contact path for written permission; **LEGAL_GAP + RATE_POLICY_GAP + TRANSPORT_INCONCLUSIVE** |
+| VNDirect / VNDIRECT Securities | History [`/dchart/history`](https://dchart-api.vndirect.com.vn/dchart/history); identity [`/dchart/symbol`](https://dchart-api.vndirect.com.vn/dchart/symbol) | `D`; bare UDF object | History: `text/plain;charset=UTF-8` → `text/plain`; identity failure: `application/json` → `application/json` | History HTTP 200, identity HTTP 404; no redirect; no auth challenge or WAF/interstitial observed; no same-owner session metadata; browser-like UA used; no no-UA control | No route-specific quota or permitted retry policy established; observation used zero retry; no cache/storage used; VNDIRECT legal/contact URLs are unverified official leads/contact paths only; see the explicit direct-403 limitation below; **LEGAL_GAP + RATE_POLICY_GAP + TRANSPORT_INCONCLUSIVE** |
 
 The full Content-Type is part of the evidence. A future parser must read the complete
 header value after the first colon, compare the exact approved full value, then normalize
@@ -375,16 +375,25 @@ only when deterministic token truncation is needed; it never creates a synthetic
 Counters remain private. Any pagination, redirect, retry, or rate-policy change requires
 another finite formula and design review.
 
+**VNDIRECT legal/contact observation (2026-08-23):** direct bounded GETs using the
+documented browser-like User-Agent to exactly
+`https://www.vndirect.com.vn/dieu-khoan-su-dung/` and exactly
+`https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/` returned HTTP `403`. No
+page content was read, and no terms or support conclusion is derived. Both URLs are
+retained only as unverified official leads/contact paths. No permitted alternate path or
+alternate date is claimed or recorded. `LEGAL_GAP + RATE_POLICY_GAP +
+TRANSPORT_INCONCLUSIVE` therefore remain unchanged.
+
 ## 7. Legal, reuse, and runtime disposition
 
-No-auth reachability is not a licence. The official provider pages reviewed for this
-batch establish the following conservative posture:
+No-auth reachability is not a licence. Official provider legal/contact URLs and bounded
+route observations for this batch are recorded as follows:
 
 | Provider | Official primary evidence | Current decision |
 |---|---|---|
 | VPS | [VPS terms](https://vps.com.vn/dieu-khoan-su-dung) and [VPS company/contact page](https://vps.com.vn/ve-chung-toi) | No affirmative route-specific permission for automated OSS retrieval, caller-facing return, caching/storage, commercial use, or redistribution; written permission required |
 | SSI | [SSI service terms](https://www.ssi.com.vn/dieu-khoan-dich-vu), [SSI network/contact page](https://www.ssi.com.vn/mang-luoi), and separate [developer terms](https://developers.ssi.com.vn/docs/getting-started/terms-and-environments) | Anonymous chart access is not a redistribution grant; keyed/developer terms do not qualify this route; written permission required |
-| VNDirect | [VNDIRECT terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) and [support/contact page](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/) | No affirmative chart-route OSS automation, cache, caller-facing, or redistribution grant; written permission and a response-backed identity route are required |
+| VNDirect | [VNDIRECT legal lead](https://www.vndirect.com.vn/dieu-khoan-su-dung/) and [contact lead](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/) | Direct GETs returned HTTP 403 on 2026-08-23; content was not read and no terms/support conclusion is derived. These are unverified official leads/contact paths only; no permitted alternate path/date is claimed or recorded. Permission posture remains unverified, so no permission is assumed and `LEGAL_GAP + RATE_POLICY_GAP + TRANSPORT_INCONCLUSIVE` remain |
 
 Current runtime disposition for all three is no cache, no storage, no bundled rows, no
 archive, no bulk export, and no caller-facing source capability. The routes' current HTTP

@@ -245,6 +245,16 @@ capability.
 
 ## 7. Conjunctive reopen gate and delivery boundary
 
+**VNDIRECT legal/contact limitation (2026-08-23):** direct bounded GETs using the
+documented browser-like User-Agent to exactly
+`https://www.vndirect.com.vn/dieu-khoan-su-dung/` and exactly
+`https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/` returned HTTP `403`. No
+page content was read, and no terms or support conclusion is derived. These URLs are
+unverified official leads/contact paths only; no permitted alternate path or alternate
+date is claimed or recorded. `LEGAL_GAP + RATE_POLICY_GAP +
+TRANSPORT_INCONCLUSIVE` remain required. Reopen requires a permitted, response-backed
+legal/rate path; it must not infer permission from these 403 responses.
+
 Reopen to TDD only when one named provider passes all gates in the same source unit:
 
 1. **Identity:** response-backed `VNREAL`, exchange/index type, point scale/value,
