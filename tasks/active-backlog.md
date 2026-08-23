@@ -602,21 +602,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#219 — DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `f2d0187` for
-  `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
-  `issuecomment-5385376214`. Corrected content anchor is
-  `3920d05f546290b737b6bb93c9367d26d787acc1`; the previously reviewed merged head was
-  `7aad9c1b5c82c2cd049d2485b81a535b863ad344`, and prior correction content anchor was
-  `9326b15c43f69383a1959c0f7f77da7f9ab09d65`. This separate reviewer-owned lifecycle receipt is
-  the final merged-handoff record; its exact current HEAD is returned with the handoff and the
-  content anchor is not relabeled as that HEAD. BLOCK-before-correction receipt is
-  `d7096bcbb898eec151d8a478b9b7e9bf978cdf05`; BLOCK report is
-  `reviews/review-202608232247-issue219-corrected-design-review.md` at reviewer `2f7ac46`.
-  R1-R2 are closed by splitting retained PXWeb shell-route accounting from browser/UI/subresource
-  traffic marked `NOT_RETAINED` and by keeping the corrected content anchor distinct from the
-  merged-handoff HEAD. Preserve `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime,
-  and no RED/code/push/close. #220, #222, #223, and #224 remain queued.
+- **#220 — ACTIVE SOURCE_DESIGN (2026-08-23).** Actor `vnfin-oss`; next action
+  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor
+  `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for
+  `tasks/220-annual-roe-ratio-history-spec.md`, public receipt `issuecomment-5385517511`.
+  #219 is verified `CLOSED`/`COMPLETED` at exact remote anchor
+  `e478f4ff0e6ad846e31dbf6a5412c16e8382a768`, with clean no-capability SOURCE-GAP resolution
+  `issuecomment-5386927683`. Prepare only the annual-ROE source/design artifacts and this
+  lifecycle row; preserve the existing single-symbol fundamentals call, current `Period.UNKNOWN`
+  ratio behavior, and no RED/code/push/close before exact-SHA design PASS. #222, #223, and #224
+  remain queued behind #220.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
@@ -1043,21 +1038,13 @@ _None._
 
 ## Next
 
-- **#220 — QUEUED_AFTER_#219 (2026-08-23).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_219_CLOSURE`; packet anchor
-  `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for `tasks/220-annual-roe-ratio-history-spec.md`,
-  public receipt `issuecomment-5385517511`. Scope provider-published annual ROE through the
-  existing fundamentals call only if qualified; exclude current/TTM/request-echo/derived/proxy
-  ROE and the reporter's external artifact. Keep queued behind #219; no #220 source-design, RED,
-  code, push, or close before its turn and exact-SHA design PASS.
-
 - **#222 — QUEUED_AFTER_#220 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_220_CLOSURE`; packet anchor `001ad85` for
   `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
   Prepare fresh VN100-specific VPS/SSI/VNDirect source/design evidence first; exact v0.2.0 predates
   the current registry guard. No proxy, basket, downstream observable, probe, RED/code, push, or
-  close before exact-SHA design PASS. Keep queued behind #220; queue order remains #219 → #220 →
-  #222 → #223 → #224 and do not interrupt active #219.
+  close before exact-SHA design PASS. Keep queued behind #220; queue order remains #220 → #222 →
+  #223 → #224 and do not interrupt active #220.
 
 - **#223 — QUEUED_AFTER_#222 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_222_CLOSURE`; packet anchor `6939ba4` for
@@ -1105,14 +1092,25 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#219 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `e478f4ff0e6ad846e31dbf6a5412c16e8382a768` to `origin/master`; remote HEAD,
+  approved ancestry, and exactly the three research/design/backlog paths were verified. Final
+  approval `reviews/review-202608232256-issue219-final-design-approval.md` at reviewer `8f7a63e`;
+  clean resolution `issuecomment-5386927683`; GitHub re-read `CLOSED`/`COMPLETED` at
+  `2026-08-23T15:59:21Z`. The official-source review did not qualify a direct no-login national
+  monthly IIP YoY provider; the new source chain remains empty, current runtime is unchanged,
+  and no enum, API, data capability, RED test, or downstream signal was added. #220 is activated
+  above for independent annual-ROE source/design only.
+
 - **#221 — DONE/CLOSED (2026-08-23), approved Fmarket runtime disable.** Published exact approved
   anchor `a69f3c5901f97e95f1c183c64792f933a82cf7a6` to `origin/master`; remote HEAD is exact,
   approved ancestry/path checks pass, and local queue receipts `65d6ac6`/`0fd103d` are excluded.
   Final approval `reviews/review-202608232207-issue221-final-approval.md` at reviewer `a9ad0e3`;
   clean resolution `issuecomment-5386706340`; GitHub re-read `CLOSED`/`COMPLETED` at
   `2026-08-23T15:09:56Z`. Fmarket access is fail-closed pending explicit permission; no live probe
-  or automatic fallback was added. Full `pytest -q`, build, diff, and scope gates passed. #219 is
-  activated below for source/design only; #220 remains closure-gated behind #219.
+  or automatic fallback was added. Full `pytest -q`, build, diff, and scope gates passed. At the
+  time of this #221 close, #219 was activated below for source/design and #220 was closure-gated
+  behind #219.
   Historical reviewer lifecycle was `CODE_REVIEW_CORRECTION_REVIEW_REQUESTED`; Actor is `vnfin-oss-reviewer`,
   next action `RETURN_FINAL_EXACT_SHA_VERDICT`, and this lifecycle receipt is
   the exact final review handoff. Final test/docs correction content anchor is
@@ -1126,7 +1124,8 @@ _None._
   `CLOSED`/`COMPLETED` at `2026-08-23T11:29:30Z`. The ETF discovery/NAV-history chain remains
   empty: no qualified provider capability or coverage claim; current mutual-fund behavior is
   unchanged. No probe, RED, production code, source registration, or runtime capability was
-  added. Local #221 activation receipt remains unpushed; #219/#220 remain closure-gated.
+  added. Local #221 activation receipt remains unpushed; at that time #219/#220 remained
+  closure-gated.
 
 - **#217 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16` from the approved docs/source range;
