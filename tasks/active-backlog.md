@@ -1043,6 +1043,11 @@ _None._
   Discount/first-difference/VN30F remain caller-side. Do not interrupt #217; no #218 RED/code/
   push/close before its design PASS.
 
+- **#219 — QUEUED_AFTER_#218 (2026-08-23).** Actor `vnfin-oss`; next action
+  `SOURCE_DESIGN_AFTER_218_REVIEW_HANDOFF`; packet anchor `f2d0187` for
+  `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind #218 and
+  do not start source/design, RED, code, push, or close before its turn and exact-SHA design PASS.
+
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
