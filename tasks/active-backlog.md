@@ -602,14 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#224 — DESIGN_BLOCK (2026-08-24, narrow B1-B2 correction).** Actor `vnfin-oss`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `b8ee1e5` for
+- **#224 — DESIGN_REVIEW (2026-08-24, narrow B1-B2 correction).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `b8ee1e5` for
   `tasks/224-daily-eurvnd-fx-history-spec.md`, public receipt `issuecomment-5387048240`.
-  Reviewed exact handoff `7364b5599ffce5f92a1b0782b344527bf2649a14` is blocked by
+  BLOCK receipt `ece9b14` records the prior exact handoff and report
   `reviews/review-202608240124-issue224-corrected-design-rereview.md` at reviewer `9fcebc2`.
-  Apply only the terms-amendment/revocation reopen-gate and revision/retention-cell corrections;
-  preserve SOURCE-GAP/empty daily chain, annual USD/VND, #225 queue, and no probe, RED, code, push,
-  or close.
+  Corrected research/design anchor is `2678fbc`; both conjunctive reopen gates now require terms
+  amendment/revocation separately from observation revision/retention, and unrelated legal-table
+  cells are `NOT_RETAINED`. Preserve SOURCE-GAP/empty daily chain, annual USD/VND, #225 queue, and
+  no probe, RED, code, push, or close before exact-SHA design PASS.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
