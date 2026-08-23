@@ -111,9 +111,11 @@ The important boundaries are:
   aggregation, not the exact YoY comparison wording. NSO does not provide one reconciled machine
   series with a provider total, row identity, revision map, or exact redistribution licence.
 - NSO PXWeb `E07.01` is an official industrial-production index table with activity/year metadata;
-  its visible table identity does not prove a month-keyed provider-published YoY series. Three
-  no-credential API-path candidates and one bounded UI transport attempt timed out; this is
-  `TRANSPORT_INCONCLUSIVE`, never confirmed absence.
+  its visible table identity does not prove a month-keyed provider-published YoY series. The
+  retained shell pass is one shell UI route plus three API-path candidates: `4 / 4` logical /
+  physical attempts, zero retries, all timed out. Browser-rendered UI and subresource traffic is
+  a separate cell with logical/physical/page/retry totals `NOT_RETAINED`; it is excluded from the
+  shell total. This is `TRANSPORT_INCONCLUSIVE`, never confirmed absence.
 - IMF DSBB monthly periodicity is metadata, not a direct exact YoY response. The current IMF API
   access documentation points to sign-in/beta access, so no login workaround is permitted.
 - The World Bank dashboard is a secondary compilation citing multiple inputs and staff

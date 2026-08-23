@@ -602,19 +602,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#219 — DESIGN BLOCKED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
-  `RECORD_DOCS_ONLY_CORRECTION`; packet anchor `f2d0187` for
+- **#219 — DESIGN_CORRECTION_READY (2026-08-23).** Actor `vnfin-oss`; next action
+  `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_DESIGN_REVIEW`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
   `issuecomment-5385376214`. Reviewed exact merged head is
-  `7aad9c1b5c82c2cd049d2485b81a535b863ad344`; correction content anchor is
-  `9326b15c43f69383a1959c0f7f77da7f9ab09d65`; prior BLOCK-before-correction receipt is
-  `e3956fd95a228dbf16ca7be9a7403c48d791ff7a`. BLOCK report is
+  `7aad9c1b5c82c2cd049d2485b81a535b863ad344`; prior correction content anchor is
+  `9326b15c43f69383a1959c0f7f77da7f9ab09d65`; BLOCK-before-correction receipt is
+  `d7096bcbb898eec151d8a478b9b7e9bf978cdf05`. BLOCK report is
   `reviews/review-202608232247-issue219-corrected-design-review.md` at reviewer `2f7ac46`.
-  R1-R2 are docs/backlog-only precision seams: split retained PXWeb shell-route accounting from
-  browser/UI/subresource traffic marked `NOT_RETAINED`, and bind the next handoff to the merged
-  head rather than the content parent. Record this BLOCK before edits. Preserve
-  `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime, and no RED/code/push/close.
-  #220, #222, #223, and #224 remain queued and are not activated.
+  R1-R2 are corrected docs/backlog-only seams: retained PXWeb shell-route accounting is split
+  from browser/UI/subresource traffic marked `NOT_RETAINED`, and the next handoff distinguishes
+  content anchor from merged review head. Preserve `SOURCE-GAP CLOSURE`, the empty new source
+  chain, current runtime, and no RED/code/push/close. #220, #222, #223, and #224 remain queued.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
