@@ -196,7 +196,7 @@ physical count is the number of network dispatches. No retry occurred in this ev
 | HOSE issuer disclosures | 1 / 1 bounded official-route observation | 0 / 0 | `SOURCE_GATE_SKIPPED_TRANSPORT_SCHEMA_GAP`; no absence claim. |
 | HOSE information disclosure | 1 / 1 bounded official-route observation | 0 / 0 | `SOURCE_GATE_SKIPPED_TRANSPORT_SCHEMA_GAP`; no absence claim. |
 | SSC regulator material | 1 / 1 bounded official-portal/legal observation | 0 / 0 | `SOURCE_GATE_SKIPPED_NOT_A_COMPANY_NEWS_UNIT`; no issuer-news coverage claim. |
-| FPT issuer-owned disclosure/news | 2 / 2 bounded official-page observations | 0 / 0 | `SOURCE_GATE_SKIPPED_COHORT_BREADTH_LEGAL_GAP`; one issuer is not a cohort source. |
+| FPT issuer-owned disclosure/news | 3 / 3 bounded official-document requests; one document per logical/physical attempt | 0 / 0 | `SOURCE_GATE_SKIPPED_COHORT_BREADTH_LEGAL_GAP`; one issuer is not a cohort source. |
 | Vingroup issuer-owned disclosure | 1 / 1 bounded official-page observation | 0 / 0 | `SOURCE_GATE_SKIPPED_COHORT_BREADTH_LEGAL_GAP`; no cohort source. |
 | Issuer-owned IR/news feeds | 0 / 0; no single feed selected | 0 / 0 | `SOURCE_GATE_SKIPPED_NO_SINGLE_SOURCE_UNIT`; one-off routes are not a source. |
 | FiinGroup licensed datafeed | 1 / 1 official product/terms observation; no news schema call | 0 / 0 | `SOURCE_GATE_SKIPPED_RIGHTS_SCHEMA_GAP`; no schema or 30-cell claim. |
