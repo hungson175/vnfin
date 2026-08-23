@@ -23,9 +23,9 @@ searches was:
 ```
 
 No prohibited result or derivative material was opened, cited, compared, installed, or used.
-Evidence below is limited to official HOSE material, provider-owned terms/contact pages, and
-fresh bounded observations of the three named provider route pairs. Licensing uncertainty is
-reported as a gap rather than inferred away.
+Evidence below is limited to official HOSE material, reachable provider terms/contact evidence,
+unverified VNDIRECT official URL leads, and fresh bounded observations of the three named provider
+route pairs. Licensing uncertainty is reported as a gap rather than inferred away.
 
 The current repository boundary is deny-only: `VNMID` is a recognized index identifier used to
 reject the stock-price namespace, but it is absent from the private value-history allow-list.
@@ -177,11 +177,14 @@ The following axes are intentionally independent:
   by these observations. The observation made zero retries. The [SSI developer terms and
   environments page](https://developers.ssi.com.vn/docs/getting-started/terms-and-environments)
   describes authenticated API environments and rate/429 behavior, but it does not grant this
-  unauthenticated chart route a quota or reuse permission. VPS and VNDirect route limits were
-  not found in the reviewed official terms. Unknown is not unlimited.
-- **Cache/storage:** no response was cached, archived, bundled, or retained. The reviewed terms
-  do not give this library a storage/redistribution grant. Any future cache policy must be
-  written into provider permission and the public contract, not inferred from HTTP success.
+  unauthenticated chart route a quota or reuse permission. VPS route limits were not found in
+  the reviewed official terms. The VNDIRECT terms/support leads below were not readable, so no
+  VNDIRECT content-level rate conclusion is made. Unknown is not unlimited.
+- **Cache/storage:** no response was cached, archived, bundled, or retained. The reachable terms
+  reviewed above do not give this library a storage/redistribution grant. The VNDIRECT leads were
+  not readable, so no VNDIRECT content-level terms conclusion is made. Any future cache policy
+  must be written into provider permission and the public contract, not inferred from HTTP
+  success.
 - **Logical versus physical:** each route dispatch counted once in the ledger; no retry,
   pagination, redirect follow-up, or hidden parallel request was counted away. Future identity,
   history, page, and retry dispatches must have separate physical reservations under one
@@ -220,15 +223,26 @@ an explicit transport/identity gap instead of inferred success. It is not implem
 
 ## 5. Official legal and reuse posture
 
-No-auth reachability is a transport observation, not a licence. The provider-owned pages below
-are primary terms/contact evidence and are kept separate from the technical matrix:
+No-auth reachability is a transport observation, not a licence. The URLs below are separated into
+reachable terms/contact evidence and unverified official leads, and are kept separate from the
+technical matrix:
 
 | Owner | Official evidence | Conservative legal conclusion for this library |
 |---|---|---|
 | VPS | [VPS terms of use](https://vps.com.vn/dieu-khoan-su-dung) and [VPS company/contact page](https://vps.com.vn/ve-chung-toi) | The terms state that website products/content are VPS-owned and restrict copying, transfer, display, distribution, storage, and derivative versions without official written consent; personal download/print language does not grant an OSS runtime redistribution licence. **LEGAL_GAP.** |
 | SSI | [SSI service terms](https://www.ssi.com.vn/dieu-khoan-dich-vu) and [SSI network/contact page](https://www.ssi.com.vn/mang-luoi) | The terms permit personal viewing/analysis/reformatting/printing but prohibit publishing, transmitting, or reproducing the information to third parties without written SSI consent. **LEGAL_GAP.** |
-| VNDirect | [VNDIRECT online-application terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) and [VNDIRECT support/contact](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/) | The terms identify VNDIRECT-provided website information/services and contain no affirmative route-specific grant for automated OSS retrieval, caching, commercial use, or caller-facing redistribution. **LEGAL_GAP.** |
+| VNDirect | [VNDIRECT terms lead](https://www.vndirect.com.vn/dieu-khoan-su-dung/) and [VNDIRECT support/contact lead](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/) | Direct bounded GETs with the documented browser-like UA to both exact URLs returned HTTP `403` on `2026-08-23`; no page content was read and no terms/support conclusion is derived. These remain unverified official leads/contact paths only. No permitted alternate path or date is claimed or recorded. **LEGAL_GAP; RATE_POLICY_GAP; TRANSPORT_INCONCLUSIVE.** |
 | HOSE | [VNMidcap factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf) and [HOSE contact](https://www1.hsx.vn/vi/lien-he) | HOSE material establishes the exchange identifier and protected index-family boundary. It is not permission to redistribute a broker's chart response. Written identity/mark and data-use permission remains unproven. |
+
+The VNDIRECT direct check was recorded as follows, with the documented browser-like UA:
+
+```text
+2026-08-23  https://www.vndirect.com.vn/dieu-khoan-su-dung/                 -> HTTP 403
+2026-08-23  https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/    -> HTTP 403
+```
+
+No page content was read. These URLs remain unverified official leads/contact paths only; no
+permitted alternate path or date is claimed or recorded.
 
 The runtime-safe status is **no capability**: no provider rows in fixtures/examples, no cache or
 archive, no bulk export, no public live-value examples, and no source chain entry. A future

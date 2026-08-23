@@ -41,9 +41,10 @@ Before research, `docs/vnstock-blacklist.md` was read and the exact search exclu
 -vnstock -"VNStock" -vnstocks.com -"thinh-vu/vnstock" -vnstock-hq -"vnstock-agent"
 ```
 
-No prohibited or derivative material was used. Only official HOSE/provider terms and
-provider-owned no-login observations are used in the companion report. No raw provider data,
-query-bearing URL, cookie, token, live bar/value, screenshot, or digest is stored.
+No prohibited or derivative material was used. Only official HOSE material, reachable provider
+terms, unverified VNDIRECT URL leads, and provider-owned no-login observations are used in the
+companion report. No raw provider data, query-bearing URL, cookie, token, live bar/value,
+screenshot, or digest is stored.
 
 The annotated `v0.2.0` tag is the exact historical commit
 `2fe50df4f27064140ff9f7a680227a2b337ec74a`. It predates the later private index namespace
@@ -243,9 +244,18 @@ A later technical winner must prove every field on the same provider unit:
 - **Legal/reuse:** written permission must cover automated access, OSS use, caller-facing return,
   storage/cache, attribution, commercial restrictions, rate limits, UA/session handling, and
   redistribution. VPS terms are at [vps.com.vn/dieu-khoan-su-dung](https://vps.com.vn/dieu-khoan-su-dung);
-  SSI terms at [ssi.com.vn/dieu-khoan-dich-vu](https://www.ssi.com.vn/dieu-khoan-dich-vu);
-  VNDIRECT terms at [vndirect.com.vn/dieu-khoan-su-dung](https://www.vndirect.com.vn/dieu-khoan-su-dung/).
-  None closes this gate today.
+  SSI terms at [ssi.com.vn/dieu-khoan-dich-vu](https://www.ssi.com.vn/dieu-khoan-dich-vu).
+  VNDIRECT has only these unverified official leads: [terms lead](https://www.vndirect.com.vn/dieu-khoan-su-dung/)
+  and [support/contact lead](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/). Direct
+  bounded GETs with the documented browser-like UA to both exact URLs returned HTTP `403` on
+  `2026-08-23`; no page content was read and no terms/support conclusion is derived. No permitted
+  alternate path or date is claimed or recorded. The VNDIRECT unit therefore retains
+  `LEGAL_GAP`, `RATE_POLICY_GAP`, and `TRANSPORT_INCONCLUSIVE`; none closes this gate today.
+
+  Exact direct-check records: `https://www.vndirect.com.vn/dieu-khoan-su-dung/` → HTTP `403` and
+  `https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/` → HTTP `403`, both on
+  `2026-08-23` with that UA. No page content was read; these remain unverified official
+  leads/contact paths only.
 
 ## 8. No-false-absence diagnostics
 
@@ -347,6 +357,10 @@ review:
 3. points, RAW adjustment, timestamp, and aligned non-null volume semantics are documented;
 4. full MIME/status/redirect/WAF/session/rate/retry/pagination/cache behavior is bounded;
 5. written legal/reuse permission covers automated retrieval and caller-facing redistribution;
+   for VNDIRECT, the two URL leads above remain direct-`403`/content-unverified on `2026-08-23`,
+   with no permitted alternate path or date claimed or recorded, so `LEGAL_GAP`,
+   `RATE_POLICY_GAP`, and `TRANSPORT_INCONCLUSIVE` remain until a permitted, content-readable
+   evidence path is independently established;
 6. strict whole-window and explicit stitched atomic contracts use one finite global ledger and
    sanitized no-false-absence diagnostics; and
 7. synthetic RED tests, docs/API compatibility, blacklist/secret/diff/build, and full merged-tree
