@@ -610,9 +610,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   macro surface if qualified; annual/index/cumulative substitutes and acceleration/VN30F logic
   remain excluded. Source/design artifacts are prepared in
   `docs/research/2026-08-23-vietnam-monthly-industrial-production-yoy-source-vetting.md` and
-  `tasks/219-design-note.md`; disposition is `SOURCE-GAP CLOSURE` with an empty new source chain.
-  No RED, code, push, or close before exact-SHA design PASS. #220, #222, #223, and #224 remain
-  queued and are not activated by this handoff.
+  `tasks/219-design-note.md`, committed at exact artifact anchor
+  `221d38a69961e2a085193a16c3e777adc148cd9f`. Disposition is `SOURCE-GAP CLOSURE` with an empty
+  new source chain. No RED, code, push, or close before exact-SHA design PASS. #220, #222, #223,
+  and #224 remain queued and are not activated by this handoff.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
