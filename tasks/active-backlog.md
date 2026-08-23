@@ -683,14 +683,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`.
   Final finite-F2 review at exact `3932d7d70d56bfa18cc11d90b327a3236441bac6` was BLOCKED in
   `reviews/review-202608232158-issue221-final-f2-grammar-review.md` at reviewer `90afc61`: F1/F2
-  pass, but lifecycle provenance remained stale. The BLOCK receipt for that finite-F2 review is
-  `e92b2b54a19dd39e3b779208d242faafbe4e5bf7`,
-  bound to reviewed head `bb6a5753aa9b375d2e14d437e30b8574ba69aba3` / reviewer `c84fc12`.
+  pass, but lifecycle provenance remained stale. Historical combined provenance receipt
+  `63679b0796acd5a6b5b687dcf0ce259819d8e59c` recorded the BLOCK for this review and is bound
+  to reviewed head `3932d7d70d56bfa18cc11d90b327a3236441bac6` / reviewer `90afc61`; receipt
+  `e92b2b54a19dd39e3b779208d242faafbe4e5bf7` belongs to the prior `bb6a575`/`c84fc12` review.
   Apply one backlog-only provenance correction; do not change tests/runtime/probe/push/close/#219.
-  The preceding combined provenance receipt is `63679b0796acd5a6b5b687dcf0ce259819d8e59c`: it
-  recorded the preceding BLOCK and correction in one commit. Its historical bindings are
-  `ed2acca` → `545c854`/`903d33b`, `9c0f9a4` → `62bf992`/`983cd27`, and `e92b2b5` →
-  `bb6a575`/`c84fc12`; `e92b2b5` is not current.
+  The historical receipt bindings are `ed2acca` → `545c854`/`903d33b`, `9c0f9a4` →
+  `62bf992`/`983cd27`, and `e92b2b5` → `bb6a575`/`c84fc12`; `e92b2b5` is not current.
   Final provenance review at exact `2a6fbff60a77c2f0cbc07b4dd7c4d8ec4e40917c` was BLOCKED in
   `reviews/review-202608232202-issue221-final-provenance-review.md` at reviewer `84d89ee`; the
   BLOCK was recorded first at exact receipt `e5d27aea0834b504ce1d201149346b16fd727998`. This
@@ -698,6 +697,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `2a6fbff60a77c2f0cbc07b4dd7c4d8ec4e40917c` / reviewer `84d89ee`; actor is `vnfin-oss-reviewer`,
   next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve empty chain, `DISABLE_PENDING_PERMISSION`,
   no tests/runtime/probe/push/resolution/close/#219 activation, and all queued issues/exclusions.
+  Corrected-provenance BLOCK was recorded first at exact receipt
+  `765dfb8cf4526044a69340f949c63564287d8a3d`; this separate wording-only correction binds that
+  receipt to reviewed head `d63e8dd74636c81a3ceadcd6aeb5f0de2ab36de5` / reviewer `94ae4bd`. Actor
+  is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve the empty
+  chain and no tests/runtime/probe/push/resolution/close/#219 activation.
   Corrected provenance review at exact `d63e8dd74636c81a3ceadcd6aeb5f0de2ab36de5` was BLOCKED in
   `reviews/review-202608232205-issue221-corrected-provenance-review.md` at reviewer `94ae4bd`:
   the `e5d27ae` BLOCK-before-correction passes, but lines 684-688 bind `e92b2b5` to the wrong
