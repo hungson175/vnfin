@@ -310,7 +310,7 @@ BUDGET_EXHAUSTED | LEGAL_GAP | IDENTITY_GAP
 ```
 
 - `FULL` requires exactly all eight requested distinct annual reports, provider-declared bounds, exact
-  fiscal dates, response-backed ROE identity, and reconciled pages/counts/cursors. Eight or fewer is
+  fiscal dates, response-backed ROE identity, and reconciled pages/counts/cursors. Fewer than eight is
   not `FULL`; a provider-declared smaller supported boundary can only be `PARTIAL`.
 - `PARTIAL` requires provider-declared supported bounds and reconciled returned pages. An unexplained
   interior gap, missing ROE, conflicting duplicate, or unreconciled page is failure/unknown.

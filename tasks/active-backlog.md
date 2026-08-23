@@ -602,17 +602,20 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#220 — DESIGN BLOCKED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
-  `RECORD_DOCS_ONLY_CORRECTION`; packet anchor
+- **#220 — DESIGN_CORRECTION_READY (2026-08-23).** Actor `vnfin-oss`; next action
+  `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_DESIGN_REVIEW`; packet anchor
   `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for
   `tasks/220-annual-roe-ratio-history-spec.md`, public receipt `issuecomment-5385517511`.
-  Reviewed exact handoff is `6de4877be85a83100ef7d3a40debac001681d4c5`; correction content anchor is
-  `4c84c2dfc04a9702c85244616730c62367b4a5df`; BLOCK report is
+  Correction wording anchor is this docs-only commit; reviewed exact handoff was
+  `6de4877be85a83100ef7d3a40debac001681d4c5`; prior content anchor was
+  `4c84c2dfc04a9702c85244616730c62367b4a5df`; BLOCK-before-correction receipt is
+  `640d2683ff228e67e9fb14be7b9f2c684fb00491`; BLOCK report is
   `reviews/review-202608232327-issue220-corrected-design-rereview.md` at reviewer `967b04c`.
-  R1 is a wording-only docs/backlog seam: both `FULL` contracts must say fewer than eight is not
-  `FULL`, while preserving the declared-boundary `PARTIAL` rule. Record this BLOCK before edits.
-  Preserve the prior B1-B7 correction, `SOURCE-GAP CLOSURE`, the empty source chain, current
-  `Period.UNKNOWN` and 26-metric behavior, no RED/code/push/close, and queued #222/#223/#224/#225.
+  Both `FULL` contracts now say fewer than eight is not `FULL`; the declared-boundary `PARTIAL`
+  rule and all prior B1-B7 gates remain unchanged. Preserve `SOURCE-GAP CLOSURE`, the empty source
+  chain, current `Period.UNKNOWN` and 26-metric behavior, no RED/code/push/close, and queued
+  #222/#223/#224/#225. The reviewer-owned exact handoff will bind the corrected merged HEAD
+  separately.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer

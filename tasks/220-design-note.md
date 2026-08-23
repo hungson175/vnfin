@@ -121,7 +121,7 @@ BUDGET_EXHAUSTED | LEGAL_GAP | IDENTITY_GAP
 ```
 
 `FULL` requires exactly all eight requested distinct annual reports, complete provider-declared bounds,
-and reconciled pages. Eight or fewer is not `FULL`; fewer periods can be `PARTIAL` only when the
+and reconciled pages. Fewer than eight is not `FULL`; fewer periods can be `PARTIAL` only when the
 provider declares that supported boundary and returned pages reconcile. An unexplained gap, missing
 ROE, duplicate/conflict, unreconciled page, or truncated transport is failure/unknown. A timeout,
 WAF/403, empty body, or missing page is not published empty or confirmed absence. No error outcome
