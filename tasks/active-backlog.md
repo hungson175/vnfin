@@ -601,32 +601,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#213 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), R1/R3 correction complete.**
-  Expected actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`.
-  Corrected merged docs HEAD `320afe94c813c207d67b478673e987527cafb00b`; separate #213 artifact
-  anchor `01fbed36a2782deeeee7bc1a830291e2db71ce05`; submitted review/lifecycle HEAD `b004748c6719f27bcfe5be197e2ff42b827d4388`;
-  prior #213 artifact anchor `a7c608499e77a7df9e31fa6c2dee12c3046b3d49`; addressed report
-  `reviews/review-202608231510-issues213-214-correction-rereview.md` at reviewer `62abf38`;
-  reviewer packet
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/213-vnreal-index-history-source-spec.md`,
-  packet commit `bc37f58`, delivery receipt `c1ce4913`. Qualify fresh VPS/SSI/VNDirect VNREAL D1
-  evidence independently for strict versus stitched identity, points, volume, coverage, global
-  budget, provenance, and rights; use SOURCE-GAP CLOSURE if none qualifies. Share methodology
-  with #214 but keep symbols, artifacts, anchors, and receipts independent. No RED tests,
-  production code, push, or close before exact-SHA design PASS.
-
-- **#214 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), R1/R2 correction complete and independent.**
-  Expected actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`.
-  Corrected merged docs HEAD `320afe94c813c207d67b478673e987527cafb00b`; separate #214 artifact
-  anchor `320afe94c813c207d67b478673e987527cafb00b`; submitted review/lifecycle HEAD `b004748c6719f27bcfe5be197e2ff42b827d4388`;
-  prior #214 artifact anchor `8e178ed5d603069afc61700d626bedc0d4829069`; addressed report
-  `reviews/review-202608231510-issues213-214-correction-rereview.md` at reviewer `62abf38`; reviewer packet
-  `tasks/214-vnmid-index-history-source-spec.md`, packet commit `bd4038e`, public receipt
-  `issuecomment-5384680920`. Qualify VNMID independently using the shared batch methodology but
-  separate artifacts/anchors/receipts: VPS/SSI/VNDirect identity, D1 points/volume/time, exact
-  `2018-08-13..2026-08-19` coverage, bounded global budget, and rights; SOURCE-GAP if no single unit
-  qualifies. Preserve deny-only zero-network behavior; no proxy/basket/downstream signal/RED/code,
-  push, or close before exact-SHA design PASS. #213/#214 remain a shared methodology batch only.
+- **#217 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), source-gap design handoff.**
+  Expected actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`. The exact
+  handoff anchor is the commit containing this record and is supplied in the tm-send receipt.
+  Reviewer packet `tasks/217-daily-cnyvnd-fx-history-spec.md` at `4159d74`, public intake
+  `issuecomment-5385114544`; artifacts are exactly
+  `docs/research/2026-08-23-daily-cnyvnd-fx-history-source-vetting.md` and
+  `tasks/217-design-note.md`. Disposition is SOURCE-GAP CLOSURE: no direct qualified CNY/VND
+  unit, empty daily chain, annual World Bank behavior preserved, and no RED/model/accessor/
+  source-registration/code/push/close before exact-SHA design PASS. Scope excludes USD
+  cross-synthesis, annual/spot substitution, and VN30F signal.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1050,26 +1034,14 @@ _None._
 
 ## Next
 
-- **#215 — DOCS_ONLY_CORRECTION_IN_PROGRESS (2026-08-23), corrected source/design gate.** Actor
-  `vnfin-oss`; next action `RETURN_EXACT_SHA_DESIGN_REVIEW`. Published handoff anchor is exact
-  `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; prior correction is
-  `1e82b0f54eea5255c540285c4a2b03bee9e94893`; prior lifecycle is
-  `74befbd7e1a35bff66931e0a297768614218df8f`. BLOCK receipt `1a23ff1c`, addressed report
-  `reviews/review-202608231605-issue215-corrected-design-rereview.md` at `0fc3467`. The final
-  review anchor is the commit containing this record; its exact SHA is supplied in the handoff, and
-  the range is `8126dd5..this-anchor`. Correct only provider-declared/reconciled PARTIAL semantics,
-  no-row unreconciled-page failure, publishable lifecycle wording, and research semantic-label
-  non-binding clarity. Preserve current cash-only VSDC, empty new share-distribution chain, and
-  queued #217. No RED/model/accessor/code/push/close before exact-SHA design PASS.
-
-- **#217 — SOURCE_DESIGN_IN_PROGRESS (2026-08-23), activated after verified #215 closure.** Actor
-  `vnfin-oss`; next action `PREPARE_EXACT_SHA_SOURCE_DESIGN`. #215 handoff/closure is verified at
-  published `origin/master` `8350329d3d881e34df62937aacf7ea4d74f99f91`, resolution
-  `issuecomment-5385242516`, CLOSED/COMPLETED. Authoritative packet
-  `tasks/217-daily-cnyvnd-fx-history-spec.md`, reviewer packet anchor `4159d74`, public receipt
-  `issuecomment-5385114544`. Scope is direct daily CNY/VND only: prove exact basis, coverage, and
-  legal provenance. Exclude USD cross-synthesis, annual/spot substitution, and VN30F signal. No
-  RED/code/push/close before exact-SHA design PASS.
+- **#218 — QUEUED_AFTER_217 (2026-08-23), separate ETF discovery/NAV-history source design.**
+  Actor `vnfin-oss`; next action `SOURCE_DESIGN_AFTER_217_REVIEW_HANDOFF`. Authoritative packet
+  `tasks/218-etf-discovery-nav-history-spec.md` at reviewer `5acb355`, public receipt
+  `issuecomment-5385276364`. Preserve existing funds ETF discovery and provider-published NAV
+  history only; prove ETF product type versus asset-class mapping, exact code/product/NAV
+  identity, `2018-01-01..2026-08-19` coverage/cadence, bounded runtime, and legal rights.
+  Discount/first-difference/VN30F remain caller-side. Do not interrupt #217; no #218 RED/code/
+  push/close before its design PASS.
 
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
@@ -1104,6 +1076,21 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#215 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `8350329d3d881e34df62937aacf7ea4d74f99f91` from the approved
+  `8126dd5..8350329` range; remote ancestry and the three research/design/backlog paths were
+  verified. Resolution `issuecomment-5385242516`; GitHub re-read `CLOSED`/`COMPLETED` at
+  `2026-08-23T09:14:04Z`. Empty new distribution chain and cash-only VSDC behavior remain;
+  no RED/model/accessor/source registration/runtime capability. Local #217 activation receipt
+  `753600f` remains unpushed.
+
+- **#213 + #214 — DONE/CLOSED (2026-08-23), independent documentation-only index-history
+  SOURCE-GAP closures.** Published exact approved anchor
+  `8126dd5510b6390f91c9feeb43e047b2b9b88bc1` with approved independent artifact paths and
+  clean-base ancestry; resolution receipts `5385033626`/`5385033721`; both issues re-read
+  `CLOSED`/`COMPLETED`. VNREAL/VNMID chains remain empty/deny-only; no RED, production code,
+  proxy, basket, downstream signal, or capability claim. #217 is the current WIP.
+
 - **#212 — DONE/CLOSED (2026-08-23), approved Fmarket runtime correction.** Published exact approved
   anchor `4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f` to `origin/master`; approved range was
   `a1410be39105bd02e09bccf9c7ea83e79a049eb6..4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f`
@@ -1111,7 +1098,8 @@ _None._
   12 approved paths were verified. Final approval `reviews/review-202608231410-issue212-final-code-approval.md`
   at reviewer `71907f3`; resolution `issuecomment-5384775032`; GitHub re-read `CLOSED`/`COMPLETED`.
   Full 4,033-test suite, focused/build/API/blacklist/secret/diff gates passed. No unrelated source,
-  endpoint, credential, or capability was added; #213/#214 now active for source-design only.
+  endpoint, credential, or capability was added; #217 is now active for source-design only and
+  #218 remains queued.
 
 - **#211 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact approved
   anchor `a1410be39105bd02e09bccf9c7ea83e79a049eb6` to `origin/master` from clean `a4df33f` ancestry;
