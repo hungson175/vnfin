@@ -1,6 +1,7 @@
 # #208 design note — canonical annual operating profit
 
-**Packet:** tasks/208-annual-operating-profit-spec.md (reviewer 3699ae5)
+**Packet:** reviewer-repo packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
+at reviewer commit `3699ae52c03bfa9be52aee0d54ae669d8a8071db` (not a builder-repo relative path)
 **Design phase:** source/design gate only
 **Disposition:** **SOURCE-GAP CLOSURE**
 **Production status:** no RED tests, production code, new mapping, push, or issue closure.
@@ -16,12 +17,12 @@ No current source/template cell passes every required axis: response-backed symb
 exact annual accounting identity, source-namespaced item code, entity/consolidation scope, raw-VND
 unit/scale, legal/runtime permission, bounded request policy, and public compatibility.
 
-VNDirect generic corporate model 2 exposes the strongest technical candidate: itemCode=23110
-matches the audited row-30 operating result for two issuers and two annual periods. It is still a
-candidate because the provider row has no semantic line label or unit field and no explicit
-automation, retention, caching, or caller-facing redistribution grant was found. CafeF is
-transport-inconclusive for the fresh generic probes and its previously observed special-template
-rows lack sufficient identity/template/scale proof.
+VNDirect generic corporate model 2 exposes the strongest structural candidate: itemCode=23110
+appears across two issuers and multiple annual periods. No reproducible audited four-cell receipt is
+accepted in this commit. The provider row has no semantic line label, unit, entity, or
+consolidation-scope field, and no explicit automation, retention, caching, or caller-facing
+redistribution grant was found. CafeF is transport-inconclusive for the fresh generic probes and
+its previously observed special-template rows lack sufficient identity/template/scale proof.
 
 Therefore:
 
@@ -58,7 +59,7 @@ The same issuer and fiscal date must prove the complete identity tuple:
  unit/scale=raw VND, fiscal-period basis, consolidation scope)
 ~~~
 
-The current technical candidate is:
+The current structural candidate is:
 
 ~~~text
 source       = vndirect
@@ -67,13 +68,14 @@ template    = generic corporate modelType=2
 entity      = is_bank=False
 cadence     = Period.ANNUAL / reportType=ANNUAL
 item_code   = "23110"
-concept     = audited row 30, Lợi nhuận thuần từ hoạt động kinh doanh
+concept     = candidate row 30, Lợi nhuận thuần từ hoạt động kinh doanh
 unit        = raw VND, only after the source/filing scale gate passes
 ~~~
 
 23110 is a candidate binding, not a current catalog value. The provider response exposes numeric
-itemCode and numericValue, but no human line label or explicit unit. The label is provenance from
-the official audited filing cross-check only; it is never a selector.
+itemCode and numericValue, but no human line label, explicit unit, entity scope, or consolidation
+scope. No audited four-cell comparison receipt is accepted in this source-gap round; any filing
+label remains unverified provenance, never a selector.
 
 The following are explicit negatives:
 
@@ -83,15 +85,16 @@ The following are explicit negatives:
 | 23110 | Candidate only; exact tuple and rights still gate qualification |
 | 23500 | Generic corporate profit attributable to non-controlling interests |
 | 23800 | Generic corporate profit before tax / row 50 |
-| 14000 | Owners' equity in the balance template; the old shortcut is disproved |
+| 14000 in corporate model 1 | Owners' equity in the corporate balance template; the old shortcut is disproved |
+| 14000 in bank model 101 | Owners' equity in the bank balance template; the old shortcut is disproved |
 | 23110 in bank, securities, insurer, foreign, or mismatched template | Numeric equality cannot cross templates |
 | B02-CTCK row 70 formula | Filing cross-check only; a RAW_MAPPED runtime value cannot be calculated |
 | CafeF string labels/codes | Must be independently qualified in the cafef namespace; none is qualified here |
 
 A generic mapping requires at least two annual periods and two issuers with different business
-profiles. The current cross-check is FPT (technology/services) and HPG (steel/manufacturing) for
-2024 and 2025. VNM is a third technical observation but is not counted as an independently retained
-filing cross-check in this round.
+profiles. The current structural observation set is FPT (technology/services) and HPG
+(steel/manufacturing) for 2024 and 2025, but no audited four-cell filing receipt is accepted in
+this round. VNM is a third technical observation and also has no accepted filing receipt.
 
 ## 3. Source/template disposition
 
@@ -99,7 +102,7 @@ The complete sanitized matrix is in the research note. The design disposition is
 
 | Source/template cell | Current evidence | API disposition |
 | --- | --- | --- |
-| VNDirect generic corporate model 2, FPT/HPG | HTTP 200 JSON; response symbol, ANNUAL, model 2; 23110 candidate across observed dates; audited row-30 cross-check | LEGAL_GAP; no TDD mapping |
+| VNDirect generic corporate model 2, FPT/HPG | HTTP 200 JSON; response symbol, ANNUAL, model 2; 23110 structural candidate across observed dates; no accepted audited four-cell receipt; provider unit/entity/scope unresolved | IDENTITY_GAP + LEGAL_GAP; no TDD mapping |
 | VNDirect generic corporate model 2, VNM | Same technical candidate pattern; no retained second filing cross-check | IDENTITY_GAP + LEGAL_GAP |
 | CafeF annual corporate, FPT/HPG | Fresh direct annual requests timed out before envelope parsing | TRANSPORT_INCONCLUSIVE + LEGAL_GAP |
 | VNDirect bank model 102, VCB/ACB | Response-backed bank templates and annual dates; no corporate operating-profit mapping | NOT_APPLICABLE |
@@ -129,6 +132,9 @@ the generic annual mapping; accepted model-filter cells for SSI, TCX, and BVH ar
 CafeF is the backup and is transport-inconclusive/transport-failed for the fresh generic annual
 cells, not served for cashflow, and identity/template-unqualified for the prior SSI/TCX observations.
 Neither role is an absence oracle, and no facade/failover winner supplies identity or retention proof.
+The research note's §3.1 enumerates all 16 VNDirect physical requests, including the five empty
+cross-template negatives omitted by the original matrix; §6 carries the separate finite rights
+ledger for each source/template family.
 
 ## 4. Compatibility-safe typed selector
 
@@ -151,6 +157,43 @@ class MetricSourceCodes:
     bindings: tuple[MetricCodeBinding, ...] = ()
 ~~~
 
+The binding does not itself expose the promised provider identity. A future additive/defaulted
+lineage extension must preserve existing positional construction while making the audit fields
+public:
+
+~~~python
+@dataclass(frozen=True)
+class MetricLineage:
+    provider_symbol: str | None = None
+    provider_template: str | None = None
+    model_type: int | None = None
+    entity_scope: str | None = None
+    currency: str | None = None
+    unit_scale: str | None = None
+    consolidation_scope: str | None = None
+    provider_tags_verified: bool = False
+
+@dataclass(frozen=True)
+class MetricInput:
+    # Existing fields remain in their current order.
+    statement: StatementType
+    item_code: str
+    value: float
+    value_unit: str
+    fiscal_date: date
+    source: str
+    name: str
+    lineage: MetricLineage = MetricLineage()
+~~~
+
+For a qualified annual mapping, `provider_tags_verified=True` requires response-backed requested
+symbol, exact `reportType=ANNUAL`, exact provider model/template, and any exposed entity and
+consolidation scope. VNDirect requires present `code`, `reportType`, and `modelType`; absent tags
+cannot be filled from request arguments. Request-derived period/model/provider-symbol metadata is
+not identity evidence. CafeF requires an equivalent response identity and annual marker or remains
+an identity gap. Missing unit, scale, entity, or consolidation scope leaves the lineage field unset
+and the binding `BLOCKED`.
+
 The future VNDirect binding is exactly:
 
 ~~~text
@@ -170,8 +213,9 @@ The runtime selector must:
 3. canonicalize the provider numeric code to a non-padded string only after strict finite,
    integral, non-boolean validation;
 4. reject duplicate or ambiguous bindings at catalog validation;
-5. use the successful report's exact source, statement_type, period, model_type, is_bank,
-   provider_symbol, currency, and fiscal date as lineage;
+5. require response-backed `MetricLineage` with `provider_tags_verified=True`, carrying exact source,
+   statement, provider template/model, entity scope, provider symbol, currency, unit/scale,
+   consolidation scope, and fiscal date;
 6. use LineItem.name only as provenance, never identity;
 7. return BLOCKED for an unqualified/mismatched template or binding, MISSING only when a
    qualified exact code is absent from an otherwise valid report, NOT_APPLICABLE for bank
@@ -185,10 +229,15 @@ code is proposed. A special-template binding requires an additive typed template
 provider's existing model_type=None cannot audit the template. Template identity may not hide in
 a warning or free-form error.
 
-If this additive field is implemented later, public snapshot field order, trailing constructor
-compatibility, repr/equality, serialization, DataFrame lineage/attrs, docs, skill reference,
-CHANGELOG.md, and release/version decisions must be reviewed in one change. No such API change
-is authorized here.
+If these additive fields are implemented later, public snapshot field order, trailing constructor
+compatibility, repr/equality, serialization, `MetricReport`/`MetricValue.inputs` snapshots,
+DataFrame lineage columns/attrs, and derived-input behavior must be reviewed together. Derived
+metrics preserve each input's lineage and never synthesize or copy provider identity; blocked or
+unverified inputs keep existing derived-input `BLOCKED` behavior. Coverage's mapped-code set must
+flatten reviewed `bindings[*].item_code` alongside legacy corporate/bank slots, with RED tests
+proving reviewed bindings are counted and unqualified bindings are not silently mapped. Docs,
+source docs, skill reference, CHANGELOG.md, and release/version decisions are part of that future
+change. No such API change is authorized here.
 
 ## 5. Annual history and source-call contract
 
@@ -216,6 +265,11 @@ with no hidden HTTP-library retries, unbounded pagination, concurrency duplicate
 trails. The current observation of one-page VNDirect model-2 responses is not a provider SLA or a
 production budget. CafeF's TotalRow is a request bound, not a legal or completeness guarantee.
 
+The current VNDirect parser remains compatible with absent response tags and request-derived report
+metadata; that existing behavior cannot qualify this annual candidate. The mandatory-present
+response-tag/trust rule and `MetricLineage` extension are future-only design requirements, not
+implementation authorization in this commit.
+
 ## 6. Diagnostics and no-false-absence contract
 
 The current public availability semantics remain the authority:
@@ -239,37 +293,51 @@ Per-statement provenance, recoverable partial coverage, all-empty EmptyData, dir
 newest-first ordering, limit, and the default source precedence remain unchanged. CafeF cashflow
 remains NOT_SERVED; no empty cashflow diagnostic may become historical absence.
 
-## 7. Conjunctive reopen gate
+## 7. Provider-conditional reopen gate and docs-only close transition
 
-The source gap stays closed if any single item fails. Reopen requires one design review to prove:
+The source gap stays closed. A later `QUALIFIED FOR TDD` or `PARTIAL` disposition requires **at
+least one** complete provider/template binding to pass every applicable gate; VNDirect and CafeF do
+not have to qualify together. If one provider qualifies, every other provider/role remains
+independently classified and fail-closed. A proposed failover backup must pass its own complete
+same-semantic gate, but an unqualified backup is not required merely to reopen a primary.
 
-1. written owner permission or a clear licence for exact route automation, pacing, retries,
+For each provider/template proposed for enablement, all of these are conjunctive:
+
+1. written owner permission or a clear licence for that exact route's automation, pacing, retries,
    caching/storage, retention, attribution, caller-facing return, redistribution, and commercial use;
-2. fresh strict transport with canonical host/path, exact MIME/envelope, no redirect/challenge
-   identity substitution, and a documented conservative rate/pacing policy;
-3. response-backed requested symbol, statement income, annual cadence, provider template/model,
-   entity/consolidation scope, fiscal date, raw-VND unit/scale, and exact source-namespaced code;
-4. generic VNDirect 23110 identity cross-checked against two annual periods and two different
-   issuers/business profiles, including sign, full-dong scale, consolidated/separate scope, and the
-   row-30 concept in official audited filings;
-5. CafeF independently proves two issuers/two annual periods, response identity or a documented
-   identity envelope, annual marker, exact string code, unit/scale, scope, and accounting concept;
-6. every current default-chain role is classified independently as capable, unqualified, not served,
-   empty, transport-failed, or identity-failed, with no historical-absence inference;
-7. foreign VNDirect 89/90/91, securities templates, bank templates, insurer/special templates, and
-   any future CafeF template are independently qualified or remain fail-closed;
-8. the typed binding selector keeps corporate_code=None, blocks quarterly/YTD/TTM/unknown,
-   preserves bank NOT_APPLICABLE, and rejects wrong namespace/code/template/entity/scope;
-9. fiscal dates, maximum honest history, missing-date semantics, newest-first order, and bounded
-   source/page/retry calls are proven without hidden retries or fabricated coverage;
-10. exactly 26 metric IDs, RAW_MAPPED, public lineage, source precedence, direct/chain parity,
-    per-statement diagnostics, limit, zero ratio calls, and tagged-v0.2.0 distinction remain
-    compatible;
-11. public snapshots, constructors, repr/equality, serialization, DataFrame columns/attrs, docs,
-    skills, CHANGELOG.md, release/version decision, blacklist/secret scans, and error
-    sanitization are reviewed together; and
-12. a new exact-SHA design PASS authorizes a separate RED-first synthetic test transition. This
-    source-gap commit never authorizes tests or production code.
+2. fresh strict transport with canonical host/path, exact MIME/envelope, response-backed requested
+   symbol, income statement, annual cadence, provider template/model, entity/consolidation scope,
+   and no redirect/challenge identity substitution; required tags must be present, not request-derived;
+3. the same issuer and fiscal date prove sign, raw-VND scale, entity/consolidation scope, and the
+   canonical row-30 concept in an exact official audited statement, with a sanitized four-cell
+   receipt (issuer, fiscal date, consolidated/separate, sign, scale, exact-match result) and no live
+   values;
+4. a generic VNDirect or CafeF binding proves at least two annual periods and two issuers with
+   different business profiles on one exact template. VNDirect requires exact model 2/23110;
+   CafeF requires response identity, annual marker, exact `cafef` namespace code, unit/scale, scope,
+   and the same two-period cross-check. No guessed string code is allowed;
+5. fiscal dates/history and runtime budgets are deterministic and bounded: no TTM/YTD/quarter
+   relabeling, fill, adjacent-period construction, hidden retries, or completeness promise;
+6. exactly 26 IDs, `RAW_MAPPED`, response-backed `MetricLineage`, source namespace, bank
+   `NOT_APPLICABLE`, blocked quarterly behavior, direct/chain parity, source precedence,
+   per-statement diagnostics, newest-first, `limit`, zero ratio calls, and public compatibility
+   surfaces remain intact; and
+7. public reasons/warnings/reports/DataFrame attrs/reprs/messages remain bounded and trail-free.
+
+All other roles—bank, securities `89/90/91`, insurer/special templates, and any provider that does
+not pass its own gate—remain `NOT_APPLICABLE`, `TEMPLATE_GAP`, `IDENTITY_GAP`,
+`TRANSPORT_INCONCLUSIVE`, `NOT_SERVED`, or another explicit fail-closed disposition. Empty, timeout,
+failed, or identity-failed roles never establish historical absence.
+
+When the chosen disposition remains `SOURCE-GAP CLOSURE`, an exact design PASS authorizes a
+docs-only publication/closure transition, not TDD:
+
+1. rerun merged-tree gates against the exact approved docs anchor;
+2. push only that approved anchor, verify remote `HEAD`, ancestry, and research/design/backlog paths;
+3. post the clean no-capability resolution preserving the empty chain and reopen criteria;
+4. close #208 and re-read it as `CLOSED/COMPLETED`; and
+5. keep RED tests, production code, and annual capability paused until a later fresh design PASS
+   authorizes a separate RED-first TDD transition.
 
 ## 8. Future-only RED and release matrix
 
@@ -291,18 +359,23 @@ dates, labels, and values.
 
 ### 8.2 Identity, applicability, cadence, and value negatives
 
-- old 14000 shortcut; same label with wrong code; 23100, 23500, and 23800; same code in wrong
+- old 14000 shortcut in both corporate model 1 and bank model 101; same label with wrong code;
+  23100, 23500, and 23800; same code in wrong
   source, statement, model/template, entity, cadence, currency, unit, scale, or consolidation scope;
 - annual-qualified binding requested quarterly/YTD/TTM/unknown response mismatches fail closed;
 - bank fixture remains exact NOT_APPLICABLE; securities/insurance/foreign templates never inherit
   generic corporate codes;
-- VNDirect 89/90/91, unknown/missing/bool/fractional/padded model ids, response/report template
-  mismatch, cross-symbol/provider-symbol mismatch, and mixed-template rows fail closed;
+- VNDirect 89/90/91, unknown/missing/bool/fractional/padded model ids, absent or request-derived
+  `reportType`/`modelType`/provider-symbol tags, response/report template mismatch,
+  cross-symbol/provider-symbol mismatch, and mixed-template rows fail closed;
 - qualified mapping but absent line is MISSING; unqualified map is BLOCKED; explicit numeric zero is
   available zero; null/blank/string/bool/non-finite/unsafe-magnitude values fail validation;
 - duplicate item code/date, duplicate/conflicting fiscal periods, out-of-order/truncated
   pagination, wrong identity, malformed envelope, partial page/count reconciliation, empty/failure
   outcomes never fabricate coverage; and
+- required provider tags are present and trusted rather than request-derived; missing tags leave
+  `provider_tags_verified=False` and fail closed, while response-backed symbol/template/model/entity/
+  currency/unit/scale/consolidation fields round-trip through `MetricLineage`; and
 - malicious/long source names, labels, URLs, response text, and exception strings are fully
   sanitized on direct and chain paths.
 
@@ -312,11 +385,13 @@ dates, labels, and values.
   VN30 helper and no changed derived formulas;
 - existing signatures/exports, source precedence, empty effective-chain behavior, incapable-role
   zero-call skips, all-empty EmptyData, per-statement coverage, DataFrame columns/attrs,
-  dataclass construction, equality/repr, and public snapshots remain compatible;
+  dataclass construction, equality/repr, public snapshots, derived-input lineage, and binding-aware
+  mapped-code coverage diagnostics remain compatible;
 - exactly zero StatementType.RATIOS calls; income/balance/cashflow fetch counts and
   ratio_status=NOT_REQUESTED remain unchanged;
-- any shipped capability updates fundamentals design/API/tutorial docs, skills/vnfin reference,
-  public API contracts, and CHANGELOG.md together, with fabricated examples and exact
+- any shipped capability updates fundamentals design/API/tutorial docs, both applicable source docs
+  (`docs/sources/fundamentals-vndirect.md` and `docs/sources/fundamentals-cafef.md`), skills/vnfin
+  reference, public API contracts, and CHANGELOG.md together, with fabricated examples and exact
   template/annual/coverage limits;
 - focused fundamentals/metrics/failover/docs/public-API tests, full offline suite,
   git diff --check, blacklist/secret scans, import/version checks, and isolated sdist/wheel build
@@ -330,6 +405,7 @@ The current public behavior stays honest: 26 metric IDs, operating profit RAW_MA
 banks NOT_APPLICABLE, quarterly source gap preserved, zero ratio calls, and no tagged-v0.2.0
 back-claim.
 
-The two requested documents are ready for exact-SHA design review. This is SOURCE-GAP CLOSURE:
-no RED tests, production code, push, or issue closure is authorized until a later explicit design
-PASS and transition.
+The two requested documents are ready for exact-SHA re-review. This correction remains
+SOURCE-GAP CLOSURE: no RED tests, production code, push, or issue closure is authorized in the
+current builder step. After exact design PASS, only the docs-only publication/resolution/close
+transition in §7 is authorized; a later fresh design PASS remains mandatory before RED-first TDD.

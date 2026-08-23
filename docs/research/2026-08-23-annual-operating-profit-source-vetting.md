@@ -1,7 +1,9 @@
 # #208 annual operating profit — source vetting
 
 **Date:** 23 August 2026 (UTC+7)
-**Packet:** `tasks/208-annual-operating-profit-spec.md` (reviewer packet `3699ae5`)
+**Packet:** reviewer-repo packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
+at reviewer commit `3699ae52c03bfa9be52aee0d54ae669d8a8071db` (the packet is not a builder-repo
+relative path).
 **Requested API:** existing `vnfin.fundamentals.metrics(..., period="annual")`
 **Decision:** **SOURCE-GAP CLOSURE** — no annual operating-profit mapping, RED test, production
 code, push, or issue closure is authorized by this note.
@@ -63,45 +65,72 @@ identity/template tags, item-code presence, distinct fiscal dates, and bounded c
 | CafeF `FinanceReport.ashx` | Direct annual income attempts for FPT and HPG, `Type=1&TotalRow=32&EndDate=2026&ReportType=NAM&Sort=DESC`; caller history `limit` was not asserted; two bounded physical GETs | Both attempts timed out without a response body. No redirect, MIME, envelope, symbol, row, or date claim is made. This is `TRANSPORT_INCONCLUSIVE`, not historical absence; `TotalRow=32` is only a transport bound. |
 | Previously reviewed special-template evidence | #204/#205 direct SSI/TCX observations, cited below and not re-fetched into this report | VNDirect foreign streams 89/90/91 and CafeF annual candidate rows remain independently unqualified; no stream is promoted by this annual round. |
 
+### 3.1 Complete VNDirect request ledger
+
+The 16-request claim is reconciled below. Every row is one direct primary-role GET with the same
+no-login headers, `size=640`, `page=1`, no retry, and HTTP 200 `application/json`; `rows=0` and
+`pages=0` are empty observations only. The requested model filter is not treated as proof of a
+provider template when the response is empty, and no row below is a historical-absence oracle.
+
+| # | Requested symbol | Requested model filter | Response rows / distinct annual dates | Disposition |
+| ---: | --- | ---: | --- | --- |
+| 1 | FPT | 2 | 587 / 24 (`2002-12-31..2025-12-31`) | Structured corporate candidate cell |
+| 2 | FPT | 102 | 0 / 0 | Empty cross-template observation; no bank inference |
+| 3 | HPG | 2 | 510 / 21 (`2005-12-31..2025-12-31`) | Structured corporate candidate cell |
+| 4 | HPG | 102 | 0 / 0 | Empty cross-template observation; no bank inference |
+| 5 | VNM | 2 | 567 / 23 (`2003-12-31..2025-12-31`) | Structured corporate candidate cell |
+| 6 | VNM | 102 | 0 / 0 | Empty cross-template observation; no bank inference |
+| 7 | VCB | 2 | 0 / 0 | Empty cross-template observation; no corporate inference |
+| 8 | VCB | 102 | 536 / 22 (`2004-12-31..2025-12-31`) | Structured bank applicability-negative cell |
+| 9 | ACB | 2 | 0 / 0 | Empty cross-template observation; no corporate inference |
+| 10 | ACB | 102 | 565 / 24 (`2002-12-31..2025-12-31`) | Structured bank applicability-negative cell |
+| 11 | SSI | 2 | 0 / 0 | Empty accepted-model observation; foreign streams remain separate |
+| 12 | SSI | 102 | 0 / 0 | Empty accepted-model observation; foreign streams remain separate |
+| 13 | TCX | 2 | 0 / 0 | Empty accepted-model observation; foreign streams remain separate |
+| 14 | TCX | 102 | 0 / 0 | Empty accepted-model observation; foreign streams remain separate |
+| 15 | BVH | 2 | 0 / 0 | Empty special-template observation; no insurer absence claim |
+| 16 | BVH | 102 | 0 / 0 | Empty special-template observation; no insurer absence claim |
+
 A VNDirect `totalElements` value counts tall line-item rows, not fiscal periods. The date counts
 below are the distinct provider `fiscalDate` values in the bounded response. No older-year
 absence is inferred from an empty route, a timeout, a truncated probe, or a budget ceiling.
 
 ## 4. Accounting identity and candidate code
 
-The official audited consolidated income statements for FPT and Hòa Phát identify row 30 as
-**Lợi nhuận thuần từ hoạt động kinh doanh** (net operating profit). Their published row identity is
-the operating-activities result, distinct from gross profit, other income, profit before tax, and
-net income:
+The accounting concept to verify for a qualified generic corporate income template is row 30,
+**Lợi nhuận thuần từ hoạt động kinh doanh** (net operating profit). Its expected operating-activities
+identity is distinct from gross profit, other income, profit before tax, and net income:
 
 ```text
 row 30 = row 20 + row 21 - row 22 + row 24 - row 25 - row 26
 ```
 
-The exact presentation formula differs typographically between filings but the accounting concept
-is the same. The [FPT 2025 annual report](https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2026/april/bctn-fpt-2025.pdf)
-and [FPT consolidated 2024 report](https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2025/january/20250124---fpt---bctc-hop-nhat-quy-4-nam-2024.pdf)
-show the audited consolidated row and VND unit. The
-[Hòa Phát 2025 consolidated report](https://file.hoaphat.com.vn/hoaphat-com-vn/2026/01/20260130-hpg-bao-cao-tai-chinh-hop-nhat-va-giai-trinh-q4-2025.pdf)
-and [Hòa Phát 2024 annual report](https://file.hoaphat.com.vn/hoaphat-com-vn/2025/04/bao-cao-thuong-nien-hpg-2024.pdf)
-provide the independent second issuer and prior annual period.
+The exact presentation formula may differ typographically between filings. The prior research note
+did not retain a reproducible four-cell comparison receipt (issuer, fiscal date,
+consolidated/separate scope, sign, raw-VND scale, and exact-match result): the cited FPT Q4 URL is
+currently 404, and Hòa Phát's official index distinguishes the cited Q4 statement from its audited
+annual statement. Therefore those citations are not treated as audited identity proof here. The
+official archive paths for a future re-check are [FPT public disclosures](https://fpt.com/en/ir/information-disclosures),
+[FPT audited 2024 annual report](https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2025/april/20250402---fpt---annual-report-2024.pdf),
+and [Hòa Phát financial reports](https://www.hoaphat.com.vn/investor-relations/financial-report).
+No live filing values or unverified comparison result is retained in this source-gap commit.
 
 The bounded VNDirect model-2 rows contain candidate `itemCode=23110.0` for every observed annual
-period of FPT, HPG, and VNM. An out-of-repository cross-check matched `23110` to the official
-row-30 result for FPT and HPG in the 2024 and 2025 audited reports above. Only the code, dates,
-identity, and cross-check disposition—not any live numeric value—are retained here. The provider
-response has no human line label or unit field, so `23110` is a strong generic-template
-candidate, not yet a qualified public mapping.
+period of FPT, HPG, and VNM. The candidate is supported only by structural provider observation in
+this commit: no reproducible audited four-cell receipt is accepted, and the provider response has
+no human line label, unit, entity scope, or consolidation scope field. `23110` is therefore a
+generic-template candidate, not identity proof and not a qualified public mapping.
 
 The candidate must not be confused with existing or disproved identities:
 
 | Code/label | Proven meaning or boundary | Operating-profit status |
 | --- | --- | --- |
 | `23100` | Generic corporate gross profit / row 20 | Not the target |
-| `23110` | Candidate generic corporate row-30 operating profit | Candidate only; exact tuple and rights still gate qualification |
+| `23110` | Candidate generic corporate row-30 operating profit | Candidate only; identity tuple, rights, and provider-backed lineage still gate qualification |
 | `23500` | Generic corporate profit attributable to non-controlling interests | Not the target |
 | `23800` | Generic corporate profit before tax / row 50 | Not the target |
-| `14000` | Owners' equity in the generic corporate balance template | Explicit negative; never an operating-profit shortcut |
+| `14000` in corporate model 1 | Owners' equity in the generic corporate balance template | Explicit negative; never an operating-profit shortcut |
+| `14000` in bank model 101 | Owners' equity in the bank balance template | Explicit negative; never an operating-profit shortcut |
 | B02-CTCK row 70 | Securities-company operating-profit formula cross-check | Never calculate a `RAW_MAPPED` value from it |
 
 ## 5. Annual source/template matrix
@@ -113,8 +142,8 @@ legal posture is unresolved.
 
 | Cell | Direct route and response identity | Annual dates/count in bounded observation | Candidate code/line and unit | Legal/runtime posture | Disposition |
 | --- | --- | --- | --- | --- | --- |
-| VNDirect · generic corporate · FPT | `financial_statements?q=code:FPT~reportType:ANNUAL~modelType:2&sort=fiscalDate:desc&size=640&page=1`; HTTP 200 JSON; response `code=FPT`, `reportType=ANNUAL`, `modelType=2.0` | 587 line-item rows; 24 distinct dates, 2002-12-31..2025-12-31; candidate present across all observed dates | `23110`, audited row-30 cross-check; adapter/source contract emits raw VND, but provider response has no unit field | No route-specific automation, retention, caching, or caller-facing redistribution grant | `LEGAL_GAP` |
-| VNDirect · generic corporate · HPG | Same canonical route with `code=HPG`; same response identity and model | 510 line-item rows; 21 distinct dates, 2005-12-31..2025-12-31; candidate present across all observed dates | `23110`, same row-30 candidate cross-checked for 2024/2025 official consolidated reports; raw-VND scale is cross-check evidence, not a provider unit field | Same unproven rights and no numeric provider quota | `LEGAL_GAP` |
+| VNDirect · generic corporate · FPT | `financial_statements?q=code:FPT~reportType:ANNUAL~modelType:2&sort=fiscalDate:desc&size=640&page=1`; HTTP 200 JSON; response `code=FPT`, `reportType=ANNUAL`, `modelType=2.0` | 587 line-item rows; 24 distinct dates, 2002-12-31..2025-12-31; candidate present across all observed dates | `23110` structural candidate; no accepted audited four-cell receipt; provider response has no unit, entity, or consolidation-scope field; adapter contract is raw VND | No route-specific automation, retention, caching, or caller-facing redistribution grant | `IDENTITY_GAP + LEGAL_GAP` |
+| VNDirect · generic corporate · HPG | Same canonical route with `code=HPG`; same response identity and model | 510 line-item rows; 21 distinct dates, 2005-12-31..2025-12-31; candidate present across all observed dates | `23110` structural candidate; no accepted audited four-cell receipt; provider response has no unit, entity, or consolidation-scope field; raw-VND scale is not provider-backed | Same unproven rights and no numeric provider quota | `IDENTITY_GAP + LEGAL_GAP` |
 | VNDirect · generic corporate · VNM | Same canonical route with `code=VNM`; HTTP 200 JSON, `modelType=2.0`, annual rows | 567 line-item rows; 23 distinct dates, 2003-12-31..2025-12-31; candidate present across all observed dates | `23110` candidate; no second independent filing cross-check retained in this round | Rights, rate policy, and provider semantic label remain unproven | `IDENTITY_GAP + LEGAL_GAP` |
 | CafeF · annual corporate · FPT | `FinanceReport.ashx?Type=1&Symbol=FPT&TotalRow=32&EndDate=2026&ReportType=NAM&Sort=DESC`; no response before bounded timeout | ∅; no date/count claim | No code or label claim; no unit/scale claim | Current direct route is transport-inconclusive; [CafeF data guidance](https://cafef.vn/du-lieu/huong-dan-su-dung.chn) is not a structured-data reuse grant | `TRANSPORT_INCONCLUSIVE + LEGAL_GAP` |
 | CafeF · annual corporate · HPG | Same route with `Symbol=HPG`; no response before bounded timeout | ∅; no date/count claim | No code or label claim; no unit/scale claim | Same transport and reuse uncertainty | `TRANSPORT_INCONCLUSIVE + LEGAL_GAP` |
@@ -139,7 +168,7 @@ provider did not expose them; `not exposed` or `not observed` is a gap, never an
 | MIME / envelope | `application/json`; `data/currentPage/size/totalElements/totalPages` envelope | No fresh MIME or envelope reached; prior reviewed shape is not asserted as a fresh annual result |
 | Provider identity / template / scope | Response `code`, `reportType`, and `modelType` observed; entity/consolidation scope not exposed by this route | Response symbol/template/scope not observed in the bounded timeout |
 | Dates / line-item count / currency / unit / namespace | Counts and date spans are in the matrix; provider rows expose no currency/unit; `vndirect` namespace; adapter contract is raw VND | No dates, count, currency, unit, or code claim from the timed-out cells; `cafef` namespace remains reserved |
-| Candidate code / provider label | `23110` candidate; no provider human label; audited filing label is provenance only | No candidate code or label claim |
+| Candidate code / provider label | `23110` candidate; no provider human label; no audited filing label is accepted as identity | No candidate code or label claim |
 | Legal axes | Owner is VNDirect route; no route-specific automation, pacing, storage, caller-return, attribution, or redistribution grant established | Owner is CafeF route; no structured-row automation, pacing, storage, caller-return, attribution, or redistribution grant established |
 
 The role-level classification is separate from each cell's disposition: VNDirect is **transport
@@ -168,6 +197,22 @@ round.
 | Robots/terms | Fresh [API robots/content-signal file](https://api-finfo.vndirect.com.vn/robots.txt) says `search=yes,ai-train=no,use=reference` for the general user-agent and explicitly restricts several named AI crawlers. It does not grant financial-row automation, caching, or redistribution. [VNDIRECT terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) were Cloudflare-challenged in this probe; no route-specific open-data licence was established. | Fresh [CafeF robots](https://cafef.vn/robots.txt) allows `/`, but [CafeF data guidance](https://cafef.vn/du-lieu/huong-dan-su-dung.chn) describes the data as reference information and disclaims use risk. No structured-row redistribution or cache licence was found. |
 | Contact/reopen path | [VNDIRECT support](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/) / official terms contact path; request written permission for the exact API route, automation, retention, attribution, and redistribution | Official data contact `dulieu@cafef.vn` and data-guide/footer contact path; request written permission for the exact handler and output use |
 | Runtime decision | Fetch-on-demand research only; no bundled rows, cache, bulk export, or caller-facing operating-profit capability | Same conservative posture; no new CafeF mapping |
+
+The required rights ledger is explicit below. `OBSERVED_NO_LOGIN` means only that the bounded probe
+sent no credential/session; it is not permission. `NOT_GRANTED` means no written route-specific grant
+was found, and `UNKNOWN` means the axis was not published or not verified. These are finite statuses,
+not implicit approval:
+
+| Source/template cell | Owner and contact/reopen path | No-login | Automation | Pacing | Caching/storage | Caller-facing return | Attribution | Redistribution |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| VNDirect generic corporate model 2 | VNDirect finfo route; [official support](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/) and [terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) | `OBSERVED_NO_LOGIN` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` |
+| VNDirect bank model 102 | Same VNDirect owner/contact path | `OBSERVED_NO_LOGIN` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` |
+| VNDirect generic model-2 empty cross-template observations | Same VNDirect owner/contact path | `OBSERVED_NO_LOGIN` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` |
+| VNDirect foreign 89/90/91 | Same VNDirect owner/contact path | `OBSERVED_NO_LOGIN` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` |
+| VNDirect insurer/special templates | Same VNDirect owner/contact path | `OBSERVED_NO_LOGIN` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` |
+| CafeF annual corporate | CafeF route; official data contact `dulieu@cafef.vn` and [data guidance](https://cafef.vn/du-lieu/huong-dan-su-dung.chn) | `OBSERVED_NO_LOGIN` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` |
+| CafeF securities annual | Same CafeF owner/contact path | `OBSERVED_NO_LOGIN` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` | `NOT_GRANTED` | `UNKNOWN` | `NOT_GRANTED` |
+| CafeF cashflow (not served) | Same CafeF owner/contact path | `OBSERVED_NO_LOGIN` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `UNKNOWN` | `NOT_APPLICABLE` |
 
 Public/no-login access is not owner permission. `robots.txt`, a webpage, or a statement filing cannot
 be treated as an OSS/API redistribution licence. Until written permission or a clearly applicable
@@ -201,6 +246,49 @@ class MetricSourceCodes:
     bindings: tuple[MetricCodeBinding, ...] = ()
 ```
 
+The binding alone is not public provider lineage. A future additive/defaulted lineage object must
+make the audit fields visible without changing existing positional construction:
+
+```python
+@dataclass(frozen=True)
+class MetricLineage:
+    provider_symbol: str | None = None
+    provider_template: str | None = None
+    model_type: int | None = None
+    entity_scope: str | None = None
+    currency: str | None = None
+    unit_scale: str | None = None
+    consolidation_scope: str | None = None
+    provider_tags_verified: bool = False
+
+@dataclass(frozen=True)
+class MetricInput:
+    # Existing fields remain in their current order.
+    statement: StatementType
+    item_code: str
+    value: float
+    value_unit: str
+    fiscal_date: date
+    source: str
+    name: str
+    lineage: MetricLineage = MetricLineage()
+```
+
+For a future qualified mapping, `provider_tags_verified=True` is allowed only when the response
+itself contains and validates the required identity tags: requested provider symbol, exact
+`reportType=ANNUAL`, exact provider model/template, and any provider-exposed entity and
+consolidation scope. VNDirect must have present `code`, `reportType`, and `modelType` tags; absent
+tags cannot be filled from request arguments. A request-derived `period`, `model_type`, or
+`provider_symbol` is not provider evidence. CafeF must expose an equivalent response identity and
+annual marker or remain an identity gap. Missing unit, scale, entity, or consolidation scope leaves
+the corresponding lineage field unset and the binding `BLOCKED`; it cannot be guessed from
+`is_bank=False`, a label, or an issuer filing.
+
+The current VNDirect parser still accepts absent response tags for compatibility and stamps the
+requested period/model onto `FinancialReport`; that behavior is not provider identity evidence for
+this candidate. The mandatory-present trust rule is future-only and must be implemented and tested
+before any annual binding can move out of `BLOCKED`.
+
 For the sole technical VNDirect candidate, a future reviewed binding would be
 `source=vndirect + statement=income + period=ANNUAL + is_bank=False + model_type=2 +
 item_code="23110"`. It must remain a binding, not `corporate_code="23110"`, because the existing
@@ -214,47 +302,78 @@ template is `BLOCKED`; a corporate-only metric on a bank is `NOT_APPLICABLE`; an
 zero from the exact mapped row is available zero. No label, ticker, sector, `is_bank=False`, or
 same-looking numeric code may select a mapping.
 
-If this additive binding is later implemented, its trailing defaulted field, constructor behavior,
-repr/equality, serialization, public snapshot, DataFrame/lineage surfaces, docs, skill reference,
-and CHANGELOG/release decision must be reviewed together. The tagged `v0.2.0` distinction remains
-explicit: a future capability cannot be described as already present in that tag.
+If these additive fields are implemented later, public snapshot field order, trailing constructor
+compatibility, repr/equality, serialization, `MetricReport`/`MetricValue.inputs` snapshots,
+DataFrame lineage columns/attrs, and derived-input behavior must be reviewed together. Derived
+metrics preserve each input's lineage and never synthesize or copy a provider identity; a blocked
+or unverified input keeps the existing derived-input `BLOCKED` behavior. Coverage's mapped-code set
+must flatten reviewed `bindings[*].item_code` alongside legacy corporate/bank slots, and RED tests
+must prove that a reviewed binding is counted while an unqualified binding is not silently mapped.
+Docs, skill reference, CHANGELOG.md, and release/version decisions are part of that future change.
+No such API change is authorized here. The tagged `v0.2.0` distinction remains explicit: a future
+capability cannot be described as already present in that tag.
 
-## 8. Conjunctive reopen criteria
+## 8. Provider-conditional reopen criteria and docs-only close transition
 
-The issue remains source-gap closed unless every criterion passes in one design review:
+The current source gap stays closed. A later `QUALIFIED FOR TDD` or `PARTIAL` disposition requires
+**at least one** complete provider/template binding to pass every applicable gate; VNDirect and CafeF
+do not have to qualify together. If one provider qualifies, every other provider/role remains
+independently classified and fail-closed. A provider proposed as a runtime failover backup must pass
+its own complete same-semantic gate; an unqualified backup is not required merely to reopen a primary.
 
-1. **Owner permission:** VNDirect and/or CafeF grants written permission or a clear licence for the
-   exact route, automation, pacing, retries, caching/storage, retention, attribution, caller-facing
-   return, redistribution, and commercial use.
-2. **Transport and identity:** fresh no-login (or explicitly approved credential) responses have
-   exact effective host/path, strict MIME/envelope, requested symbol, `statement=income`,
+### 8.1 Applicable gate for each provider proposed for enablement
+
+For each proposed provider/template cell, all of these are conjunctive:
+
+1. **Owner permission:** that owner grants written permission or a clear licence for the exact route,
+   automation, pacing, retries, caching/storage, retention, attribution, caller-facing return,
+   redistribution, and commercial use.
+2. **Transport and identity:** fresh no-login (or explicitly approved credential) responses have exact
+   effective host/path, strict MIME/envelope, response-backed requested symbol, `statement=income`,
    annual cadence, provider template/model, entity/consolidation scope, and no redirect/challenge
-   identity substitution.
-3. **Generic VNDirect evidence:** at least two annual periods and two issuers with different business
-   profiles prove the same `model_type=2`, exact item code `23110`, raw VND scale, sign, row-30
-   concept, and consolidated/separate scope against official audited filings.
-4. **CafeF evidence:** at least two issuers on one exact annual template expose response-backed symbol
-   or independently verified identity, annual marker, exact source-namespaced operating-profit code,
-   unit/scale, scope, and two-period accounting cross-check. No guessed string code is allowed.
-5. **Special templates:** bank, securities `89/90/91`, insurer, and any other special template are
-   classified independently. No foreign stream inherits generic corporate mapping; no bank
-   `NOT_APPLICABLE` change occurs without exact same-concept evidence and explicit API review.
-6. **Cadence/history:** provider fiscal dates are annual flow periods, newest-first and unique; no
-   TTM/YTD/quarter relabeling, adjacent-period construction, fill, or 2016–2025 completeness promise.
-   Missing years remain missing/coverage facts only after a qualified response family.
-7. **Runtime budget:** direct and chain paths have deterministic bounded logical/physical calls,
-   no hidden retries, and a documented conservative pacing rule. No provider SLA is inferred from
-   response success.
-8. **Metric contract:** exactly 26 IDs, `RAW_MAPPED`, source namespace, `MetricInput` lineage,
-   bank `NOT_APPLICABLE`, current blocked quarterly behavior, direct/chain parity, source
-   precedence, per-statement diagnostics, newest-first, and `limit` behavior remain compatible.
-9. **No ratios/no proxy:** exactly zero `StatementType.RATIOS` calls; no provider ratio, formula,
-   EBITDA/EBIT/gross/PBT/net-income/cashflow substitute, or VN30 behavior.
-10. **Bounded diagnostics:** reasons, warnings, `MetricValue`, `MetricReport`, DataFrame attrs,
-    reprs, and raised messages contain no URL/query, provider text, raw response, exception, secret,
-    live value, or failed-attempt trail.
-11. **Reviewer transition:** exact design PASS precedes a separate RED-first synthetic test commit;
-    no source-gap document authorizes TDD or production code.
+   identity substitution. Required tags must be present; request-derived metadata does not qualify.
+3. **Accounting identity:** the same issuer and fiscal date prove the complete tuple, including sign,
+   raw-VND scale, entity/consolidation scope, and canonical row-30 concept in an exact official
+   audited statement. The receipt records issuer, fiscal date, consolidated/separate, sign, scale,
+   and exact-match result without live values.
+4. **Provider-specific minimum evidence:** a generic VNDirect or CafeF binding proves at least two
+   annual periods and two issuers with different business profiles on one exact template. VNDirect
+   requires exact `model_type=2`/`23110`; CafeF requires a response-backed identity, annual marker,
+   exact `cafef`-namespaced code, unit/scale, scope, and the same two-period cross-check. No guessed
+   string code is allowed.
+5. **Cadence/history/runtime:** fiscal dates are annual flow periods, newest-first and unique; no
+   TTM/YTD/quarter relabeling, fill, adjacent-period construction, or 2016–2025 completeness promise;
+   direct and chain paths have deterministic logical/physical calls, no hidden retries, and a
+   conservative pacing rule.
+6. **Metric/public contract:** exactly 26 IDs, `RAW_MAPPED`, typed response-backed `MetricLineage`,
+   source namespace, bank `NOT_APPLICABLE`, blocked quarterly behavior, direct/chain parity, source
+   precedence, per-statement diagnostics, newest-first, `limit`, zero ratio calls, and all public
+   compatibility surfaces remain compatible.
+7. **Bounded diagnostics:** reasons, warnings, `MetricValue`, `MetricReport`, DataFrame attrs,
+   reprs, and raised messages contain no URL/query, provider text, raw response, exception, secret,
+   live value, or failed-attempt trail.
+
+### 8.2 Roles that are not being enabled
+
+Bank, securities `89/90/91`, insurer, other special templates, and any provider not passing its own
+applicable gate remain `NOT_APPLICABLE`, `TEMPLATE_GAP`, `IDENTITY_GAP`, `TRANSPORT_INCONCLUSIVE`,
+`NOT_SERVED`, or another explicit fail-closed disposition. Empty, timeout, failed, or identity-failed
+roles never establish historical absence. No bank behavior changes without exact same-concept
+evidence and explicit API review.
+
+### 8.3 Docs-only SOURCE-GAP close transition
+
+When the chosen disposition remains `SOURCE-GAP CLOSURE`, an exact design PASS authorizes a
+publication/closure transition without authorizing TDD:
+
+1. rerun all merged-tree gates against the exact approved docs anchor;
+2. push only that approved anchor, then verify remote `HEAD`, ancestry, and changed paths are the
+   approved research/design/backlog paths;
+3. post the clean no-capability source-gap resolution, explicitly preserving the empty chain and
+   reopen criteria;
+4. close #208 and re-read it as `CLOSED/COMPLETED`; and
+5. keep RED tests, production code, and annual capability paused until a later fresh design PASS
+   authorizes a separate RED-first TDD transition.
 
 ## 9. Future-only RED/release contract
 
@@ -264,30 +383,35 @@ passes, synthetic offline tests must cover:
 - exact annual `23110` binding for FPT/HPG-like fabricated generic templates, two periods and two
   issuers, raw VND lineage, fiscal dates, source namespace, and explicit zero;
 - `corporate_code=None`/unqualified map `BLOCKED`, qualified absent line `MISSING`, bank
-  `NOT_APPLICABLE`, wrong `14000`, wrong `23100`/`23500`/`23800`, wrong namespace, wrong
+  `NOT_APPLICABLE`, wrong `14000` in corporate model 1 and bank model 101, wrong
+  `23100`/`23500`/`23800`, wrong namespace, wrong
   statement, wrong model, wrong entity, wrong unit/scale, wrong scope, and foreign 89/90/91;
 - annual binding requested quarterly/YTD/TTM/unknown, malformed/absent/bool/fractional/padded
-  model ids, response/report template mismatch, symbol/provider-symbol mismatch, duplicate dates,
-  incomplete pagination, empty responses, and transport failures;
+  model ids, absent or request-derived `reportType`/`modelType`/provider-symbol tags, response/report
+  template mismatch, symbol/provider-symbol mismatch, duplicate dates, incomplete pagination, empty
+  responses, and transport failures;
 - direct `source=` and explicit/default `sources=` parity, incapable-role zero-call skips,
   source precedence, recoverable partial coverage, all-empty `EmptyData`, newest-first order, and
   `limit`;
 - exactly zero ratio calls and unchanged income/balance/cashflow call counts;
 - malicious/long labels, source names, URLs, response bodies, and exceptions fail sanitization;
-- additive binding public snapshots, constructor/repr/equality/serialization, DataFrame columns/attrs,
-  docs/API/skill/CHANGELOG/release decision, import/version checks, blacklist/secret scans,
-  `git diff --check`, full offline tests, and isolated sdist/wheel build.
+- additive binding and `MetricLineage` public snapshots, trailing constructor/repr/equality/
+  serialization, `MetricReport`/derived-input lineage, DataFrame columns/attrs, binding-aware
+  mapped-code coverage diagnostics, source-document updates (`docs/sources/fundamentals-vndirect.md`
+  and `docs/sources/fundamentals-cafef.md` where applicable), docs/API/skill/CHANGELOG/release
+  decision, import/version checks, blacklist/secret scans, `git diff --check`, full offline tests,
+  and isolated sdist/wheel build.
 
 All fixtures must use visibly fabricated symbols, dates, labels, and values. No provider payload or
 live statement value may enter tests, docs examples, build artifacts, or history.
 
 ## 10. Final disposition
 
-VNDirect exposes a strong technical generic-corporate candidate: model 2, annual `fiscalDate`,
-response symbol, and candidate code `23110` that cross-checks to the audited row-30 operating
-result for two business profiles and two annual periods. That is not enough to ship: the provider
-response lacks a semantic line label/unit field and the route has no explicit automated-use,
-retention, or redistribution grant.
+VNDirect exposes a strong structural generic-corporate candidate: model 2, annual `fiscalDate`,
+response symbol, and candidate code `23110` across two business profiles and multiple annual periods.
+No reproducible audited four-cell receipt is accepted in this commit, and the provider response
+lacks a semantic line label, unit, entity scope, and consolidation scope. That is not enough to
+ship; the route also has no explicit automated-use, retention, or redistribution grant.
 
 CafeF remains unresolved for the requested generic cells because the fresh direct route timed out
 and prior special-template observations lack response symbol/model/scale proof. Banks remain
@@ -295,9 +419,10 @@ and prior special-template observations lack response symbol/model/scale proof. 
 remains the #205 source gap; ratios remain zero-call; and the tagged `v0.2.0` distinction is
 preserved.
 
-Therefore #208 is **SOURCE-GAP CLOSURE**. The two requested artifacts may be reviewed and, if
-approved, published as a no-capability resolution. No annual operating-profit capability, RED tests,
-production code, push, or issue closure is authorized by this report.
+Therefore #208 is **SOURCE-GAP CLOSURE**. The two requested artifacts may, after exact design PASS,
+follow the docs-only publish/resolution/close transition above without claiming annual capability.
+No annual operating-profit capability, RED tests, or production code is authorized; a later fresh
+design PASS is mandatory before TDD.
 
 ## Sources
 
@@ -308,10 +433,9 @@ production code, push, or issue closure is authorized by this report.
 - [CafeF FinanceReport handler](https://cafef.vn/du-lieu/Ajax/PageNew/FinanceReport.ashx)
 - [CafeF data guidance](https://cafef.vn/du-lieu/huong-dan-su-dung.chn)
 - [CafeF robots.txt](https://cafef.vn/robots.txt)
-- [FPT 2025 annual report](https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2026/april/bctn-fpt-2025.pdf)
-- [FPT audited consolidated 2024 report](https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2025/january/20250124---fpt---bctc-hop-nhat-quy-4-nam-2024.pdf)
-- [Hòa Phát 2025 consolidated report](https://file.hoaphat.com.vn/hoaphat-com-vn/2026/01/20260130-hpg-bao-cao-tai-chinh-hop-nhat-va-giai-trinh-q4-2025.pdf)
-- [Hòa Phát 2024 annual report](https://file.hoaphat.com.vn/hoaphat-com-vn/2025/04/bao-cao-thuong-nien-hpg-2024.pdf)
+- [FPT public disclosures](https://fpt.com/en/ir/information-disclosures)
+- [FPT audited 2024 annual report](https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2025/april/20250402---fpt---annual-report-2024.pdf)
+- [Hòa Phát financial reports](https://www.hoaphat.com.vn/investor-relations/financial-report)
 - [Previously reviewed #204 SSI/TCX source vetting](2026-08-22-fundamentals-ssi-tcx-source-vetting.md)
 - [Previously reviewed #205 quarterly source vetting](2026-08-22-quarterly-operating-profit-margin-source-vetting.md)
 - [Existing VNDirect source note](../sources/fundamentals-vndirect.md)
