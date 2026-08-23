@@ -601,10 +601,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#213 — DESIGN_REVIEW_BLOCKED (2026-08-23), narrow R1/R3 docs correction with #214.**
-  Correction actor `vnfin-oss`; next action `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`.
-  Current merged head `b004748c6719f27bcfe5be197e2ff42b827d4388`; prior #213 artifact anchor
-  `a7c608499e77a7df9e31fa6c2dee12c3046b3d49`; synthesized correction report
+- **#213 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), R1/R3 correction complete.**
+  Expected actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  Corrected merged docs HEAD `320afe94c813c207d67b478673e987527cafb00b`; separate #213 artifact
+  anchor `01fbed36a2782deeeee7bc1a830291e2db71ce05`; submitted review/lifecycle HEAD `b004748c6719f27bcfe5be197e2ff42b827d4388`;
+  prior #213 artifact anchor `a7c608499e77a7df9e31fa6c2dee12c3046b3d49`; addressed report
   `reviews/review-202608231510-issues213-214-correction-rereview.md` at reviewer `62abf38`;
   reviewer packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/213-vnreal-index-history-source-spec.md`,
@@ -614,10 +615,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   with #214 but keep symbols, artifacts, anchors, and receipts independent. No RED tests,
   production code, push, or close before exact-SHA design PASS.
 
-- **#214 — DESIGN_REVIEW_BLOCKED (2026-08-23), narrow R1/R2 docs correction and independent.**
-  Correction actor `vnfin-oss`; next action `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`.
-  Current merged head `b004748c6719f27bcfe5be197e2ff42b827d4388`; prior #214 artifact anchor
-  `8e178ed5d603069afc61700d626bedc0d4829069`; synthesized correction report
+- **#214 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), R1/R2 correction complete and independent.**
+  Expected actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  Corrected merged docs HEAD `320afe94c813c207d67b478673e987527cafb00b`; separate #214 artifact
+  anchor `320afe94c813c207d67b478673e987527cafb00b`; submitted review/lifecycle HEAD `b004748c6719f27bcfe5be197e2ff42b827d4388`;
+  prior #214 artifact anchor `8e178ed5d603069afc61700d626bedc0d4829069`; addressed report
   `reviews/review-202608231510-issues213-214-correction-rereview.md` at reviewer `62abf38`; reviewer packet
   `tasks/214-vnmid-index-history-source-spec.md`, packet commit `bd4038e`, public receipt
   `issuecomment-5384680920`. Qualify VNMID independently using the shared batch methodology but
