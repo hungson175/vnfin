@@ -602,18 +602,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#219 — ACTIVE SOURCE_DESIGN (2026-08-23).** Actor `vnfin-oss`; next action
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `f2d0187` for
+- **#219 — DESIGN BLOCKED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
+  `RECORD_DOCS_ONLY_CORRECTION`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
-  `issuecomment-5385376214`. #221 is verified `CLOSED`/`COMPLETED`, so #219 is now active for
-  source/design only. Scope is provider-published VNM national monthly IIP YoY through the existing
-  macro surface if qualified; annual/index/cumulative substitutes and acceleration/VN30F logic
-  remain excluded. Source/design artifacts are prepared in
-  `docs/research/2026-08-23-vietnam-monthly-industrial-production-yoy-source-vetting.md` and
-  `tasks/219-design-note.md`, committed at exact artifact anchor
-  `221d38a69961e2a085193a16c3e777adc148cd9f`. Disposition is `SOURCE-GAP CLOSURE` with an empty
-  new source chain. No RED, code, push, or close before exact-SHA design PASS. #220, #222, #223,
-  and #224 remain queued and are not activated by this handoff.
+  `issuecomment-5385376214`. Reviewed exact merged head is
+  `3ed6f6a65825672ee6f9caad9878ab3fb102cb6a` with artifact anchor
+  `221d38a69961e2a085193a16c3e777adc148cd9f`; BLOCK report is
+  `reviews/review-202608232235-issue219-design-source-review.md` at reviewer `36a29e2`.
+  B1-B6 are docs/backlog-only precision seams: all-traffic accounting, NSO semantic wording,
+  current-versus-hypothetical API truth, compatibility-safe diagnostics/budget language, separate
+  MIME fields, and reviewer-owned merged-head lifecycle. Record this BLOCK before edits. Preserve
+  `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime, and no RED/code/push/close.
+  #220, #222, #223, and #224 remain queued and are not activated by this handoff.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
