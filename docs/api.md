@@ -89,9 +89,10 @@ funds = src.list_funds()                     # FundList; each Fund has .manageme
                                              # fund_nav_stale. include_metadata=False -> fee-agnostic list.
 holds = src.holdings(funds[0].id)            # tuple[FundHolding] — equities + bonds merged; each has
                                              # .instrument_type (STOCK/BOND/UNLISTED_BOND/OTHER) + .as_of_utc
-alloc = src.asset_allocation(funds[0].id)    # AssetAllocation — asset-class split + .sector_weights
-                                             # (tuple[SectorWeight]) + .inception_date + .description;
-                                             # alloc.warnings: fund_partial_holdings (<50% of NAV disclosed)
+alloc = src.asset_allocation(funds[0].id)    # AssetAllocation — STOCK/BOND/CASH/OTHER split + metadata
+                                             # .sector_weights/.inception_date/.description; weights may be partial
+                                             # alloc.warnings: fund_partial_holdings and, for absent/null/[] allocation,
+                                             # exactly one no_asset_allocation_published token
 
 # indices — index value (points) + members.
 ic   = vnfin.indices.client()                # IndexClient

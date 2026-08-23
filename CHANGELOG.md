@@ -7,6 +7,14 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Fmarket `OTHER` allocation and known-empty disclosure** (#212) — `asset_allocation(product_id)`
+  now preserves the provider-declared `OTHER` class alongside `STOCK`/`BOND`/`CASH` while still
+  rejecting unknown tags such as `OTHER2`, malformed rows, duplicates, and invalid weights. An
+  absent, `null`, or empty `productAssetHoldingList` now returns a typed empty `AssetAllocation`
+  with exactly one `no_asset_allocation_published` warning (plus any existing detail-coverage
+  warning), preserving same-document metadata and one identity-checked GET; it no longer raises
+  `EmptyData` for those three known disclosure shapes. Synthetic TDD fixtures cover the migration.
+  ([#212](https://github.com/hungson175/vnfin/issues/212))
 - **Fail-loud fundamentals diagnostics and safe routing** (#204) —
   `vnfin.fundamentals.metrics` now raises a bounded `EmptyData` when no usable fiscal period can
   be built, while `explain_metric_coverage` retains exactly three aggregate

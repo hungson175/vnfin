@@ -133,11 +133,38 @@ former name. The full typed per-security model (Option A) is therefore buildable
    provider self-inconsistency → `InvalidData`; aggregate weight > 100% (equity + bond) → `InvalidData`.
 5. **`EmptyData` fires only when BOTH lists are empty/absent** (the fund has published no holdings yet).
 6. **New sibling accessor** `funds.source().asset_allocation(product_id) -> AssetAllocation` exposes the
-   asset-class split (`productAssetHoldingList`) typed (class code ∈ {STOCK, BOND, CASH} fail-closed,
-   percent 0-100, `as_of_utc` = freshest row `updateAt`). Disclosed weights are **not** forced to sum to
-   100% (partial disclosure allowed). New `AssetAllocation` + `AssetClassWeight` models.
+   asset-class split (`productAssetHoldingList`) typed (the initial #173 class set was {STOCK, BOND,
+   CASH}; follow-on #212 adds provider-declared OTHER while keeping unknown tags fail-closed, percent
+   0-100, `as_of_utc` = freshest row `updateAt`). Disclosed weights are **not** forced to sum to 100%
+   (partial disclosure allowed). New `AssetAllocation` + `AssetClassWeight` models.
 7. **#21 identity guard** (the detail doc must identify the requested fund) is shared by both accessors
    via `_fetch_detail_data`. Same already-used endpoint — no scraping, no new endpoint, clean-room intact.
+
+## #212 — provider-declared OTHER and known-empty allocation disclosure
+
+The shipped #173 accessor is corrected by this follow-on contract. The qualified provider class set
+is exactly `{STOCK, BOND, CASH, OTHER}`. `OTHER` is preserved verbatim as a provider-declared class;
+`OTHER2` and any other unknown, malformed, duplicate, or non-finite/out-of-range class row still
+raises `InvalidData`. Row order and partial-sum semantics remain unchanged.
+
+When the identity-valid detail document has `productAssetHoldingList` absent, `null`, or `[]`,
+`asset_allocation()` returns a successful `AssetAllocation` with `classes == ()`, `len(result) == 0`,
+`source == "fmarket"`, `currency == "VND"`, the validated product id and same-document metadata,
+`as_of_utc is None`, and a real timezone-aware `fetched_at_utc`. It appends exactly one
+`no_asset_allocation_published` warning while preserving any existing detail-coverage warning. This
+is known-empty disclosure, not proof of no assets; no `OTHER`, zero-weight, or residual row is made.
+The three shapes still use one identity-checked detail GET. A present non-array container, malformed
+row, identity mismatch, transport failure, or envelope failure remains fail-closed.
+
+### #212 tests (synthetic, offline)
+
+- `OTHER` alone and mixed with each known class preserves code, order, and weight.
+- Duplicate `OTHER`, `OTHER2`, malformed/non-string class codes, and non-finite/out-of-range weights
+  fail closed.
+- Absent, `null`, and `[]` each return the typed empty result, exact warning, preserved metadata and
+  existing detail-coverage warning, with one physical GET.
+- Existing `STOCK`/`BOND`/`CASH`, ordering, partial totals, identity guards, docs, no-secrets, and
+  package-build contracts remain green.
 
 ### #173 tests (synthetic, offline)
 
@@ -149,7 +176,9 @@ former name. The full typed per-security model (Option A) is therefore buildable
   combined weight > 100% → `InvalidData`; same code across lists → `InvalidData`.
 - per-holding `as_of_utc` from `updateAt`; malformed `updateAt` → `None` (no fabricated now()).
 - `asset_allocation()` returns typed split, uses `/res/products/{id}`, `as_of_utc` = max row `updateAt`,
-  empty/absent → `EmptyData`, unknown class / malformed percent → `InvalidData`, partial sum < 100% ok.
+  and partial sum < 100% is okay. Its initial #173 empty/absent → `EmptyData` expectation is
+  superseded by #212: absent/`null`/`[]` return typed empty + `no_asset_allocation_published`; present
+  non-array, unknown class (including `OTHER2`), duplicate, or malformed percent → `InvalidData`.
 - Public-API **additive** (two appended `FundHolding` fields + `AssetAllocation`/`AssetClassWeight`
   models + `asset_allocation` method); snapshot regenerated additively at release time only.
 

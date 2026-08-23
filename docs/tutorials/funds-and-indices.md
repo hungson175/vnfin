@@ -32,11 +32,13 @@ print(nav.value_unit, nav.points[-1])
 for h in holdings[:10]:
     print(h.stock_code, h.weight_pct, h.instrument_type)  # FundHolding fields
 
-# The top-level asset-class split (equity/bond/cash) is a separate accessor:
+# The top-level asset-class split (equity/bond/cash/provider OTHER) is separate:
 alloc = fund_src.asset_allocation(first.id)   # AssetAllocation
 for c in alloc:
-    print(c.asset_class, c.weight_pct)        # AssetClassWeight: asset_class, weight_pct
+    print(c.asset_class, c.weight_pct)        # STOCK/BOND/CASH/OTHER, provider-preserved
 print(alloc.as_of_utc)                        # freshest provider updateAt, or None
+# An absent/null/[] provider allocation returns classes==() with the exact
+# "no_asset_allocation_published" warning; it is not a no-assets claim.
 ```
 
 ## Index levels

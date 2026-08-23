@@ -163,8 +163,11 @@ class FundHolding:
 @dataclass(frozen=True)
 class AssetClassWeight:
     """One asset-class slice of a fund's portfolio: ``weight_pct`` (0-100) of NAV
-    in the asset class ``asset_class`` (the provider's normalized class code, e.g.
-    ``"STOCK"``/``"BOND"``/``"CASH"``)."""
+    in the provider's normalized class code ``asset_class`` (``"STOCK"``, ``"BOND"``,
+    ``"CASH"``, or the provider-declared ``"OTHER"``).
+
+    ``OTHER`` is a preserved provider class, not a catch-all for unknown future tags.
+    """
 
     asset_class: str
     weight_pct: float
@@ -183,20 +186,22 @@ class SectorWeight:
 
 @dataclass(frozen=True)
 class AssetAllocation:
-    """A fund's asset-class allocation (the equity/bond/cash split) plus provenance.
+    """A fund's asset-class allocation (STOCK/BOND/CASH/OTHER) plus provenance.
 
     Unlike :class:`FundHolding` (per-line-item positions), this is the top-level
-    portfolio breakdown by asset class. ``as_of_utc`` is the freshest provider
-    ``updateAt`` across the allocation rows (``None`` when the provider omits it —
-    never fabricated).
+    portfolio breakdown by asset class. ``classes`` may be empty when the provider's
+    allocation field is absent, ``null``, or ``[]``; that known-empty disclosure is
+    signaled by ``no_asset_allocation_published`` and is not a claim that the fund has
+    no assets. ``as_of_utc`` is the freshest provider ``updateAt`` across allocation
+    rows (``None`` when there are no rows or the provider omits it — never fabricated).
 
     The detail document also carries (additively, #155): ``sector_weights`` — the
     fund's per-industry breakdown as a tuple of :class:`SectorWeight` (empty when the
     provider omits it; malformed rows are dropped fail-closed, never fabricated);
     ``inception_date`` — the fund's first-issue date (``None`` when absent/malformed);
     and ``description`` — the provider's free-text fund blurb (``None`` when
-    absent/blank/non-string). ``warnings`` may carry the detail-doc coverage token
-    ``fund_partial_holdings`` (disclosed top-holdings sum below the documented bound).
+    absent/blank/non-string). ``warnings`` may carry ``fund_partial_holdings`` and
+    the exact ``no_asset_allocation_published`` known-empty token.
     """
 
     product_id: int

@@ -18,8 +18,10 @@ NAV is VND per fund unit; ``navDate`` is ``YYYY-MM-DD``. Provenance, compliance,
 and shape notes live in ``docs/sources/funds-fmarket.md``.
 
 Transport errors are wrapped as :class:`SourceUnavailable`; malformed / garbage
-payloads as :class:`InvalidData`; no-data responses as :class:`EmptyData`. This
-keeps the adapter failover-safe (it never leaks raw exceptions to callers).
+payloads as :class:`InvalidData`; no-data responses as :class:`EmptyData` except for
+an identity-valid allocation document whose allocation field is absent, ``null``, or
+``[]`` — that shape is a successful typed empty result with a warning. This keeps the
+adapter failover-safe (it never leaks raw exceptions to callers).
 
 Runtime fetch only — no caching or redistribution of provider data.
 """
@@ -104,6 +106,11 @@ _FUND_MISSING_FEES_CAP = 5                # max enumerated codes before "+M more
 # staleness principle). Documented in skills/vnfin/SKILL.md.
 _FUND_PARTIAL_HOLDINGS = "fund_partial_holdings"  # mechanical token prefix (fact-first)
 _FUND_PARTIAL_HOLDINGS_BOUND = 50.0               # warn when disclosed sum < this percent
+
+# Issue #212: the provider-declared class taxonomy is closed for this accessor. OTHER is
+# preserved as a typed provider class; it is not a catch-all for unknown future tags.
+_FUND_ASSET_CLASSES = frozenset({"STOCK", "BOND", "CASH", "OTHER"})
+_NO_ASSET_ALLOCATION_PUBLISHED = "no_asset_allocation_published"
 
 
 def _parse_json(text, who):
@@ -537,14 +544,17 @@ class FmarketFundSource(HttpDataSource):
         return holdings
 
     def asset_allocation(self, product_id: int) -> AssetAllocation:
-        """Asset-class split (equity/bond/cash) for a fund, off the same detail doc.
+        """Asset-class split for a fund, off the same detail document.
 
         Parses ``productAssetHoldingList`` into typed :class:`AssetClassWeight` rows.
-        Each class code is validated against ``{STOCK, BOND, CASH}`` (a present-but-
-        unrecognized class fails closed). The disclosed weights are NOT forced to sum
-        to 100% (partial disclosure is allowed). ``as_of_utc`` is the freshest per-row
-        ``updateAt`` (``None`` when the provider omits it). :class:`EmptyData` is
-        raised when the allocation list is empty/absent.
+        The closed provider class set is ``{STOCK, BOND, CASH, OTHER}``; ``OTHER`` is
+        preserved as a provider-declared class, while a different tag fails closed.
+        Disclosed weights are not forced to sum to 100% (partial disclosure is allowed).
+        When the provider publishes no allocation list (absent, ``null``, or ``[]``),
+        this returns a successful typed empty result with the exact
+        ``no_asset_allocation_published`` warning. That known-empty disclosure is not a
+        claim that the fund has no assets. ``as_of_utc`` is the freshest per-row
+        ``updateAt`` (``None`` when no row supplies it).
         """
         fid = _validate_product_id(product_id)
         data = self._fetch_detail_data(fid, who="asset-allocation")
@@ -552,18 +562,15 @@ class FmarketFundSource(HttpDataSource):
             data.get("productAssetHoldingList"),
             who="asset-allocation productAssetHoldingList",
         )
-        if rows is None or len(rows) == 0:
-            raise EmptyData(
-                f"fmarket: no asset allocation published yet for product {product_id}"
-            )
         seen: set[str] = set()
         classes: list[AssetClassWeight] = []
         as_of = None
-        for row in rows:
-            classes.append(self._parse_asset_class(row, seen))
-            row_as_of = _parse_update_at(row.get("updateAt")) if isinstance(row, dict) else None
-            if row_as_of is not None and (as_of is None or row_as_of > as_of):
-                as_of = row_as_of
+        if rows:
+            for row in rows:
+                classes.append(self._parse_asset_class(row, seen))
+                row_as_of = _parse_update_at(row.get("updateAt")) if isinstance(row, dict) else None
+                if row_as_of is not None and (as_of is None or row_as_of > as_of):
+                    as_of = row_as_of
         code = data.get("code") if isinstance(data.get("code"), str) else None
         # #155: surface the detail-doc metadata off the SAME document (no extra request):
         # per-industry breakdown, first-issue date, free-text blurb, and a disclosed
@@ -572,6 +579,10 @@ class FmarketFundSource(HttpDataSource):
         inception_date = _parse_inception_date(data.get("firstIssueAt"))
         description = _optional_detail_str(data.get("description"))
         warnings = _fund_partial_holdings_warning(data)
+        if not rows:
+            # A known empty allocation keeps the existing detail-doc warning(s), then
+            # appends exactly one machine-matchable disclosure token.
+            warnings = warnings + (_NO_ASSET_ALLOCATION_PUBLISHED,)
         return AssetAllocation(
             product_id=fid,
             classes=tuple(classes),
@@ -787,9 +798,10 @@ class FmarketFundSource(HttpDataSource):
     def _parse_asset_class(row, seen_codes=None) -> AssetClassWeight:
         """Parse one ``productAssetHoldingList`` row into an :class:`AssetClassWeight`.
 
-        ``assetType`` must be an object; its ``code`` is validated against
-        ``{STOCK, BOND, CASH}`` (present-but-unrecognized fails closed). ``assetPercent``
-        is range-checked 0-100. A class code repeated within the list fails closed.
+        ``assetType`` must be an object; its ``code`` is validated against the closed
+        provider set ``{STOCK, BOND, CASH, OTHER}`` (present-but-unrecognized fails
+        closed). ``assetPercent`` is finite and range-checked 0-100. A class code
+        repeated within the list fails closed.
         """
         if not isinstance(row, dict):
             raise InvalidData("fmarket: asset-allocation row is not an object")
@@ -798,7 +810,7 @@ class FmarketFundSource(HttpDataSource):
             raise InvalidData("fmarket: asset-allocation row assetType is not an object")
         asset_class = canonical_enum_tag(
             optional_present(asset_type, "code"),
-            {"STOCK", "BOND", "CASH"},
+            _FUND_ASSET_CLASSES,
             "fmarket asset-allocation class code",
         )
         if seen_codes is not None:

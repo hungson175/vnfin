@@ -1,7 +1,8 @@
 # Source: `fmarket` (Fmarket fund data)
 
 Adapter: `vnfin.funds.fmarket.FmarketFundSource`.
-Models: `vnfin.funds.models` (`Fund`, `FundList`, `NavPoint`, `NavHistory`, `FundHolding`).
+Models: `vnfin.funds.models` (`Fund`, `FundList`, `NavPoint`, `NavHistory`, `FundHolding`,
+`AssetAllocation`, `AssetClassWeight`, `SectorWeight`).
 
 This document records the provenance and compliance posture for the Fmarket
 public fund-data API. It was written clean-room from direct live probes of the
@@ -161,9 +162,15 @@ bond list. (There is no `productBondHoldingList` key — the bond array is `prod
 | `updateAt` | `FundHolding.as_of_utc` | epoch-**ms** → UTC; absent/malformed → `None` (never fabricated) |
 
 `asset_allocation(product_id)` reads `productAssetHoldingList` off the same document:
-`assetType.code` (∈ `{STOCK, BOND, CASH}`, fail-closed on unknown) → `AssetClassWeight.asset_class`,
-`assetPercent` (0–100) → `AssetClassWeight.weight_pct`. `AssetAllocation.as_of_utc` is the freshest row
-`updateAt`. Disclosed class weights are **not** required to sum to 100% (partial disclosure allowed).
+`assetType.code` (∈ `{STOCK, BOND, CASH, OTHER}`, fail-closed on another tag) →
+`AssetClassWeight.asset_class`; `OTHER` is preserved as the provider-declared class, not a future-tag
+catch-all. `assetPercent` (finite, 0–100) → `AssetClassWeight.weight_pct`. `AssetAllocation.as_of_utc`
+is the freshest row `updateAt`. Disclosed class weights are **not** required to sum to 100% (partial
+disclosure allowed). When the list is absent, `null`, or `[]`, the accessor returns a successful typed
+empty allocation (`classes == ()`, `as_of_utc is None`) with exactly one
+`no_asset_allocation_published` warning, while retaining any existing detail-coverage warning(s) and
+metadata from the same response. This is a known-empty disclosure, not proof of no assets. A present
+non-array list, `OTHER2`, malformed/duplicate class, or bad weight remains `InvalidData`.
 The industry allocation list is present in the payload and may be exposed later.
 
 ## Authentication
@@ -188,7 +195,8 @@ weights are **percent of NAV (0–100)**. `NavPoint.date` is a plain
 | Non-JSON / unexpected top-level shape | `InvalidData` |
 | Malformed scalar (bad/`null` nav, bad date, out-of-range weight, negative nav) | `InvalidData` |
 | Missing required field (id, stockCode, navDate) | `InvalidData` |
-| Empty rows / no data in range | `EmptyData` |
+| Empty holdings / no NAV data in range | `EmptyData` |
+| Asset allocation absent, `null`, or `[]` | Successful empty `AssetAllocation` plus `no_asset_allocation_published` |
 | NAV history non-empty but its latest `navDate` is before the requested window start (stale/closed feed) | `StaleData` (an `EmptyData` subclass) |
 
 These reuse `vnfin.exceptions` so the adapter never leaks raw exceptions.
