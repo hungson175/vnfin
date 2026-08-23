@@ -233,9 +233,13 @@ If these additive fields are implemented later, public snapshot field order, tra
 compatibility, repr/equality, serialization, `MetricReport`/`MetricValue.inputs` snapshots,
 DataFrame lineage columns/attrs, and derived-input behavior must be reviewed together. Derived
 metrics preserve each input's lineage and never synthesize or copy provider identity; blocked or
-unverified inputs keep existing derived-input `BLOCKED` behavior. Coverage's mapped-code set must
-flatten reviewed `bindings[*].item_code` alongside legacy corporate/bank slots, with RED tests
-proving reviewed bindings are counted and unqualified bindings are not silently mapped. Docs,
+unverified inputs keep existing derived-input `BLOCKED` behavior. Coverage keeps legacy global
+corporate/bank-code behavior, but typed bindings are selector-aware: a binding suppresses a line from
+`unmapped_codes` only when source namespace, metric/report statement, binding/report cadence,
+entity/`is_bank`, validated provider model/template, and `provider_tags_verified=True` all match.
+A quarter, wrong source/statement/entity/model, or unverified-tag `23110` remains unmapped under an
+annual binding. Future RED tests must prove the exact annual-positive, every mismatch negative, and
+legacy corporate/bank coverage plus public snapshots. Docs,
 source docs, skill reference, CHANGELOG.md, and release/version decisions are part of that future
 change. No such API change is authorized here.
 
@@ -385,8 +389,11 @@ dates, labels, and values.
   VN30 helper and no changed derived formulas;
 - existing signatures/exports, source precedence, empty effective-chain behavior, incapable-role
   zero-call skips, all-empty EmptyData, per-statement coverage, DataFrame columns/attrs,
-  dataclass construction, equality/repr, public snapshots, derived-input lineage, and binding-aware
-  mapped-code coverage diagnostics remain compatible;
+  dataclass construction, equality/repr, public snapshots, derived-input lineage, and
+  selector-aware mapped-code coverage diagnostics remain compatible; future RED coverage must prove
+  qualified annual source/income/corporate/model-2 `23110` is mapped, while quarter, wrong
+  source/statement/entity/model, and unverified-tag `23110` remain unmapped, and legacy corporate/
+  bank coverage remains unchanged;
 - exactly zero StatementType.RATIOS calls; income/balance/cashflow fetch counts and
   ratio_status=NOT_REQUESTED remain unchanged;
 - any shipped capability updates fundamentals design/API/tutorial docs, both applicable source docs

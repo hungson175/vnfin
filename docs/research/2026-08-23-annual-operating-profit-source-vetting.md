@@ -306,12 +306,20 @@ If these additive fields are implemented later, public snapshot field order, tra
 compatibility, repr/equality, serialization, `MetricReport`/`MetricValue.inputs` snapshots,
 DataFrame lineage columns/attrs, and derived-input behavior must be reviewed together. Derived
 metrics preserve each input's lineage and never synthesize or copy a provider identity; a blocked
-or unverified input keeps the existing derived-input `BLOCKED` behavior. Coverage's mapped-code set
-must flatten reviewed `bindings[*].item_code` alongside legacy corporate/bank slots, and RED tests
-must prove that a reviewed binding is counted while an unqualified binding is not silently mapped.
+or unverified input keeps the existing derived-input `BLOCKED` behavior. Coverage handling must
+remain selector-aware rather than globally flattening typed bindings, with RED tests proving the
+qualified annual positive and every mismatch negative.
 Docs, skill reference, CHANGELOG.md, and release/version decisions are part of that future change.
 No such API change is authorized here. The tagged `v0.2.0` distinction remains explicit: a future
 capability cannot be described as already present in that tag.
+
+Coverage must not globally flatten typed bindings. Existing legacy `corporate_code`/`bank_code`
+coverage remains compatible, but a typed binding suppresses a line from `unmapped_codes` only when
+all of its context matches the report: source namespace, metric statement and report statement,
+binding cadence and report period, entity/`is_bank`, validated provider model/template, and
+`provider_tags_verified=True`. A mismatched source, statement, quarter, entity, model/template, or
+unverified-tag report leaves the code in that period's `unmapped_codes`, even if the numeric code is
+the same. The annual `23110` binding therefore never becomes a global mapped-code exemption.
 
 ## 8. Provider-conditional reopen criteria and docs-only close transition
 
@@ -396,11 +404,14 @@ passes, synthetic offline tests must cover:
 - exactly zero ratio calls and unchanged income/balance/cashflow call counts;
 - malicious/long labels, source names, URLs, response bodies, and exceptions fail sanitization;
 - additive binding and `MetricLineage` public snapshots, trailing constructor/repr/equality/
-  serialization, `MetricReport`/derived-input lineage, DataFrame columns/attrs, binding-aware
-  mapped-code coverage diagnostics, source-document updates (`docs/sources/fundamentals-vndirect.md`
-  and `docs/sources/fundamentals-cafef.md` where applicable), docs/API/skill/CHANGELOG/release
-  decision, import/version checks, blacklist/secret scans, `git diff --check`, full offline tests,
-  and isolated sdist/wheel build.
+  serialization, `MetricReport`/derived-input lineage, DataFrame columns/attrs, and selector-aware
+  mapped-code coverage diagnostics; exact RED cases must prove: (a) qualified annual income,
+  corporate, source-matching, model-2 `23110` is mapped; (b) the same code in quarter, wrong
+  source/statement/entity/model, or unverified-tag contexts is not mapped by the annual binding; and
+  (c) legacy corporate/bank code coverage and public snapshots remain unchanged. Also update source
+  docs (`docs/sources/fundamentals-vndirect.md` and `docs/sources/fundamentals-cafef.md` where
+  applicable), docs/API/skill/CHANGELOG/release decision, import/version checks, blacklist/secret
+  scans, `git diff --check`, full offline tests, and isolated sdist/wheel build.
 
 All fixtures must use visibly fabricated symbols, dates, labels, and values. No provider payload or
 live statement value may enter tests, docs examples, build artifacts, or history.
