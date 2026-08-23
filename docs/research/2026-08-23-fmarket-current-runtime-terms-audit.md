@@ -115,15 +115,17 @@ validation remains first and keeps its current `InvalidData`/`TypeError`/`ValueE
 disable result is specified only for a valid call. This preserves current validation precedence
 without allowing a valid disabled call to read provider data.
 
-The future RED matrix is executable and covers every direct and factory path. For each of the four
-operations, call the direct `FmarketFundSource`, `source()`, and `client()` entrypoints with a
-synthetic transport spy and assert the following:
+The future RED matrix has two explicit scopes. For each of the four operations, default disabled
+valid calls use the direct `FmarketFundSource`, `source()`, and `client()` entrypoints with a
+synthetic transport spy. The positive cache/retry cases use the direct public constructor only:
+`source()` and `client()` accept only `http_get` and `timeout` and must not gain cache/retry
+parameters.
 
-| RED fixture | Required result |
+| RED fixture and entrypoint scope | Required result |
 |---|---|
-| Disabled source, default `cache_ttl=None`, `max_retries=0` | Existing `SourceUnavailable`; exact public message/reason is `SOURCE_DISABLED_PENDING_PERMISSION`; zero transport calls and no provider data. |
-| Disabled source with a pre-populated positive-`cache_ttl` cache entry | The same exact `SourceUnavailable` before cache lookup; no cached return, zero transport calls, and no provider data. |
-| Disabled source with positive `max_retries` | The same exact `SourceUnavailable` before the first attempt; zero physical attempts, zero retries/backoff, and no provider data. |
+| Disabled source, default `cache_ttl=None`, `max_retries=0` — direct class, `source()`, and `client()` | Existing `SourceUnavailable`; exact public message/reason is `SOURCE_DISABLED_PENDING_PERMISSION`; zero transport calls and no provider data. |
+| Disabled direct `FmarketFundSource` with a pre-populated positive-`cache_ttl` cache entry | The same exact `SourceUnavailable` before cache lookup; no cached return, zero transport calls, and no provider data. Pre-seed only the existing test-only internal seam `HttpDataSource._cache` using `HttpDataSource._cache_key(url, params, json_body, headers)` with `(expires_at, fabricated_response_text)`; make no provider call. |
+| Disabled direct `FmarketFundSource` with positive `max_retries` | The same exact `SourceUnavailable` before the first attempt; zero physical attempts, zero retries/backoff, and no provider data. |
 | `FmarketFundSource(...)`, `source()`, and `client()` construction | Return the source object lazily with zero network calls; a valid disabled operation call, not construction, raises the exact exception. |
 
 The exact disabled public carrier is the existing `SourceUnavailable` exception with
@@ -175,7 +177,8 @@ The implementation boundary is:
   or expired, using the exact `SourceUnavailable`/`SOURCE_DISABLED_PENDING_PERMISSION` contract
   above;
 - make direct `FmarketFundSource` calls and the `source()`/`client()` facade/factory paths fail
-  with zero transport calls, including positive-cache and positive-retry configurations;
+  with zero transport calls; positive cache/retry settings are tested on the direct constructor
+  only because the factory/alias signatures do not expose those knobs;
 - preserve imports, models, method signatures, and aliases; do not add fallback, proxy, session
   bypass, unofficial mirror, paid feed, alternate source, or new opt-in/config/enum grammar;
 - expose only bounded sanitized diagnostics and never provider legal prose, correspondence, raw
@@ -192,8 +195,9 @@ surfaces. Current `master` is the compatibility boundary that adds allocation an
 signatures/models; the implementation must not silently rewrite the v0.2.0 claims.
 
 The exact future RED/release matrix must bind those routes to direct class, `source()` factory, and
-`client()` alias assertions, source registration/factory behavior, diagnostics status/capabilities,
-and the v0.2.0/current distinction. It must inspect and update (only where a claim becomes false):
+`client()` alias assertions, exact `source_capabilities()` registry/export behavior, diagnostics
+status/capabilities, and the v0.2.0/current distinction. It must inspect and update (only where a
+claim becomes false):
 
 - `vnfin/diagnostics.py:318-348,663-728` and
   `tests/test_diagnostics.py:257-282`;
@@ -205,30 +209,59 @@ and the v0.2.0/current distinction. It must inspect and update (only where a cla
 - `skills/vnfin/SKILL.md:63-67` and `skills/vnfin/reference/domains.md:77`; and
 - `CHANGELOG.md` and release notes.
 
-The diagnostics contract is also exact: the current `explain_fund_coverage()` status is
-`metadata_core_available`; after the approved disable it must be
-`source_disabled_pending_permission`, with no note or suggested action claiming that Fmarket data
-is available or served. The retained `fund_metadata` capability identity, if kept for an offline
-explanation, must be marked `is_default=False`, retain `source="fmarket"` only as provenance, and
-carry the bounded limitation `SOURCE_DISABLED_PENDING_PERMISSION`; it must not be presented as an
-available source. The future RED assertions must cover these status/capability values and the
-`tests/test_diagnostics.py:257-282` availability expectations together with the four route calls.
+The diagnostics contract is frozen rather than conditional. The future
+`source_capabilities()` export retains exactly one offline Fmarket provenance record with
+`domain="funds"`, `endpoint="fund_metadata"`, `source="fmarket"`,
+`instruments=("VN open-ended mutual fund metadata",)`, `granularity="snapshot"`,
+`coverage_start=None`, `coverage_end=None`, `is_default=False`, `is_opt_in=False`,
+`is_single_source=True`, `limitations=("SOURCE_DISABLED_PENDING_PERMISSION",)`, and
+`suggested_action=None`. The future `explain_fund_coverage()` must return
+`status="source_disabled_pending_permission"`, that exact one-record `sources` tuple,
+`notes=("SOURCE_DISABLED_PENDING_PERMISSION; no provider call.",)`, and
+`suggested_actions=()`. It must make no availability claim or source-call suggestion. The future
+RED assertions must cover this complete record and the `tests/test_diagnostics.py:257-282`
+expectations together with the four route calls.
+
+The release handoff must name three exact values: `APPROVED_ANCHOR` (the final reviewed docs+RED+
+code commit), `APPROVED_BASE` (the reviewed design/base anchor), and `APPROVED_PATH_SET` (the exact
+changed paths in the approved range). Only the approved anchor may be pushed. Remote verification
+must assert `origin/master == APPROVED_ANCHOR`, `APPROVED_BASE` is an ancestor of that anchor, and
+`git diff --name-only APPROVED_BASE..origin/master == APPROVED_PATH_SET`; a later local receipt or
+commit must not cross the remote anchor. Only then may the clean resolution comment, close,
+`CLOSED`/`COMPLETED` re-read, and ordered activation occur: activate #219 after verified #221
+closure, then #220 after #219, then #222 after #220.
+
+The remaining release surfaces must also be explicit: `docs/units.md:19`,
+`docs/design/redundancy-failover.md:26-30,56-57`, `vnfin/funds/__init__.py:1-17,48-59`,
+`vnfin/funds/fmarket.py:1-26`, `vnfin/exceptions.py:33-34`,
+`tests/test_public_api_surface.py`, and `tests/snapshots/public_api_v0_2_0.json`. The future
+implementation must keep the `SourceUnavailable` import/class/constructor/signatures frozen, keep
+the exact disabled string, and update its public documentation to cover policy-disabled sources in
+addition to transport/network failures. Public-surface and snapshot checks must remain green with
+no new reason field or carrier.
 
 The matrix must assert exact routes, all four operation outcomes, direct/factory/alias zero-call
-behavior, exact exception/message, diagnostics and capability status, import/model/signature
-compatibility, full offline tests, and isolated wheel/sdist build. This audit and its correction do
-not authorize any RED test, production code, source registration, probe, push, or close.
+behavior, direct-only positive cache/retry cross-product, exact exception/message, exact diagnostics
+registry/export record, import/model/signature compatibility, full offline tests, and isolated
+wheel/sdist build. This audit and its correction do not authorize any RED test, production code,
+source registration, probe, push, or close.
 
 ## Reopen and review gates
 
-Re-open the disposition only on a fresh official document or written owner response. The evidence
-must be conjunctive across route applicability, all four operations, automation, caller return,
-commercial use, storage/retention/deletion, redistribution/attribution, rate/session policy, and
-revision/revocation. Reachability, robots.txt, a browser User-Agent, or a third-party integration
-reference is never sufficient by itself.
+Before design PASS, this audit remains documentation-only: no Fmarket probe, RED test, production
+code, push, or close is authorized, and the source remains `DISABLE_PENDING_PERMISSION`. After design
+PASS, absent permission is itself sufficient to start the authorized
+`RED_FIRST_IMPLEMENTATION_AND_API_REVIEW`; owner evidence is not a prerequisite for the fail-closed
+disable transition. The source must still fail before cache/network while that implementation is
+reviewed.
 
-Until that gate is satisfied, the source remains `DISABLE_PENDING_PERMISSION`; #219, #220, and #222
-remain queued and this audit does not authorize probes, RED tests, production code, push, or close.
+Fresh official evidence or a written owner response may reopen the **source/legal disposition**
+before that transition. Such evidence must be conjunctive across route applicability, all four
+operations, automation, caller return, commercial use, storage/retention/deletion,
+redistribution/attribution, rate/session policy, and revision/revocation. Reachability, robots.txt,
+a browser User-Agent, or a third-party integration reference is never sufficient by itself. It can
+change the outcome to `CLEARED_AS_IS`, `CLEARED_WITH_LIMITS`, or `REMOVE_SOURCE` only through a fresh
+review; it does not block the already-authorized disable RED path. #219, #220, and #222 remain queued.
 
 ## Sources
 
@@ -247,6 +280,6 @@ parameters, headers, cookies, tokens, or correspondence.
 
 `DISABLE_PENDING_PERMISSION` is the only defensible current design disposition. The terms' public
 website right and current technical reachability do not establish lawful automated collection or
-caller-facing reuse for any of listing, NAV history, holdings, or allocation. Obtain written owner
-coverage or complete a separately reviewed fail-before-network transition; do not silently continue
-or add a fallback.
+caller-facing reuse for any of listing, NAV history, holdings, or allocation. Written owner coverage
+may reopen that disposition; absent it, complete the separately reviewed fail-before-network
+transition. Do not silently continue or add a fallback.

@@ -78,14 +78,21 @@ text in the in-memory transport cache and a valid hit returns before the HTTP ca
 | `asset_allocation()` | `GET /res/products/{id}` | Same shared product-detail seam as holdings; after valid-argument validation, fail before cache lookup/cached return, GET dispatch, retry, or backoff. |
 
 Invalid public arguments retain current validation precedence and existing error types; the exact
-disable behavior below applies to valid calls. The future RED matrix must run every operation via
-the direct `FmarketFundSource`, `source()`, and `client()` paths with a transport spy and assert:
+disable behavior below applies to valid calls. The future RED matrix has two scopes. Default
+disabled valid calls cover every operation through direct `FmarketFundSource`, `source()`, and
+`client()` with a transport spy. Positive cache/retry cases cover the direct public constructor
+only: `source()` and `client()` accept only `http_get` and `timeout` and must not gain those knobs.
 
-- default disabled calls raise `SourceUnavailable` with exact `str(exc) ==
-  "SOURCE_DISABLED_PENDING_PERMISSION"`, return no provider data, and make zero transport calls;
-- a pre-populated positive-`cache_ttl` entry still raises before cache lookup/cached return, with
-  zero transport calls and no cached provider data;
-- positive `max_retries` still makes zero physical attempts and zero retry/backoff calls; and
+- default disabled calls through the direct class, `source()`, and `client()` raise
+  `SourceUnavailable` with exact `str(exc) == "SOURCE_DISABLED_PENDING_PERMISSION"`, return no
+  provider data, and make zero transport calls;
+- a disabled direct constructor with a pre-populated positive-`cache_ttl` entry still raises before
+  cache lookup/cached return, with zero transport calls and no cached provider data. Pre-seed only
+  the existing test-only internal seam `HttpDataSource._cache` using
+  `HttpDataSource._cache_key(url, params, json_body, headers)` and a
+  `(expires_at, fabricated_response_text)` tuple; make no provider call;
+- a disabled direct constructor with positive `max_retries` still makes zero physical attempts and
+  zero retry/backoff calls; and
 - `FmarketFundSource(...)`, `source()`, and `client()` remain lazy object-returning constructors
   with zero network calls; only a valid disabled operation call raises.
 
@@ -118,23 +125,26 @@ normal browser behavior cannot satisfy any missing axis.
 
 ## 5. Disposition and future transition boundary
 
-### 4.1 Current state
+### 5.1 Current state
 
 Keep this commit documentation-only. Do not probe the Fmarket API, change the registry, disable a
 runtime path, add a fallback, or close #221 before exact design review. The current mutual-fund
 runtime remains technically unchanged until a separately approved implementation transition.
 
-### 4.2 If permission remains absent
+### 5.2 If permission remains absent
 
 A later RED-first implementation must make the source fail before cache lookup and network dispatch
-while permission is absent or expired. It must:
+while permission is absent or expired. After design PASS, absent permission is sufficient to start
+this authorized RED/API transition; owner evidence is not a prerequisite for the fail-closed
+disable. It must:
 
 1. preserve public imports/models where compatible but make availability change explicit;
 2. raise the existing typed `SourceUnavailable` family with the exact bounded public token
    `SOURCE_DISABLED_PENDING_PERMISSION`;
 3. avoid provider legal prose, correspondence, raw headers, cookies, and unbounded reasons;
 4. make direct source calls and the `source()`/`client()` facade/factory zero-network and
-   deterministic, including positive cache/retry settings;
+   deterministic; positive cache/retry settings are tested on the direct constructor only because
+   the factory/alias signatures do not expose those knobs;
 5. avoid fallback, proxy, session bypass, unofficial mirror, paid feed, or alternate provider; and
 6. update API docs, user docs, the vnfin skill, `CHANGELOG.md`, and release notes in the same
    implementation change.
@@ -144,7 +154,7 @@ network calls before cache and retry, stable exception/type/reason, import/model
 compatibility, source registration, docs/API/skill/CHANGELOG/release behavior, the full offline
 suite, and isolated wheel/sdist build. No part of that matrix is authorized by this docs commit.
 
-### 4.3 What a written owner response must cover
+### 5.3 What a written owner response must cover
 
 A future permission request through T3 must identify the authority and explicitly cover:
 
@@ -181,21 +191,43 @@ The matrix must cover every live availability statement that becomes false after
 - `skills/vnfin/SKILL.md:63-67`, `skills/vnfin/reference/domains.md:77`, `CHANGELOG.md`,
   and release notes.
 
-Each row must assert route, operation, direct/factory/alias zero-call behavior, exact
-`SourceUnavailable`/message, diagnostics status/capabilities, source registration, the
+Each row must assert route, operation, direct/factory/alias zero-call behavior, direct-only positive
+cache/retry cases, exact `SourceUnavailable`/message, exact `source_capabilities()` registry/export
+record, diagnostics status/capabilities, source registration, the
 v0.2.0/current compatibility boundary, and full offline test/build gates. No docs-only PASS may
 publish or close #221: it must transition to `RED_FIRST_IMPLEMENTATION_AND_API_REVIEW`, remain
 open, and receive a fresh exact-SHA implementation/API review. Only that code approval permits
 push, remote verification, clean resolution, close, and re-read; #219 activates after verified
 #221 closure, #220 after #219 closure, and #222 after #220 closure.
 
-Diagnostics values are frozen for that future release: current
-`explain_fund_coverage().status == "metadata_core_available"` must become exact
-`"source_disabled_pending_permission"`; no `notes` or `suggested_actions` may claim Fmarket data
-is available or served. If the offline `fund_metadata` capability remains for provenance, it must
-have `is_default=False`, retain `source="fmarket"` only as identity, and carry the bounded
-`SOURCE_DISABLED_PENDING_PERMISSION` limitation, never an available-source claim. The RED matrix
-must assert these values alongside `tests/test_diagnostics.py:257-282` and the four route calls.
+Diagnostics values are frozen, not conditional. The future `source_capabilities()` export retains
+exactly one offline Fmarket provenance record with `domain="funds"`, `endpoint="fund_metadata"`,
+`source="fmarket"`, `instruments=("VN open-ended mutual fund metadata",)`,
+`granularity="snapshot"`, `coverage_start=None`, `coverage_end=None`, `is_default=False`,
+`is_opt_in=False`, `is_single_source=True`, `limitations=("SOURCE_DISABLED_PENDING_PERMISSION",)`,
+and `suggested_action=None`. The future `explain_fund_coverage()` must return
+`status="source_disabled_pending_permission"`, that exact one-record `sources` tuple,
+`notes=("SOURCE_DISABLED_PENDING_PERMISSION; no provider call.",)`, and `suggested_actions=()`.
+It must make no availability claim or source-call suggestion. The RED matrix must assert this
+complete record alongside `tests/test_diagnostics.py:257-282` and the four route calls.
+
+The release handoff must name `APPROVED_ANCHOR` (the final reviewed docs+RED+code commit),
+`APPROVED_BASE` (the reviewed design/base anchor), and `APPROVED_PATH_SET` (the exact changed-path
+set). Only `APPROVED_ANCHOR` may be pushed. Remote verification must assert
+`origin/master == APPROVED_ANCHOR`, `APPROVED_BASE` is an ancestor of that anchor, and
+`git diff --name-only APPROVED_BASE..origin/master == APPROVED_PATH_SET`; no later local receipt
+or commit may cross the remote anchor. Only then may the clean resolution comment, close,
+`CLOSED`/`COMPLETED` re-read, and ordered activation occur: #219 after verified #221 closure, #220
+after #219, and #222 after #220.
+
+The remaining release surfaces are explicit: `docs/units.md:19`,
+`docs/design/redundancy-failover.md:26-30,56-57`, `vnfin/funds/__init__.py:1-17,48-59`,
+`vnfin/funds/fmarket.py:1-26`, `vnfin/exceptions.py:33-34`,
+`tests/test_public_api_surface.py`, and `tests/snapshots/public_api_v0_2_0.json`. The future
+implementation must keep the `SourceUnavailable` import/class/constructor/signatures frozen, keep
+the exact disabled string, and update its public documentation to cover policy-disabled sources in
+addition to transport/network failures. Public-surface and snapshot checks remain green with no
+new reason field or carrier.
 
 ## 7. Review/reopen and release gates
 
@@ -207,14 +239,25 @@ The exact-SHA design reviewer must verify:
 - no API probe, provider row, query-bearing URL, header, cookie, token, full-term text, or
   correspondence is committed;
 - blacklist, secret, diff/path, and clean-tree gates pass; and
-- post-PASS lifecycle says `DISABLE_PENDING_PERMISSION` remains the disposition unless a fresh
-  conjunctive owner-evidence review changes it.
+- before design PASS, no RED/code/push/close is authorized; after design PASS, absent permission
+  authorizes the exact `RED_FIRST_IMPLEMENTATION_AND_API_REVIEW` transition;
+- owner evidence is a disposition-reopen input, not a prerequisite for the fail-closed disable;
+  a fresh conjunctive owner-evidence review may change `DISABLE_PENDING_PERMISSION` before the
+  implementation transition; and
+- post-PASS lifecycle preserves `DISABLE_PENDING_PERMISSION` unless that fresh disposition review
+  changes it.
 
 No push or close is allowed before design PASS. A design PASS at this docs-only stage does not
 authorize publication or closure. It authorizes only the fresh
 `RED_FIRST_IMPLEMENTATION_AND_API_REVIEW` transition described above. Any implementation transition
 requires RED-first tests, the exact docs/API/runtime release matrix, and another exact-SHA code
 review before publication or closure.
+
+The final implementation review must freeze `APPROVED_ANCHOR`, `APPROVED_BASE`, and
+`APPROVED_PATH_SET` in its handoff. It may authorize publication only when
+`origin/master == APPROVED_ANCHOR`, `APPROVED_BASE` is an ancestor, and the remote diff path set
+equals `APPROVED_PATH_SET` with no later local receipt crossing the anchor; then and only then may
+the clean resolution, close/re-read, and ordered #219 → #220 → #222 activation occur.
 
 ## 8. Lifecycle
 
@@ -231,6 +274,7 @@ review before publication or closure.
   and caller-facing reuse remain ungranted/unknown.
 - Fincorp owner/contact path is recorded; no written API/data permission was found.
 - Current runtime is unchanged; no API probe or production capability was added.
-- A design PASS cannot publish/close; a disable transition requires the exact RED-first implementation
-  and code-review path above, while clear/remove requires a fresh source/legal review.
+- A design PASS cannot publish/close; absent permission, the disable transition follows the exact
+  RED-first implementation and code-review path above, while clear/remove requires a fresh
+  source/legal review.
 - Exact artifacts are this note, the source-vetting report, and the backlog lifecycle entry only.
