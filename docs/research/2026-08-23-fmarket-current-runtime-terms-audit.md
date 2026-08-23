@@ -268,13 +268,14 @@ RED test, production code, push, or close was authorized. Design PASS and the RE
 review have since occurred. The Fmarket source is implemented and remains disabled before
 cache/network while permission is absent; the current final review changes no runtime behavior.
 
-Fresh official evidence or a written owner response may reopen the **source/legal disposition**
-before that transition. Such evidence must be conjunctive across route applicability, all four
-operations, automation, caller return, commercial use, storage/retention/deletion,
+Fresh official evidence or a written owner response may reopen the **source/legal disposition** while
+the implemented disable remains in force. Such evidence must be conjunctive across route applicability,
+all four operations, automation, caller return, commercial use, storage/retention/deletion,
 redistribution/attribution, rate/session policy, and revision/revocation. Reachability, robots.txt,
-a browser User-Agent, or a third-party integration reference is never sufficient by itself. It can
-change the outcome to `CLEARED_AS_IS`, `CLEARED_WITH_LIMITS`, or `REMOVE_SOURCE` only through a fresh
-review; it does not block the already-authorized disable RED path. #219, #220, and #222 remain queued.
+a browser User-Agent, or a third-party integration reference is never sufficient by itself. A fresh
+review may change the outcome to `CLEARED_AS_IS`, `CLEARED_WITH_LIMITS`, or `REMOVE_SOURCE`; it does
+not authorize a new RED/implementation path or runtime capability in this completed review. #219,
+#220, and #222 remain queued.
 
 ## Sources
 

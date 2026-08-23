@@ -130,9 +130,9 @@ class TestCanonicalIdentifier:
     @pytest.mark.parametrize(
         "value,expected",
         [
-            ("VCBFBCF", "VCBFBCF"), ("VFMVF1", "VFMVF1"), ("RVPF24", "RVPF24"),
+            ("SYNTHFUND1", "SYNTHFUND1"), ("DEMOFUND2", "DEMOFUND2"), ("FAKEFUND3", "FAKEFUND3"),
             ("VN30", "VN30"), ("E1VFVN30", "E1VFVN30"), ("FUEVFVND", "FUEVFVND"),
-            ("  vcbf ", "VCBF"),   # strip().upper() normalization
+            ("  synthfund ", "SYNTHFUND"),   # strip().upper() normalization
             ("fpt", "FPT"),
         ],
     )

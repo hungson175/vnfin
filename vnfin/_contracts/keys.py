@@ -35,8 +35,8 @@ _CRYPTO_PAIR_RE = re.compile(r"[A-Z0-9]{4,}|[A-Z0-9]{2,}-[A-Z0-9]{2,}")
 
 #: A canonical security/fund identifier: letter-start then uppercase alphanumerics,
 #: no dot/hyphen/slash/punctuation/internal-space and not digit-first (#34/#33/#30/#9).
-#: Validated AFTER ``strip().upper()`` so padded/lower public inputs normalize (live
-#: Fmarket codes e.g. ``VCBFBCF``/``VFMVF1``/``RVPF24`` and index/security examples
+#: Validated AFTER ``strip().upper()`` so padded/lower public inputs normalize (fabricated
+#: fund examples ``SYNTHFUND1``/``DEMOFUND2``/``FAKEFUND3`` and index/security examples
 #: ``VN30``/``E1VFVN30``/``FUEVFVND`` all match).
 _SECURITY_ID_RE = re.compile(r"[A-Z][A-Z0-9]*")
 

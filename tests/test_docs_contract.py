@@ -306,8 +306,9 @@ def test_fmarket_transition_docs_reject_completed_state_contradictions():
         "already-authorized disable RED path",
     ):
         assert phrase not in terms_audit
-    assert "may reopen the **source/legal disposition** while the implemented disable remains in force" in terms_audit
-    assert "does not authorize a new RED/implementation path" in terms_audit
+    terms_normalized = re.sub(r"\s+", " ", terms_audit)
+    assert "may reopen the **source/legal disposition** while the implemented disable remains in force" in terms_normalized
+    assert "does not authorize a new RED/implementation path" in terms_normalized
     for document in (etf_page, terms_audit):
         _assert_no_current_fmarket_contradictions(document)
     assert "The current `explain_fund_coverage()` returns" in terms_audit
@@ -349,8 +350,9 @@ def test_fmarket_correction_lifecycle_has_reviewer_verdict_owner():
     assert "CODE_REVIEW_CORRECTION_REVIEW_REQUESTED" in backlog
     assert "Actor is `vnfin-oss-reviewer`" in backlog
     assert "RETURN_FINAL_EXACT_SHA_VERDICT" in backlog
-    assert re.search(r"final test/docs correction content anchor [`'][0-9a-f]{40}[`']", backlog)
-    assert "this lifecycle receipt is the exact final review handoff" in backlog
+    backlog_normalized = re.sub(r"\s+", " ", backlog.casefold())
+    assert re.search(r"final test/docs correction content anchor is [`'][0-9a-f]{40}[`']", backlog_normalized)
+    assert "this lifecycle receipt is the exact final review handoff" in backlog_normalized
 
 
 def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
