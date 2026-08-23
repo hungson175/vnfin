@@ -602,14 +602,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#223 — DESIGN_BLOCK (2026-08-24).** Actor `vnfin-oss-reviewer`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `6939ba4` for
+- **#223 — EXACT_SHA_DESIGN_REREVIEW (2026-08-24, clean-base correction).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `6939ba4` for
   `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
-  Reviewed handoff `1a950ee67cda40768cc6541c5a4b6f1a41178e6e` is blocked by report
-  `reviews/review-202608240028-issue223-design-source-review.md` at reviewer `31af06f`.
-  Rebuild the correction from clean `origin/master=c3921a1`; remove scanner-evasion URL and repair
-  identity/legal/status, qualified-role, exact-UTC stitched, and executable-byte-budget seams.
-  Preserve SOURCE-GAP/empty chain and #224/#225 queue; no probe, RED, code, push, or close.
+  BLOCK at reviewed handoff `1a950ee67cda40768cc6541c5a4b6f1a41178e6e` is recorded in
+  `reviews/review-202608240028-issue223-design-source-review.md` at reviewer `31af06f`; the
+  correction is rebuilt from clean `origin/master=c3921a1` and contains only the two source/design
+  artifacts plus this lifecycle. It removes scanner-evasion URL encoding, repairs official
+  identity/legal/status evidence, filters only independently qualified roles, pins executable UTC
+  stitching and incremental byte caps, and keeps the public carrier deferred. Preserve
+  SOURCE-GAP/empty chain and #224/#225 queue; no probe, RED, code, push, or close.
 
 - **#222 — EXACT_SHA_DESIGN_REREVIEW (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
   `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `001ad85` for
