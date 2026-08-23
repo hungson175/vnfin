@@ -602,6 +602,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#225 — BLOCK_RECORDED (2026-08-24, source/design gate).** Actor `vnfin-oss-reviewer`; next
+  action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `7b7fe0b`; reviewed exact
+  handoff `24363bfe887a7f4c9e269fe9ac1034a63f959069`; BLOCK report
+  `reviews/review-202608240153-issue225-design-source-gate.md` at reviewer `d7118d4`.
+  Preserve `SOURCE-GAP`/empty new chain, Fmarket `DISABLE_PENDING_PERMISSION`/unprobed, and no
+  RED, code, push, or close. This BLOCK record is rebuilt directly on published base
+  `bdfe06bba330bdf36fec0cf7c18bb79e96e5c28e`; local activation `ae8087d` is excluded.
+
 - **#224 — DESIGN_REVIEW (2026-08-24, narrow B1-B2 correction).** Actor
   `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `b8ee1e5` for
   `tasks/224-daily-eurvnd-fx-history-spec.md`, public receipt `issuecomment-5387048240`.
