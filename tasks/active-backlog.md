@@ -601,19 +601,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), current-runtime source/legal audit.**
-  Actor `vnfin-oss`; next action `RETURN_EXACT_SHA_DESIGN_REVIEW` to reviewer
-  `vnfin-oss-reviewer`. Activation followed verified #218 closure at published exact anchor
-  `c646c37ca948a1747d3483d9b40c296263b85496`, clean-resolution receipt `issuecomment-5385760373`,
-  and CLOSED/COMPLETED re-read. Authoritative packet
-  `tasks/221-fmarket-current-runtime-terms-audit-spec.md` at reviewer
-  `1cc60cd99e7ed8b28214eb3a5cf9375c4a7c5376`; public issue
-  `https://github.com/hungson175/vnfin/issues/221`. The current exact docs handoff audits official
-  Fmarket/Fincorp terms across listing, NAV history, holdings, and allocation/detail and chooses
-  `DISABLE_PENDING_PERMISSION`; no API/developer/caller-facing grant was found. Changed paths are
-  only `docs/research/2026-08-23-fmarket-current-runtime-terms-audit.md`, `tasks/221-design-note.md`,
-  and this backlog lifecycle record. No Fmarket API probe, RED/code/push/close; #219/#220/#222
-  remain queued.
+- **#221 — DESIGN_BLOCKED (2026-08-23), B1-B4/I1 executable-contract correction.** BLOCK recorded
+  first at reviewed exact anchor `946a2b9d7dc7a9d552ea2b527caaea9884e23ca0`; report
+  `reviews/review-202608231850-issue221-source-legal-design-gate.md`, reviewer `3be16c8`, delivery
+  `c48362a9`. Expected correction actor is `vnfin-oss`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Correct the current cache/retry inventory and
+  fail-before-cache/network rule, the RED-first implementation lifecycle, exact exception/entrypoint
+  and route/v0.2-current/diagnostics/release contract, and the broken T6 link. Preserve
+  `DISABLE_PENDING_PERMISSION`, official evidence, no Fmarket API probe, no RED/code/push/close,
+  and queued #219/#220/#222.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
