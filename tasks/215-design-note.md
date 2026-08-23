@@ -1,10 +1,11 @@
 # #215 source/design note — stock dividends and bonus shares
 
-**Issue:** #215  
-**Packet:** `tasks/215-stock-bonus-distributions-source-spec.md` at reviewer anchor `4a6780b`  
-**Date:** 23 August 2026 (Vietnam time, UTC+7)  
-**Status:** `SOURCE-GAP CLOSURE` — docs/design only; no RED, model, accessor, source registration, or runtime capability  
-**Current published base:** `origin/master` exact `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`  
+**Issue:** #215
+**Packet:** `tasks/215-stock-bonus-distributions-source-spec.md` at reviewer anchor `4a6780b`
+**Date:** 23 August 2026 (Vietnam time, UTC+7)
+**Status:** `SOURCE-GAP CLOSURE` — docs/design only; no RED, model, accessor, source registration, or runtime capability
+**Current published base:** `origin/master` exact `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`
+**Annotated historical `v0.2.0` boundary:** exact `2fe50df4f27064140ff9f7a680227a2b337ec74a`; no `vnfin/corp_actions` tree; not current cash behavior
 **Research:** [`docs/research/2026-08-23-vn-stock-bonus-distributions-source-vetting.md`](../docs/research/2026-08-23-vn-stock-bonus-distributions-source-vetting.md)
 
 ## 0. Decision and hard boundary
@@ -23,9 +24,10 @@ RED tests / production code              = not authorized
 The source-gate result is `SOURCE-GAP CLOSURE`. Official notices for both kinds exist, but no single
 no-login owner/route set currently proves identity, kind, ex/effective date, unit, event revision,
 full coverage, bounded runtime, and lawful reuse together for the inclusive request
-`2018-08-13..2026-08-19`. A docs-only source-gap PASS may authorize publication and resolution only;
-it never authorizes TDD or implementation. A new implementation requires a fresh exact-SHA design
-PASS after all reopen conditions in section 10 are evidenced.
+`2018-08-13..2026-08-19`. A docs-only source-gap PASS may authorize publication, remote verification,
+the clean no-capability resolution, and close/re-read only; it never authorizes TDD or implementation.
+A new implementation requires a fresh exact-SHA design PASS after all reopen conditions in section 8
+are evidenced.
 
 ## 1. Clean-room and compatibility contract
 
@@ -87,406 +89,86 @@ BUDGET_EXHAUSTED
 provider row or a confirmed-empty event result. A `PARTIAL` candidate never becomes `QUALIFIED` by
 combining another owner.
 
-## 3. Future public contract (non-authoritative until a source qualifies)
-
-This section records the minimum shape a later implementation must review; it creates no symbols or
-exports now. The current cash API remains unchanged.
-
-```python
-vnfin.corp_actions.share_distributions(
-    symbol,
-    *,
-    start=None,
-    end=None,
-    sources=None,
-    http_get=None,
-    timeout=25.0,
-    max_attempts=3,
-) -> ShareDistributionHistory
-```
-
-The exact future module/export contract is fixed for the next design gate, although no symbol is
-created now:
-
-```text
-vnfin.corp_actions.__init__:
-  share_distributions
-  ShareDistributionKind, ShareDistributionEvent, ShareDistributionHistory
-  CoverageStatus, SourceAttempt
-
-vnfin.corp_actions.models:
-  ShareDistributionKind, ShareDistributionEvent, ShareDistributionHistory
-
-vnfin.corp_actions.base:
-  CoverageStatus, SourceOutcome, SourceAttempt
-
-vnfin.exceptions:
-  ShareDistributionSourceGap, ShareDistributionSourceSelectionError
-  ShareDistributionSourceError, BudgetGlobalExhausted
-```
-
-`sources` is `None | str | Sequence[str]` and has one exact future behavior: `None` selects the
-default registry; an empty sequence raises `ShareDistributionSourceGap` before network; one
-canonical source token runs exactly that source; more than one token raises
-`ShareDistributionSourceSelectionError(code="share_distribution_single_source_required")` before
-network. Unknown, duplicate, or malformed tokens raise the same selection error with
-`code="share_distribution_source_invalid"`. There is no implicit cross-source failover or
-per-event merge. The current default registry is empty, so `sources=None` raises
-`ShareDistributionSourceGap(code="share_distribution_source_gap")` before network.
-
-### 3.1 Exact future types
-
-The intended public values and field names are frozen for the next design gate:
-
-```python
-class ShareDistributionKind(Enum):
-    STOCK_DIVIDEND = "stock_dividend"
-    BONUS_SHARE = "bonus_share"
-
-@dataclass(frozen=True)
-class ShareDistributionEvent:
-    symbol: str
-    kind: ShareDistributionKind
-    shares_per_100: Decimal
-    ex_date: date                 # required, provider-backed, never inferred
-    record_date: date | None       # optional, provider-backed, not ex_date
-    event_id: str                  # stable owner-issued identifier
-    revision: str | None           # owner revision/update token when available
-    source: Literal["vsdc", "vndirect", "hose", "hnx"]  # closed source-role token
-    provider_published_at: datetime | None
-    fetched_at_utc: datetime
-    warnings: tuple[str, ...]
-
-@dataclass(frozen=True)
-class ShareDistributionHistory:
-    symbol: str
-    events: tuple[ShareDistributionEvent, ...]
-    source: Literal["vsdc", "vndirect", "hose", "hnx"]
-    requested_start: date | None
-    requested_end: date | None
-    served_start: date | None
-    served_end: date | None
-    coverage: CoverageStatus
-    fetched_at_utc: datetime
-    attempts: tuple[SourceAttempt, ...]
-    warnings: tuple[str, ...]
-```
-
-`Decimal`/an exact rational is required for `shares_per_100`; binary floating point is not an
-acceptable canonical storage unit. `provider_published_at` is optional and must not be substituted
-for an event date. Date-only provider fields remain dates; they are not assigned UTC midnight.
-
-The future `SourceAttempt` is a sanitized typed value, not raw transport text:
-
-```text
-SourceAttempt(
-  name: Literal["vsdc", "vndirect", "hose", "hnx"],
-  role: Literal["identity", "history", "page", "detail"],
-  outcome: SourceOutcome,
-  logical_count: int,
-  physical_count: int,
-  page_count: int,
-  retry_count: int,
-  dispatch_ordinals: tuple[int, ...],
-  response_bytes: int,
-  http_status: int | None,
-  mime: Literal["application/json", "text/html", "text/plain"] | None,
-  warnings: tuple[str, ...],
-)
-```
-
-`SourceAttempt` validation is exact: all counters are finite integers `>= 0`, ordinals are strictly
-ascending positive integers, `physical_count == len(dispatch_ordinals)`, and every warning is one
-of the section-8 tokens. `name` and `role` are closed enums; arbitrary custom source names are
-rejected before network. `SourceOutcome` is the section-2 allow-list plus `RESPONSE_TOO_LARGE`.
-
-The future exceptions have exact sanitized fields and stable codes:
-
-```text
-ShareDistributionSourceGap(
-  code="share_distribution_source_gap",
-  attempts=tuple[SourceAttempt, ...],  # empty for preflight default/empty registry
-)
-
-ShareDistributionSourceSelectionError(
-  code in {"share_distribution_source_invalid",
-           "share_distribution_single_source_required"},
-  attempts=(),
-)
-
-ShareDistributionSourceError(
-  code in {"share_distribution_not_served", "share_distribution_schema_drift",
-           "share_distribution_identity_gap", "share_distribution_event_type_gap",
-           "share_distribution_effective_date_gap", "share_distribution_ratio_unit_gap",
-           "share_distribution_pagination_gap", "share_distribution_revision_gap",
-           "share_distribution_response_too_large"},
-  outcome: SourceOutcome,
-  attempts: tuple[SourceAttempt, ...],
-)
-
-BudgetGlobalExhausted(
-  code="share_distribution_budget_exhausted",
-  logical_used: int, logical_limit: int,
-  physical_used: int, physical_limit: int,
-  source_units_used: int, source_units_limit: int,
-  response_bytes_used: int, response_bytes_limit: int,
-  page_counts: tuple[tuple[str, int], ...],
-  attempts: tuple[SourceAttempt, ...],
-)
-```
-
-`str(exception)` is exactly its stable `code`; no dynamic provider text is included. The two
-selection exceptions are zero-network preflight failures. `BudgetGlobalExhausted` preserves prior
-attempts and never substitutes an empty attempt list.
-
-No URL, query, cookie, token, response body, exception text, arbitrary source name, or unbounded
-provider string may enter a public attempt or warning.
-
-### 3.2 Coverage status
-
-```text
-CoverageStatus = one of:
-  FULL            = exact requested window reconciled and complete
-  PARTIAL         = provider-declared bounded interval, not the exact requested window
-  UNKNOWN         = syntactically valid response but completeness/absence is unproved
-  EMPTY_CONFIRMED = exact full-window proof with no matching events
-  NOT_SERVED      = no admissible source result
-```
-
-`FULL` requires response-backed ex/effective dates, exact kind/unit, symbol identity, all-page
-reconciliation, duplicate/revision handling, and a provider completeness statement or equivalent
-proof for `2018-08-13..2026-08-19`. `PARTIAL` must expose `served_start`/`served_end` and never claim
-full history and is permitted only when the provider declares the served interval and all pages in
-that interval reconcile. `UNKNOWN` always returns `ShareDistributionHistory(events=(), coverage=UNKNOWN)`
-with the exact `SHARE_DISTRIBUTION_COVERAGE_UNKNOWN` warning; observed rows are discarded when
-coverage is unknown. `EMPTY_CONFIRMED` is the only confirmed-empty status and is permitted only when
-all `FULL` predicates pass with zero matching events. A source error or budget exhaustion is not an
-empty `ShareDistributionHistory`.
-
-## 4. Kind and unit normalization
-
-### 4.1 Kind is response/schema-backed only
-
-The two values are independent:
-
-| Normalized kind | Accepted only when the same owner proves | Rejected inputs |
-|---|---|---|
-| `STOCK_DIVIDEND` | An exact provider token/schema means dividend paid in newly issued shares. | `DIVIDEND`, cash words, generic `LISTED`, a title-only match, or a free-text inference. |
-| `BONUS_SHARE` | An exact provider token/schema means a free/capital-from-equity bonus issue. | Rights purchase, ESOP/listing without a declared kind, generic capital increase, or a title-only match. |
-
-The observed VNDIRECT `STOCKDIV` and `KINDDIV` tokens remain unqualified until the provider's
-same-owner documentation binds them to these definitions. VSDC notice headings and Vietnamese free
-text remain evidence to investigate, not an executable allow-list. Mixed-purpose notices are rejected
-unless the owner supplies distinct typed event records or an exact split rule.
-
-### 4.2 `shares_per_100`
-
-The normalized unit is new shares per 100 existing shares. A future parser may accept a provider
-field already labelled in that unit or an explicitly labelled `held:new` ratio. The orientation must
-be response/schema-backed; never guess from a colon or percent sign.
-
-For an explicitly labelled `held:new` ratio, the exact formula is:
-
-```text
-shares_per_100 = (new_shares / held_shares) * 100
-```
-
-Synthetic examples only: `20:1` becomes `5`; `100:6.25` becomes `6.25`. Both are illustrative,
-not provider rows. The parser must reject zero/negative/non-finite values, percent-of-par values,
-cash amounts, missing orientation, and ratios whose rounding/fraction rule is not documented.
-Provider-provided rounding, fractional entitlement, cancellation, and total-new-share fields are
-stored separately from the normalized ratio; they never alter the ratio silently.
-
-## 5. Date, identity, and revision contract
-
-### 5.1 Ex/effective date
-
-`ex_date` is required for every returned event. It may come from a field named `exDate` or
-`effectiveDate` only after the provider's own documentation proves that field means the ex/right-
-trading date for the exact event kind. A field named `effectiveDate` is not self-authenticating.
-
-The following are never substitutes:
-
-- VSDC `Ngày đăng ký cuối cùng` (record date);
-- a VSDC explanatory rule that describes the relation between dates;
-- disclosure/announcement date;
-- pay/actual date;
-- listing/trading-start date;
-- retrieval time; or
-- a calculated previous trading day.
-
-Filtering is inclusive on the response-backed `ex_date` only. Missing, ambiguous, inferred,
-timezone-unclear, or semantically conflicting dates produce `EFFECTIVE_DATE_GAP` and no event row.
-A record date may be returned as `record_date` only when its provider meaning is separately proven.
-
-### 5.2 Response-backed identity
-
-Before accepting a row, the same response family must bind:
-
-1. canonical requested symbol and provider symbol;
-2. legal issuer name and venue;
-3. ISIN or owner-equivalent stable security identity;
-4. exact owner event ID and, if applicable, revision/cancellation ID;
-5. exact provider kind token; and
-6. canonical source role.
-
-Search result text, URL numeric IDs, title hashes, query tickers, local sequence numbers, and
-cross-provider matching are not identity. Wrong-issuer, renamed-symbol, duplicate-locale,
-missing-ID, conflicting-code, and ambiguous response cases fail closed.
-
-### 5.3 Revision/cancellation
-
-A provider must state how amendment, cancellation, supersession, and duplicate locale rows are
-represented. Rows with the same `event_id` and identical revision/payload may be deduplicated. Two
-different revisions require the provider's precedence rule; otherwise the result is
-`REVISION_GAP`, never arbitrary keep-first or keep-last. A cancelled event is not silently dropped;
-it must be represented by the provider-backed revision policy or make the window unqualified.
-
-## 6. Coverage, pagination, and empty-result contract
-
-A future implementation must prove the requested inclusive window independently for each kind and
-source. It must not use a current total as a historical coverage claim.
-
-| Predicate | `FULL` requirement | Failure result |
-|---|---|---|
-| Identity | Every page/row echoes the requested issuer/symbol and stable event identity. | `IDENTITY_GAP`; no confirmed empty. |
-| Kind | Every accepted row maps to exactly one allowed kind; rejected kinds are counted by typed outcome. | `EVENT_TYPE_GAP`; no silent remap. |
-| Date | Every accepted row has response-backed ex/effective date. | `EFFECTIVE_DATE_GAP`; no inferred date. |
-| Unit | Every accepted row has exact positive finite shares-per-100 semantics. | `RATIO_UNIT_GAP`; no cash/percent fallback. |
-| Pages | Provider first/last page, cursor, total, and page-size semantics reconcile; no page is skipped. | `PAGINATION_GAP`; no false empty. |
-| Boundaries | Served min/max ex dates and requested bounds are known and inclusive. | `COVERAGE_GAP`/`UNKNOWN`; no `FULL`. |
-| Revision | Duplicates, amendments, and cancellations reconcile under owner rule. | `REVISION_GAP`; no silent omission. |
-
-The future response must reject page zero, negative pages, changing totals, missing page metadata,
-generic maintenance HTML, redirects, missing/wrong MIME, login pages, and a successful-but-wrong
-route. A provider-declared empty result is `EMPTY_CONFIRMED` only if all `FULL` predicates pass for
-the exact symbol/kind/window and the provider defines empty semantics. A syntactically valid response
-whose completeness is unknown returns an empty `UNKNOWN` history with the exact warning token;
-transport, schema, identity, pagination, revision, and budget failures raise the typed source error
-and return no history. No failure path is a confirmed absence.
-
-## 7. Atomic global budget and deterministic scheduler
-
-These are future design ceilings, not claims about provider policy. They are deliberately finite and
-must be approved again before implementation:
-
-```text
-MAX_SOURCE_UNITS_PER_CALL = 4       # independent candidates; final result uses one source only
-MAX_LOGICAL_DISPATCHES   = 32       # route/page reservations, retries excluded
-MAX_PHYSICAL_DISPATCHES  = 48       # actual network sends, all sources combined
-MAX_PAGES_PER_SOURCE     = 24       # page/cursor reservations for one candidate
-MAX_RETRIES_PER_PAGE     = 2        # initial send + at most two retries = 3 physical sends
-MAX_RESPONSE_BYTES_PER_DISPATCH = 4_000_000
-MAX_TOTAL_RESPONSE_BYTES = 16_000_000
-MAX_ATTEMPT_WARNING_CHARS = 1_024
-MAX_RESULT_WARNING_CHARS  = 4_096
-```
-
-The request-scoped budget is global across all candidates and routes. A source candidate may be
-retried only within the same source unit; a later source is never appended to rows from an earlier
-source. The default scheduler is sequential and deterministic:
-
-1. preserve explicit source order;
-2. for one source, reserve identity before history, then pages in ascending provider page/cursor
-   order; and
-3. for one page, attempt retry generations `0`, `1`, `2` in order, only when the failure is retryable
-   under a later owner-approved policy.
-
-Before any dispatch, the scheduler atomically reserves the source unit. A source name may be
-reserved once; a fifth unit is rejected by `MAX_SOURCE_UNITS_PER_CALL`, and the one-source public
-contract normally makes the limit one in practice. Each logical route/page has one key
-`(source_name, route_role, scope_id, page_key)`. A retry does not consume another logical
-reservation. Each physical dispatch has one key `(logical_key, retry_generation)` and receives the
-next contiguous `dispatch_ordinal` only after the atomic reservation succeeds. A reservation that
-would exceed any global, source, page, retry, or byte cap performs **no network send and receives no
-physical ordinal**.
-
-Response bytes are streamed into a fixed-size counter, never an unbounded buffer. Every received
-chunk atomically increments both `dispatch_bytes` and `total_response_bytes`; a chunk that would
-make `dispatch_bytes > 4_000_000` or `total_response_bytes > 16_000_000` aborts that dispatch,
-classifies the attempt as `RESPONSE_TOO_LARGE`, and commits no event page. The physical dispatch
-still counts because the network send occurred. There is no retry unless a later owner-approved
-policy explicitly marks this typed failure retryable.
-
-The reservation operation is atomic and deterministic:
-
-```text
-reserve_source(source_name):
-  reject source_name not in {"vsdc", "vndirect", "hose", "hnx"}
-  reject source_name already reserved
-  reject if source_units_used + 1 > 4
-  otherwise add source_name and increment source_units_used
-
-reserve(logical_key, retry_generation):
-  reject source not reserved or source_units_used > MAX_SOURCE_UNITS_PER_CALL
-  reject duplicate (logical_key, retry_generation)
-  if retry_generation == 0:
-    reject logical_key already reserved
-    reject if logical_used + 1 > 32
-    increment logical_used and add logical_key
-  else:
-    require logical_key already reserved
-    require retry_generation == max_prior_retry(logical_key) + 1
-  reject retry_generation > MAX_RETRIES_PER_PAGE
-  reject if physical_used + 1 > 48
-  reject if page_used(source) + new_page > 24
-  otherwise add (logical_key, retry_generation), increment physical_used, and assign next physical ordinal
-
-consume_response_bytes(dispatch, chunk_length):
-  reject if dispatch_bytes + chunk_length > 4_000_000
-  reject if total_response_bytes + chunk_length > 16_000_000
-  otherwise increment both counters before parsing the next chunk
-```
-
-At exhaustion, the scheduler stops before the next send. It preserves all prior sanitized attempts and
-raises `BudgetGlobalExhausted` with the exact fields in section 3; it never fabricates an empty
-`SourceAttempt`, a `diagnostics_truncated` attempt, or a successful empty event list. A fatal
-transport/schema/identity/pagination/revision failure discards the uncommitted event accumulator.
-Only a provider-declared interval whose pages reconcile may return rows with `PARTIAL` coverage;
-an unreconciled page, response overflow, or budget exhaustion is never a partial-success signal.
-
-## 8. Diagnostics and public failure grammar
-
-Diagnostics are finite and machine-readable. Public text contains only these warning tokens and
-bounded counters:
-
-```text
-SHARE_DISTRIBUTION_SOURCE_GAP
-SHARE_DISTRIBUTION_NOT_SERVED
-SHARE_DISTRIBUTION_COVERAGE_UNKNOWN
-SHARE_DISTRIBUTION_COVERAGE_PARTIAL
-SHARE_DISTRIBUTION_IDENTITY_MISMATCH
-SHARE_DISTRIBUTION_EVENT_TYPE_UNMAPPED
-SHARE_DISTRIBUTION_EFFECTIVE_DATE_UNPROVEN
-SHARE_DISTRIBUTION_RATIO_UNIT_UNPROVEN
-SHARE_DISTRIBUTION_REVISION_CONFLICT
-SHARE_DISTRIBUTION_PAGINATION_UNRECONCILED
-SHARE_DISTRIBUTION_BUDGET_EXHAUSTED
-SHARE_DISTRIBUTION_TRANSPORT_INCONCLUSIVE
-SHARE_DISTRIBUTION_LEGAL_UNVERIFIED
-SHARE_DISTRIBUTION_RESPONSE_TOO_LARGE
-```
-
-A future typed exception/outcome must use one exact mapping:
-
-| Condition | Public behavior | Rows |
-|---|---|---|
-| source chain still empty | `ShareDistributionSourceGap` with token `SHARE_DISTRIBUTION_SOURCE_GAP` | none |
-| valid response, complete empty proof | return history with `coverage=FULL`, no warning | empty, confirmed only by provider proof |
-| valid rows but provider-declared bounded interval | return history with `coverage=PARTIAL` and served bounds | rows only under provider partial contract |
-| valid response but absence/fullness unproved | return history with `coverage=UNKNOWN` and token `...COVERAGE_UNKNOWN` | none unless a future design explicitly permits non-fatal unknown rows |
-| transport/schema/identity/revision failure | `ShareDistributionSourceError` with one typed outcome and sanitized attempts | none |
-| global/page/retry/byte budget exhausted | `BudgetGlobalExhausted` with prior sanitized attempts and counters | none |
-
-No provider error message, raw URL, query, cookie, token, HTML, arbitrary MIME parameter, or source
-name can be interpolated into public diagnostics. Attempts already recorded remain present when the
-budget exception is raised; the exception must not replace them with an empty tuple.
-
-## 9. Candidate-specific future route contracts
+## 3. Deferred implementation contract — non-authoritative
+
+This source-gap packet deliberately freezes no public function signature, module, export, enum,
+dataclass, exception, field name, source token, selector grammar, serialization shape, or numeric
+scheduler ceiling. It creates no symbol and is not an implementation recipe. A later qualified-source
+packet must define those decisions against the provider's real response and legal contract, then pass a
+fresh exact-SHA design review before RED or code.
+
+The following invariants are retained and are not public API claims:
+
+- The current cash-dividend surface remains unchanged and the new stock/bonus registry remains empty
+  and disabled.
+- One request uses one qualified provider/route unit only. There is no implicit multi-source
+  failover, per-event merge, cross-source stitch, basket, archive, or cash-to-stock synthesis.
+- No event row is returned without provider-backed kind, symbol/issuer identity, ex/effective date,
+  ratio unit, and stable event/revision evidence. No record, publish, pay, listing, retrieval, or
+  calculated trading date may substitute for ex/effective date.
+- A later design must choose exact public fields, optionality, identity visibility, ordering,
+  deduplication, revision/cancellation precedence, serialization/DataFrame behavior, and constructor
+  compatibility from a qualified source rather than freezing them here.
+
+## 4. Future event, identity, date, and unit gate
+
+A candidate can reopen only when `STOCK_DIVIDEND` and `BONUS_SHARE` pass independently for the same
+owner and route set. The future design must response-bind the requested symbol, provider symbol, legal
+issuer, venue, ISIN or owner-equivalent, stable owner event ID, exact kind token, and announcement or
+event identity. It must decide which identity fields are public and which are validation-only; neither
+an issuer/title search result nor a URL/local ordinal is sufficient.
+
+It must also define and validate all provider temporal semantics: response-backed ex/effective date,
+record date, provider publish/update/revision time, retrieval time, and timezone awareness. Date-only
+provider fields remain date-only, and no UTC midnight/session/exchange inference is admitted.
+
+The normalized ratio is new shares per 100 existing shares. The provider contract must bind orientation,
+finite decimal validation/serialization, fractional entitlement, rounding, cancellation, and the
+meaning of any total-new-share field. Total-new-share values never infer or silently alter the ratio.
+Selector grammar, canonicalization, date bounds, unknown-symbol preflight, and behavior outside the
+vetted `2018-08-13..2026-08-19` interval are future design decisions and must be tested before code.
+
+## 5. Future coverage and no-false-absence gate
+
+Coverage is proved separately for each kind; one undifferentiated history result cannot prove both.
+The next design must define one mutually exclusive result/error disposition for every response:
+
+- `FULL` only for a reconciled exact requested window;
+- `PARTIAL` only for a provider-declared bounded interval whose pages reconcile;
+- `UNKNOWN` when rows or emptiness are observed but completeness/absence is unproved;
+- `EMPTY_CONFIRMED` only for a complete provider-backed empty proof; and
+- `NOT_SERVED` when transport, authentication, legal, or schema gates prevent an admissible result.
+
+The future design must explicitly choose whether each status is a returned result or a typed source
+error; no condition may be both. Fatal transport/schema/identity/pagination/revision/budget failure
+returns no history and never masquerades as an empty result. Page/cursor totals, first/last boundaries,
+empty semantics, duplicate/locale/revision reconciliation, and cancellation precedence must be bound
+before any partial or full result is allowed.
+
+## 6. Future atomic budget and diagnostic gate
+
+The runtime design is one-source and sequential, not a four-source scheduler. A qualified provider's
+real route, pagination, rate, and retry contract must determine finite logical/physical/page/retry/
+response-byte ceilings in a later design review; no numeric scheduler ceiling is frozen here.
+
+The future request-scoped ledger must reserve every route/page/retry dispatch atomically: validate all
+caps before committing keys, counters, page charges, or physical ordinals; a rejected reservation sends
+no request and has no side effect. Retry generations are contiguous, dispatch order is deterministic,
+responses are byte-accounted while streamed, and fatal or exhausted calls discard uncommitted rows.
+Prior sanitized attempts and counters survive budget exhaustion; no fabricated empty or truncated
+attempt may be emitted, and no partial output is allowed after a fatal boundary.
+
+The future public diagnostic grammar must be finite, allow-listed, bounded in tuple length and text,
+deterministically ordered, and fully sanitized. It must cover every technical/legal/rate/transport/
+coverage outcome without provider text, URLs, cookies, tokens, arbitrary MIME parameters, or source
+names. Warning overflow, response overflow, and budget exhaustion must have one exact typed behavior;
+these are reopen requirements, not current public exceptions or warning tokens.
+
+## 7. Candidate-specific future route contracts
 
 These are reopen requirements, not enabled routes.
 
-### 9.1 VSDC route family
+### 7.1 VSDC route family
 
 A future VSDC unit would need an owner-confirmed exact route set for security identity, rights/history
 pages, and announcement detail. The observed search/detail/first-party AJAX shapes are not enough.
@@ -505,7 +187,7 @@ A `GET /vi/ad/{id}` page with only a record date cannot qualify `ex_date`. A gen
 explaining ex-rights timing cannot be used to calculate it. Numeric announcement adjacency and a
 search miss cannot establish coverage or absence.
 
-### 9.2 VNDIRECT finfo route
+### 7.2 VNDIRECT finfo route
 
 The observed official `/v4/events` JSON shape is a candidate only. A future gate must bind:
 
@@ -522,14 +204,14 @@ The observed official `/v4/events` JSON shape is a candidate only. A future gate
 The JSON envelope's totals are not enough to claim `FULL`, and the presence of a row is not enough to
 claim an admissible ex-date or kind.
 
-### 9.3 HOSE/HNX
+### 7.3 HOSE/HNX
 
 No implementation path is proposed. A later exchange candidate would need a published or owner-
 confirmed machine route, strict TLS/MIME/redirect contract, response-backed symbol/issuer/event
 identity, date/unit/revision semantics, full pagination/coverage, and written runtime/redistribution
 permission. HTML application shells and certificate failures remain `NOT_SERVED`, not empty history.
 
-## 10. Conjunctive reopen and release gate
+## 8. Conjunctive reopen and release gate
 
 A future exact-SHA design review may reopen implementation only if **all** conditions pass separately
 for `STOCK_DIVIDEND` and `BONUS_SHARE`:
@@ -546,16 +228,17 @@ for `STOCK_DIVIDEND` and `BONUS_SHARE`:
    rounding behavior pass synthetic fixtures;
 7. requested `2018-08-13..2026-08-19` coverage, page/cursor totals, served boundaries, duplicate and
    revision rules, and confirmed-empty semantics pass without false absence;
-8. the atomic 32-logical/48-physical/24-page/2-retry scheduler and sanitized diagnostics pass;
+8. the source-approved finite logical/physical/page/retry/byte budget, atomic reservations,
+   deterministic exhaustion, preserved sanitized attempts, and bounded diagnostics pass;
 9. a source result uses one provider only; no cross-source stitch, basket, archive, signal, or
    cash-to-stock synthesis is introduced; and
 10. RED tests, implementation, docs/snapshots/changelog, merged-tree full/focused gates, blacklist,
     no-secrets, API/import compatibility, and isolated build gates pass in a later authorized round.
 
-Until all ten conditions pass, the new chain stays empty and the current cash-only VSDC behavior stays
-unchanged.
+Until all ten conditions pass, the new share-distribution chain stays empty and the current cash-only
+VSDC behavior stays unchanged.
 
-## 11. Future RED/release matrix — not authorized in this commit
+## 9. Future RED/release matrix — not authorized in this commit
 
 After a fresh design PASS only, synthetic offline fixtures must cover:
 
@@ -567,19 +250,23 @@ After a fresh design PASS only, synthetic offline fixtures must cover:
 | Ratio | exact synthetic `held:new` and direct shares-per-100 values | percent-of-par, cash amount, zero/negative/non-finite, reversed/ambiguous orientation |
 | Identity/revision | stable event ID, revision update, cancellation under owner rule | wrong issuer, wrong symbol, duplicate locale, same-ID conflict, missing ID |
 | Coverage | reconciled full, provider-declared partial, typed unknown | page gap, changing total, empty page without full proof, false absence |
-| Budget | exact boundary at 32 logical / 48 physical / 24 pages; prior attempts preserved | duplicate reservation, retry overrun, phantom ordinal, empty attempts on exhaustion |
+| Budget | source-approved finite logical/physical/page/retry/byte boundaries; prior attempts preserved | duplicate reservation, retry overrun, phantom ordinal, empty attempts on exhaustion |
 | Compatibility | cash VSDC, diagnostics, snapshots, DataFrame/docs/imports unchanged | cash kind widened, ex-date fabricated, source chain silently populated |
 
 No RED test, provider fixture, production code, public export, skill, changelog, or runtime registry
 is part of #215's source-gap design commit.
 
-## 12. Delivery boundary
+## 10. Delivery boundary
 
-Only these two packet artifacts belong in the #215 design handoff:
+The #215 source/design handoff consists of these two packet artifacts plus the required lifecycle
+record in `tasks/active-backlog.md`:
 
 - `docs/research/2026-08-23-vn-stock-bonus-distributions-source-vetting.md`
 - `tasks/215-design-note.md`
+- `tasks/active-backlog.md`
 
-The separate local backlog activation receipt is intentionally local-only and is not part of any
-approved push. Reviewer: please spawn parallel source/legal, identity/date/unit, and budget/coverage
-sub-agents for exact-SHA review. No code, RED, push, or close is authorized before design PASS.
+The approved exact range must enumerate all three paths; the backlog record is not local-only and must
+not be described as excluded from a proposed push. A docs-only source-gap PASS may publish the approved
+range, verify remote ancestry/paths, post the clean no-capability resolution, and close/re-read #215;
+it never authorizes models, accessors, RED, or runtime capability. Reviewer: please spawn parallel
+source/legal, identity/date/unit, and budget/coverage sub-agents for exact-SHA review.

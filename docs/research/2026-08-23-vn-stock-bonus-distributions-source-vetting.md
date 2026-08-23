@@ -1,10 +1,19 @@
 # VN stock-dividend and bonus-share source vetting
 
-**Date:** 23 August 2026 (Vietnam time, UTC+7)  
-**Owner:** `vnfin-oss`  
-**Issue:** #215  
-**Disposition:** `SOURCE-GAP CLOSURE` — no new source is qualified or enabled  
+**Date:** 23 August 2026 (Vietnam time, UTC+7)
+**Owner:** `vnfin-oss`
+**Issue:** #215
+**Disposition:** `SOURCE-GAP CLOSURE` — no new source is qualified or enabled
 **Requested inclusive window:** 13 August 2018 through 19 August 2026 (`2018-08-13..2026-08-19`)
+
+## Published-boundary evidence
+
+The annotated historical `v0.2.0` boundary is exact commit
+`2fe50df4f27064140ff9f7a680227a2b337ec74a`. That commit has no `vnfin/corp_actions` tree and is
+not the current cash behavior. The reviewed current published base is exact
+`origin/master` `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`, which contains the cash-only corporate-
+actions surface. #215 changes neither boundary and grants no legal clearance to the existing cash
+adapter.
 
 ## Clean-room and evidence boundary
 
@@ -41,15 +50,16 @@ VSDC bonus-share unit    = SOURCE_GAP
 VNDIRECT stock-dividend unit = SOURCE_GAP
 VNDIRECT bonus-share unit    = SOURCE_GAP
 HOSE/HNX exchange units   = NOT_SERVED / TRANSPORT_OR_SCHEMA_INCONCLUSIVE
-new source chain          = EMPTY_AND_DISABLED
+new share-distribution chain = EMPTY_AND_DISABLED
 runtime capability        = NOT_AUTHORIZED
 current cash VSDC surface = PRESERVED_BYTE_FOR_BYTE
 ```
 
 The current `vnfin.corp_actions.dividends()` / `CashDividendEvent(kind="CASH")` surface remains
 unchanged. This report authorizes only a later design re-review if the conjunctive reopen evidence
-in the companion note is obtained; it does not authorize models, accessors, parsing, RED tests, a
-new source token, a cache, or an issue close.
+in the companion note is obtained. A docs-only source-gap PASS may publish the approved docs/backlog
+range, post the clean no-capability resolution, and close/re-read #215; it does not authorize models, accessors,
+parsing, RED tests, a new source token, a cache, or runtime capability.
 
 ## Candidate matrix
 
@@ -68,8 +78,10 @@ are the bounded direct-probe ledger in section 4; they are not provider row coun
 ### Reproducible route and response ledger
 
 The following route inventory is the exact bounded shape used for the 23 August 2026 observations.
-Parameters are listed separately so no query-bearing URL is committed. A route is not qualified merely
-because this inventory makes it reproducible.
+Parameters are listed separately so no query-bearing URL is committed. Contact details were read from
+the official home-page navigation and do not represent a separate contact dispatch; therefore the
+VSDC direct-probe total below is seven, not eight. A route is not qualified merely because this
+inventory makes it reproducible.
 
 | Candidate/role | Method and canonical host/path | Non-secret request parameters/body | Response/MIME and redirect | Auth/session/browser/WAF boundary | Probe result |
 |---|---|---|---|---|---|
@@ -202,8 +214,7 @@ licence or a grant to automate, cache, derive normalized events, or redistribute
 
 Written VSDC owner clearance would have to cover the exact route family, session/token and cookie
 mechanism if any, request frequency/concurrency/retries, response retention/cache, derived
-`ShareDistributionEvent` rows, attribution, and caller-facing redistribution. Until then, the VSDC
-chain remains empty.
+`ShareDistributionEvent` rows, attribution, and caller-facing redistribution. Until then, the new share-distribution VSDC chain remains empty. #215 neither qualifies nor grants legal clearance to the existing cash adapter.
 
 ### VNDIRECT
 
@@ -237,7 +248,7 @@ coverage counts, or a provider rate limit.
 
 | Candidate/role | Logical | Physical | Observed result | Boundary |
 |---|---:|---:|---|---|
-| VSDC owner/home, search, security detail, announcement, rights-calendar, legal, contact, robots | 8 | 8 | Four HTML identity/notice surfaces were HTTP 200 with exact HTML MIME; rights-calendar body was empty; robots redirected. | No related-list POST, page walk, token reuse, or announcement crawl. |
+| VSDC home, search, security detail, announcement, rights-calendar, legal, robots | 7 | 7 | Four HTML identity/notice surfaces were HTTP 200 with exact HTML MIME; rights-calendar body was empty; robots redirected. Contact details came from home navigation, not a separate dispatch. | No related-list POST, page walk, token reuse, or announcement crawl. |
 | VNDIRECT event route, stock-dividend filter | 1 | 1 | HTTP 200 JSON; page metadata and typed field names observed; no row values retained. | One page only; no historical crawl. |
 | VNDIRECT event route, bonus-share filter | 1 | 1 | HTTP 200 JSON; page metadata and typed field names observed; no row values retained. | One page only; no historical crawl. |
 | VNDIRECT robots | 1 | 1 | HTTP 200 text; content signals reviewed. | No permission inferred beyond the text's narrow signal semantics. |
@@ -246,7 +257,7 @@ coverage counts, or a provider rate limit.
 | HOSE issuer-disclosure route | 1 | 1 | HTTP 200 HTML application shell; no event envelope accepted. | No guessed API or article fetch. |
 | HNX listed-disclosure route | 1 | 1 | Strict certificate-chain failure. | No insecure retry or response claim. |
 | HNX UPCoM-disclosure route | 1 | 1 | Strict certificate-chain failure. | No insecure retry or response claim. |
-| **Total direct probes** | **16** | **16** | **Bounded source-vetting observations only.** | **No source is enabled.** |
+| **Total direct probes** | **15** | **15** | **Bounded source-vetting observations only.** | **No source is enabled.** |
 
 The web-search/source-reading pass is separate from this direct-dispatch ledger. No provider page
 crawl was performed after a candidate failed its source/legal gate.
@@ -269,9 +280,10 @@ route set, separately for each event kind:
 6. **Coverage:** exact `2018-08-13..2026-08-19` full/partial/unknown result, first/last served
    boundaries, all-page totals/cursors, duplicate/revision reconciliation, and a typed empty result
    only when the source proves absence.
-7. **Budget:** the companion note's atomic logical/physical scheduler, finite page/body/retry caps,
-   deterministic exhaustion, and preserved sanitized attempts pass synthetic RED tests after a
-   separate design PASS.
+7. **Budget:** a later qualified-source design defines finite logical/physical/page/retry/byte
+   ceilings; one-source sequential execution, atomic reservation, deterministic exhaustion, and
+   preserved sanitized attempts pass synthetic RED tests after a separate design PASS. No numeric
+   ceiling is frozen by this source-gap packet.
 8. **Merged gates:** current cash VSDC tests/docs/API snapshots remain unchanged; no provider payload,
    credential, token, cookie, query-bearing URL, or live value enters the repository; blacklist and
    secret gates remain clean.
