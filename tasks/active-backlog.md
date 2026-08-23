@@ -1023,7 +1023,7 @@ _None._
 
 ## Next
 
-- **#208 — annual operating profit (DESIGN_REVIEW_PENDING; builder, 2026-08-23).** Filtered
+- **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
   `docs/research/2026-08-23-annual-operating-profit-source-vetting.md` and `tasks/208-design-note.md`.
@@ -1035,7 +1035,10 @@ _None._
   in docs correction `f692e7f2cf3b7b9ab4cb2aa0fe69bd8da8772e1f`: audited/identity disposition,
   complete 16-call and rights ledgers, provider-conditional reopen/close transition,
   response-tag/public-lineage/mapped-code seams, and packet/bank-14000/source-doc fixes. Request
-  exact-SHA re-review; no RED tests, production code, push, or close.
+  exact-SHA re-review then returned one narrow B4 block at report
+  `reviews/review-202608230949-issue208-corrected-design-rereview.md` / reviewer commit `45f6579`:
+  binding-aware context coverage and annual-positive/mismatch RED cases. Apply only this docs fix;
+  preserve the empty chain; no RED tests, production code, push, or close.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
