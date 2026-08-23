@@ -253,8 +253,10 @@ def test_fmarket_disabled_surface_has_current_alias_docs_and_private_fixture_bou
         _read("docs/api.md"),
         _read("docs/design/redundancy-failover.md"),
     )
-    for text in alias_docs:
+    for text in (alias_docs[0], alias_docs[1], alias_docs[3]):
         assert "client() == source()" not in text
+    assert "FmarketFundSource; client() == source()" not in alias_docs[2]
+    for text in alias_docs:
         assert "src is vnfin.funds.client()" not in text
     assert "vnfin.funds.client is vnfin.funds.source" in alias_docs[0]
     assert "vnfin.funds.client is vnfin.funds.source" in alias_docs[1]

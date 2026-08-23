@@ -155,7 +155,7 @@ Offline helper namespaces (`diagnostics`, `liquidity`) have their own API descri
 ```
 VnfinError
   SourceError                # recoverable single-source failures (trigger failover)
-    SourceUnavailable        # transport / network failure
+    SourceUnavailable        # transport / network or policy-disabled failure
     EmptyData                # source responded; no usable rows
     InvalidData              # malformed / self-inconsistent data
   UnsupportedInterval        # capability signal (skipped, not failed)

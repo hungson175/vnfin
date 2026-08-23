@@ -247,7 +247,12 @@ class FmarketFundSource(HttpDataSource):
     def list_funds(
         self, asset_type=None, search="", page_size: int = 100, include_metadata: bool = True
     ) -> FundList:
-        """List VN open-ended mutual funds.
+        """Currently disabled pending permission: Fmarket listing entrypoint.
+
+        Valid calls currently raise ``SourceUnavailable`` with the exact
+        ``SOURCE_DISABLED_PENDING_PERMISSION`` message before cache or transport work.
+        The remainder of this docstring records the historical parser contract used only
+        by the private synthetic-fixture seam; it is not a current availability promise.
 
         ``asset_type`` optionally filters by provider asset-class code (e.g.
         ``"STOCK"``); ``search`` does a free-text name/code search.
@@ -257,7 +262,8 @@ class FmarketFundSource(HttpDataSource):
         already on the filter response) and surfaces the ``fund_missing_fees`` warning
         for funds with no disclosed fee. Pass ``include_metadata=False`` to skip both
         (``management_fee_pct`` stays ``None`` and the warning is not emitted) for a
-        leaner, fee-agnostic listing. Either way exactly one request is issued.
+        leaner, fee-agnostic listing. In the historical parser contract, either way
+        exactly one request was issued.
         """
         if not isinstance(page_size, int) or isinstance(page_size, bool):
             raise InvalidData("fmarket: page_size must be an integer")
@@ -320,9 +326,14 @@ class FmarketFundSource(HttpDataSource):
         )
 
     def nav_history(self, product_id: int, from_date=None, to_date=None) -> NavHistory:
-        """Daily NAV history for a fund (by internal ``product_id``).
+        """Currently disabled pending permission: Fmarket NAV-history entrypoint.
 
-        With no date window the full inception-to-now history is requested.
+        Valid calls currently raise ``SourceUnavailable`` with the exact
+        ``SOURCE_DISABLED_PENDING_PERMISSION`` message before cache or transport work.
+        The remainder of this docstring records the historical parser contract used only
+        by the private synthetic-fixture seam; it is not a current availability promise.
+
+        Historically, with no date window the full inception-to-now history was requested.
         ``from_date``/``to_date`` (``date`` or ``YYYY-MM-DD`` string) window the
         series. Note the upstream server requires both ``fromDate`` and ``toDate``
         to be present (an absent pair returns HTTP 400) and only enforces the
@@ -511,14 +522,19 @@ class FmarketFundSource(HttpDataSource):
         return data
 
     def holdings(self, product_id: int) -> tuple[FundHolding, ...]:
-        """Top disclosed portfolio holdings for a fund (by internal ``product_id``).
+        """Currently disabled pending permission: Fmarket holdings entrypoint.
 
-        Returns equity holdings (``productTopHoldingList``) followed by bond holdings
-        (``productTopHoldingBondList``) — a bond fund discloses only the latter, so a
-        pure-bond or balanced fund now returns its real positions instead of empty
-        data. Each :class:`FundHolding` carries ``instrument_type`` (``"STOCK"``/
+        Valid calls currently raise ``SourceUnavailable`` with the exact
+        ``SOURCE_DISABLED_PENDING_PERMISSION`` message before cache or transport work.
+        The remainder of this docstring records the historical parser contract used only
+        by the private synthetic-fixture seam; it is not a current availability promise.
+
+        The historical parser returned equity holdings (``productTopHoldingList``) followed
+        by bond holdings (``productTopHoldingBondList``) — a bond fund disclosed only the
+        latter, so a pure-bond or balanced fixture returned parsed positions instead of empty
+        data. Each :class:`FundHolding` carried ``instrument_type`` (``"STOCK"``/
         ``"BOND"``). :class:`EmptyData` is raised only when *both* lists are empty/
-        absent (the fund has published no holdings yet).
+        absent in that parser fixture (the fund had published no holdings).
         """
         fid = _validate_product_id(product_id)
         self._raise_disabled_pending_permission()
@@ -556,14 +572,20 @@ class FmarketFundSource(HttpDataSource):
         return holdings
 
     def asset_allocation(self, product_id: int) -> AssetAllocation:
-        """Asset-class split for a fund, off the same detail document.
+        """Currently disabled pending permission: Fmarket asset-allocation entrypoint.
 
-        Parses ``productAssetHoldingList`` into typed :class:`AssetClassWeight` rows.
+        Valid calls currently raise ``SourceUnavailable`` with the exact
+        ``SOURCE_DISABLED_PENDING_PERMISSION`` message before cache or transport work.
+        The remainder of this docstring records the historical parser contract used only
+        by the private synthetic-fixture seam; it is not a current availability promise.
+
+        The historical parser parsed ``productAssetHoldingList`` into typed
+        :class:`AssetClassWeight` rows.
         The closed provider class set is ``{STOCK, BOND, CASH, OTHER}``; ``OTHER`` is
         preserved as a provider-declared class, while a different tag fails closed.
         Disclosed weights are not forced to sum to 100% (partial disclosure is allowed).
-        When the provider publishes no allocation list (absent, ``null``, or ``[]``),
-        this returns a successful typed empty result with the exact
+        When a synthetic parser fixture contains no allocation list (absent, ``null``, or
+        ``[]``), it returns a successful typed empty result with the exact
         ``no_asset_allocation_published`` warning. That known-empty disclosure is not a
         claim that the fund has no assets. ``as_of_utc`` is the freshest per-row
         ``updateAt`` (``None`` when no row supplies it).
@@ -874,6 +896,7 @@ class FmarketFundSource(HttpDataSource):
         }
 
     def _post(self, url, body, who):
+        self._raise_disabled_pending_permission()
         # ``json_body`` makes the shared transport issue a POST; transport errors are
         # wrapped as SourceUnavailable by the base. Keep ``_parse_json`` (who-context
         # message) and ``_unwrap`` (application-status envelope check) here.
@@ -881,6 +904,7 @@ class FmarketFundSource(HttpDataSource):
         return self._unwrap(_parse_json(text, who), who)
 
     def _get(self, url, who):
+        self._raise_disabled_pending_permission()
         text = self._request_text(url, params=None, headers=self._headers())
         return self._unwrap(_parse_json(text, who), who)
 

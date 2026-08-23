@@ -5,7 +5,7 @@
 and `docs/design/macro-no-key-byok.md`.
 
 > **Current status:** this is historical failover architecture. The Fmarket funds adapter is now
-> disabled pending permission (#221): `client() == source()` remains a compatibility alias, but
+> disabled pending permission (#221): `client is source` remains a compatibility alias, but
 > valid operations fail before cache/network and no fund fallback is attempted.
 
 ## Goal
@@ -27,7 +27,7 @@ assert agreement (require `VNFIN_LIVE=1`).
 | **Gold (world)** | currency-api (`world()`) | `default_world_gold_client()` = **currency-api** ✅; **Stooq opt-in only** (server-IP anti-bot challenge — not a reliable default) | USD/oz |
 | **Gold (VN)** | BTMC / PNJ (`vn()`) | **n/a — NO runtime failover client.** BTMC and PNJ are **two separate spot adapters**; pick one explicitly. A live cross-source **parity test** checks they agree | VND/lượng |
 | **Macro** | World Bank | **World Bank → IMF DataMapper → DBnomics** (no-key) ✅ + **FRED BYOK** (excluded from no-key default chain) | per-indicator |
-| **Funds** | Fmarket (named compatibility source) | **disabled pending permission**; `client() == source()` remains lazy; no runtime fallback | VND/unit model contract |
+| **Funds** | Fmarket (named compatibility source) | **disabled pending permission**; `client is source` remains lazy; no runtime fallback | VND/unit model contract |
 
 For the **standard domains**, `client()` returns the failover chain and `source()`
 returns just the primary adapter; they are **not** aliases except for the accepted

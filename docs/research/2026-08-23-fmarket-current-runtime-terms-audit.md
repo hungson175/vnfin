@@ -163,19 +163,16 @@ an authoritative grant covering all current operations and caller-facing uses wi
 restriction. If the owner confirms that the shipped use is prohibited and no compatible permission
 or lawful mode exists, a later design review may choose `REMOVE_SOURCE`.
 
-## Required future transition and compatibility contract (not implemented here)
+## Historical transition contract and current implementation boundary
 
-Because the current evidence does not clear the source, the exact lifecycle is **design PASS →
-fresh RED-first implementation/API packet → exact-SHA code review → publish/close**. A docs-only
-design PASS does not authorize publishing this source/legal result, pushing, resolving, or closing
-#221. After a design PASS, #221 remains open and transitions directly to the exact action
-`RED_FIRST_IMPLEMENTATION_AND_API_REVIEW`. RED tests must fail first, then the implementation and
-the release documentation may be reviewed together. Only an exact-SHA code approval after merged
-tests/build/blacklist/secret/diff gates authorizes push, remote verification, clean resolution,
-close, and re-read. Activate #219 only after verified #221 closure; #220 only after verified #219
-closure; and #222 only after verified #220 closure.
+At the design anchor, the exact lifecycle was **design PASS → fresh RED-first implementation/API
+packet → exact-SHA code review → publish/close**. That historical gate has now authorized the
+implementation line, while the current exact-SHA code review remains open for bounded B1-B4
+corrections. No push, resolution, close, or #219 activation is authorized until code PASS and
+merged-tree verification. Activate #219 only after verified #221 closure; #220 only after verified
+#219 closure; and #222 only after verified #220 closure.
 
-The implementation boundary is:
+The approved implementation boundary is:
 
 - disable the Fmarket source **before cache lookup and network dispatch** while permission is absent
   or expired, using the exact `SourceUnavailable`/`SOURCE_DISABLED_PENDING_PERMISSION` contract
@@ -189,7 +186,7 @@ The implementation boundary is:
   headers, cookies, cache text, or unbounded reasons; and
 - update every public availability statement and release artifact in the same approved code range.
 
-### Exact route, version, and release matrix
+### Exact route, version, and release matrix (historical design evidence)
 
 The route identity is fixed for the future RED and release checks: listing is `POST
 /res/products/filter`; NAV history is `POST /res/product/get-nav-history`; holdings and allocation

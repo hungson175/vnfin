@@ -15,7 +15,7 @@ import vnfin
 from vnfin.exceptions import SourceUnavailable
 
 fund_src = vnfin.funds.source()
-assert fund_src is vnfin.funds.client()
+assert vnfin.funds.client is vnfin.funds.source
 try:
     fund_src.list_funds(asset_type="STOCK")
 except SourceUnavailable as exc:

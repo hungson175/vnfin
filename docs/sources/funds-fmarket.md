@@ -40,9 +40,10 @@ ETF iNAV for HOSE-listed ETFs is a known gap (not on Fmarket); out of scope here
 | `POST` | `https://api.fmarket.vn/res/product/get-nav-history` | NAV history for one fund |
 | `GET`  | `https://api.fmarket.vn/res/products/{id}` | fund detail incl. holdings + asset allocation |
 
-`{id}` is the provider's internal product id returned by the filter endpoint
-(the examples below use a fabricated `999`/`DEMO1` identity). It is used as `productId` for NAV history and as
-the path id for holdings. `holdings()` and `asset_allocation()` both read this one
+`{id}` was the provider's internal product id returned by the filter endpoint (the examples
+below use a fabricated `999`/`DEMO1` identity). It was used as `productId` for historical
+NAV parsing and as the path id for historical holdings parsing. `holdings()` and
+`asset_allocation()` both read this one
 detail document (and both enforce the #21 fund-identity guard on it).
 
 ### Historical fund-list request shape (synthetic reference only)
@@ -99,16 +100,18 @@ Mapping: `id`→`Fund.id`, `code`→`Fund.code`, `name`→`Fund.name`,
 Historical server observations (live probes, 2026-06-18; retained as provenance, not a current
 runtime guarantee):
 
-- **Both `fromDate` and `toDate` are mandatory.** A body with neither (e.g.
-  `{"isAllData":1,"productId":20}`) returns **HTTP 400**.
+- **Both `fromDate` and `toDate` were mandatory in the historical observation.** A body with
+  neither (e.g. `{"isAllData":1,"productId":999}`) returned **HTTP 400**.
 - `isAllData:1` returns the full inception-to-`toDate` series. With wide dates,
-  VEOF returns 1729 rows (`2014-07-01` … `2025-12-05`).
+  a historical provider response returned a fund-specific row count and inception-to-cutoff
+  span. The provider identity, exact count, and dates are intentionally omitted; no real row
+  or date span is retained in this repository.
 - The server only enforces the **`toDate` upper bound** server-side; it does not
   reliably honor `fromDate` as a lower bound (and its `toDate` row-count handling
   is itself irregular near recent boundaries).
 - `isAllData:0` returns a single snapshot row (not a window).
 
-**Adapter strategy:** always send `isAllData:1` + a far-past default `fromDate`
+**Historical parser strategy (private synthetic seam):** always send `isAllData:1` + a far-past default `fromDate`
 (`2000-01-01`) + a `toDate` (caller's `to_date` or today), then apply the
 caller's `from_date` lower bound **client-side** for an exact window. If no rows
 fall in range, the adapter raises `EmptyData` (failover-safe) — except when the
@@ -156,15 +159,15 @@ sorted ascending by date.
 ```
 
 The detail document carries **two** per-line-item holdings arrays with the **same row shape** —
-`productTopHoldingList` (equities) and `productTopHoldingBondList` (bonds; `stockCode` is the bond code
-e.g. `BAF126003`, `price` is typically `null`, `type:"BOND"`). A pure-bond fund populates **only** the
+`productTopHoldingList` (equities) and `productTopHoldingBondList` (bonds; `stockCode` is the
+synthetic bond code in the fixtures, `price` is typically `null`, `type:"BOND"`). A pure-bond fund populates **only** the
 bond list. (There is no `productBondHoldingList` key — the bond array is `productTopHoldingBondList`.)
 
 `holdings(product_id)` historical mapping (equity rows first, then bond rows, merged into one tuple):
 
 | Provider field | Model field | Notes |
 |----------------|-------------|-------|
-| `stockCode` | `FundHolding.stock_code` | canonical `[A-Z][A-Z0-9]*` ticker for equities; for bond / unlisted-bond / other rows a relaxed identifier (required present + non-empty, stored verbatim — may be a descriptive phrase e.g. `'Trái phiếu chưa niêm yết'`) |
+| `stockCode` | `FundHolding.stock_code` | canonical `[A-Z][A-Z0-9]*` ticker for equities; for bond / unlisted-bond / other rows a relaxed identifier (required present + non-empty, stored verbatim — may be a synthetic descriptive label) |
 | `netAssetPercent` | `FundHolding.weight_pct` | percent of NAV, 0–100 |
 | `industry` | `FundHolding.industry` | nullable |
 | `price` | `FundHolding.price_raw` (+ `price_unit="raw"`) | unverified scale, kept RAW; bonds usually `null` |
@@ -229,17 +232,18 @@ does not fetch, retry, back off, or force a provider session.
 
 ## Compliance caveat
 
-- **Current runtime:** no provider fetch occurs. Valid calls fail closed with
-  `SOURCE_UNAVAILABLE` reason `SOURCE_DISABLED_PENDING_PERMISSION` before cache/network.
+- **Current runtime:** no provider fetch occurs. Valid calls fail closed with the existing
+  `SourceUnavailable` exception and exact message `SOURCE_DISABLED_PENDING_PERMISSION` before
+  cache/network; there is no structured reason carrier.
 - **Historical runtime posture:** the pre-#221 adapter was designed as runtime fetch only and did
   not bundle, cache to disk, or redistribute provider data. That historical design does not cure
   the current permission gap.
 - **No published redistribution grant.** Treat the data as the provider's
   property; do not republish, resell, or redistribute. Personal/internal research
   use only.
-- **No real rows in the repo.** All tests use hand-crafted synthetic payloads. No
-  real fund rows are committed.
+- **No real rows in the repo.** All executable tests and examples use hand-crafted synthetic
+  payloads. Historical provider observations remain prose-only with row identities, counts, and
+  exact date/value samples redacted.
 - If the provider publishes terms restricting programmatic access, those terms
   govern; be conservative and stop on any access restriction.
 - VNStock and all derivatives were completely excluded from research and design.
-```

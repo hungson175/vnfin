@@ -32,7 +32,7 @@ offer the predictable **factory verbs**:
 | `history(...)` / `index_history(...)` / `get_financials(...)` | Domain-specific one-shot convenience functions (kept where they already existed). |
 
 > `client()` is **not** an alias of `source()` for normal failover domains. `funds` is
-> the deliberate single-source compatibility exception: `client() == source()` and both
+> the deliberate single-source compatibility exception: `client is source` and both
 > factories are lazy, but the Fmarket source is currently disabled pending permission.
 > Valid fund operations raise the exact `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")`
 > before cache lookup or network dispatch; no fallback is attempted. See [units.md](units.md)
@@ -85,7 +85,7 @@ reports = vnfin.fundamentals.get_financials("FAKECORP", "income", "annual")  # u
 # funds — mutual-fund model/API compatibility surface (VND/unit when served).
 # Construction is lazy and offline. The current Fmarket source is disabled pending permission;
 # every valid operation below raises SourceUnavailable with the exact token before cache/network.
-src   = vnfin.funds.client()                 # FmarketFundSource; client() == source()
+src   = vnfin.funds.client()                 # FmarketFundSource; client is source
 try:
     src.list_funds()
 except vnfin.exceptions.SourceUnavailable as exc:

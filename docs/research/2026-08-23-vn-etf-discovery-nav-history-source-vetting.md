@@ -86,7 +86,7 @@ documentation and does not reopen that source.
 | `vnfin.funds.source()` | Returns the Fmarket source | Still returns the lazy named source; valid calls disabled pending permission | Preserve |
 | `list_funds.search` | Free-text search input | Still free text; it is not a code grammar or selector proof | Preserve; no local fuzzy matching |
 | `list_funds.asset_type` | Provider asset-class filter string | Forwarded as `fundAssetTypes`; no official `ETF` token/product-type proof | Do not map, broaden, or call it an ETF selector |
-| `nav_history(product_id, ...)` | Existing mutual-fund product-ID history | Broad provider request plus client-side date filtering | Preserve; no ETF call |
+| `nav_history(product_id, ...)` | Existing mutual-fund product-ID history | Pre-#221 historical behavior used a broad provider request plus client-side date filtering; current valid calls fail closed before it | Preserve schema/parser compatibility; no ETF call |
 | `canonical_fund_code` | Existing helper was not an ETF contract | Current response-code helper uses the unbounded current `[A-Z][A-Z0-9]*` shape after normalization | Preserve response compatibility; no new ETF ceiling |
 | Repository routes | Mutual-fund baseline only | `/res/products/filter`, `/res/products/{id}`, `/res/product/get-nav-history` | No new route or request mapping |
 
@@ -251,8 +251,9 @@ The official terms are at [`fmarket.vn/legal`](https://fmarket.vn/legal). The co
 [`hello@fmarket.vn`](https://fmarket.vn/lien-he), `1900 571 299`, and `028 3636 0755`, with
 stated support hours of 08:30–17:00 Monday–Friday. No permission request was sent.
 
-These terms are not described as ETF-specific. The current mutual-fund adapter automates the same
-provider host/route family, so its posture must not be silently cleared or ignored:
+These terms are not described as ETF-specific. The pre-#221 mutual-fund adapter automated the same
+provider host/route family, so its historical posture must not be silently cleared or ignored; the
+current runtime is disabled before that host/route family is reached:
 
 | Durable disposition | Scope | Meaning and next action |
 | --- | --- | --- |

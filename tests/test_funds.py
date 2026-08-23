@@ -1352,7 +1352,7 @@ def test_holdings_present_unknown_type_maps_to_other():
 
 
 def test_holdings_unlisted_bond_type_parsed():
-    # #173 residual (ASBF id 51, VFF id 21, DCBF id 27): real Fmarket bond funds
+    # #173 residual (synthetic unlisted-bond fixture ids): historical unlisted-bond shapes
     # report type="UNLISTED_BOND" on their unlisted-bond rows. The old
     # {STOCK,BOND} whitelist hard-failed (InvalidData) ~8 such funds; the granular
     # tag must now be accepted and carried (listed vs unlisted is a credit-risk
@@ -1367,19 +1367,19 @@ def test_holdings_unlisted_bond_type_parsed():
 
 
 def test_holdings_descriptive_bond_stock_code_accepted_verbatim():
-    # #173 residual (ASBF id 51): an unlisted-bond row whose stockCode is a
-    # descriptive phrase ('Trái phiếu chưa niêm yết' = "unlisted bond") must NOT
+    # #173 residual (a synthetic fixture id): an unlisted-bond row whose stockCode is a
+    # descriptive phrase ('Synthetic unlisted bond label' = "unlisted bond") must NOT
     # fail the whole fund. For bond/unlisted-bond/other rows stockCode is relaxed:
     # required present + non-empty, stripped, but NOT forced to the canonical
     # [A-Z][A-Z0-9]* grammar — stored verbatim (no upper-case, no regex).
     bond = [
-        {"stockCode": "  Trái phiếu chưa niêm yết  ", "netAssetPercent": 8.0, "type": "UNLISTED_BOND"},
+        {"stockCode": "  Synthetic unlisted bond label  ", "netAssetPercent": 8.0, "type": "UNLISTED_BOND"},
     ]
     holds = _src(
         _holdings_payload_with(productTopHoldingList=[], productTopHoldingBondList=bond)
     ).holdings(FAKE_ID_A)
     assert len(holds) == 1
-    assert holds[0].stock_code == "Trái phiếu chưa niêm yết"
+    assert holds[0].stock_code == "Synthetic unlisted bond label"
     assert holds[0].instrument_type == "UNLISTED_BOND"
 
 
@@ -1422,8 +1422,8 @@ def test_holdings_present_malformed_type_still_raises_invalid(bad_type):
 def test_holdings_bond_descriptive_code_dedup_still_applies():
     # Dedup spans the resolved stock_code string even for relaxed/phrase codes.
     bond = [
-        {"stockCode": "Trái phiếu chưa niêm yết", "netAssetPercent": 4.0, "type": "UNLISTED_BOND"},
-        {"stockCode": "Trái phiếu chưa niêm yết", "netAssetPercent": 5.0, "type": "UNLISTED_BOND"},
+        {"stockCode": "Synthetic unlisted bond label", "netAssetPercent": 4.0, "type": "UNLISTED_BOND"},
+        {"stockCode": "Synthetic unlisted bond label", "netAssetPercent": 5.0, "type": "UNLISTED_BOND"},
     ]
     with pytest.raises(InvalidData, match="duplicate holding stock code"):
         _src(
@@ -1458,10 +1458,10 @@ def test_holdings_end_to_end_unlisted_bond_fund_populated_not_raising():
     # End-to-end regression: a whole fund whose bond list carries an UNLISTED_BOND
     # row with a descriptive stockCode now returns a POPULATED tuple instead of
     # raising InvalidData (the #173 residual that hard-failed ~8 defensive-credit
-    # funds — ASBF/VFF/DCBF). Drives holdings() through the detail/HTTP layer with
+    # funds — synthetic fixture variants). Drives holdings() through the detail/HTTP layer with
     # a synthetic payload.
     bond = [
-        {"stockCode": "Trái phiếu chưa niêm yết", "netAssetPercent": 30.0, "type": "UNLISTED_BOND"},
+        {"stockCode": "Synthetic unlisted bond label", "netAssetPercent": 30.0, "type": "UNLISTED_BOND"},
         {"stockCode": "ZZZBOND2", "netAssetPercent": 20.0, "type": "BOND"},
     ]
     holds = _src(
@@ -1469,7 +1469,7 @@ def test_holdings_end_to_end_unlisted_bond_fund_populated_not_raising():
     ).holdings(FAKE_ID_A)
     assert len(holds) == 2
     by_code = {h.stock_code: h for h in holds}
-    assert by_code["Trái phiếu chưa niêm yết"].instrument_type == "UNLISTED_BOND"
+    assert by_code["Synthetic unlisted bond label"].instrument_type == "UNLISTED_BOND"
     assert by_code["ZZZBOND2"].instrument_type == "BOND"
 
 
@@ -2097,10 +2097,10 @@ def test_nav_history_inverted_window_rejected():
 
 
 # ---------------------------------------------------------------------------
-# Issue #172 — NAV-history staleness. When the provider's history ends BEFORE the
-# requested window start (probe-confirmed: Fmarket's get-nav-history is systemically
-# stale), a bounded recent window must raise StaleData (an EmptyData subclass naming
-# the data gap), not a silent EmptyData indistinguishable from "no data".
+# Issue #172 — NAV-history staleness. When the historical source-gap shape ends BEFORE the
+# requested window start, a bounded recent synthetic window must raise StaleData (an
+# EmptyData subclass naming the data gap), not a silent EmptyData indistinguishable from
+# "no data".
 # ---------------------------------------------------------------------------
 
 
@@ -3004,21 +3004,21 @@ def test_nav_history_case4_identical_dup_dedupes_no_quarantine_token():
 # --- case 5: never averages / never picks (degrade-not-fabricate) ------------------
 
 def test_nav_history_case5_never_averages_conflicting_date():
-    # The repro values: 15091.0 vs 15120.0 (mean 15105.5). The conflicting date is
+    # Synthetic values: 12345.0 vs 12390.0 (mean 12367.5). The conflicting date is
     # ABSENT — no served point equals or is near the mean, and neither raw value
     # survives for that date.
     rows = [
-        {"navDate": "2018-07-31", "nav": 15091.0, "productId": FAKE_ID_A},
-        {"navDate": "2018-07-31", "nav": 15120.0, "productId": FAKE_ID_A},
-        {"navDate": "2018-08-01", "nav": 15200.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-07-31", "nav": 12345.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-07-31", "nav": 12390.0, "productId": FAKE_ID_A},
+        {"navDate": "2024-08-01", "nav": 12420.0, "productId": FAKE_ID_A},
     ]
     hist = _src(_nav_history_payload(rows=rows)).nav_history(FAKE_ID_A)
-    assert [p.date for p in hist.points] == [date(2018, 8, 1)]
+    assert [p.date for p in hist.points] == [date(2024, 8, 1)]
     for p in hist.points:
-        assert p.date != date(2018, 7, 31)
+        assert p.date != date(2024, 7, 31)
         # no fabricated value anywhere near the mean / either raw value
-        assert abs(p.nav - 15105.5) > 1.0
-        assert p.nav not in (15091.0, 15120.0)
+        assert abs(p.nav - 12367.5) > 1.0
+        assert p.nav not in (12345.0, 12390.0)
 
 
 # --- case 6: two distinct conflicting dates under threshold (long series) ----------

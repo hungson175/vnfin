@@ -176,7 +176,7 @@ import vnfin
 from vnfin.exceptions import SourceUnavailable
 
 src = vnfin.funds.source()                 # lazy FmarketFundSource; no network
-assert src is vnfin.funds.client()
+assert vnfin.funds.client is vnfin.funds.source
 try:
     src.list_funds(asset_type="STOCK")
 except SourceUnavailable as exc:
@@ -366,7 +366,7 @@ print(s.unit, s.currency)                          # 'current US$' 'USD'
 ## 6. Errors
 
 All adapters wrap failures as `vnfin.exceptions` subclasses so a failover client can recover:
-`SourceUnavailable` (transport), `EmptyData` (no rows), `InvalidData` (malformed / bad caller
+`SourceUnavailable` (transport/network or policy-disabled), `EmptyData` (no rows), `InvalidData` (malformed / bad caller
 input), `UnsupportedInterval` (capability), `UnitMismatchError` (guard), and `AllSourcesFailed`
 (every source failed — carries per-source `.attempts`). Bad caller input (missing/inverted dates,
 malformed currency code) raises **before** any network call.
