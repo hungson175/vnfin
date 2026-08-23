@@ -602,16 +602,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#223 — EXACT_SHA_DESIGN_REREVIEW (2026-08-24, clean-base correction).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `6939ba4` for
+- **#223 — DESIGN_BLOCK (2026-08-24).** Actor `vnfin-oss-reviewer`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `6939ba4` for
   `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
-  BLOCK at reviewed handoff `1a950ee67cda40768cc6541c5a4b6f1a41178e6e` is recorded in
-  `reviews/review-202608240028-issue223-design-source-review.md` at reviewer `31af06f`; the
-  correction is rebuilt from clean `origin/master=c3921a1` and contains only the two source/design
-  artifacts plus this lifecycle. It removes scanner-evasion URL encoding, repairs official
-  identity/legal/status evidence, filters only independently qualified roles, pins executable UTC
-  stitching and incremental byte caps, and keeps the public carrier deferred. Preserve
-  SOURCE-GAP/empty chain and #224/#225 queue; no probe, RED, code, push, or close.
+  Corrected handoff `567460afb29e7dcdc096e60256829806354c50db` is blocked by report
+  `reviews/review-202608240040-issue223-corrected-design-rereview.md` at reviewer `ab2c9ba`.
+  Apply only the lifecycle wording fix: restore #222 DONE/CLOSED facts on the clean line and
+  remove excluded-receipt wording from the research boundary. Preserve #223 reviewer ownership,
+  SOURCE-GAP/empty chain, #224/#225 queue, and no probe, RED, code, push, or close.
 
 - **#222 — EXACT_SHA_DESIGN_REREVIEW (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
   `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `001ad85` for
