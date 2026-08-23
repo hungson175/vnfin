@@ -602,19 +602,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#219 — DESIGN_CORRECTION_READY (2026-08-23).** Actor `vnfin-oss`; next action
-  `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_DESIGN_REVIEW`; packet anchor `f2d0187` for
+- **#219 — DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
-  `issuecomment-5385376214`. Reviewed exact merged head is
-  `3ed6f6a65825672ee6f9caad9878ab3fb102cb6a` with artifact anchor
-  `221d38a69961e2a085193a16c3e777adc148cd9f`; BLOCK report is
-  `reviews/review-202608232235-issue219-design-source-review.md` at reviewer `36a29e2`.
-  B1-B6 are docs/backlog-only precision seams: all-traffic accounting, NSO semantic wording,
-  current-versus-hypothetical API truth, compatibility-safe diagnostics/budget language, separate
-  MIME fields, and reviewer-owned merged-head lifecycle. Record this BLOCK before edits. Preserve
-  `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime, and no RED/code/push/close.
-  BLOCK-before-correction receipt is `e3956fd95a228dbf16ca7be9a7403c48d791ff7a`. #220, #222,
-  #223, and #224 remain queued and are not activated by this correction.
+  `issuecomment-5385376214`. Exact corrected merged review head is
+  `9326b15c43f69383a1959c0f7f77da7f9ab09d65`; correction content is in that exact commit and
+  the prior BLOCK-before-correction receipt is
+  `e3956fd95a228dbf16ca7be9a7403c48d791ff7a`. It addresses report
+  `reviews/review-202608232235-issue219-design-source-review.md` at reviewer `36a29e2`: retained
+  versus `NOT_RETAINED` all-traffic accounting, audited NSO semantic wording, current versus
+  hypothetical API truth, compatibility-safe internal diagnostics/budget language, separate
+  sanitized complete Content-Type and normalized media type, and the exact reviewer-owned merged
+  head lifecycle. Preserve `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime, and
+  no RED/code/push/close. #220, #222, #223, and #224 remain queued and are not activated.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
