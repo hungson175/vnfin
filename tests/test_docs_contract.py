@@ -324,9 +324,10 @@ _APPROVED_CURRENT_FAIL_CLOSED_SENTENCES = tuple(
         "dispatch, response parsing, or public `EmptyData` production.",
         "no current valid call reaches that parser or produces `EmptyData`, and this closure "
         "invents no enum, exception, or result carrier.",
-        # The ETF compatibility table has this exact bounded fail-before clause before its
-        # semicolon-delimited historical fundAssetTypes note.
-        "current valid calls fail before request-body construction",
+        # The ETF compatibility table has this exact bounded cell, including its historical
+        # fundAssetTypes note; a reworded or extended cell must remain scannable.
+        "current valid calls fail before request-body construction; pre-#221 forwarding as "
+        "`fundAssetTypes` is historical parser evidence only",
     )
 )
 
