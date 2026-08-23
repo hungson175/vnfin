@@ -602,6 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#223 — DESIGN_BLOCK (2026-08-24).** Actor `vnfin-oss-reviewer`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `6939ba4` for
+  `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
+  Reviewed handoff `1a950ee67cda40768cc6541c5a4b6f1a41178e6e` is blocked by report
+  `reviews/review-202608240028-issue223-design-source-review.md` at reviewer `31af06f`.
+  Rebuild the correction from clean `origin/master=c3921a1`; remove scanner-evasion URL and repair
+  identity/legal/status, qualified-role, exact-UTC stitched, and executable-byte-budget seams.
+  Preserve SOURCE-GAP/empty chain and #224/#225 queue; no probe, RED, code, push, or close.
+
 - **#222 — EXACT_SHA_DESIGN_REREVIEW (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
   `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `001ad85` for
   `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
@@ -1052,13 +1061,6 @@ _None._
   decision; parked (reviewer agrees, like #137). Not implementing autonomously.
 
 ## Next
-
-- **#223 — QUEUED_AFTER_#222 (2026-08-23).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_222_CLOSURE`; packet anchor `6939ba4` for
-  `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
-  Current master recognizes VNCOND deny-only; exact v0.2.0 predates the current registry guard.
-  Keep queued behind #222; no #223 source-design, probe, RED, code, push, or close before its turn
-  and exact-SHA design PASS.
 
 - **#224 — QUEUED_AFTER_#223 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_223_CLOSURE`; packet anchor `b8ee1e5` for
