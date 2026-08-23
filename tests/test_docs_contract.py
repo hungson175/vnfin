@@ -317,10 +317,27 @@ def test_fmarket_transition_docs_reject_completed_state_contradictions():
 
 _CURRENT_FMARKET_CONTRADICTION_PATTERNS = (
     re.compile(
-        r"\bcurrent(?:\s+valid)?\s+calls?\b(?!\s+do\s+not\b)"
-        r"(?:\s+[a-z0-9_`-]+){0,8}\s+"
-        r"(?:can|may|will|forward|send|include|build|construct|dispatch|parse|return|serve|produce|yield)\b"
-        r"[^.!?\n]{0,180}\b(?:fundassett?ypes|cache(?:d|\s+lookup|\s+text)?|emptydata|parse(?:d|s)?\s+(?:response|payload|row))\b",
+        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b(?!\s+do\s+not\b)"
+        r"(?:\s+[a-z0-9_`-]+){0,8}\s+parse(?:d|s)?\s+(?:provider\s+)?(?:response|payload|rows?|row)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b(?!\s+do\s+not\b)"
+        r"(?:\s+[a-z0-9_`-]+){0,8}\s+(?:can|may|will)?\s*"
+        r"(?:forward|send|include)\b[^.!?\n]{0,180}\bfundassett?ypes\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b(?!\s+do\s+not\b)"
+        r"(?:\s+[a-z0-9_`-]+){0,8}\s+(?:can|may|will|return|serve|use|hit|read|cache)\b"
+        r"[^.!?\n]{0,180}\b(?:cache(?:d|\s+lookup|\s+text)?|emptydata)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bcurrent(?:\s+(?:valid|api|fmarket)){0,3}\s+calls?\b"
+        r"[^.!?\n]{0,180}\bdo\s+not\b[^.!?\n]{0,180}\b(?:instead|but|yet|however)\b"
+        r"[^.!?\n]{0,120}\b(?:return|serve|use|hit|parse|produce|yield)\b"
+        r"[^.!?\n]{0,180}\b(?:cache(?:d|\s+text)?|emptydata|response|payload|row)\b",
         re.IGNORECASE,
     ),
 )
@@ -335,9 +352,16 @@ def _assert_no_current_fmarket_contradictions(text: str) -> None:
 @pytest.mark.parametrize(
     "contradiction",
     (
+        "Current calls parse provider response rows.",
+        "Current valid calls parse provider payload.",
+        "Current calls parse response.",
         "Current valid calls can forward `fundAssetTypes` and parse provider rows.",
+        "Current valid API calls can forward fundAssetTypes.",
         "Current calls return cached response text before network.",
+        "Current Fmarket calls may return cached response text.",
+        "Current calls use cached response text.",
         "Current valid calls may parse provider payloads and produce `EmptyData`.",
+        "Current valid calls do not fail before cache and instead return cached text.",
     ),
 )
 def test_fmarket_contradiction_matcher_covers_modal_and_short_forms(contradiction):
@@ -355,9 +379,8 @@ def test_fmarket_correction_lifecycle_has_reviewer_verdict_owner():
     assert "this lifecycle receipt is the exact final review handoff" in backlog_normalized
 
 
-def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
-    forbidden_patterns = (
-        r"\b(?:veof|vesaf|vff|vibf|ssisca|bvpf|vlbf|vcbfbcf|vfmvf1|rvpf24|vndaf|asbf|dcbf)\b",
+_FMARKET_EVIDENCE_FORBIDDEN_PATTERNS = (
+        r"\b(?:veof|vesaf|vff|vibf|ssisca|bvpf|vlbf|vcbf|vcbfbcf|vfmvf1|rvpf24|vndaf|asbf|dcbf)\b",
         r"\bbaf126003\b",
         r"\b(?:id|product[_\s]*id)\s*=?\s*(?:20|21|27|38|51)\b",
         r"\b21\s*/\s*65\b",
@@ -373,7 +396,8 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
         r"\b(?:15091(?:\.0)?|15120(?:\.0)?|15105\.5|7\.99|25\.2|11\.59|97\.44|33\.36|19626\.37|34942\.66|33779\.47|43503\.81|36153\.51)\b",
         r"res/products/20\b",
     )
-    affected = (
+
+_FMARKET_EVIDENCE_PATHS = (
         "tests/test_funds.py",
         "tests/test_issue221_fmarket_disable.py",
         "docs/sources/funds-fmarket.md",
@@ -389,12 +413,52 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
         "vnfin/_contracts/keys.py",
         "vnfin/funds/fmarket.py",
     )
-    for path in affected:
+
+_FMARKET_EVIDENCE_KNOWN_FORMS = (
+    ("VEOF", 0), ("VCBF", 0), ("VCBFBCF", 0), ("VFMVF1", 0), ("RVPF24", 0),
+    ("baf126003", 1), ("id=20", 2), ("product_id=20", 2), ("product id 51", 2), ("id27", 2),
+    ("21/65", 3), ("all 65 funds", 4), ("65 funds", 5), ("total=65", 6), ("total:65", 6),
+    ("1729 rows", 7), ("1267", 8), ("2025-12-05", 9), ("2014-07-01", 9),
+    ("1781802000000", 10), ("1761537393929", 11), ("~8 such funds", 12),
+    ("~8 defensive-credit", 12), ("15091", 13), ("15120", 13), ("15105.5", 13),
+    ("7.99", 13), ("25.2", 13), ("11.59", 13), ("97.44", 13), ("33.36", 13),
+    ("19626.37", 13), ("34942.66", 13), ("33779.47", 13), ("43503.81", 13),
+    ("36153.51", 13), ("res/products/20", 14),
+)
+
+
+def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
+    for path in _FMARKET_EVIDENCE_PATHS:
         text = _read(path)
         normalized = re.sub(r"\s+", " ", text.casefold())
         assert "trái phiếu chưa niêm yết" not in normalized, path
-        for pattern in forbidden_patterns:
+        for pattern in _FMARKET_EVIDENCE_FORBIDDEN_PATTERNS:
             assert not re.search(pattern, normalized, flags=re.IGNORECASE), (path, pattern)
+
+
+@pytest.mark.parametrize("sample, pattern_index", _FMARKET_EVIDENCE_KNOWN_FORMS)
+def test_fmarket_evidence_scanner_pins_each_known_forbidden_form(sample, pattern_index):
+    pattern = _FMARKET_EVIDENCE_FORBIDDEN_PATTERNS[pattern_index]
+    assert re.search(pattern, re.sub(r"\s+", " ", sample.casefold()), flags=re.IGNORECASE)
+
+
+def test_fmarket_evidence_scanner_pins_exact_affected_paths():
+    assert set(_FMARKET_EVIDENCE_PATHS) == {
+        "tests/test_funds.py",
+        "tests/test_issue221_fmarket_disable.py",
+        "docs/sources/funds-fmarket.md",
+        "docs/research/2026-06-18-funds.md",
+        "docs/design/fund-coverage-holdings.md",
+        "tasks/194-build-spec.md",
+        "tasks/194-nav-quarantine-design.md",
+        "tasks/155-fund-metadata-design.md",
+        "tasks/181-fund-nav-asof-spec.md",
+        "tasks/active-backlog.md",
+        "CHANGELOG.md",
+        "tests/test_contract_keys.py",
+        "vnfin/_contracts/keys.py",
+        "vnfin/funds/fmarket.py",
+    }
 
 
 # Issue #153 — gold tutorial must use GoldBar.price (GoldBar has no .close, unlike PriceBar).
