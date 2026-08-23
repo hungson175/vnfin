@@ -601,14 +601,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — IMPLEMENTATION_IN_PROGRESS (2026-08-23), RED committed → exact code review pending.**
+- **#221 — IMPLEMENTATION_IN_PROGRESS (2026-08-23), RED + implementation/docs committed → exact code review pending.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
   implementation line `issue221-fmarket-disable` from the design anchor; local queue receipt
   `65d6ac6` is excluded and remains unpushed. RED commits are `3aa66a5`, `17a085d`, and `18803a7`;
-  production/docs changes are uncommitted pending merged gates. Actor is `vnfin-oss`; next action
-  `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_CODE_REVIEW`. Preserve
+  production commit is `3a8ffe4` and public/docs contract commit is `b94c836`. Actor is `vnfin-oss`;
+  next action `REQUEST_EXACT_SHA_CODE_REVIEW` after merged gates. Preserve
   `DISABLE_PENDING_PERMISSION`, no Fmarket probe/push/resolution/close, no #219 activation, and
   queued #219/#220/#222.
 
