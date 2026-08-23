@@ -15,6 +15,7 @@ import pathlib
 
 import vnfin
 import vnfin.crypto as crypto
+import vnfin.diagnostics as diagnostics
 import vnfin.fx as fx
 import vnfin.macro as macro
 from vnfin import Interval
@@ -268,8 +269,32 @@ def test_fmarket_disabled_surface_has_current_alias_docs_and_private_fixture_bou
     assert source_doc.count("```") % 2 == 0
 
 
-def test_fmarket_private_fixture_docs_contain_no_known_real_rows_or_repros():
+def test_fmarket_transition_docs_bind_current_disabled_and_historical_evidence():
+    etf_page = _read("docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md")
+    assert "Current valid calls fail before request-body construction" in etf_page
+    assert "Pre-#221 parser EmptyData behavior remains private historical evidence" in etf_page
+
+    terms_audit = _read("docs/research/2026-08-23-fmarket-current-runtime-terms-audit.md")
+    assert "Pre-#221 transport/cache seam (historical design evidence)" in terms_audit
+    assert (
+        "Current valid calls do not build request bodies, enter cache lookup, dispatch, parse, or "
+        "produce `EmptyData`."
+    ) in terms_audit
+    assert "At the design anchor, this section was documentation-only" in terms_audit
+    assert '"source_disabled_pending_permission"' in inspect.getsource(diagnostics.RequestDiagnostic)
+
+
+def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
     forbidden = (
+        "VEOF",
+        "VESAF",
+        "VFF",
+        "VIBF",
+        "SSISCA",
+        "BVPF",
+        "VLBF",
+        "VFMVF1",
+        "VNDAF",
         "VEOF",
         "ASBF",
         "VFF",
@@ -280,11 +305,32 @@ def test_fmarket_private_fixture_docs_contain_no_known_real_rows_or_repros():
         "15120.0",
         "15105.5",
         "1729 rows",
+        "1317 rows",
+        "1267 rows",
+        "2025-12-05",
+        "2014-07-01",
+        "1761537393929",
+        "VNDAF 19630.53",
+        "productId=20",
+        "id=20",
+        "~8",
+        "~21/65",
+        "total=65",
     )
-    for path in ("tests/test_funds.py", "docs/sources/funds-fmarket.md"):
+    affected = (
+        "tests/test_funds.py",
+        "tests/test_issue221_fmarket_disable.py",
+        "docs/sources/funds-fmarket.md",
+        "docs/research/2026-06-18-funds.md",
+        "docs/design/fund-coverage-holdings.md",
+        "tasks/194-build-spec.md",
+        "tasks/194-nav-quarantine-design.md",
+        "CHANGELOG.md",
+    )
+    for path in affected:
         text = _read(path)
         for token in forbidden:
-            assert token not in text, f"{path} retains real-derived token {token!r}"
+            assert token not in text, f"{path} retains live-derived token {token!r}"
 
 
 # Issue #153 — gold tutorial must use GoldBar.price (GoldBar has no .close, unlike PriceBar).
