@@ -441,26 +441,22 @@ _FMARKET_EVIDENCE_PATHS = (
         "vnfin/funds/fmarket.py",
     )
 
+_FMARKET_EVIDENCE_ID_VALUES = ("20", "21", "27", "38", "51")
+_FMARKET_EVIDENCE_ID_PREFIXES = ("id", "product_id", "product id", "productid")
+_FMARKET_EVIDENCE_ID_SEPARATORS = ("", "=", " ", " =", "= ", " = ")
+_FMARKET_EVIDENCE_ID_FORMS = tuple(
+    (f"{prefix}{separator}{value}", 2)
+    for prefix in _FMARKET_EVIDENCE_ID_PREFIXES
+    for separator in _FMARKET_EVIDENCE_ID_SEPARATORS
+    for value in _FMARKET_EVIDENCE_ID_VALUES
+)
+
 _FMARKET_EVIDENCE_KNOWN_FORMS = (
     ("VEOF", 0), ("VESAF", 0), ("VFF", 0), ("VIBF", 0), ("SSISCA", 0), ("BVPF", 0),
     ("VLBF", 0), ("VCBF", 0), ("VCBFBCF", 0), ("VFMVF1", 0), ("RVPF24", 0),
     ("VNDAF", 0), ("ASBF", 0), ("DCBF", 0), ("baf126003", 1),
-    ("id=20", 2), ("id=21", 2), ("id=27", 2), ("id=38", 2), ("id=51", 2),
-    ("id 20", 2), ("id 21", 2), ("id 27", 2), ("id 38", 2), ("id 51", 2),
-    ("id = 20", 2), ("id = 21", 2), ("id = 27", 2), ("id = 38", 2), ("id = 51", 2),
-    ("product_id=20", 2), ("product_id=21", 2), ("product_id=27", 2),
-    ("product_id=38", 2), ("product_id=51", 2),
-    ("product_id 20", 2), ("product_id 21", 2), ("product_id 27", 2),
-    ("product_id 38", 2), ("product_id 51", 2),
-    ("product_id = 20", 2), ("product_id = 21", 2), ("product_id = 27", 2),
-    ("product_id = 38", 2), ("product_id = 51", 2),
-    ("product id=20", 2), ("product id=21", 2), ("product id=27", 2),
-    ("product id=38", 2), ("product id=51", 2),
-    ("product id 20", 2), ("product id 21", 2), ("product id 27", 2),
-    ("product id 38", 2), ("product id 51", 2),
-    ("product id = 20", 2), ("product id = 21", 2), ("product id = 27", 2),
-    ("product id = 38", 2), ("product id = 51", 2),
-    ("21/65", 3), ("all 65 funds", 4), ("65 funds", 5), ("total=65", 6), ("total:65", 6),
+    ("21/65", 3), ("all 65 funds", 4), ("all 65 fund", 4),
+    ("65 funds", 5), ("65 fund", 5), ("total=65", 6), ("total:65", 6),
     ("1729 rows", 7), ("1729 row", 7), ("1317 rows", 7), ("1317 row", 7),
     ("1267 rows", 7), ("1267 row", 7), ("1267", 8),
     ("2025-12-05", 9), ("2018-07-31", 9), ("2017-01-31", 9), ("2014-07-01", 9),
@@ -470,7 +466,7 @@ _FMARKET_EVIDENCE_KNOWN_FORMS = (
     ("7.99", 13), ("25.2", 13), ("11.59", 13), ("97.44", 13), ("33.36", 13),
     ("19626.37", 13), ("34942.66", 13), ("33779.47", 13), ("43503.81", 13),
     ("36153.51", 13), ("res/products/20", 14),
-)
+) + _FMARKET_EVIDENCE_ID_FORMS
 
 
 def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
