@@ -1023,25 +1023,12 @@ _None._
 
 ## Next
 
-- **#206 — VNFIN sector-index history (DESIGN_REVIEW_REQUESTED; final B6.1-B6.3 correction awaiting reviewer, 2026-08-23).**
-  Reviewer packet `tasks/206-vnfin-sector-index-history-spec.md` at reviewer `bd0a501`; public
-  triage receipt `issuecomment-5382313915`. Exact design anchor `dd9093b` was BLOCKED by
-  reviewer report `6446dbf` at
-  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608230322-issue206-design-source-gate.md`.
-  Docs-only B1-B7 correction anchor is exact `582c432`; final re-review BLOCK report `999a147`
-  requires one minimal B6.1-B6.3 docs correction at
-  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608230336-issue206-corrected-design-rereview.md`.
-  Final docs correction anchor is exact `4eb281b`: reconciles stitched provenance with a separate
-  bounded warning grammar, canonicalizes every public producer identity, makes actual-attempt
-  truncation non-fabricating with the real eight-call ceiling, and says SSI at most two physical
-  calls. The prior correction recorded:
-  browser-UA dependency, single-provider route binding,
-  per-source capability/SSI physical budget, fixed-window versus arbitrary/stitched coverage,
-  total fail-loud volume, bounded diagnostics, and executable direct-success/MIME TDD. Preserve
-  the empty chain and `SOURCE-GAP CLOSURE`. Merged gates: full suite 4021 passed, docs/secret
-  contracts 45 passed (37 + 8), isolated sdist/wheel build passed, and `git diff --check` passed; published
-  `origin/master` remains `b90e924`. No production code, push, or close before exact-SHA design
-  PASS; actor is `vnfin-oss` builder.
+- **#207 — daily USD/VND FX history (SOURCE_DESIGN_IN_PROGRESS; builder, 2026-08-23).**
+  Filtered tech-lead packet `tasks/207-daily-usdvnd-fx-history-spec.md` at reviewer `3d60102`.
+  Prepare exactly the two source/design artifacts named by the packet, preserving
+  annual World Bank behavior. Current SBV full-span evidence remains blocked on reuse rights,
+  bounded pagination/WAF reliability, and rate policy; no RED tests, production code, push, or
+  close before exact-SHA design PASS. Actor is `vnfin-oss` builder; design anchor pending.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
@@ -1058,6 +1045,12 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#206 — DONE/CLOSED (2026-08-22), documentation-only source-gap closure.** Published exact
+  approved `origin/master` anchor `4eb281b0309dd7603bc4c1afae6be5efc2ebacd9` with only approved
+  research/design/backlog paths; resolution `issuecomment-5382529637`; GitHub re-read
+  `CLOSED`/`COMPLETED`. No VNFIN runtime capability, TDD, or provider qualification; local
+  backlog receipt `4e9850a` remains unpushed.
 
 - **#205 — DONE/CLOSED (2026-08-22), documentation-only source-gap closure.** Exact approved
   `origin/master` anchor `b90e924df3bd747f0d98d763b4c1a26b3b8f8e4f` published only the approved
