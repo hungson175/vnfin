@@ -152,16 +152,21 @@ For the nine-segment requested window:
 
 An identity failure may consume one actual physical call and must not dispatch history. A page or
 cursor, if ever authorized, is an additional physical dispatch under the same ledger, not a
-free call. This source-gap note makes no arbitrary-range scheduler or calendar-cap promise; any
+free call. This source-gap design admits no page/cursor dispatch for the current source-gap unit;
+adding pagination, redirects, retries, or a provider rate policy requires a new reviewed finite
+formula. This source-gap note makes no arbitrary-range scheduler or calendar-cap promise; any
 such range requires a fresh trading-calendar, segment-cap, and API design review. The
 nine-segment request never receives a per-segment budget reset.
 
 Reserve a logical attempt atomically before starting an eligible source. Reserve one physical
 slot immediately before each HTTP dispatch and increment the consumed counter only after that
 dispatch. If the next reservation would exceed the cap, emit typed `budget_exhausted` before
-network and publish no partial/false full-span result. Capability skips reserve neither count.
-Only actual capable attempts create attempt records; `diagnostics_truncated` is a warning token,
-never a synthetic attempt.
+network and publish no partial/false full-span result. The public call raises the typed future
+`BudgetGlobalExhausted` (`VnfinError`) with all prior sanitized attempts and bounded counters; it
+returns no sentinel or partial `PriceHistory`. Capability skips reserve neither count. Only
+actual capable attempts create attempt records; `diagnostics_truncated` is a warning token, never
+a synthetic attempt. Any pagination, redirect, retry, or rate-policy change requires a new
+reviewed finite formula.
 
 ## 7. Daily points, volume, time, MIME, and legal gates
 

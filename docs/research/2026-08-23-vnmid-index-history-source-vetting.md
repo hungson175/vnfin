@@ -254,16 +254,19 @@ policy must be approved separately and must reserve each retry as a new physical
 may not reset a segment or extend the cap. An identity failure may consume only its actual one
 physical call; the history call is never dispatched after a failed identity check. A page or
 cursor call, if ever authorized, is another physical dispatch and must fit the same ledger;
-there is no unbounded page loop. This source-gap note makes no arbitrary-range scheduler or
+there is no unbounded page loop. This design admits no page/cursor dispatch for the current
+source-gap unit; adding pagination, redirects, retries, or a provider rate policy requires a
+new reviewed finite formula. This source-gap note makes no arbitrary-range scheduler or
 calendar-cap promise; any such range requires a fresh trading-calendar, segment-cap, and API
 design review. The nine-segment request never receives a per-segment budget reset.
 
 A reservation occurs atomically immediately before a logical attempt or physical dispatch:
-if the next reservation would exceed the precomputed cap, the scheduler emits a typed
-`budget_exhausted` outcome before making that call. A logical `SourceAttempt` is created only
-for an actual capable provider attempt; a physical counter is incremented only after its HTTP
-dispatch. Capability skips reserve neither budget and create no attempt. The scheduler never
-publishes a partial or false full-span result after exhaustion.
+if the next reservation would exceed the precomputed cap, the public strict/stitched call raises
+the typed future `BudgetGlobalExhausted` (`VnfinError`) with all prior sanitized attempts and
+bounded counters before making that call; it returns no sentinel or partial `PriceHistory`. A
+logical `SourceAttempt` is created only for an actual capable provider attempt; a physical counter
+is incremented only after its HTTP dispatch. Capability skips reserve neither budget and create no
+attempt. The scheduler never publishes a partial or false full-span result after exhaustion.
 
 Strict mode uses one whole-window operation: a failed capable provider receives one logical
 attempt and the next provider receives the same window, with no date-level merge. Stitched mode
