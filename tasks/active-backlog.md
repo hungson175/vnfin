@@ -602,15 +602,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#222 — DESIGN_BLOCK (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
-  `DOCS_ONLY_B1_B6_CORRECTION`; packet anchor `001ad85` for
+- **#222 — EXACT_SHA_DESIGN_REREVIEW (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `001ad85` for
   `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
-  Reviewed merged SHA `77083c188f3639f03238f0d3b687a39dcf72ccfa`; BLOCK report
+  BLOCK record `de8d7196db7a25f911c93573fbc54da8b42dcce5` binds reviewed `77083c1` to report
   `reviews/review-202608232350-issue222-design-source-review.md` at reviewer `5a554b7`.
-  This BLOCK is recorded before any correction edit. Original source/design content anchor was
-  `05acc132584be11ce4ae3806d16eb6cbcba1afd1`; the later reviewed docs state is `77083c1`.
+  Corrected artifact anchor `7e4047da5ba42a9dbcb605082d65330ce08fc9ec` repairs the transparent HOSE
+  owner landing citation, strictly-positive OHLC/current-volume carrier gate, explicit wrong-index
+  aliases, shared identity/history ledger charging, and the complete existing stitched RED matrix.
   Preserve SOURCE-GAP CLOSURE, empty VN100 chain, current strict/stitched zero-network guard, and
-  the #223/#224/#225 queue. #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
+  #223/#224/#225 queue. #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
   `0d7977a21386acd754d3fa220b040fa1d89b03c7`; its clean resolution is `issuecomment-5387072621`.
   No proxy, basket, downstream observable, probe, RED/code, push, or close before exact-SHA design
   PASS.
