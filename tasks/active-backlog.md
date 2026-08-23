@@ -655,7 +655,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `65d6ac6` and `0fd103d`.
   Closure review at exact `62bf9926219880bd549d8724231c760947de8fae` was BLOCKED in
   `reviews/review-202608232138-issue221-exhaustive-closure-review.md` at reviewer `983cd27`:
-  F1 passes, but the F2 matrix omitted compact `id`/`product` forms (including required `id27`) and
+  F1 passes, but the F2 matrix omitted compact identifier/product forms (including required compact
+  value `27`) and
   singular fund-count forms accepted by its regex. The durable BLOCK receipt is the exact prior
   commit `ed2accae8c80a3e3a5c8c5e5026f59a514213aab`; apply one narrow F2 grammar/matrix plus
   lifecycle-anchor correction only. Preserve F1, `DISABLE_PENDING_PERMISSION`, no runtime/probe/
