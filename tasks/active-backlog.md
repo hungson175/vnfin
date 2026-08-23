@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final compact F2 handoff.**
+- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), final F2 grammar correction.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -666,6 +666,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   plus singular/plural fund-count forms. F1 and the exact 14-path clean corpus remain unchanged;
   no runtime/probe/source capability changed. This lifecycle receipt is the exact final review
   handoff. Actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`.
+  Final F2 closure review at exact `bb6a5753aa9b375d2e14d437e30b8574ba69aba3` was BLOCKED in
+  `reviews/review-202608232147-issue221-final-f2-closure-review.md` at reviewer `c84fc12`: F1
+  passes, but the F2 regex still accepts unpinned product separator mixtures and spacing variants
+  around slash/colon/equal/tilde. Apply one narrow finite-grammar or two-way matrix correction;
+  no runtime/probe/push/close/#219 activation. Bind current BLOCK receipt `9c0f9a47e13dc104ff21b226a648bdcd554b3ff5`
+  to review `983cd27` above; preserve all prior anchors and exclusions.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
