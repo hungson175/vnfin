@@ -601,6 +601,44 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#209 — DESIGN_BLOCK (2026-08-23), combined with #210 as the historical VN cash M1 source-depth
+  batch.** Actor `vnfin-oss`; next action `SOURCE_DESIGN_HISTORY_CORRECTION`. Reviewer packet
+  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/209-210-historical-vn-cash-intraday-spec.md`,
+  triage receipts `5384151534` and `5384151605`. Latest reviewer report commit `ff817c87` at
+  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608231158-issue209-210-corrected-design-rereview.md`.
+  Rebuild the publish candidate from `origin/master`; add per-unit semantic axes, compatible
+  `SourceAttempt.name` diagnostics, and a finite audit-global budget. Preserve SOURCE-GAP and
+  the empty new qualified chain; no RED tests, production code, push, or close.
+
+- **#210 — DESIGN_BLOCK (2026-08-23), combined with #209 as the historical VN cash M5 source-depth
+  batch.** Actor `vnfin-oss`; next action `SOURCE_DESIGN_HISTORY_CORRECTION`. Same reviewer packet
+  and latest report `ff817c87`. Rebuild from `origin/master` with independent M5 coverage,
+  timestamp/price/volume/adjustment axes, compatible diagnostics, and bounded audit accounting;
+  preserve SOURCE-GAP and the empty new qualified chain. No M1-to-M5 synthesis, RED tests,
+  production code, push, or close.
+
+- **#211 — SPEC_SENT (2026-08-23), queued after the #209+#210 exact design handoff.** Actor
+  `vnfin-oss`; next action `SOURCE_DESIGN_AFTER_209_210_REVIEW_HANDOFF`. Reviewer packet
+  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/211-vn-company-news-source-spec.md`, triage
+  receipt `5384197053`. Preserve Alpha Vantage BYOK/default behavior; later scope is metadata-only
+  provider sentiment with no bodies, archive, signal, or automatic fallback. No RED tests,
+  production code, push, or close before review.
+
+- **#212 — SPEC_SENT (2026-08-23), queued after #211.** Actor `vnfin-oss`; next action
+  `SOURCE_DESIGN_AFTER_211`. Reviewer packet
+  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/212-fmarket-asset-allocation-other-spec.md`,
+  packet commit `9f94335`, delivery receipt `ef86be0a`. Preserve `OTHER`; require typed empty
+  allocation with the exact warning and strict unknown/malformed failures. RED-first only after
+  its queue turn and exact-SHA design review; no code, push, or close now.
+
+- **#213 — SPEC_SENT (2026-08-23), queued after #212.** Actor `vnfin-oss`; next action
+  `SOURCE_DESIGN_AFTER_212`. Reviewer packet
+  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/213-vnreal-index-history-source-spec.md`,
+  packet commit `bc37f58`, delivery receipt `c1ce4913`. Qualify fresh VPS/SSI/VNDirect VNREAL D1
+  evidence independently for strict versus stitched identity, points, volume, coverage, global
+  budget, provenance, and rights; use SOURCE-GAP CLOSURE if none qualifies. No RED tests,
+  production code, push, or close before its queue turn and exact-SHA design PASS.
+
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
   `cfb9ebebdf2f035874b41c48cab13dc8252044d4..45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`.
