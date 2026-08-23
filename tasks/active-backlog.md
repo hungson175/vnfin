@@ -1030,12 +1030,15 @@ _None._
   `tasks/207-design-note.md`. Disposition is SOURCE-GAP CLOSURE: annual World Bank behavior is
   preserved; SBV remains blocked on reuse rights, bounded pagination/WAF reliability, and rate
   policy. Exact design review `reviews/review-202608230822-issue207-source-design-gate.md`
-  (reviewer `a8910c5`) was BLOCKED on docs-only B1-B6 precision. One correction round is committed
-  at `bebc45ef446f3db1678d99e6b47733532ec9e26f` (same two Markdown paths); exact base-to-anchor
-  diff, full/focused/docs-secret tests, offline imports, and isolated build pass. Corrected re-review
-  `reviews/review-202608230838-issue207-corrected-design-rereview.md` (reviewer `9906cd3`) remains
-  BLOCKED on narrow R1-R4 precision; no RED tests, production code, push, or close before exact-SHA
-  re-review. Actor is `vnfin-oss` builder; one final docs-only correction pending.
+  (reviewer `a8910c5`) was BLOCKED on docs-only B1-B6 precision. First correction `bebc45e` was
+  reviewed by `reviews/review-202608230838-issue207-corrected-design-rereview.md` (reviewer
+  `9906cd3`) and remained BLOCKED on narrow R1-R4 precision. Final docs-only correction is the
+  exact anchor `81baabc909c5d11f2be814644363decd3283c60e` on the same two Markdown paths: total
+  unexpected-status handling, closed internal/offline tokens and mappings, typed-basis reopen gate,
+  corrected page=0 provenance and VCB wording, plus future enum/string daily-parity RED coverage.
+  Merged-tree diff checks, full/focused/docs-secret tests, offline imports, and isolated sdist/wheel
+  build pass. No RED tests, production code, push, or close before exact-SHA re-review. Actor is
+  `vnfin-oss` builder; backlog receipt is local-only.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
