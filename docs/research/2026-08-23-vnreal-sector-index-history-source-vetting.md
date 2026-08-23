@@ -262,7 +262,8 @@ may receive exactly one metadata event per physical dispatch, including each fut
 It is not public/re-exported and must not receive raw URLs, query strings, bodies, cookies,
 provider exception text, credentials, or unbounded headers. A future route validator must
 check exact status, the complete Content-Type value after the first header colon, the
-approved normalized media type, exact effective host/path, redirect count, and envelope.
+approved normalized media type, exact effective host/path, redirect count, and envelope;
+a colon-suffixed MIME/value is rejected rather than truncated or accepted.
 Generic maintenance HTML, an unexpected status, wrong full MIME, or wrong effective route
 fails closed. This seam is required before any future qualification RED test; no seam or
 runtime capability is added in this source-gap correction.
@@ -403,7 +404,7 @@ fixtures and offline HTTP mocks only after a fresh design PASS.
 | Selector/namespace negatives | Wrong sector, `VNFIN`, constituent/basket/proxy/ETF, unknown, punctuation, malformed range, wrong interval, price namespace, and every deny-only identifier fail typed before network; existing served indices remain callable |
 | Identity positive | A synthetic same-provider response pair proves symbol, exchange/index type, D1, point scale/value, timezone/session, and exact history/metadata binding; only then can a source succeed |
 | Identity negatives | Request echo only, missing/mismatched symbol, SSI unbound history, wrong exchange/type/interval/point scale, missing/invalid adjustment or timestamp, and non-canonical provenance fail with finite reasons |
-| Transport negatives | Metadata wrapper with unexpected status, full Content-Type mismatch (including generic HTML), wrong normalized media type, effective host/path mismatch, redirect mismatch, or missing metadata on a metadata-sensitive path fails closed; legacy string stubs remain valid for existing non-index callers |
+| Transport negatives | Metadata wrapper with unexpected status, full Content-Type mismatch (including generic HTML and a colon-suffixed MIME/value), wrong normalized media type, effective host/path mismatch, redirect mismatch, or missing metadata on a metadata-sensitive path fails closed; legacy string stubs remain valid for existing non-index callers |
 | Coverage positive | Synthetic provider calendar/base date, inclusive reviewed horizon, total/page/cursor/window-cap, one row per session, aligned volume, and exact boundaries produce a complete strict series |
 | Coverage negatives | Recent-only/recent cap, missing literal date without provider calendar, unexplained start/end, internal gap, duplicate conflict, missing/null volume, invalid OHLC, no total/cursor reconciliation, and `nextTime=null` without completeness evidence produce `coverage_gap`, `pagination_gap`, `volume_gap`, or `duplicate_conflict` as applicable; no false absence |
 | Horizon/partial | Outside or crossing the reviewed horizon makes no request and emits `coverage_gap` plus `out_of_reviewed_horizon`; an explicitly reviewed partial emits only `coverage_partial` with `partial_start_coverage`/`partial_end_coverage`, never a full-range claim; no calendar inference is permitted |

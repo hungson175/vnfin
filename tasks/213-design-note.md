@@ -141,7 +141,7 @@ stubs remain valid. The future private seam is design-only:
   re-exported and raw URL/query/body/provider text never reaches it; and
 - future validation reads the complete header value after the first colon, checks exact
   status/full MIME/effective host/path/redirect policy, then normalizes only the media
-  type. Maintenance HTML fails closed.
+  type; a colon-suffixed MIME/value is rejected. Maintenance HTML fails closed.
 
 Legacy string stubs remain valid for current APIs and synthetic wrapper fixtures are
 offline-only. No response seam or production behavior is added in this docs-only round.
@@ -231,7 +231,7 @@ capability.
 | Existing source compatibility | Current served indices, current deny-only behavior, `PriceHistory` fields, source/warnings/attempts, DataFrame conversion, imports, snapshots, and existing stitched output remain byte-compatible |
 | Identity positive | Synthetic same-provider history + identity responses prove symbol, exchange/index type, D1, point scale/value, timezone/session, and exact binding before accepting bars |
 | Identity negatives | Request echo only, missing/mismatched symbol, unbound SSI history, wrong exchange/type/interval/scale, invalid point/RAW/adjustment, timestamp, or provenance fail with finite reasons |
-| Status/MIME/route | Private metadata wrapper tests unexpected status, full Content-Type/normalized MIME mismatch, generic HTML, effective host/path mismatch, redirect mismatch, and missing metadata; all fail closed |
+| Status/MIME/route | Private metadata wrapper tests unexpected status, full Content-Type/normalized MIME mismatch (including a colon-suffixed MIME/value), generic HTML, effective host/path mismatch, redirect mismatch, and missing metadata; all fail closed |
 | Coverage positive | Synthetic calendar/base date, reviewed inclusive horizon, provider total/page/cursor/window-cap, one row per session, aligned finite OHLC/volume, and exact boundaries produce one complete strict series |
 | Coverage/quality negatives | Recent-only/server-cap, missing boundary without calendar, internal gap, duplicate conflict, missing/null/invalid volume, invalid OHLC, no total/cursor reconciliation, and `nextTime=null` without completeness fail closed; no false absence |
 | Horizon/partial | Outside/crossing reviewed horizon causes zero network plus `coverage_gap`/`out_of_reviewed_horizon`; explicitly reviewed partial causes `coverage_partial` and boundary warning only, never a full-range claim or calendar inference |
