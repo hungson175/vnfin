@@ -602,17 +602,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#222 — SOURCE_DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss-reviewer`; next
-  action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `001ad85` for
+- **#222 — DESIGN_BLOCK (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
+  `DOCS_ONLY_B1_B6_CORRECTION`; packet anchor `001ad85` for
   `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
-  Stall reconciliation receipt `35565fa7` resumed the local activation at `fe46b578`; the exact
-  two-artifact source/design anchor is `05acc132584be11ce4ae3806d16eb6cbcba1afd1`:
-  `docs/research/2026-08-23-vn100-index-history-source-vetting.md` and
-  `tasks/222-design-note.md`. #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
+  Reviewed merged SHA `77083c188f3639f03238f0d3b687a39dcf72ccfa`; BLOCK report
+  `reviews/review-202608232350-issue222-design-source-review.md` at reviewer `5a554b7`.
+  This BLOCK is recorded before any correction edit. Original source/design content anchor was
+  `05acc132584be11ce4ae3806d16eb6cbcba1afd1`; the later reviewed docs state is `77083c1`.
+  Preserve SOURCE-GAP CLOSURE, empty VN100 chain, current strict/stitched zero-network guard, and
+  the #223/#224/#225 queue. #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
   `0d7977a21386acd754d3fa220b040fa1d89b03c7`; its clean resolution is `issuecomment-5387072621`.
-  Disposition is SOURCE-GAP CLOSURE; the new VN100 chain remains empty. Exact v0.2.0 predates the
-  current registry guard. No proxy, basket, downstream observable, probe, RED/code, push, or close
-  before exact-SHA design PASS. #223, #224, and #225 remain queued behind #222.
+  No proxy, basket, downstream observable, probe, RED/code, push, or close before exact-SHA design
+  PASS.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
