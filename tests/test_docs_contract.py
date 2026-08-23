@@ -303,6 +303,12 @@ def test_fmarket_transition_docs_reject_completed_state_contradictions():
         "complete the separately reviewed fail-before-network transition",
     ):
         assert phrase not in terms_audit
+    for pattern in (
+        r"current valid calls\s+(?:forward|send|include).*fundassett?ypes",
+        r"current valid calls\s+(?:return|serve).*cached",
+        r"current valid calls\s+(?:produce|return).*emptydata",
+    ):
+        assert not re.search(pattern, terms_audit, flags=re.IGNORECASE), pattern
     assert "The current `explain_fund_coverage()` returns" in terms_audit
     assert "the fmarket source is implemented and remains disabled" in terms_audit.casefold()
 
@@ -319,7 +325,7 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
     forbidden_patterns = (
         r"\b(?:veof|vesaf|vff|vibf|ssisca|bvpf|vlbf|vfmvf1|vndaf|asbf|dcbf)\b",
         r"\bbaf126003\b",
-        r"\b(?:id|product\s*id)\s*=?\s*(?:20|21|38|51)\b",
+        r"\b(?:id|product\s*id)\s*=?\s*(?:20|21|27|38|51)\b",
         r"\b21\s*/\s*65\b",
         r"\ball\s+65\s+funds?\b",
         r"\b65\s+funds?\b",
