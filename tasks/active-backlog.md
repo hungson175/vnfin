@@ -615,6 +615,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `0d7977a21386acd754d3fa220b040fa1d89b03c7`; its clean resolution is `issuecomment-5387072621`.
   No proxy, basket, downstream observable, probe, RED/code, push, or close before exact-SHA design
   PASS.
+  New BLOCK at exact `4e7c5f2b35f98a4e46b3fbea8e4f5109c2374e7f`, receipt `9187a237`, and report
+  `reviews/review-202608240000-issue222-corrected-design-rereview.md` at reviewer `4ad08c8`.
+  Actor `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. R1-R4 require removal
+  of unsupported Decision 747/date attribution, VN100 identity-mismatch rather than public-request
+  rejection framing for served indices, an executable aggregate `fetched_at_utc` rule, and a later
+  local-only exact-SHA handoff receipt. Preserve the empty chain and queue; no probe, RED, code, push,
+  or close.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
