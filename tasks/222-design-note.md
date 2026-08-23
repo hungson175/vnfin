@@ -199,7 +199,7 @@ reviewer authorizes their transition.
 
 ## 8. Primary references
 
-- [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15%66f11e7994%38abd11677%61d0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
 - [HOSE VN100 factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2396611/Form_Factsheet_MCIndices_VN_T08.2025.pdf)
 - [HOSE-Index factsheet, January 2026](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf)
 - [HOSE official index-data presentation](https://www1.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/theo-bo-chi-so-tri)

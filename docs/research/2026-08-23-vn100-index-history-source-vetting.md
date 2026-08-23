@@ -120,7 +120,7 @@ logical/physical/page/retry counts, and the exact identity fields. A missing fie
 
 ### 4.1 Identity and index semantics
 
-The official [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf), issued under Decision 747/QĐ-SGDHCM on 30 December 2024, defines the HOSE index series as price and total-return indices and defines VN100 as the constituents of VN30 and VNMidcap. This is strong owner/methodology evidence.
+The official [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15%66f11e7994%38abd11677%61d0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf), issued under Decision 747/QĐ-SGDHCM on 30 December 2024, defines the HOSE index series as price and total-return indices and defines VN100 as the constituents of VN30 and VNMidcap. This is strong owner/methodology evidence.
 
 The official [VN100 factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2396611/Form_Factsheet_MCIndices_VN_T08.2025.pdf) records a VN100 base date of 24 January 2014, base value `560.19`, price and total-return forms, real-time VN100 calculation and end-of-day VN100TRI cadence, free-float market-cap methodology, a 10% cap, and a VND field. Those facts establish the index family and a static base-date reference. They do not establish an anonymous daily history response, an observation timezone, a provider page total, a revision/as-of contract, or a redistribution licence.
 
@@ -452,7 +452,7 @@ or runtime capability.
 
 ## 13. Primary references
 
-- [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15%66f11e7994%38abd11677%61d0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
 - [HOSE VN100 factsheet, updated 31 July 2025](https://staticfile.hsx.vn/Uploads/UploadDocuments/2396611/Form_Factsheet_MCIndices_VN_T08.2025.pdf)
 - [HOSE-Index factsheet, updated 30 January 2026](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf)
 - [HOSE official index-data presentation](https://www1.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/theo-bo-chi-so-tri)
