@@ -31,7 +31,7 @@ class SourceError(VnfinError):
 
 
 class SourceUnavailable(SourceError):
-    """Transport/network failure reaching a source."""
+    """Transport/network or policy-disabled failure reaching or using a source."""
 
 
 class EmptyData(SourceError):

@@ -1,7 +1,7 @@
 """Fmarket fund-data adapter (clean-room).
 
-Talks to Fmarket's own public, no-auth JSON API (``api.fmarket.vn``) for VN
-open-ended mutual funds:
+The Fmarket source is currently disabled pending permission. Its historical route
+inventory is retained for the fail-closed contract:
 
   - ``list_funds()``  -> POST /res/products/filter
   - ``nav_history(product_id)`` -> POST /res/product/get-nav-history  (isAllData:1)
@@ -17,13 +17,13 @@ disclose only the latter) and the top-level asset-class split
 NAV is VND per fund unit; ``navDate`` is ``YYYY-MM-DD``. Provenance, compliance,
 and shape notes live in ``docs/sources/funds-fmarket.md``.
 
-Transport errors are wrapped as :class:`SourceUnavailable`; malformed / garbage
-payloads as :class:`InvalidData`; no-data responses as :class:`EmptyData` except for
-an identity-valid allocation document whose allocation field is absent, ``null``, or
-``[]`` — that shape is a successful typed empty result with a warning. This keeps the
-adapter failover-safe (it never leaks raw exceptions to callers).
+Valid public operation calls raise :class:`SourceUnavailable` with the exact bounded
+reason ``SOURCE_DISABLED_PENDING_PERMISSION`` before cache lookup or network dispatch.
+Malformed-payload and parser behavior remains covered only through fabricated,
+private test seams; no provider response is fetched by the production adapter.
 
-Runtime fetch only — no caching or redistribution of provider data.
+The historical adapter was runtime-fetch only (no disk cache or redistribution); the current
+policy-disabled runtime makes no provider request or data return.
 """
 from __future__ import annotations
 
@@ -60,6 +60,7 @@ _BASE_URL = "https://api.fmarket.vn"
 _FILTER_PATH = "/res/products/filter"
 _NAV_PATH = "/res/product/get-nav-history"
 _DETAIL_PATH = "/res/products"  # + /{id}
+_DISABLED_PENDING_PERMISSION = "SOURCE_DISABLED_PENDING_PERMISSION"
 
 # Issue #172-RESIDUAL: success-path NAV end-gap warning. Cadence-relative (NOT the
 # stock trading calendar — fund NAV cadence varies: daily vs weekly/twice-monthly),
@@ -223,15 +224,23 @@ def _pick_manager(owner: dict, *, fund_code: str) -> str:
 
 
 class FmarketFundSource(HttpDataSource):
-    """Adapter for Fmarket's public fund-data API.
+    """Fail-closed Fmarket fund source with preserved parser contracts.
 
     ``http_get(url, params=None, headers=None, json_body=None) -> text``. When
     ``json_body`` is provided the shared transport issues a POST with that JSON
-    body; otherwise it issues a GET. Injectable for testing.
+    body; otherwise it issues a GET. Injectable for synthetic tests. The current
+    policy-disabled source raises ``SourceUnavailable`` with the exact
+    ``SOURCE_DISABLED_PENDING_PERMISSION`` message for every valid public operation
+    before this transport can be reached.
     """
 
     NAME = "fmarket"
     name = "fmarket"
+
+    @staticmethod
+    def _raise_disabled_pending_permission() -> None:
+        """Raise the bounded policy-disabled error before any transport work."""
+        raise SourceUnavailable(_DISABLED_PENDING_PERMISSION)
 
     # --- public API -------------------------------------------------------
 
@@ -263,6 +272,7 @@ class FmarketFundSource(HttpDataSource):
         # never contains a blank filter.
         asset = asset_type.strip() if asset_type else ""
         query = search.strip() if search else ""
+        self._raise_disabled_pending_permission()
         body = {
             "types": ["NEW_FUND", "TRADING_FUND"],
             "sortField": "navTo6Months",
@@ -328,6 +338,7 @@ class FmarketFundSource(HttpDataSource):
             raise InvalidData(
                 f"fmarket: from_date {lo.isoformat()} is after to_date {hi.isoformat()}"
             )
+        self._raise_disabled_pending_permission()
         # Issue #144: the upstream server mishandles a NARROW window — a request with
         # the caller's fromDate/toDate can return inception-anchored rows that do NOT
         # overlap the requested range, so client-side filtering then drops everything
@@ -510,6 +521,7 @@ class FmarketFundSource(HttpDataSource):
         absent (the fund has published no holdings yet).
         """
         fid = _validate_product_id(product_id)
+        self._raise_disabled_pending_permission()
         data = self._fetch_detail_data(fid, who="holdings")
         equity = (
             _require_array(
@@ -557,6 +569,7 @@ class FmarketFundSource(HttpDataSource):
         ``updateAt`` (``None`` when no row supplies it).
         """
         fid = _validate_product_id(product_id)
+        self._raise_disabled_pending_permission()
         data = self._fetch_detail_data(fid, who="asset-allocation")
         rows = _require_array(
             data.get("productAssetHoldingList"),

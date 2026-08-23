@@ -1,20 +1,13 @@
-"""vnfin.funds — VN open-ended mutual fund data (clean-room).
+"""vnfin.funds — VN open-ended mutual-fund contracts (clean-room).
 
 Public API:
     - Typed models: ``Fund``, ``FundList``, ``NavPoint``, ``NavHistory``, ``FundHolding``,
       ``AssetAllocation``, ``AssetClassWeight``, ``SectorWeight``.
-    - Adapter: ``FmarketFundSource`` (Fmarket public, no-auth API).
+    - Adapter: ``FmarketFundSource`` (currently disabled pending permission).
 
-Example::
-
-    from vnfin.funds import FmarketFundSource
-
-    src = FmarketFundSource()
-    funds = src.list_funds(asset_type="STOCK")
-    hist = src.nav_history(funds[0].id)         # full NAV history (VND/unit)
-    holdings = src.holdings(funds[0].id)        # top disclosed holdings (stocks + bonds)
-    alloc = src.asset_allocation(funds[0].id)   # STOCK/BOND/CASH/OTHER split; absent/null/[]
-                                                  # -> typed empty + no_asset_allocation_published
+The source and model imports remain compatible. Valid Fmarket operation calls fail
+closed with ``SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")`` before any
+cache or network work; construction remains lazy and offline.
 """
 from __future__ import annotations
 
@@ -46,10 +39,11 @@ __all__ = [
 
 
 def source(http_get=None, timeout: float = 25.0) -> FmarketFundSource:
-    """Primary funds entry: the default :class:`FmarketFundSource` (Fmarket, no-auth).
+    """Return the lazy, policy-disabled :class:`FmarketFundSource` entrypoint.
 
-    Standard ``<domain>.source(...)`` factory. Use ``.list_funds()``, ``.nav_history(id)``
-    and ``.holdings(id)`` on the returned object.
+    Construction makes no network call and preserves the existing ``http_get`` and
+    ``timeout`` signature. Valid operations currently raise the bounded
+    ``SOURCE_DISABLED_PENDING_PERMISSION`` error before transport.
     """
     return FmarketFundSource(http_get=http_get, timeout=timeout)
 
