@@ -5,6 +5,7 @@
 **Phase:** `SOURCE_DESIGN` / docs-only
 **Disposition:** **SOURCE-GAP CLOSURE**
 **Current source chain:** empty
+**Requested target:** `VNM` + future `MacroIndicator.INDUSTRIAL_PRODUCTION_YOY`
 **Requested window:** `2018-01-01..2026-08-19` inclusive
 **Implementation status:** no enum, registry, adapter, API, model, test, or runtime capability
 
@@ -25,7 +26,9 @@ Only official NSO/GSO, IMF, World Bank, and UN Statistics Division sources and t
 terms/metadata routes were considered. No raw response, live value, query-bearing URL, cookie,
 header, token, response digest, or credential is committed.
 
-The only future product primitive is the existing macro call:
+The existing public surfaces are `get_indicator(country_iso3, indicator)` and `IndicatorSeries`.
+The enum member and call below are hypothetical future API only: current v0.2/current
+`MacroIndicator` has no `INDUSTRIAL_PRODUCTION_YOY` member, so this call is unavailable today.
 
 ```python
 vnfin.macro.get_indicator(
@@ -51,7 +54,7 @@ signals, and backtests remain caller-side.
 
 | Candidate unit | Identity/measure | Coverage/runtime | Legal/reuse | Total decision |
 |---|---|---|---|---|
-| Official NSO release family + PXWeb catalogue | Strong owner and narrative national IIP same-period-last-year semantics; no exact machine row/series binding | Archive reaches the requested era, but no reconciled monthly row set, totals/cursors, revision contract, or stable no-login YoY API; PXWeb table is not proven exact monthly YoY | NSO attribution/copyright language found; open/commercial OSS redistribution permission not established | `SOURCE_GAP` |
+| Official NSO release family + PXWeb catalogue | Strong owner; seven sampled monthly/period releases contain national-IIP YoY wording, while the methodology does not itself prove that exact comparison; no machine row/series binding | Archive reaches the requested era, but no reconciled monthly row set, totals/cursors, revision contract, or stable no-login YoY API; PXWeb table is not proven exact monthly YoY | NSO attribution/copyright language found; open/commercial OSS redistribution permission not established | `SOURCE_GAP` |
 | IMF Production Index/API/DSBB | Monthly Vietnam Production Index metadata, not exact direct national YoY values | Current API access documentation points to sign-in/beta flow; exact no-login route, span, pages, and revision runtime not proven | Exact-series reuse terms not established | `SOURCE_GAP` |
 | World Bank GEM/dashboard | Public industrial-production catalogue and secondary Vietnam YoY dashboard | Direct VNM row identity, raw-vs-derived provenance, current span, pages, and vintages not proven | Dataset visibility is not an exact redistribution grant | `SOURCE_GAP` |
 | UN MBS | No-login Vietnam industrial-production viewer/web service | Observed unit is a `2010=100` index level and bounded target-window display had no data; not provider-published YoY | Conditions-of-use/copyright visible; OSS redistribution licence not established | `SOURCE_GAP` |
@@ -72,9 +75,9 @@ owner + canonical route/version + exact VNM national IIP YoY series/release temp
 
 The source/design gate is conjunctive across these axes:
 
-1. **Transport and access:** official owner, method, stable host/path, expected status, complete
-   normalized MIME, effective route, redirect policy, no-login or explicit automation permission,
-   WAF/challenge behavior, bounded bytes, and no hidden dispatches.
+1. **Transport and access:** official owner, method, stable host/path, expected status, sanitized
+   complete Content-Type, normalized media type, effective route, redirect policy, no-login or
+   explicit automation permission, WAF/challenge behavior, bounded bytes, and no hidden dispatches.
 2. **Response identity:** response/catalogue binds `VNM`, national whole industry, exact monthly
    provider-published YoY, `%`, series/release identifier, and nullability. Request echo or page
    title alone is insufficient.
@@ -93,13 +96,19 @@ The source/design gate is conjunctive across these axes:
 
 The report records no-credential official-owner observations only. A browser-like UA was a bounded
 transport choice; no no-UA control was run, so UA necessity and automation permission remain
-unknown. No cookies or sessions were retained. Research dispatches were sequential and had zero
-recorded retries; logical and physical counts are preserved per evidence cell in the report.
+unknown. No cookies or sessions were retained. The report preserves a retained route-cell ledger
+for the archive, calendar, PXWeb, and MBS viewer probes. Documentation and semantic-release
+traffic whose transport ledger was not retained is marked `NOT_RETAINED` per dimension; no global
+zero-retry or all-traffic count is claimed. A physical dispatch means one HTTP request; byte and
+decompression limits are separate local resource counters.
 
 The important boundaries are:
 
 - NSO archive and release-calendar HTML were reachable without login, and the archive contains
-  monthly release material spanning the requested era. It does not provide one reconciled machine
+  monthly release material spanning the requested era. Seven sampled monthly/period release pages
+  provide bounded narrative YoY wording evidence; one annual release is an explicit negative
+  control. The cited methodology establishes IIP index construction/current-base periods and
+  aggregation, not the exact YoY comparison wording. NSO does not provide one reconciled machine
   series with a provider total, row identity, revision map, or exact redistribution licence.
 - NSO PXWeb `E07.01` is an official industrial-production index table with activity/year metadata;
   its visible table identity does not prove a month-keyed provider-published YoY series. Three
@@ -137,11 +146,15 @@ Definitions are strict:
 - `TRANSPORT_FAILURE`, `SCHEMA_DRIFT`, `BUDGET_EXHAUSTED`, `LEGAL_GAP`, and `IDENTITY_GAP` never
   produce an empty successful `IndicatorSeries` or a partial result.
 
-Public diagnostics, if later approved, use only finite source tokens (`nso`, `imf`, `world_bank`,
-`un_mbs`), finite outcome/warning tokens, and bounded integer logical/physical/page/retry/byte
-counters. Raw URL/query, body, headers, cookies, exceptions, arbitrary provider text, and
-unbounded names are forbidden. Missing publication/revision metadata is a bounded warning, never
-a fabricated date.
+The finite outcome vocabulary above is internal design-only. No public source token, warning field,
+exception, result carrier, or diagnostic shape is approved here. Current stable adapter tokens are
+`imf_datamapper` and `worldbank`; candidate labels (`nso`, `imf`, `world_bank`, `un_mbs`) are
+internal research labels, not public tokens. Current `MacroClient.get_indicator()` remains an
+`IndicatorSeries` result or an `AllSourcesFailed` error carrying `SourceAttempt` records. A later
+qualified-source compatibility review must choose any public projection without changing that
+current shape. Raw URL/query, body, headers, cookies, exceptions, arbitrary provider text, and
+unbounded names are forbidden. Missing publication/revision metadata is only a future internal
+warning, never a fabricated date.
 
 ## 6. Deterministic budget contract — design only
 
@@ -149,15 +162,18 @@ No numeric ceiling is frozen before a qualifying route and published rate policy
 implementation must nevertheless reserve atomically:
 
 1. one logical source attempt before adapter entry;
-2. one physical dispatch immediately before each HTTP request, page, cursor, retry, redirect
-   follow-up, or bounded byte/decompression operation;
-3. zero budget and zero attempt record for an incapable source skipped before network; and
-4. one request-scoped global ledger with no per-source, page, or fallback reset.
+2. one physical dispatch immediately before each HTTP request, including an initial request,
+   page/cursor request, retry, or redirect follow-up; page/cursor labels do not double-count it;
+3. separate local byte/decompression counters that never increment the physical HTTP counter;
+4. zero budget and zero attempt record for an incapable source skipped before network; and
+5. one request-scoped global ledger with no per-source, page, or fallback reset.
 
-Exhaustion must discard private partial rows and return only the reviewed bounded
-`BUDGET_EXHAUSTED` outcome/diagnostic; it must never publish a partial `IndicatorSeries` or imply
-historical absence. Any future numeric limits must be derived from owner rate/byte/retry policy
-and reviewed as part of a fresh design packet.
+Exhaustion must discard private partial rows and record only an internal bounded
+`BUDGET_EXHAUSTED` outcome. The public exception/result carrier is deferred to a compatibility
+review; current behavior remains `IndicatorSeries` or `AllSourcesFailed` with `SourceAttempt`
+records. It must never publish a partial `IndicatorSeries` or imply historical absence. Any future
+numeric limits must be derived from owner rate/byte/retry policy and reviewed as part of a fresh
+design packet.
 
 ## 7. Reopen gate and release sequence
 

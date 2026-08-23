@@ -602,8 +602,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#219 — DESIGN BLOCKED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
-  `RECORD_DOCS_ONLY_CORRECTION`; packet anchor `f2d0187` for
+- **#219 — DESIGN_CORRECTION_READY (2026-08-23).** Actor `vnfin-oss`; next action
+  `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_DESIGN_REVIEW`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
   `issuecomment-5385376214`. Reviewed exact merged head is
   `3ed6f6a65825672ee6f9caad9878ab3fb102cb6a` with artifact anchor
@@ -613,7 +613,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   current-versus-hypothetical API truth, compatibility-safe diagnostics/budget language, separate
   MIME fields, and reviewer-owned merged-head lifecycle. Record this BLOCK before edits. Preserve
   `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime, and no RED/code/push/close.
-  #220, #222, #223, and #224 remain queued and are not activated by this handoff.
+  BLOCK-before-correction receipt is `e3956fd95a228dbf16ca7be9a7403c48d791ff7a`. #220, #222,
+  #223, and #224 remain queued and are not activated by this correction.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer

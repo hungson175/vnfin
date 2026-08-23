@@ -4,7 +4,7 @@
 **Packet:** `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md` at reviewer `f2d0187`
 **Phase:** source/design gate only; no runtime capability is enabled by this report
 **Requested inclusive window:** `2018-01-01..2026-08-19`
-**Canonical target:** `VNM` + `MacroIndicator.INDUSTRIAL_PRODUCTION_YOY`
+**Requested target:** `VNM` + future `MacroIndicator.INDUSTRIAL_PRODUCTION_YOY`
 **Disposition:** **SOURCE-GAP CLOSURE**
 **New source chain:** empty
 
@@ -27,7 +27,9 @@ The evidence below is limited to official Vietnamese statistics, official intern
 statistical portals, their documented routes, and official terms/contact material. Licensing
 uncertainty is reported as a gap rather than inferred away.
 
-The requested primitive is the existing macro surface, only if a future source qualifies:
+The existing public surfaces are `get_indicator(country_iso3, indicator)` and `IndicatorSeries`.
+The requested enum member and call below are **hypothetical future API only**: the enum member is
+absent from current v0.2/current code and is not callable in this source-gap review.
 
 ```python
 vnfin.macro.get_indicator(
@@ -71,23 +73,30 @@ transport choice for selected public pages; no no-user-agent control was run, so
 **NOT_ESTABLISHED** and it is not an automation or permission claim. Cookies, raw headers, bodies,
 live indicator values, response digests, query-bearing URLs, and credentials were not retained.
 
-The ledger distinguishes a planned logical cell from a physical dispatch. A retry, redirect
-follow-up, pagination request, cursor request, or hidden parallel call would be a separate
-physical dispatch. `NOT_PROBED` and `NOT_ESTABLISHED` mean unresolved evidence, never confirmed
-non-service or historical absence.
+The ledger distinguishes a planned logical cell from a physical dispatch. A physical dispatch is
+one actual HTTP request, including a page/cursor request, retry, or redirect follow-up. Local byte
+and decompression accounting is separate resource accounting and is never a physical dispatch.
+`NOT_PROBED` and `NOT_ESTABLISHED` mean unresolved evidence, never confirmed non-service or
+historical absence. The table is a retained **route-cell** ledger, not an all-traffic ledger:
+documentation reads and semantic page reads whose transport ledger was not retained are explicitly
+marked `NOT_RETAINED` below.
 
 | Evidence cell | Logical / physical dispatches | Retries | Pages/cursors | Transport observation | Retained evidence |
 |---|---:|---:|---:|---|---|
-| NSO IIP archive index and sampled archive pages | 8 / 8 | 0 | 8 page requests, no cursor contract | `200`; HTML; normalized MIME observed as `text/html; charset=UTF-8`; no redirect was observed in the bounded pass | shape/date/title metadata only; no body or values |
-| NSO release calendar | 1 / 1 | 0 | 1 | `200`; HTML; normalized MIME observed as `text/html; charset=UTF-8` | route/date metadata only |
-| NSO individual release-document family | bounded reads of selected 2018, 2020, 2023, and 2026 releases; per-document runtime ledger not retained | 0 recorded | no machine pagination | HTML release pages rendered; no API contract or complete MIME ledger retained | title/date/semantic metadata only; no values |
-| NSO PXWeb UI plus three no-credential API-path candidates | 4 / 4 | 0 | no data page/cursor reached | UI page rendered in browser context; the bounded shell UI/API attempts timed out; no response MIME/status was accepted for the timed-out API attempts | table metadata only |
-| IMF catalogue/API documentation and DSBB metadata | 0 data dispatches | 0 | none | documentation/catalogue evidence only; no qualifying data route was called | public metadata and access/legal gaps |
-| World Bank GEM/catalogue/dashboard material | 0 direct row dispatches | 0 | no reconciled VNM row page | public catalogue/dashboard material only; no exact qualifying row route was called | dataset-level metadata only |
-| UN MBS viewer, table notes, technical notes, and web-service documentation | 2 bounded viewer dispatches; documentation reads separate | 0 | 2 viewer windows; no cursor contract established | viewer `200`; HTML UTF-8; normalized MIME observation `text/html; charset=utf-8`; no redirect was observed in the bounded viewer pass | shape, series-label, and coverage metadata only; no values |
+| NSO IIP archive index and sampled archive pages | 8 / 8 | 0 | 8 page requests, no cursor contract | `200`; sanitized complete Content-Type observed as `text/html; charset=UTF-8`; normalized media type `text/html`; no redirect was observed in the bounded pass | shape/date/title metadata only; no body or values |
+| NSO release calendar | 1 / 1 | 0 | 1 | `200`; sanitized complete Content-Type observed as `text/html; charset=UTF-8`; normalized media type `text/html` | route/date metadata only |
+| NSO individual release-document semantic sample | logical/physical/retry/page/redirect totals **NOT_RETAINED**; semantic sample count is recorded separately below | **NOT_RETAINED** | **NOT_RETAINED** | selected release pages were read; per-document status, sanitized complete Content-Type, normalized media type, redirect, and retry fields are **NOT_RETAINED** | title/path/semantic metadata only; no body or values |
+| NSO PXWeb UI plus three no-credential API-path candidates | 4 / 4 | 0 for this retained probe cell | no data page/cursor reached | UI page rendered in browser context; bounded shell UI/API attempts timed out; timed-out API response status and both MIME fields are **NOT_RETAINED** | table metadata only |
+| IMF catalogue/API documentation and DSBB metadata | qualifying data dispatches: 0; documentation traffic totals **NOT_RETAINED** | **NOT_RETAINED** | **NOT_RETAINED** | documentation/catalogue evidence only; no qualifying data route was called | public metadata and access/legal gaps |
+| World Bank GEM/catalogue/dashboard material | direct row dispatches: 0; documentation/dashboard traffic totals **NOT_RETAINED** | **NOT_RETAINED** | **NOT_RETAINED** | public catalogue/dashboard material only; no exact qualifying row route was called | dataset-level metadata only |
+| UN MBS viewer, table notes, technical notes, and web-service documentation | retained viewer data cell 2 / 2; documentation traffic totals **NOT_RETAINED** | 0 for retained viewer cell; **NOT_RETAINED** for docs | 2 viewer windows; documentation pages **NOT_RETAINED** | viewer `200`; sanitized complete Content-Type observed as `text/html; charset=utf-8`; normalized media type `text/html`; no redirect was observed in the bounded viewer pass | shape, series-label, and coverage metadata only; no values |
 
-The ledger is research evidence, not a future runtime quota. It does not turn an HTML page into a
-series, and it does not support a false absence claim when a route timed out or returned no rows.
+The complete Content-Type values above are sanitized observations; raw header blocks were not
+retained. A cell with an unretained response has both the complete-value and normalized-media-type
+dimensions marked `NOT_RETAINED`. The ledger is research evidence, not a future runtime quota. It
+does not turn an HTML page into a series, and it does not support a false absence claim when a
+route timed out or returned no rows. There is no global zero-retry claim: zero is asserted only for
+retained cells, and every unretained traffic dimension remains explicitly `NOT_RETAINED`.
 
 ## 4. Official Vietnam NSO/GSO candidate
 
@@ -97,19 +106,37 @@ The official [NSO IIP archive](https://www.nso.gov.vn/en/iip/) is a monthly rele
 observed on the research date, it listed recent monthly releases through July 2026 and older
 monthly releases through the archive pagination. The [NSO industry statistics page](https://www.nso.gov.vn/en/industry/)
 lists official industrial-production tables and the [release calendar](https://www.nso.gov.vn/en/release-calendar-3/)
-provides the publication-calendar route. Individual official releases from the requested era and
-recent years are clearly monthly IIP releases. Their narrative semantics distinguish the overall
-industry comparison with the same period of the previous year from other monthly, cumulative,
-sector, and annual statements. This establishes a strong owner and concept lead, not a machine
-row contract.
+provides the publication-calendar route. The exact semantic sample used here is seven monthly/period
+release pages plus one annual negative control; the sanitized canonical paths are listed below.
+The sampled monthly/period pages contain national IIP year-over-year comparison wording, while the
+annual page is not treated as a monthly source. This is bounded narrative evidence only, not a
+machine row contract.
 
 The official [industry methodology](https://www.nso.gov.vn/en/metadata/2019/03/industry-2/)
-describes IIP as a production-growth measure aggregated to whole industry and other levels and
-explains the use of the same period of the previous year and the previous period as comparison
-bases. It does not, by itself, publish a stable exact VNM monthly YoY series with row identity,
-revision ID, nullability, page totals, and redistribution terms. The release pages also use
-estimated/preliminary language in the monthly context; a typed preliminary/final/revised vintage
-contract was not established.
+establishes monthly/quarterly/yearly IIP index construction, current/base periods, and aggregation
+to whole industry and other levels. It does **not** by itself establish the exact same-period-last-
+year release-row contract claimed by this report. That semantic evidence is limited to the seven
+sampled monthly/period release pages below. None supplies a stable machine series with row
+identity, revision ID, nullability, page totals, or redistribution terms. The release pages also
+use estimated/preliminary language in the monthly context; a typed preliminary/final/revised
+vintage contract was not established.
+
+### 4.2a Audited NSO semantic sample (no values retained)
+
+The sample contains eight official canonical paths: seven monthly/period semantic pages and one
+annual negative control. This count is a semantic-document count, not a transport dispatch count;
+the transport ledger for these documents is `NOT_RETAINED` in Section 3.
+
+| Sample class | Official canonical path | Use in this gate |
+|---|---|---|
+| Monthly | [July 2026 IIP release](https://www.nso.gov.vn/en/data-and-statistics/2026/08/index-of-industrial-production-in-july-of-2026/) | Monthly national-IIP YoY wording sample |
+| Monthly | [May 2026 IIP release](https://www.nso.gov.vn/en/data-and-statistics/2026/06/index-of-industrial-production-in-may-of-2026/) | Monthly national-IIP YoY wording sample |
+| Monthly | [January 2023 IIP release](https://www.nso.gov.vn/en/data-and-statistics/2023/01/index-of-industrial-production-in-january-of-2023/) | Monthly national-IIP YoY wording sample |
+| Monthly | [October 2020 IIP release](https://www.nso.gov.vn/en/data-and-statistics/2020/10/monthly-index-of-industrial-production-in-2020-2/) | Monthly national-IIP YoY wording sample |
+| Period/month | [February 2018 socio-economic release](https://www.nso.gov.vn/en/data-and-statistics/2019/10/report-socio-economic-situation-two-months-and-in-february-2018/) | Historical national-IIP YoY wording sample |
+| Period/month | [May 2018 socio-economic release](https://www.nso.gov.vn/en/data-and-statistics/2019/10/report-social-and-economic-situations-five-months-and-in-may-2018/) | Historical national-IIP YoY wording sample |
+| Period/month | [October 2018 socio-economic release](https://www.nso.gov.vn/en/data-and-statistics/2019/05/report-social-and-economic-situations-in-october-and-ten-months-of-2018/) | Historical national-IIP YoY wording sample |
+| Annual negative control | [2018 annual IIP release](https://www.nso.gov.vn/en/data-and-statistics/2019/11/index-of-industrial-production-in-2018/) | Excluded annual cadence; not evidence for monthly capability |
 
 ### 4.2 Route and table cells
 
@@ -241,7 +268,7 @@ transformation; this report does not do so.
 | Axis | UN MBS result |
 |---|---|
 | Owner/route/method | UNSD MBS viewer and documented web service, no-login GET/document route |
-| Status/MIME/redirect | Viewer `200`, HTML UTF-8; normalized MIME observed as `text/html; charset=utf-8`; no redirect observed in bounded viewer pass |
+| Status/MIME/redirect | Viewer `200`; sanitized complete Content-Type observed as `text/html; charset=utf-8`; normalized media type `text/html`; no redirect observed in bounded viewer pass |
 | Identity/measure | Vietnam industrial-production **index level**, general index, rebased label `2010=100`; not provider-published YoY |
 | Coverage | Bounded target-window display had no data; wider display reached only an earlier pre-window observation; requested span is not covered by the observed unit |
 | Pages/totals/revision | No provider-declared total/cursor/revision/vintage contract was established for the target unit |
@@ -271,7 +298,8 @@ No candidate has all axes below on one provider unit:
    reconciled pages/cursors/totals and explicit month/calendar gaps. The candidate month keys are
    January 2018 through August 2026 (104 monthly keys) only if the source declares that monthly
    calendar; no provider total was accepted here.
-5. **Runtime:** no-login or explicitly permitted access, exact status/full MIME/effective route,
+5. **Runtime:** no-login or explicitly permitted access, exact status, sanitized complete
+   Content-Type, normalized media type, effective route,
    bounded bytes, WAF/challenge behavior, rate/retry policy, deterministic global dispatch ledger,
    and no hidden pagination or redirect calls.
 6. **Lawful reuse:** attribution, storage/cache, commercial use, retention, redistribution, and
@@ -301,7 +329,7 @@ states are not interchangeable:
 | `COVERAGE_BOUNDARY` | Provider-declared first/last supported observation excludes part of the request | Only the declared outside bound |
 | `NOT_SERVED` | Capability, country, indicator, or interval is unsupported before network | No inference about provider history |
 | `TRANSPORT_FAILURE` | Timeout, DNS/TLS, unexpected status, WAF/challenge, or connection failure | No |
-| `SCHEMA_DRIFT` | Full MIME, envelope, identity, type, or required field contract fails | No |
+| `SCHEMA_DRIFT` | Sanitized complete Content-Type/normalized media type, envelope, identity, type, or required field contract fails | No |
 | `BUDGET_EXHAUSTED` | The request-scoped deterministic ledger is exhausted before a required dispatch | No |
 | `LEGAL_GAP` | Technical data exists but permission/terms are not sufficient for this library | No |
 | `IDENTITY_GAP` | Response or catalogue cannot prove the exact VNM national IIP YoY unit | No |
@@ -311,31 +339,38 @@ An empty HTML page, empty JSON array, timeout, 403, generic error, or missing ar
 partial provider response with unreconciled page/cursor state is `SCHEMA_DRIFT` or
 `TRANSPORT_FAILURE`/`COVERAGE_BOUNDARY` according to the verified failure, never `FULL`.
 
-### 9.2 Bounded public diagnostics
+### 9.2 Bounded diagnostics — internal design only
 
-If a future source qualifies, public diagnostics may expose only a finite source token and finite
-outcome/warning fields, for example `source=nso`, `outcome=COVERAGE_BOUNDARY`, and integer logical,
-physical, page, retry, and byte counters within the request ledger. The exact public shape must be
-reviewed against the existing `IndicatorSeries` compatibility surface before implementation.
-Raw URLs, query strings, bodies, headers, cookies, exception text, provider names not in the
-allow-list, arbitrary response strings, and unbounded model text must never appear. A missing
-revision/as-of field is a bounded `REVISION_UNAVAILABLE` warning, not a fabricated publication
-date. Diagnostics are warnings only when the returned series remains fully valid; transport,
-identity, legal, schema, or budget failures return no partial `IndicatorSeries`.
+The finite outcome vocabulary above is internal design-only. No new public source token, warning
+field, exception, result carrier, or diagnostic shape is approved here. Current stable adapter
+tokens remain `imf_datamapper` and `worldbank`; candidate labels such as `nso`, `imf`, `world_bank`,
+and `un_mbs` are internal research labels, not public tokens. Current
+`MacroClient.get_indicator()` behavior remains an `IndicatorSeries` result or an
+`AllSourcesFailed` error carrying `SourceAttempt` records.
+
+After a source qualifies, a separate compatibility review may decide whether finite source and
+outcome fields can be projected onto that existing surface. Until then, raw URLs, query strings,
+bodies, headers, cookies, exception text, arbitrary provider strings, and unbounded model text
+must never appear. A missing revision/as-of field is only a future internal
+`REVISION_UNAVAILABLE` warning, not a fabricated publication date. Transport, identity, legal,
+schema, or budget failures do not authorize a partial `IndicatorSeries` or a new public carrier.
 
 ### 9.3 Deterministic global dispatch ledger
 
 The future implementation must use one sequential request-scoped ledger for the whole result:
 
 - reserve each eligible logical source attempt atomically before adapter entry;
-- reserve each physical HTTP dispatch immediately before network, including every page, cursor,
-  retry, redirect follow-up, or bounded decompression/byte operation;
+- reserve each physical HTTP dispatch immediately before an HTTP request, including an initial
+  request, page/cursor request, retry, or redirect follow-up; page/cursor labels describe the
+  request and do not double-count it;
+- reserve byte and decompression limits in separate local resource counters; those operations are
+  not physical network dispatches and must never increment the physical HTTP counter;
 - capability skips make zero physical calls, consume no attempt, and do not create a public
   attempt record;
 - never reset the ledger per page, provider, or fallback source;
-- on exhaustion, discard all private partial rows and return one bounded `BUDGET_EXHAUSTED`
-  diagnostic, preserving only previously sanitized attempts if the reviewed public contract later
-  provides such a field; and
+- on exhaustion, discard all private partial rows and record only an internal bounded
+  `BUDGET_EXHAUSTED` outcome; the public exception/result carrier is deferred to a compatibility
+  review. Preserve the current `IndicatorSeries`/`AllSourcesFailed` shape until then; and
 - commit a result atomically only after identity, measure, coverage, revision, and legal gates
   pass for the whole provider unit.
 
@@ -348,7 +383,8 @@ route's policy; absence of a published policy is a `RATE_POLICY_GAP`, not unlimi
 Reopen requires a fresh primary-source packet and **all** of the following conjunctively:
 
 1. an official owner confirms one stable route/version or release-template family and real contact
-   path, with no-login or explicitly permitted automation and exact full-MIME/status/redirect/WAF
+   path, with no-login or explicitly permitted automation and exact status, complete Content-Type,
+   normalized media type, redirect, and WAF
    behavior;
 2. the same response/schema binds `VNM` to national whole-industry IIP, provider-published monthly
    YoY, `%`, exact series/release identity, observation-month convention, and nullability;
