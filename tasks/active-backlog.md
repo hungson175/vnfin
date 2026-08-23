@@ -601,15 +601,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — DESIGN_BLOCKED (2026-08-23), B1-B4/I1 executable-contract correction.** BLOCK recorded
-  first at reviewed exact anchor `946a2b9d7dc7a9d552ea2b527caaea9884e23ca0`; report
-  `reviews/review-202608231850-issue221-source-legal-design-gate.md`, reviewer `3be16c8`, delivery
-  `c48362a9`. Expected correction actor is `vnfin-oss`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Correct the current cache/retry inventory and
-  fail-before-cache/network rule, the RED-first implementation lifecycle, exact exception/entrypoint
-  and route/v0.2-current/diagnostics/release contract, and the broken T6 link. Preserve
-  `DISABLE_PENDING_PERMISSION`, official evidence, no Fmarket API probe, no RED/code/push/close,
-  and queued #219/#220/#222.
+- **#221 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), B1-B4/I1 correction complete.** BLOCK
+  was recorded first at reviewed exact anchor `946a2b9d7dc7a9d552ea2b527caaea9884e23ca0` in
+  `5cfa103`; report `reviews/review-202608231850-issue221-source-legal-design-gate.md`, reviewer
+  `3be16c8`, delivery `c48362a9`. The correction commit containing this record is the exact
+  handoff anchor returned to the reviewer. Actor is `vnfin-oss`; next action
+  `RETURN_EXACT_SHA_DESIGN_REVIEW`. It closes the current cache/retry inventory and fail-before-
+  cache/network rule, exact `SourceUnavailable`/entrypoint contract, exact routes and
+  v0.2.0/current/diagnostics/release matrix, RED-first post-PASS lifecycle, and one-line T6 URL.
+  Preserve `DISABLE_PENDING_PERMISSION`, official evidence, no Fmarket API probe, no RED/code,
+  push, or close; #219/#220/#222 remain queued in that order. A design PASS cannot publish/close;
+  only a later exact-SHA RED/code approval can transition #221 to release and verified closure.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer

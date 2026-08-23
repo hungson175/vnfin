@@ -91,6 +91,50 @@ specific caller-facing use.
 - **Revision:** T1 can change by notice; no stable version/effective-date identifier was visible.
   A later review must re-fetch the official page and re-evaluate all four operations.
 
+## Current runtime transport, cache, and retry inventory
+
+This is a code-contract inventory, not evidence that the provider permits the calls. The current
+`FmarketFundSource` inherits the public `HttpDataSource` controls `max_retries` and `cache_ttl`.
+The defaults are `max_retries=0` (one physical attempt, with no retry) and `cache_ttl=None` (cache
+off). A positive `cache_ttl` stores the raw response text in an in-memory transport cache and a
+valid cache hit is returned before the HTTP callback is invoked. A positive `max_retries` permits
+additional physical attempts for transient failures. Neither behavior supplies a legal, quota, or
+redistribution grant.
+
+| Public operation | Exact current transport seam | Cache/retry path | Disable contract to implement later |
+|---|---|---|---|
+| `list_funds()` | `POST https://api.fmarket.vn/res/products/filter` | Shared text transport; cache can short-circuit the POST; retry can add physical POST attempts. | After valid-argument validation, fail before cache lookup/cached return and before POST. |
+| `nav_history()` | `POST https://api.fmarket.vn/res/product/get-nav-history` | Shared text transport; cache can short-circuit the POST; retry can add physical POST attempts. | After valid-argument validation, fail before cache lookup/cached return and before POST. |
+| `holdings()` | `GET https://api.fmarket.vn/res/products/{id}` | Shared detail text transport; cache can short-circuit the GET; retry can add physical GET attempts. | After valid-argument validation, fail before cache lookup/cached return and before GET. |
+| `asset_allocation()` | `GET https://api.fmarket.vn/res/products/{id}` (shared with holdings) | Shared detail text transport; cache can short-circuit the GET; retry can add physical GET attempts. | After valid-argument validation, fail before cache lookup/cached return and before GET. |
+
+The future disabled gate is therefore an operation-level gate immediately before the transport
+seam: it must run before `_request_text` cache lookup, before a cached response can be returned,
+before `_http_get`/HTTP dispatch, and before any retry or backoff. Existing invalid-argument
+validation remains first and keeps its current `InvalidData`/`TypeError`/`ValueError` behavior; the
+disable result is specified only for a valid call. This preserves current validation precedence
+without allowing a valid disabled call to read provider data.
+
+The future RED matrix is executable and covers every direct and factory path. For each of the four
+operations, call the direct `FmarketFundSource`, `source()`, and `client()` entrypoints with a
+synthetic transport spy and assert the following:
+
+| RED fixture | Required result |
+|---|---|
+| Disabled source, default `cache_ttl=None`, `max_retries=0` | Existing `SourceUnavailable`; exact public message/reason is `SOURCE_DISABLED_PENDING_PERMISSION`; zero transport calls and no provider data. |
+| Disabled source with a pre-populated positive-`cache_ttl` cache entry | The same exact `SourceUnavailable` before cache lookup; no cached return, zero transport calls, and no provider data. |
+| Disabled source with positive `max_retries` | The same exact `SourceUnavailable` before the first attempt; zero physical attempts, zero retries/backoff, and no provider data. |
+| `FmarketFundSource(...)`, `source()`, and `client()` construction | Return the source object lazily with zero network calls; a valid disabled operation call, not construction, raises the exact exception. |
+
+The exact disabled public carrier is the existing `SourceUnavailable` exception with
+`str(exc) == "SOURCE_DISABLED_PENDING_PERMISSION"`; that token is the only accepted public
+message/reason spelling in the future implementation contract. The current exception has no new
+structured field in this docs packet. Provider text, legal prose, cache contents, headers, contact
+correspondence, and unbounded diagnostics are never included. Any later structured reason would
+require an explicitly reviewed exception/public-snapshot change; no new opt-in, enum, fallback,
+proxy, or alternate-source grammar is introduced here. Imports, models, method signatures, and the
+`client` alias remain compatible.
+
 ## What would clear or limit the source
 
 No permission request was sent in this docs-only round. The official contact path is T3. A written
@@ -113,26 +157,67 @@ an authoritative grant covering all current operations and caller-facing uses wi
 restriction. If the owner confirms that the shipped use is prohibited and no compatible permission
 or lawful mode exists, a later design review may choose `REMOVE_SOURCE`.
 
-## Required future transition (not implemented here)
+## Required future transition and compatibility contract (not implemented here)
 
-Because the current evidence does not clear the source, a later code change must be RED-first and
-must be reviewed separately. The design boundary is:
+Because the current evidence does not clear the source, the exact lifecycle is **design PASS →
+fresh RED-first implementation/API packet → exact-SHA code review → publish/close**. A docs-only
+design PASS does not authorize publishing this source/legal result, pushing, resolving, or closing
+#221. After a design PASS, #221 remains open and transitions directly to the exact action
+`RED_FIRST_IMPLEMENTATION_AND_API_REVIEW`. RED tests must fail first, then the implementation and
+the release documentation may be reviewed together. Only an exact-SHA code approval after merged
+tests/build/blacklist/secret/diff gates authorizes push, remote verification, clean resolution,
+close, and re-read. Activate #219 only after verified #221 closure; #220 only after verified #219
+closure; and #222 only after verified #220 closure.
 
-- disable the Fmarket source **before network dispatch** while permission is absent or expired;
-- use the existing typed `SourceUnavailable` family with one bounded public reason token such as
-  `SOURCE_DISABLED_PENDING_PERMISSION`; never expose provider legal prose, contact correspondence,
-  raw headers, or an unbounded terms excerpt;
-- make direct `FmarketFundSource` calls and the funds facade/factory fail with zero network calls;
-- preserve imports and models where compatible, but document the availability change and release
-  boundary in API docs, user docs, the vnfin skill, `CHANGELOG.md`, and release notes;
-- do not add fallback, proxy, session bypass, unofficial mirror, paid feed, or alternate source;
-- retain fabricated/offline fixtures only. No live provider rows or permission correspondence may
-  enter the repository.
+The implementation boundary is:
 
-The future RED/release matrix must cover each of the four operations, direct and facade entrypoints,
-zero-network behavior, stable exception/type/reason, source registration, docs/API/skill/
-CHANGELOG/release compatibility, full offline tests, and isolated wheel/sdist build. This audit does
-not authorize any of those changes.
+- disable the Fmarket source **before cache lookup and network dispatch** while permission is absent
+  or expired, using the exact `SourceUnavailable`/`SOURCE_DISABLED_PENDING_PERMISSION` contract
+  above;
+- make direct `FmarketFundSource` calls and the `source()`/`client()` facade/factory paths fail
+  with zero transport calls, including positive-cache and positive-retry configurations;
+- preserve imports, models, method signatures, and aliases; do not add fallback, proxy, session
+  bypass, unofficial mirror, paid feed, alternate source, or new opt-in/config/enum grammar;
+- expose only bounded sanitized diagnostics and never provider legal prose, correspondence, raw
+  headers, cookies, cache text, or unbounded reasons; and
+- update every public availability statement and release artifact in the same approved code range.
+
+### Exact route, version, and release matrix
+
+The route identity is fixed for the future RED and release checks: listing is `POST
+/res/products/filter`; NAV history is `POST /res/product/get-nav-history`; holdings and allocation
+share `GET /res/products/{id}`. The dereferenced `v0.2.0^{}` commit is
+`2fe50df4f27064140ff9f7a680227a2b337ec74a`, where list/NAV/holdings are the relevant shipped
+surfaces. Current `master` is the compatibility boundary that adds allocation and additive
+signatures/models; the implementation must not silently rewrite the v0.2.0 claims.
+
+The exact future RED/release matrix must bind those routes to direct class, `source()` factory, and
+`client()` alias assertions, source registration/factory behavior, diagnostics status/capabilities,
+and the v0.2.0/current distinction. It must inspect and update (only where a claim becomes false):
+
+- `vnfin/diagnostics.py:318-348,663-728` and
+  `tests/test_diagnostics.py:257-282`;
+- `README.md:122-130`, `docs/api.md:85-95,354-360`, `docs/ai-usage.md:161-188`,
+  `docs/tutorials/funds-and-indices.md:5-42`, and `docs/how-to/source-diagnostics.md`;
+- `docs/sources/funds-fmarket.md`, the Fmarket-bearing source/design docs, and the relevant
+  architecture docs (`docs/architecture/data-domains.md`,
+  `docs/architecture/provider-contracts.md`, `docs/architecture/system-overview.md`);
+- `skills/vnfin/SKILL.md:63-67` and `skills/vnfin/reference/domains.md:77`; and
+- `CHANGELOG.md` and release notes.
+
+The diagnostics contract is also exact: the current `explain_fund_coverage()` status is
+`metadata_core_available`; after the approved disable it must be
+`source_disabled_pending_permission`, with no note or suggested action claiming that Fmarket data
+is available or served. The retained `fund_metadata` capability identity, if kept for an offline
+explanation, must be marked `is_default=False`, retain `source="fmarket"` only as provenance, and
+carry the bounded limitation `SOURCE_DISABLED_PENDING_PERMISSION`; it must not be presented as an
+available source. The future RED assertions must cover these status/capability values and the
+`tests/test_diagnostics.py:257-282` availability expectations together with the four route calls.
+
+The matrix must assert exact routes, all four operation outcomes, direct/factory/alias zero-call
+behavior, exact exception/message, diagnostics and capability status, import/model/signature
+compatibility, full offline tests, and isolated wheel/sdist build. This audit and its correction do
+not authorize any RED test, production code, source registration, probe, push, or close.
 
 ## Reopen and review gates
 
