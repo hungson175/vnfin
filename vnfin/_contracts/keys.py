@@ -108,7 +108,7 @@ def canonical_provider_key(
 def _canonical_identifier(value, ctx: str, *, pattern=_SECURITY_ID_RE) -> str:
     """Shared core for security/fund identifiers: ``strip().upper()`` then validate.
 
-    Normalizes first (so padded/lower public input like ``"  vcbf "`` -> ``"VCBF"``
+    Normalizes first (so padded/lower public input like ``"  synthfund "`` -> ``"SYNTHFUND"``
     stays friendly and dedup runs on the normalized form), then requires a non-empty
     string matching ``pattern``. ``None``/containers/bool/number and shapes with
     internal space / punctuation / digit-first fail closed.
