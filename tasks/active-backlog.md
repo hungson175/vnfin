@@ -601,15 +601,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#218 — CLOSURE_REVIEW_BLOCKED (2026-08-23), second source/design gate.** Record BLOCK first at
-  reviewed exact anchor `20a3d927d84fe6f9d2bfa6727711c907e223fad3`; report
+- **#218 — EXACT_SHA_CLOSURE_REVIEW_REQUESTED (2026-08-23), corrected SOURCE-GAP handoff.** BLOCK
+  was recorded first at `6f2cfbe3378ba1c1a5129e4a187146b268315b51`, after reviewed exact anchor
+  `20a3d927d84fe6f9d2bfa6727711c907e223fad3`; report
   `reviews/review-202608231812-issue218-corrected-design-rereview.md`, reviewer
-  `08818dc`, delivery `5d3636d7`. Expected correction actor is `vnfin-oss`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Correct only R1-R3 and the Fmarket phone typo:
-  activate #221 after verified #218 closure and keep #219/#220 behind it; defer all four future
-  outcome result-vs-error carriers until qualified-source API PASS before RED; make each alternative
-  owner dispatch ledger and all legal/runtime axes explicit without new requests. Preserve SOURCE-GAP,
-  empty ETF chain, current mutual-fund behavior, no probe/RED/code/push/close, and the queued order.
+  `08818dc`, delivery `5d3636d7`. The corrected exact anchor is the current handoff commit returned
+  to `vnfin-oss-reviewer`; actor `vnfin-oss`, next action `RETURN_EXACT_SHA_VERDICT`, published base
+  `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`. R1-R3 and the telephone typo are addressed: #221 is
+  explicitly activated only after verified #218 closure; #219 follows #221; #220 follows #219; all
+  four future result-vs-error carriers remain deferred until qualified-source API PASS before RED;
+  and every alternative owner has a zero runtime ledger plus complete legal/runtime axes. Correction
+  scope remains exactly the research/design artifacts and this backlog lifecycle record. Preserve
+  SOURCE-GAP, empty ETF chain, current mutual-fund behavior, no probe/RED/code/push/close, and order.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1033,20 +1036,20 @@ _None._
 
 ## Next
 
-- **#221 — QUEUED_AFTER_#218_BEFORE_#219_#220 (2026-08-23).** Actor `vnfin-oss`; next action
-  `SOURCE_DESIGN_AFTER_218_REVIEW_HANDOFF`; packet anchor
+- **#221 — QUEUED_AFTER_#218 (2026-08-23).** Actor `vnfin-oss`; next action
+  `ACTIVATE_AFTER_218_CLOSURE`; packet anchor
   `1cc60cd99e7ed8b28214eb3a5cf9375c4a7c5376` for
   `tasks/221-fmarket-current-runtime-terms-audit-spec.md`; public issue
-  `https://github.com/hungson175/vnfin/issues/221`. Record only now and do not interrupt #218.
-  After the #218 handoff, prepare exact source/legal design for current Fmarket listing, NAV,
-  holdings, and allocation and choose `CLEARED_AS_IS`, `CLEARED_WITH_LIMITS`,
-  `DISABLE_PENDING_PERMISSION`, or `REMOVE_SOURCE`. No Fmarket API probe, RED/code/push/close before
-  exact design PASS; keep #219/#220 queued behind this handoff.
+  `https://github.com/hungson175/vnfin/issues/221`. Activate only after verified #218 closure, then
+  prepare exact source/legal design for current Fmarket listing, NAV, holdings, and allocation and
+  choose `CLEARED_AS_IS`, `CLEARED_WITH_LIMITS`, `DISABLE_PENDING_PERMISSION`, or `REMOVE_SOURCE`.
+  No Fmarket API probe, RED/code/push/close before exact design PASS; #219/#220 remain behind #221.
 
-- **#219 — QUEUED_AFTER_#218 (2026-08-23).** Actor `vnfin-oss`; next action
-  `SOURCE_DESIGN_AFTER_218_REVIEW_HANDOFF`; packet anchor `f2d0187` for
-  `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind #218 and
-  do not start source/design, RED, code, push, or close before its turn and exact-SHA design PASS.
+- **#219 — QUEUED_AFTER_#221 (2026-08-23).** Actor `vnfin-oss`; next action
+  `SOURCE_DESIGN_AFTER_221_REVIEW_HANDOFF`; packet anchor `f2d0187` for
+  `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind verified #221
+  closure and do not start source/design, RED, code, push, or close before its turn and exact-SHA
+  design PASS.
 
 - **#220 — QUEUED_AFTER_#219 (2026-08-23).** Actor `vnfin-oss`; next action
   `SOURCE_DESIGN_AFTER_219_REVIEW_HANDOFF`; packet anchor

@@ -6,7 +6,8 @@
 **Requested inclusive span:** `2018-01-01..2026-08-19`
 **Current published implementation boundary:** `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`
 **Annotated `v0.2.0` boundary:** `2fe50df4f27064140ff9f7a680227a2b337ec74a`
-**Correction lifecycle:** BLOCK recorded first at local `9c48084`; this artifact is the one docs-only correction after that BLOCK
+**Correction lifecycle:** prior B1-B6 BLOCK recorded first at `9c48084`; closure-review BLOCK recorded
+first at `6f2cfbe`; this artifact is the one docs-only correction after the latter BLOCK
 
 This is a source and legal design artifact only. It does not add an ETF selector, product model,
 parser, source registration, runtime call, RED test, coverage claim, or NAV-discount capability.
@@ -141,6 +142,36 @@ identity evidence does not establish complete `2018-01-01..2026-08-19` history o
 automation. HOSE is a document-support route, and Dragon/VSDC are support/context only. No single
 owner route set qualifies, so the new chain remains empty.
 
+#### 4.1.1 Retained dispatch ledger: runtime versus evidence reading
+
+The ledger below is for a future provider/data-route runtime, not for the read-only evidence review.
+No owner API or direct data route was dispatched, so every runtime ledger is exactly zero. The public
+HTML/PDF reads are named separately and do not invent HTTP status, redirect, or unretained MIME data.
+
+| Owner | Runtime logical | Runtime physical | Runtime page | Runtime retry | Read-only evidence distinction |
+| --- | ---: | ---: | ---: | ---: | --- |
+| VinaCapital | `0` | `0` | `0` | `0` | Three public evidence documents read: manager page, disclosure index, and one linked factsheet PDF; not a runtime attempt; unprobed route fields remain `NOT_PROBED_BY_DESIGN` |
+| HOSE | `0` | `0` | `0` | `0` | One official disclosure PDF read; not a history/API dispatch; status/redirect/page fields remain `NOT_PROBED_BY_DESIGN` |
+| Dragon Capital | `0` | `0` | `0` | `0` | One official HTML article read; not a NAV/data-route dispatch; status/redirect/schema fields remain `NOT_PROBED_BY_DESIGN` |
+| VSDC | `0` | `0` | `0` | `0` | One official HTML service page read; not a product/data-route dispatch; status/redirect/schema fields remain `NOT_PROBED_BY_DESIGN` |
+
+#### 4.1.2 Complete alternative-owner legal/runtime axes
+
+Every alternative owner is evaluated on the same nine axes. A public page or document supplies no
+permission by itself, so unsupported rights are explicit gaps rather than omitted cells.
+
+| Axis | VinaCapital | HOSE | Dragon Capital | VSDC |
+| --- | --- | --- | --- | --- |
+| Owner identity | `PROVIDER_IDENTIFIED` | `PROVIDER_IDENTIFIED` | `PROVIDER_IDENTIFIED` | `UNKNOWN` (service context, not a selected data owner) |
+| Automated access | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Caller-facing return | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Storage/cache | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Redistribution | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Attribution | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Commercial use | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Rate/retry | `RATE_POLICY_GAP` | `RATE_POLICY_GAP` | `RATE_POLICY_GAP` | `RATE_POLICY_GAP` |
+| Revision/correction | `REVISION_GAP` | `REVISION_GAP` | `REVISION_GAP` | `REVISION_GAP` |
+
 ## 5. Existing Fmarket route ledger (zero dispatch)
 
 The following are repository baselines for existing mutual-fund compatibility, not fresh ETF evidence.
@@ -195,7 +226,11 @@ An empty filter response is not `CONFIRMED_EMPTY` unless the exact ETF selector 
 success envelope is valid, totals are reconciled, and the scope is the ETF universe. A missing route,
 mutual-fund-only page, blank/HTML/WAF/error response, or unindexed document is not proof that no ETF
 exists. `UNSERVED`, `UNVERIFIED_SELECTOR`, `CONFIRMED_EMPTY`, and `UNKNOWN` remain distinct
-future outcomes; no new public enum is added here.
+future outcomes; no new public enum is added here. For each of these four outcomes, the future public
+carrier—typed empty result versus typed error, exact error type, and exact public message—is
+explicitly deferred until one source qualifies and a fresh qualified-source API design PASS occurs
+before RED. Current mutual-fund `EmptyData` behavior is preserved; this closure invents no enum,
+exception, or result carrier.
 
 ## 7. Legal posture and the separate existing-runtime risk
 
@@ -208,7 +243,7 @@ Fmarket's official terms provide a provider-wide conservative boundary:
 - commercial use requires Fincorp permission.
 
 The official terms are at [`fmarket.vn/legal`](https://fmarket.vn/legal). The contact page lists
-[`hello@fmarket.vn`](https://fmarket.vn/lien-he), `1900 571 299`, and `028 3636 0755), with
+[`hello@fmarket.vn`](https://fmarket.vn/lien-he), `1900 571 299`, and `028 3636 0755`, with
 stated support hours of 08:30–17:00 Monday–Friday. No permission request was sent.
 
 These terms are not described as ETF-specific. The current mutual-fund adapter automates the same
@@ -286,7 +321,8 @@ the exact range `8d1490f..<approved-anchor>`, and list exactly these three paths
 
 The release sequence is: rerun merged gates; push only the approved anchor; verify remote exact HEAD,
 base ancestry, and the three paths; post a clean no-capability `SOURCE-GAP` resolution; close and
-re-read #218; only then activate #219. #220 remains queued. No implementation, RED, model/accessor,
+re-read #218; only then activate #221. Keep #219 queued until #221's exact source/design handoff
+and verified close, then activate #219; keep #220 behind #219. No implementation, RED, model/accessor,
 source registration, or runtime capability is authorized by this docs pass.
 
 If a later fresh design PASS authorizes implementation, the separate release matrix must explicitly

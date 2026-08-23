@@ -6,7 +6,8 @@ model/accessor change, push, or close
 **Research:** [source vetting](../docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md)
 **Requested inclusive span:** `2018-01-01..2026-08-19`
 **Published base:** `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`
-**Block record:** `9c48084`; reviewed anchor `ce1db49fe2508a900ed2f68b43054401cb0b8da5`
+**Prior B1-B6 block:** `9c48084`; **closure-review BLOCK:** `6f2cfbe`; reviewed anchor
+`20a3d927d84fe6f9d2bfa6727711c907e223fad3`
 **Local activation:** `77671d42d9be16d1c4264397cf9939c266f6b4d8` (backlog-only and unpushed)
 
 This is a documentation-only source-gap correction. It does not authorize a new ETF token, public
@@ -106,6 +107,33 @@ The following evidence is read-only official-page/document research, not Fmarket
 Each route set is evaluated on its own owner/basis. No row is dismissed for lacking a Fmarket ID; no
 row is promoted beyond the evidence it owns. The new source chain remains empty.
 
+### 4.1 Runtime ledger and complete legal/runtime axes
+
+The alternative-source ledger below counts only a future provider/data-route runtime. No such route
+was dispatched. Read-only evidence documents are listed separately and are not runtime attempts; no
+unretained status, redirect, or MIME value is invented.
+
+| Owner | Logical | Physical | Page | Retry | Read-only evidence, not runtime |
+| --- | ---: | ---: | ---: | ---: | --- |
+| VinaCapital | `0` | `0` | `0` | `0` | Manager page, disclosure index, and one linked factsheet PDF read; runtime fields `NOT_PROBED_BY_DESIGN` |
+| HOSE | `0` | `0` | `0` | `0` | One official disclosure PDF read; history/API fields `NOT_PROBED_BY_DESIGN` |
+| Dragon Capital | `0` | `0` | `0` | `0` | One official HTML article read; NAV/data-route fields `NOT_PROBED_BY_DESIGN` |
+| VSDC | `0` | `0` | `0` | `0` | One official HTML service page read; product/data-route fields `NOT_PROBED_BY_DESIGN` |
+
+Every alternative owner has an explicit disposition on all nine legal/runtime axes:
+
+| Axis | VinaCapital | HOSE | Dragon Capital | VSDC |
+| --- | --- | --- | --- | --- |
+| Owner identity | `PROVIDER_IDENTIFIED` | `PROVIDER_IDENTIFIED` | `PROVIDER_IDENTIFIED` | `UNKNOWN` (service context only) |
+| Automated access | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Caller-facing return | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Storage/cache | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Redistribution | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Attribution | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Commercial use | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` | `LEGAL_GAP` |
+| Rate/retry | `RATE_POLICY_GAP` | `RATE_POLICY_GAP` | `RATE_POLICY_GAP` | `RATE_POLICY_GAP` |
+| Revision/correction | `REVISION_GAP` | `REVISION_GAP` | `REVISION_GAP` | `REVISION_GAP` |
+
 ## 5. Coverage and no-false-absence contract
 
 Retain these separate fields for every future route set:
@@ -126,7 +154,11 @@ unproven bound, page, identity, publication, cadence, or revision axis.
 
 `UNVERIFIED_SELECTOR`, `UNSERVED`, `CONFIRMED_EMPTY`, and `UNKNOWN` remain distinct. A blank,
 HTML/WAF/error/timeout/missing-page response or an open-ended-only page is not proof that no ETF
-exists. No new enum or public exception is added in this closure.
+exists. No new enum or public exception is added in this closure. For each of these four outcomes,
+the future public carrier—typed empty result versus typed error, exact error type, and exact public
+message—is explicitly deferred until one source qualifies and a fresh qualified-source API design
+PASS occurs before RED. Current mutual-fund `EmptyData` behavior is preserved; this closure invents
+no enum, exception, or result carrier.
 
 ## 6. Future runtime invariants; exact budgets deferred
 
@@ -169,7 +201,8 @@ revision/correction. Public reachability, a page/PDF, or a distribution licence 
 
 ## 8. Exact lifecycle and release boundary
 
-The blocker was recorded first in backlog commit `9c48084`; correction actor is `vnfin-oss`.
+The prior B1-B6 blocker was recorded first in backlog commit `9c48084`; this closure-review BLOCK was
+recorded first in `6f2cfbe`; correction actor is `vnfin-oss`.
 A corrected exact-SHA handoff must retain the published base `8d1490f`, name its exact
 `8d1490f..<approved-anchor>` range, and change only:
 
@@ -179,7 +212,8 @@ A corrected exact-SHA handoff must retain the published base `8d1490f`, name its
 
 After a future design PASS: rerun merged gates; push only the approved anchor; verify remote exact
 HEAD/base ancestry/three paths; post a clean no-capability `SOURCE-GAP` resolution; close and
-re-read #218; only then activate #219. #220 remains queued. No later commit may be pushed in that
+re-read #218; only then activate #221. Keep #219 queued until #221's exact source/design handoff
+and verified close, then activate #219; keep #220 behind #219. No later commit may be pushed in that
 approved range. A future implementation requires a fresh design PASS and must include fund API/source/
 diagnostics/tutorial and agent-facing AI docs, the maintainer skill, `CHANGELOG.md`, release notes,
 tests, build, blacklist/secret, diff, and path gates.
