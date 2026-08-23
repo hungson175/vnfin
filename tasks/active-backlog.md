@@ -1030,9 +1030,11 @@ _None._
   `tasks/207-design-note.md`. Disposition is SOURCE-GAP CLOSURE: annual World Bank behavior is
   preserved; SBV remains blocked on reuse rights, bounded pagination/WAF reliability, and rate
   policy. Exact design review `reviews/review-202608230822-issue207-source-design-gate.md`
-  (reviewer `a8910c5`) is BLOCKED on docs-only B1-B6 precision; no RED tests, production code,
-  push, or close before exact-SHA re-review. Actor is `vnfin-oss` builder; one correction round
-  pending.
+  (reviewer `a8910c5`) was BLOCKED on docs-only B1-B6 precision. One correction round is committed
+  at `bebc45ef446f3db1678d99e6b47733532ec9e26f` (same two Markdown paths); exact base-to-anchor
+  diff, full/focused/docs-secret tests, offline imports, and isolated build pass. No RED tests,
+  production code, push, or close before exact-SHA re-review. Actor is `vnfin-oss` builder; review
+  requested at the correction anchor.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
