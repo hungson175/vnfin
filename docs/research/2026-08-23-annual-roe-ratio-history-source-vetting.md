@@ -199,8 +199,8 @@ out of scope.
 
 ### 5.5 Official exchange and issuer documents
 
-HOSE's [VN30 index ground rules](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
-define VN30 as 30 constituents selected under the official index rules. HOSE's [index-data page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so)
+HOSE's official **VN30 Index Ground Rules**, Decision 747/QĐ-SGDHCM (30 December 2024), define
+VN30 as 30 constituents selected under the official index rules. HOSE's [index-data page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so)
 exposes a VN30 data area, but the bounded public page did not provide a retained dated current
 constituent snapshot suitable for a reproducible 2026-08-23 membership claim. The coverage axis is
 therefore `UNKNOWN`, not `FULL`.
@@ -384,7 +384,7 @@ work. #222, #223, and #224 remain queued behind active #220.
 - [TCBS OpenAPI](https://developers.tcbs.com.vn/)
 - [TCInvest analysis landing page](https://tcinvest.tcbs.com.vn/tc-analysis/dashboard)
 - [TCBS audited-report notice](https://www.tcbs.com.vn/quan-he-nha-dau-tu/bao-cao-tai-chinh/cbtt-ve-bao-cao-tai-chinh-va-bao-cao-ty-le-an-toan-tai-chinh-nam-2025-da-duoc-kiem-toan/)
-- [HOSE VN30 ground rules](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- HOSE, *VN30 Index Ground Rules*, Decision 747/QĐ-SGDHCM (30 December 2024), official static PDF
 - [HOSE index-data page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so)
 
 ## Bottom summary

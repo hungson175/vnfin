@@ -170,7 +170,7 @@ source registration, or runtime work. #222, #223, and #224 remain queued behind 
 - [SSI terms](https://www.ssi.com.vn/en/terms-of-services)
 - [TCBS OpenAPI](https://developers.tcbs.com.vn/)
 - [TCInvest analysis page](https://tcinvest.tcbs.com.vn/tc-analysis/dashboard)
-- [HOSE VN30 ground rules](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- HOSE, *VN30 Index Ground Rules*, Decision 747/QĐ-SGDHCM (30 December 2024), official static PDF
 
 ## Bottom summary
 
