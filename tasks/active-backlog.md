@@ -1050,9 +1050,10 @@ _None._
 
 ## Next
 
-- **#215 — SOURCE_DESIGN_IN_PROGRESS (2026-08-23), activated after #213/#214 exact publication.** Actor
-  `vnfin-oss`; next action `PREPARE_SOURCE_DESIGN_ARTIFACTS`. Handoff anchor is published exact
-  `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; authoritative packet
+- **#215 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), source/design artifacts prepared after #213/#214 exact publication.** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`. Handoff anchor is published
+  exact `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; local design/source anchor is
+  `5b1bbfae2f1e81ed3c495d934766b5c1e1038800`; exact contract-correction anchor; authoritative packet
   `tasks/215-stock-bonus-distributions-source-spec.md`, reviewer packet anchor `4a6780b`, public
   receipt `issuecomment-5384790949`. Preserve the current cash-only VSDC surface; independently
   prove stock-dividend versus bonus kind, response-backed ex/effective dates, shares-per-100 units,
