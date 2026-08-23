@@ -320,10 +320,12 @@ _APPROVED_CURRENT_FAIL_CLOSED_SENTENCES = tuple(
     for sentence in (
         "Current valid calls do not build request bodies, enter cache lookup, dispatch, parse, "
         "or produce `EmptyData`.",
-        "current valid calls fail before request-body construction, cache lookup, transport "
-        "dispatch, response parsing, or public `EmptyData` production.",
-        "no current valid call reaches that parser or produces `EmptyData`, and this closure "
-        "invents no enum, exception, or result carrier.",
+        "the current-vs-historical boundary is strict: current valid calls fail before request-body "
+        "construction, cache lookup, transport dispatch, response parsing, or public `EmptyData` "
+        "production.",
+        "pre-#221 parser EmptyData behavior remains private historical evidence only; no current "
+        "valid call reaches that parser or produces `EmptyData`, and this closure invents no enum, "
+        "exception, or result carrier.",
         # The ETF compatibility table has this exact bounded cell, including its historical
         # fundAssetTypes note; a reworded or extended cell must remain scannable.
         "current valid calls fail before request-body construction; pre-#221 forwarding as "
@@ -352,12 +354,15 @@ _CURRENT_FMARKET_CONTRADICTION_PATTERNS = (
 
 def _assert_no_current_fmarket_contradictions(text: str) -> None:
     normalized = re.sub(r"\s+", " ", text.casefold())
-    # Replace only exact approved fail-closed text. A reworded or extended sentence remains in
-    # the bounded scan and is rejected by the marker matcher.
-    for sentence in _APPROVED_CURRENT_FAIL_CLOSED_SENTENCES:
-        normalized = normalized.replace(sentence, " ")
-    for pattern in _CURRENT_FMARKET_CONTRADICTION_PATTERNS:
-        assert not pattern.search(normalized), pattern.pattern
+    # Allow only an entire exact sentence/table cell. A reworded or extended unit remains in the
+    # bounded scan and is rejected by the marker matcher; substring replacement would be bypassable.
+    bounded_units = re.split(r"[|]+|(?<=[.!?])\s+", normalized)
+    for unit in bounded_units:
+        unit = unit.strip()
+        if not unit or unit in _APPROVED_CURRENT_FAIL_CLOSED_SENTENCES:
+            continue
+        for pattern in _CURRENT_FMARKET_CONTRADICTION_PATTERNS:
+            assert not pattern.search(unit), pattern.pattern
 
 
 @pytest.mark.parametrize(
@@ -382,6 +387,8 @@ def _assert_no_current_fmarket_contradictions(text: str) -> None:
         "Current calls do not fail before cache; they return cached text.",
         "Current calls do not fail before cache, returning cached text instead.",
         "Current calls do not fail before cache; instead cached text is returned.",
+        "Current valid calls fail before request-body construction; pre-#221 forwarding as "
+        "`fundAssetTypes` is historical parser evidence only; cached response text is returned.",
     ),
 )
 def test_fmarket_contradiction_matcher_covers_modal_and_short_forms(contradiction):
