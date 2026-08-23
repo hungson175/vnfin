@@ -1050,17 +1050,15 @@ _None._
 
 ## Next
 
-- **#215 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), corrected source/design gate.** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`. Published handoff anchor is
-  exact `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; correction anchor is exact
-  `1e82b0f54eea5255c540285c4a2b03bee9e94893` (correction actor `vnfin-oss`), with local lifecycle
-  receipt to follow. BLOCK receipt `cdfdc853`, addressed report
-  `reviews/review-202608231546-issue215-design-source-gate.md` at `b1ef2ed`; review range is
-  `8126dd5..1e82b0f`. B1-B6 are corrected in one docs/backlog-only round: exact v0.2.0/current
-  boundary and 7/15 probe ledger, publish/close/path lifecycle, deferred non-authoritative
-  model/coverage/diagnostic contract, one-source atomic future budget invariants, and clean diff.
-  Preserve current cash-only VSDC and the empty share-distribution chain; keep queued #217 untouched.
-  No RED/model/accessor/code/push/close before exact-SHA design PASS.
+- **#215 — DESIGN_BLOCKED (2026-08-23), corrected source/design gate.** Actor `vnfin-oss-reviewer`;
+  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Published handoff anchor is exact
+  `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; correction anchor is exact
+  `1e82b0f54eea5255c540285c4a2b03bee9e94893`; lifecycle HEAD is exact
+  `74befbd7e1a35bff66931e0a297768614218df8f`. BLOCK receipt `1a23ff1c`, addressed report
+  `reviews/review-202608231605-issue215-corrected-design-rereview.md` at `0fc3467`. Correct only
+  the research PARTIAL/unreconciled-page semantics, the publishable lifecycle anchor wording, and
+  research semantic-label non-binding clarity. Preserve current cash-only VSDC, empty new chain, and
+  queued #217. No RED/model/accessor/code/push/close before exact-SHA design PASS.
 
 - **#217 — QUEUED_AFTER_#215 (2026-08-23), source/design only.** Actor `vnfin-oss-reviewer`; next
   action `SOURCE_DESIGN_AFTER_#215`. Authoritative packet
