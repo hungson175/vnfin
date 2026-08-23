@@ -1025,10 +1025,12 @@ _None._
 
 - **#207 — daily USD/VND FX history (SOURCE_DESIGN_IN_PROGRESS; builder, 2026-08-23).**
   Filtered tech-lead packet `tasks/207-daily-usdvnd-fx-history-spec.md` at reviewer `3d60102`.
-  Prepare exactly the two source/design artifacts named by the packet, preserving
-  annual World Bank behavior. Current SBV full-span evidence remains blocked on reuse rights,
-  bounded pagination/WAF reliability, and rate policy; no RED tests, production code, push, or
-  close before exact-SHA design PASS. Actor is `vnfin-oss` builder; design anchor pending.
+  Source/design artifacts are committed at `26ad4f510484ff4233d38950461a283dc0227ccc`:
+  `docs/research/2026-08-23-daily-usdvnd-fx-history-source-vetting.md` and
+  `tasks/207-design-note.md`. Disposition is SOURCE-GAP CLOSURE: annual World Bank behavior is
+  preserved; SBV remains blocked on reuse rights, bounded pagination/WAF reliability, and rate
+  policy. No RED tests, production code, push, or close before exact-SHA design review.
+  Actor is `vnfin-oss` builder; review requested at this anchor.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
