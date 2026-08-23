@@ -601,7 +601,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_IN_PROGRESS (2026-08-23), B1-B4 correction committed.**
+- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), R1-R2 correction required.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -611,9 +611,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `reviews/review-202608231955-issue221-code-review.md` at reviewer `ae46900` was addressed by
   RED correction `e8fe053` and implementation/docs correction `13bd60d`: B1 transport chokepoints,
   B2 exact cache-key proof, B3 current documentation truth, and B4 fabricated fixture boundary.
-  Actor is `vnfin-oss`; next action `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_REVIEW`. Preserve
-  `DISABLE_PENDING_PERMISSION`, no Fmarket probe/push/resolution/close, no #219 activation, and
-  queued #219/#220/#222.
+  Correction review `reviews/review-202608232014-issue221-correction-review.md` at reviewer
+  `58f4a95` BLOCKED exact head `495f6d8`: R1 current-vs-historical transition docs still contradict
+  the disabled runtime, and R2 the synthetic/redaction boundary remains false and under-scanned.
+  Actor is `vnfin-oss`; next action `RED_FIRST_R1_R2_DOCS_FIXTURE_CORRECTION`. Preserve
+  `DISABLE_PENDING_PERMISSION`, no runtime/probe/push/resolution/close, no #219 activation, and
+  queued #219/#220/#222; exclude local queue receipts `65d6ac6` and `0fd103d`.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
