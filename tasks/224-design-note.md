@@ -230,7 +230,8 @@ All criteria are conjunctive. Reopen only when one named provider/route/basis su
 4. finite owner-approved logical/physical/page/retry/redirect/byte ceilings with atomic
    reservation/exhaustion and no-false-partial behavior;
 5. explicit answers for automated access, caller-facing return, storage/cache, redistribution,
-   attribution, commercial use, rate/retry/pacing, and revision/correction/retention;
+   attribution, commercial use, rate/retry/pacing, terms amendment/revocation, and
+   observation/data revision/correction/retention;
 6. annual USD/VND compatibility and an additive model/facade/diagnostic plan; and
 7. a new exact-SHA source-design PASS followed by a separate RED-first implementation review.
 

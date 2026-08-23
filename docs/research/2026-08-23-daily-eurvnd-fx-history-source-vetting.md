@@ -281,16 +281,16 @@ it is not permission.
 | VCB EUR sell | Surface owner `PROVEN`; historical field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
 | SBV central VND/USD | Product owner `PROVEN`; direct EUR/VND field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
 | SBV reference rate | Product owner `PROVEN`; direct daily field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
-| SBV weekly tax cross-rate | Product owner `PROVEN`; daily market unit `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN weekly product; daily data `NOT_APPLICABLE` |
-| ECB direct EUR/VND | Roster owner `PROVEN`; direct VND `NOT_SERVED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN roster absence/current boundary` |
+| SBV weekly tax cross-rate | Product owner `PROVEN`; daily market unit `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| ECB direct EUR/VND | Roster owner `PROVEN`; direct VND `NOT_SERVED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
 | Frankfurter unfiltered | Facade owner `PROVEN`; direct owner `GAP` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `NOT_RETAINED` |
 | Frankfurter `providers=ECB` | Facade/provider label `PROVEN`; direct ECB/VND `GAP` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `NOT_RETAINED` |
 | Frankfurter underlying inventory | Inventory not fully reviewed | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
-| BIS bilateral | Dataset owner/method `PROVEN`; requested pair wrong | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN combined/USD-relative; not direct unit` |
-| World Bank annual | Indicator owner/basis `PROVEN`; daily pair wrong | `NOT_RETAINED` | `PROVEN annual CC BY 4.0 only` | `PROVEN annual CC BY 4.0 conditions` | `PROVEN annual CC BY 4.0 conditions` | `PROVEN attribution requirement` | `PROVEN subject to CC BY 4.0` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN annual period-average/revision boundary` |
+| BIS bilateral | Dataset owner/method `PROVEN`; requested pair wrong | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| World Bank annual | Indicator owner/basis `PROVEN`; daily pair wrong | `NOT_RETAINED` | `PROVEN annual CC BY 4.0 only` | `PROVEN annual CC BY 4.0 conditions` | `PROVEN annual CC BY 4.0 conditions` | `PROVEN attribution requirement` | `PROVEN subject to CC BY 4.0` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
 | Federal Reserve H.10 | Owner `PROVEN`; direct pair `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
 | FRED DEXCHUS | Owner `PROVEN`; direct pair `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
-| `open.er-api` current | Route owner/source contract `PROVEN`; historical direct unit `GAP` | `PROVEN current no-key route only` | `PROVEN current client use only` | `PROVEN cache allowed for current client` | `PROVEN raw redistribution prohibited` | `PROVEN requested attribution` | `PROVEN commercial use stated` | `PROVEN current rate limit; history NOT_APPLICABLE` | `NOT_RETAINED` | `PROVEN current-update timestamp; no historical revision` |
+| `open.er-api` current | Route owner/source contract `PROVEN`; historical direct unit `GAP` | `PROVEN current no-key route only` | `PROVEN current client use only` | `PROVEN cache allowed for current client` | `PROVEN raw redistribution prohibited` | `PROVEN requested attribution` | `PROVEN commercial use stated` | `PROVEN current rate limit; history NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_RETAINED` |
 
 No public/no-login/free surface receives an inferred licence. Terms amendment/revocation is kept
 separate from observation/data revision/retention: a provider may revise observations without
@@ -474,7 +474,8 @@ unit:
 4. finite owner-approved logical/physical/page/retry/redirect/byte budget and rate/pacing policy,
    with atomic reservation/exhaustion and no-false-partial behavior;
 5. explicit legal answers for automated access, caller return, storage/cache, redistribution,
-   attribution, commercial use, rate/retry, and revision/correction/retention;
+   attribution, commercial use, rate/retry/pacing, terms amendment/revocation, and
+   observation/data revision/correction/retention;
 6. annual USD/VND compatibility, existing model/facade reuse, exact daily unit, diagnostics and
    snapshot compatibility, and a public API design that does not claim unreviewed fields; and
 7. a new exact-SHA reviewer design PASS followed by a separate RED-first implementation review.
