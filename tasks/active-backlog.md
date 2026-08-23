@@ -602,16 +602,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#220 — ACTIVE SOURCE_DESIGN (2026-08-23).** Actor `vnfin-oss`; next action
-  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor
+- **#220 — DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss`; next action
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
   `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for
   `tasks/220-annual-roe-ratio-history-spec.md`, public receipt `issuecomment-5385517511`.
-  #219 is verified `CLOSED`/`COMPLETED` at exact remote anchor
-  `e478f4ff0e6ad846e31dbf6a5412c16e8382a768`, with clean no-capability SOURCE-GAP resolution
-  `issuecomment-5386927683`. Prepare only the annual-ROE source/design artifacts and this
-  lifecycle row; preserve the existing single-symbol fundamentals call, current `Period.UNKNOWN`
-  ratio behavior, and no RED/code/push/close before exact-SHA design PASS. #222, #223, and #224
-  remain queued behind #220.
+  Activation receipt is `8dea6df9beb1acdbcf3583af2ef51a84bff0e6df`; docs content anchor is
+  `ce3503371f417ea291d77889145d6dd5f6bac5ef`. The source/design artifacts conclude
+  `SOURCE-GAP CLOSURE`: no candidate proves annual fiscal ROE identity, complete coverage,
+  bounded lawful runtime, and redistribution together. Preserve the existing single-symbol
+  fundamentals call, current `Period.UNKNOWN` ratio behavior, zero-ratio metrics, and no
+  RED/code/push/close before exact-SHA design PASS. #222, #223, and #224 remain queued behind
+  #220. The final merged-handoff HEAD is returned with the reviewer request; the content anchor
+  is not relabeled as that HEAD.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
