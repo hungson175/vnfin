@@ -606,8 +606,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
   `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for
   `tasks/220-annual-roe-ratio-history-spec.md`, public receipt `issuecomment-5385517511`.
-  Activation receipt is `8dea6df9beb1acdbcf3583af2ef51a84bff0e6df`; docs content anchor is
-  `ce3503371f417ea291d77889145d6dd5f6bac5ef`. The source/design artifacts conclude
+  Activation receipt is `8dea6df9beb1acdbcf3583af2ef51a84bff0e6df`; final docs content anchor is
+  `e0949e103b7df6c90d5ef7a27dde5dfa5f2c2d14` (superseding content anchor
+  `ce3503371f417ea291d77889145d6dd5f6bac5ef` only to remove an opaque official-reference path
+  that failed the repository secret-like-blob scanner). The source/design artifacts conclude
   `SOURCE-GAP CLOSURE`: no candidate proves annual fiscal ROE identity, complete coverage,
   bounded lawful runtime, and redistribution together. Preserve the existing single-symbol
   fundamentals call, current `Period.UNKNOWN` ratio behavior, zero-ratio metrics, and no
