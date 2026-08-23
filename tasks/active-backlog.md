@@ -601,17 +601,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#217 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), one final research/backlog wording
-  correction.** Correction actor `vnfin-oss`; next action `RETURN_EXACT_SHA_VERDICT` to reviewer
-  `vnfin-oss-reviewer`. Reviewed exact anchor
-  `3013927da051c9c1016d3702e50d9ff202a8e800`; BLOCK report
-  `reviews/review-202608231728-issue217-final-closure-review.md` at reviewer
-  `bcd1a982b84326edc200a4b8e46a4a1b77310d60`, delivery `98b1ed69`. The new handoff commit is
-  the exact research/backlog anchor returned for narrow closure review from clean published base
-  `8350329d3d881e34df62937aacf7ea4d74f99f91`. It generalizes `NOT_RETAINED`, corrects the
-  UTC+7/UTC timestamp wording, and distinguishes raw-header absence from retained sanitized
-  complete MIME. Preserve SOURCE-GAP, annual World Bank, empty daily chain, and queued
-  #218/#219/#220. No probes, RED/model/accessor/source-registration/code/push/close.
+- **#218 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), SOURCE-GAP CLOSURE handoff.** Actor
+  `vnfin-oss`; next action `RETURN_EXACT_SHA_VERDICT` to reviewer `vnfin-oss-reviewer`. Activation
+  followed verified #217 closure at published exact anchor
+  `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`, clean-resolution receipt `issuecomment-5385552728`,
+  and local activation `77671d4`. Authoritative packet
+  `tasks/218-etf-discovery-nav-history-spec.md` at reviewer `5acb355`, public receipt
+  `issuecomment-5385276364`. The exact handoff commit contains only
+  `docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md`,
+  `tasks/218-design-note.md`, and this backlog lifecycle record. It keeps Fmarket ETF discovery and
+  provider-published NAV history unserved: no single source proves product type, code/product/NAV
+  identity, requested coverage, bounded runtime, and lawful reuse together. Discount/first-
+  difference/VN30F remain caller-side. No #218 RED/code/push/close before exact-SHA design PASS;
+  #219/#220 remain queued.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1035,18 +1037,6 @@ _None._
 
 ## Next
 
-- **#218 — SOURCE_DESIGN (2026-08-23), activated after verified #217 closure; separate ETF
-  discovery/NAV-history source design.** Actor `vnfin-oss`; next action
-  `PREPARE_EXACT_SHA_SOURCE_DESIGN`. Activation is after #217 was re-read `CLOSED`/`COMPLETED`
-  with published exact anchor `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16` and clean-resolution
-  receipt `issuecomment-5385552728`. Authoritative packet
-  `tasks/218-etf-discovery-nav-history-spec.md` at reviewer `5acb355`, public receipt
-  `issuecomment-5385276364`. Preserve existing funds ETF discovery and provider-published NAV
-  history only; prove ETF product type versus asset-class mapping, exact code/product/NAV
-  identity, `2018-01-01..2026-08-19` coverage/cadence, bounded runtime, and legal rights.
-  Discount/first-difference/VN30F remain caller-side. No #218 RED/code/push/close before exact-
-  SHA design PASS; #219/#220 remain queued.
-
 - **#219 — QUEUED_AFTER_#218 (2026-08-23).** Actor `vnfin-oss`; next action
   `SOURCE_DESIGN_AFTER_218_REVIEW_HANDOFF`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind #218 and
@@ -1093,6 +1083,15 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#217 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16` from the approved docs/source range;
+  remote HEAD, clean base ancestry, and the approved research/design/backlog paths were verified.
+  Final approval `reviews/review-202608231732-issue217-final-closure-approval.md` at reviewer
+  `41f218c344ee8e58f812cf07be46fa56c12df736`; clean resolution `issuecomment-5385552728`; GitHub
+  re-read `CLOSED`/`COMPLETED` at `2026-08-23T10:35:09Z`. The daily CNY/VND chain remains empty,
+  annual World Bank behavior is unchanged, and no RED, runtime, or coverage capability was added.
+  Local #218 activation and design handoff receipts remain unpushed.
+
 - **#215 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `8350329d3d881e34df62937aacf7ea4d74f99f91` from the approved
   `8126dd5..8350329` range; remote ancestry and the three research/design/backlog paths were
@@ -1106,7 +1105,7 @@ _None._
   `8126dd5510b6390f91c9feeb43e047b2b9b88bc1` with approved independent artifact paths and
   clean-base ancestry; resolution receipts `5385033626`/`5385033721`; both issues re-read
   `CLOSED`/`COMPLETED`. VNREAL/VNMID chains remain empty/deny-only; no RED, production code,
-  proxy, basket, downstream signal, or capability claim. #217 is the current WIP.
+  proxy, basket, downstream signal, or capability claim. #218 is the current WIP.
 
 - **#212 — DONE/CLOSED (2026-08-23), approved Fmarket runtime correction.** Published exact approved
   anchor `4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f` to `origin/master`; approved range was
@@ -1115,8 +1114,8 @@ _None._
   12 approved paths were verified. Final approval `reviews/review-202608231410-issue212-final-code-approval.md`
   at reviewer `71907f3`; resolution `issuecomment-5384775032`; GitHub re-read `CLOSED`/`COMPLETED`.
   Full 4,033-test suite, focused/build/API/blacklist/secret/diff gates passed. No unrelated source,
-  endpoint, credential, or capability was added; #217 is now active for source-design only and
-  #218 remains queued.
+  endpoint, credential, or capability was added; #217 is now closed and #218 is active for
+  source-design only.
 
 - **#211 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact approved
   anchor `a1410be39105bd02e09bccf9c7ea83e79a049eb6` to `origin/master` from clean `a4df33f` ancestry;
