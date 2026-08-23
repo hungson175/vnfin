@@ -146,3 +146,7 @@ def test_factory_signatures_do_not_gain_cache_or_retry_knobs():
     assert tuple(source_signature.parameters) == ("http_get", "timeout")
     assert "cache_ttl" not in source_signature.parameters
     assert "max_retries" not in source_signature.parameters
+
+
+def test_source_unavailable_documents_policy_disabled_sources():
+    assert "policy-disabled" in (SourceUnavailable.__doc__ or "").lower()

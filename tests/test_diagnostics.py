@@ -254,29 +254,50 @@ def test_fund_coverage_in_dunder_all():
     assert "explain_fund_coverage" in diag.__all__
 
 
-def test_fund_coverage_enumerates_available_metadata():
+def test_fund_coverage_reports_disabled_status_without_availability_claims():
     d = explain_fund_coverage()
-    blob = " ".join(d.notes).lower()
-    # what IS available (#155 confirmed core): management fee, sector weights,
-    # asset allocation, inception date, description.
-    for kind in ("management fee", "sector", "asset", "inception", "description"):
-        assert kind in blob, kind
+    assert d.status == "source_disabled_pending_permission"
+    assert d.notes == ("SOURCE_DISABLED_PENDING_PERMISSION; no provider call.",)
+    assert d.suggested_actions == ()
 
 
-def test_fund_coverage_discloses_source_missing_metadata():
+def test_fund_coverage_freezes_one_disabled_fmarket_capability_record():
     d = explain_fund_coverage()
-    blob = " ".join(d.notes + d.suggested_actions).lower()
-    sources_blob = " ".join(" ".join(c.limitations).lower() for c in d.sources)
-    full = blob + " " + sources_blob
-    # the 4 deferred/source-missing fields per the live probe.
-    assert "benchmark" in full
-    assert "risk" in full
-    assert "fee schedule" in full or "fee-schedule" in full or "subscription" in full or "redemption" in full
-    assert "factsheet" in full
+    assert d.sources == (
+        SourceCapability(
+            domain="funds",
+            endpoint="fund_metadata",
+            source="fmarket",
+            instruments=("VN open-ended mutual fund metadata",),
+            granularity="snapshot",
+            coverage_start=None,
+            coverage_end=None,
+            is_default=False,
+            is_opt_in=False,
+            is_single_source=True,
+            limitations=("SOURCE_DISABLED_PENDING_PERMISSION",),
+            suggested_action=None,
+        ),
+    )
 
 
 def test_fund_coverage_in_source_capabilities_registry():
     caps = source_capabilities()
     fund_caps = [c for c in caps if c.domain == "funds"]
     assert fund_caps, "fund metadata capabilities missing from source_capabilities()"
-    assert any(c.source == "fmarket" for c in fund_caps)
+    assert fund_caps == [
+        SourceCapability(
+            domain="funds",
+            endpoint="fund_metadata",
+            source="fmarket",
+            instruments=("VN open-ended mutual fund metadata",),
+            granularity="snapshot",
+            coverage_start=None,
+            coverage_end=None,
+            is_default=False,
+            is_opt_in=False,
+            is_single_source=True,
+            limitations=("SOURCE_DISABLED_PENDING_PERMISSION",),
+            suggested_action=None,
+        )
+    ]
