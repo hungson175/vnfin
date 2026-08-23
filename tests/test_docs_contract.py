@@ -406,20 +406,23 @@ def test_fmarket_correction_lifecycle_has_reviewer_verdict_owner():
     assert "this lifecycle receipt is the exact final review handoff" in backlog_normalized
 
 
+_FMARKET_ID_PREFIX_PATTERN = r"(?:productid|product_id|product id|(?<!product )(?<!product  )id)"
+_FMARKET_ID_SEPARATOR_PATTERN = r"(?:|=|\x20|\x20=|=\x20|\x20=\x20)"
+
 _FMARKET_EVIDENCE_FORBIDDEN_PATTERNS = (
         r"\b(?:veof|vesaf|vff|vibf|ssisca|bvpf|vlbf|vcbf|vcbfbcf|vfmvf1|rvpf24|vndaf|asbf|dcbf)\b",
         r"\bbaf126003\b",
-        r"\b(?:id|product[_\s]*id)\s*=?\s*(?:20|21|27|38|51)\b",
-        r"\b21\s*/\s*65\b",
+        rf"\b{_FMARKET_ID_PREFIX_PATTERN}{_FMARKET_ID_SEPARATOR_PATTERN}(?:20|21|27|38|51)\b",
+        r"\b21/65\b",
         r"\ball\s+65\s+funds?\b",
         r"\b65\s+funds?\b",
-        r"\btotal\s*[:=]\s*65\b",
+        r"\btotal(?:=65|:65)\b",
         r"\b(?:1729|1317|1267)\s+rows?\b",
         r"\b1267\b",
         r"\b(?:2025-12-05|2018-07-31|2017-01-31|2014-07-01)\b",
         r"\b1781802000000\b",
         r"\b1761537393929\b",
-        r"~\s*8\s+(?:such\s+funds|defensive-credit)\b",
+        r"~8\s+(?:such\s+funds|defensive-credit)\b",
         r"\b(?:15091(?:\.0)?|15120(?:\.0)?|15105\.5|7\.99|25\.2|11\.59|97\.44|33\.36|19626\.37|34942\.66|33779\.47|43503\.81|36153\.51)\b",
         r"res/products/20\b",
     )
@@ -449,6 +452,14 @@ _FMARKET_EVIDENCE_ID_FORMS = tuple(
     for prefix in _FMARKET_EVIDENCE_ID_PREFIXES
     for separator in _FMARKET_EVIDENCE_ID_SEPARATORS
     for value in _FMARKET_EVIDENCE_ID_VALUES
+)
+
+_FMARKET_EVIDENCE_OUT_OF_GRAMMAR_FORMS = (
+    ("product__id27", 2), ("product _id=27", 2),
+    ("21 /65", 3), ("21/ 65", 3), ("21 / 65", 3),
+    ("total =65", 6), ("total= 65", 6), ("total = 65", 6),
+    ("total: 65", 6), ("total :65", 6), ("total : 65", 6),
+    ("~ 8 such funds", 12), ("~ 8 defensive-credit", 12),
 )
 
 _FMARKET_EVIDENCE_KNOWN_FORMS = (
@@ -482,6 +493,12 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
 def test_fmarket_evidence_scanner_pins_each_known_forbidden_form(sample, pattern_index):
     pattern = _FMARKET_EVIDENCE_FORBIDDEN_PATTERNS[pattern_index]
     assert re.search(pattern, re.sub(r"\s+", " ", sample.casefold()), flags=re.IGNORECASE)
+
+
+@pytest.mark.parametrize("sample, pattern_index", _FMARKET_EVIDENCE_OUT_OF_GRAMMAR_FORMS)
+def test_fmarket_evidence_scanner_rejects_unpinned_grammar_forms(sample, pattern_index):
+    pattern = _FMARKET_EVIDENCE_FORBIDDEN_PATTERNS[pattern_index]
+    assert not re.search(pattern, re.sub(r"\s+", " ", sample.casefold()), flags=re.IGNORECASE)
 
 
 def test_fmarket_evidence_scanner_pins_exact_affected_paths():
