@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final finite F2 handoff.**
+- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), final F2 provenance correction.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -657,8 +657,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `reviews/review-202608232138-issue221-exhaustive-closure-review.md` at reviewer `983cd27`:
   F1 passes, but the F2 matrix omitted compact identifier/product forms (including required compact
   value `27`) and
-  singular fund-count forms accepted by its regex. The durable BLOCK receipt is the exact prior
-  commit `ed2accae8c80a3e3a5c8c5e5026f59a514213aab`; apply one narrow F2 grammar/matrix plus
+  singular fund-count forms accepted by its regex. The durable BLOCK receipt for this closure cycle
+  is `9c0f9a47e13dc104ff21b226a648bdcd554b3ff5`, bound to reviewed head
+  `62bf9926219880bd549d8724231c760947de8fae` / reviewer `983cd27`; retain
+  `ed2accae8c80a3e3a5c8c5e5026f59a514213aab` only for the earlier `545c854` review. Apply one narrow F2 grammar/matrix plus
   lifecycle-anchor correction only. Preserve F1, `DISABLE_PENDING_PERMISSION`, no runtime/probe/
   push/resolution/close, no #219 activation, and queued #219/#220/#222.
   Final compact-F2 RED matrix commit is `01f9dadfbf0e9e9d168dd9401e1be8be15e2aed7`: it pins
@@ -679,6 +681,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   prefixes/separators and slash/colon/equal/tilde spacing are finite, with two-way positive/negative
   tests. F1 and runtime remain unchanged. This lifecycle receipt is the exact final review handoff;
   actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`.
+  Final finite-F2 review at exact `3932d7d70d56bfa18cc11d90b327a3236441bac6` was BLOCKED in
+  `reviews/review-202608232158-issue221-final-f2-grammar-review.md` at reviewer `90afc61`: F1/F2
+  pass, but lifecycle provenance remained stale. Current BLOCK receipt is `e92b2b54a19dd39e3b779208d242faafbe4e5bf7`,
+  bound to reviewed head `bb6a5753aa9b375d2e14d437e30b8574ba69aba3` / reviewer `c84fc12`.
+  Apply one backlog-only provenance correction; do not change tests/runtime/probe/push/close/#219.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
