@@ -51,7 +51,7 @@ page cannot fill a missing response or rights axis.
 
 | Unit | Positive evidence | Blocking axes | Decision |
 |---|---|---|---|
-| HOSE owner route | Ground Rules define VN100; factsheet gives base date/value, price/TRI forms, cadence, method, and ownership contact | no retained no-login D1 history response, full-span/page/revision contract, or redistribution grant | `SOURCE-GAP` |
+| HOSE owner route | Official factsheets summarize VN100 as VN30 plus VNMidcap and give base date/value, price/TRI forms, cadence, method, and ownership contact | no retained no-login D1 history response, full-span/page/revision contract, or redistribution grant | `SOURCE-GAP` |
 | VPS `vps_index` | provider-owned candidate host/path and official SmartOne VN100 UI recognition | response identity, transport/envelope, coverage, semantics, rate policy, legal/reuse | `SOURCE-GAP` |
 | SSI `ssi_index` / FastConnect | official generic index summary/OHLC docs and typed API models | account/key/approval gate; no VN100 response identity, span, semantics, or redistribution contract | `SOURCE-GAP` |
 | VNDIRECT `vndirect_index` | official VN100 quote/futures recognition and provider-owned chart candidate | no response-backed D1 history/schema, coverage, bounds, policy, or reuse contract | `SOURCE-GAP` |
@@ -132,10 +132,12 @@ Strict history is one provider for the whole request. There is no cross-provider
 reconstruction, ETF/other-index proxy, silent strict-to-stitched route, or basket. The existing
 stitched API remains opt-in and unchanged. If a future qualification/API PASS authorizes VN100 in
 that existing path, it must preserve calendar-year segmentation, inclusive year boundaries,
-per-segment validation, identical/conflicting seam behavior, atomic mid-range failure, canonical
-segment provenance, deterministic aggregate retrieval metadata, and the global identity/history
-ledger including every identity/page/retry/redirect/byte reservation; it cannot invent a helper or
-silently route strict calls to stitched history.
+per-segment validation, identical/conflicting seam behavior, atomic mid-range failure, and canonical
+segment provenance. After each segment passes validation, it must supply a timezone-aware UTC
+`fetched_at_utc`; the aggregate result uses exactly `max(segment.fetched_at_utc)` over the validated
+segment stamps. Missing, naive, or non-UTC segment timestamps fail the aggregate atomically. The
+global identity/history ledger still charges every identity/page/retry/redirect/byte reservation;
+the path cannot invent a helper or silently route strict calls to stitched history.
 
 ### 5.3 Atomic budget and diagnostics design
 
@@ -172,15 +174,20 @@ cover:
 
 | Area | Required cases |
 |---|---|
-| Input/zero network | exact/padded/lowercase VN100; explicit wrong-index requests `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE`; malformed/proxy/unknown/constituent; D1 positive and all non-D1 negatives |
+| Input/zero network | exact/padded/lowercase VN100; future VN100 qualification/adapter identity-mismatch fixtures for `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE` must not be accepted as `VN100` without changing their normal public routing; malformed/proxy/unknown/constituent; D1 positive and all non-D1 negatives |
 | Identity | correct/wrong/missing provider symbol, owner, exchange/type, price-vs-TRI, point scale, timezone/session, provenance; explicit `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE` request/response/provider-alias negatives with no alias collapse |
 | Transport | exact complete-MIME parsing and normalized MIME; expected envelope/status; wrong status, HTML/login, redirect/effective-host, malformed envelope |
 | Values | strictly positive finite point/OHLC rows; negative/zero/non-finite/malformed values fail; volume is independently provider-defined whole/non-negative, and omitted volume is unqualified for the current carrier unless a later optional-carrier API PASS; timestamp/date rules, null/unit, RAW; no synthetic volume/adjustment |
 | Coverage | requested boundaries, declared partial, provider totals/pages/cursors, trading-calendar exceptions, gaps, duplicate/conflict, revision/no-false-absence |
 | Atomicity | one-source whole-window, capability skip, direct identity-call initialization/page/retry/redirect/byte exhaustion, history-only exhaustion, combined history-plus-identity aggregate exhaustion, retry/page/redirect/byte/global-budget charging with no per-source/year reset, no partial return after terminal failure |
-| Stitched | existing opt-in single-year/multi-year, inclusive year boundaries, identical/conflicting seams, atomic mid-range failure, segment provenance, deterministic aggregate retrieval metadata, identity/page/retry charging, global exhaustion, no helper/silent strict fallback |
-| Compatibility | current served indices, all deny-only indices, price-path guard, strict/stitched behavior, public snapshots/docs/imports |
+| Stitched | existing opt-in single-year/multi-year, inclusive year boundaries, identical/conflicting seams, atomic mid-range failure, segment provenance, per-segment timezone-aware UTC `fetched_at_utc`, aggregate `fetched_at_utc` exactly `max(segment.fetched_at_utc)` after validation, missing/naive/non-UTC timestamp negatives, identity/page/retry charging, global exhaustion, no helper/silent strict fallback |
+| Compatibility | current served indices, with explicit assertions that `VN30` and `VNALLSHARE`/`VNALL` remain served; all deny-only indices, price-path guard, strict/stitched behavior, public snapshots/docs/imports |
 | Release | docs/skill/CHANGELOG/API snapshot if changed; focused/full offline tests, build, blacklist/secret/diff/path/object/clean-tree gates |
+
+The wrong-index cases are future VN100 qualification/adapter identity-mismatch fixtures, not public
+request rejections for already-served selectors. `VN30` and `VNALLSHARE`/`VNALL` retain their
+current served behavior; current deny-only identifiers such as `VN100` retain the recognized-but-
+not-served zero-network guard.
 
 No RED, test, fixture, parser, mapping, model, source registration, or runtime capability is created
 in #222.

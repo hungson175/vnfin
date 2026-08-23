@@ -622,6 +622,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   rejection framing for served indices, an executable aggregate `fetched_at_utc` rule, and a later
   local-only exact-SHA handoff receipt. Preserve the empty chain and queue; no probe, RED, code, push,
   or close.
+  The narrow correction handoff removes the unsupported attribution, scopes wrong-index fixtures to
+  VN100 identity qualification while preserving current served selectors, and binds stitched
+  `fetched_at_utc` to the validated UTC-aware segment maximum with atomic negatives. After the
+  corrected merged handoff, a separate local-only backlog receipt must bind its exact SHA and remain
+  unpushed/outside any publish range.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer

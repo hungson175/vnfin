@@ -77,7 +77,7 @@ the VN100 index is, but it cannot make a VPS, SSI, or VNDIRECT response a VN100 
 
 | Candidate unit | Evidence that is established | Decisive gaps | Disposition |
 |---|---|---|---|
-| HOSE owner identity / official index presentation | Official Ground Rules define VN100 as VN30 plus VNMidcap; official factsheet supplies base-date, calculation, cadence, and ownership notices | No retained no-login machine-readable D1 history route with the requested window, row/page totals, response envelope, revision contract, and redistribution grant | `IDENTITY_EVIDENCE_ONLY` / `LEGAL_GAP` / `COVERAGE_GAP` |
+| HOSE owner identity / official index presentation | Official factsheets summarize VN100 as VN30 plus VNMidcap and supply base-date, calculation, cadence, and ownership notices | No retained no-login machine-readable D1 history route with the requested window, row/page totals, response envelope, revision contract, and redistribution grant | `IDENTITY_EVIDENCE_ONLY` / `LEGAL_GAP` / `COVERAGE_GAP` |
 | VPS `vps_index` chart-history candidate | Current repository identifies the provider-owned host/path and D1 selector as a candidate; official SmartOne pages show VN100 as a UI index | No fresh VN100 response identity, route contract, coverage, MIME/envelope, WAF/session posture, rate policy, or OSS redistribution permission; public UI is not a history API | `SOURCE-GAP` |
 | SSI `ssi_index` / FastConnect candidate | Official docs describe index lists, historical index summaries, daily OHLC paging, JSON/CSV market data, and API rate headers | FastConnect requires SSI account/API key/secret/approval; generic examples are VNINDEX/SSI, not VN100; no response-backed VN100 D1 identity, full-span coverage, volume/RAW semantics, or redistribution grant | `SOURCE-GAP` |
 | VNDIRECT `vndirect_index` chart-history candidate | Official VNDIRECT quote/support pages recognize VN100 and its index-futures underlying; current repository identifies a provider-owned chart host/path candidate | No documented or retained no-login historical D1 response contract, VN100 symbol binding, requested coverage, pagination/revision, rate policy, or redistribution grant | `SOURCE-GAP` |
@@ -123,7 +123,7 @@ logical/physical/page/retry counts, and the exact identity fields. A missing fie
 
 ### 4.1 Identity and index semantics
 
-The official [HOSE index-data landing page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so) is the stable owner-side document/data index for the HOSE-Index family. The linked [HOSE-Index factsheet, updated 30 January 2026](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf) records the official rule summary: the HOSE index series has price and total-return forms, and VN100 comprises VN30 and VNMidcap. The factsheet identifies the Ground Rules as the official construction reference issued under Decision 747/QĐ-SGDHCM on 30 December 2024. This is strong owner/methodology evidence.
+The official [HOSE index-data landing page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so) is the stable owner-side document/data index for the HOSE-Index family. The linked [HOSE-Index factsheet, updated 30 January 2026](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf) records the official index-family summary: the HOSE index series has price and total-return forms, and VN100 comprises VN30 and VNMidcap. This is owner/methodology evidence, but it does not establish an anonymous daily history response or a reusable runtime contract.
 
 The official [VN100 factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2396611/Form_Factsheet_MCIndices_VN_T08.2025.pdf) records a VN100 base date of 24 January 2014, base value `560.19`, price and total-return forms, real-time VN100 calculation and end-of-day VN100TRI cadence, free-float market-cap methodology, a 10% cap, and a VND field. Those facts establish the index family and a static base-date reference. They do not establish an anonymous daily history response, an observation timezone, a provider page total, a revision/as-of contract, or a redistribution licence.
 
@@ -387,10 +387,12 @@ unreconciled page, or truncated transport is terminal failure/unknown.
 The current opt-in stitched API remains unchanged and the current VN100 guard remains deny-only.
 If a future qualification/API PASS authorizes VN100 participation, it must use this existing opt-in
 path: calendar-year segmentation, inclusive segment boundaries, per-segment validation, atomic
-mid-range failure, identical/conflicting seam rules, canonical segment provenance, deterministic
-aggregate retrieval metadata, and one global ledger covering history, identity, pages, retries,
-redirects, and bytes. It cannot invent a helper, silently route strict calls to stitched history,
-or reset budgets per year/source.
+mid-range failure, identical/conflicting seam rules, and canonical segment provenance. After each
+segment passes validation, it must supply a timezone-aware UTC `fetched_at_utc`; the aggregate result
+must use exactly `max(segment.fetched_at_utc)` over those validated segment stamps. A missing, naive,
+or non-UTC segment stamp fails the aggregate atomically. The same path uses one global ledger covering
+history, identity, pages, retries, redirects, and bytes. It cannot invent a helper, silently route
+strict calls to stitched history, or reset budgets per year/source.
 
 ### 10.3 Future bounded outcomes
 
@@ -428,16 +430,21 @@ cover, at minimum:
 
 | Dimension | Required future RED cases |
 |---|---|
-| Selector | exact/lowercase/padded `VN100` positives; explicit wrong-index request negatives for `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE`; proxy, constituent, unknown, punctuation, and non-D1 zero-network negatives |
+| Selector | exact/lowercase/padded `VN100` positives; future VN100 qualification/adapter identity-mismatch fixtures for `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE` must not be accepted as `VN100` without changing their normal public routing; proxy, constituent, unknown, punctuation, and non-D1 zero-network negatives |
 | Identity | provider symbol/owner/type/exchange positive; response/provider-alias negatives for `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE` must never collapse to `VN100`; missing/wrong/ambiguous symbol, price-vs-TRI, wrong owner, wrong scale, and provenance mismatch negatives |
 | Transport | exact MIME parsing after the first colon, normalized media type, expected envelope/status, redirect/effective-host, wrong status/MIME/HTML/login/WAF/JSON shape negatives |
 | Values | strictly positive finite point/OHLC values; negative, zero, non-finite, or malformed values are RED negatives; volume is independently whole/non-negative only when provider-defined, with omitted volume unqualified for the current carrier; no synthesized volume or adjustment |
 | Coverage | requested boundaries, provider bounds, total/page/cursor reconciliation, trading-calendar holidays, interior gaps, duplicate/conflict, revision and no-false-absence negatives |
 | Atomicity | one-source whole-window behavior, source capability skip, direct identity-call initialization/page/retry/redirect/byte exhaustion, history-only exhaustion, combined history-plus-identity aggregate exhaustion, retry/page/redirect/byte/global-budget charging, no per-source/year reset, and no returned partial accumulator after terminal failure |
 | Provenance | bounded canonical source identity, provider symbol, retrieval stamp, fixed warnings, finite attempts, no raw URL/query/header/body/value leakage |
-| Stitched history | existing opt-in single-year and multi-year paths; inclusive calendar-year boundaries; identical seam dedupe; conflicting seam failure; mid-range atomic failure; per-segment source/identity/page/retry charging; canonical segment provenance; deterministic aggregate retrieval metadata; global exhaustion with no partial result; no new helper or silent strict fallback |
-| Compatibility | all currently served indices, all deny-only indices including VN100, price-path rejection, current strict/stitched guards, public snapshots/docs/imports |
+| Stitched history | existing opt-in single-year and multi-year paths; inclusive calendar-year boundaries; identical seam dedupe; conflicting seam failure; mid-range atomic failure; per-segment source/identity/page/retry charging; canonical segment provenance; after segment validation each segment supplies a timezone-aware UTC `fetched_at_utc`, and the aggregate uses exactly `max(segment.fetched_at_utc)`; missing, naive, or non-UTC stamps fail atomically; global exhaustion with no partial result; no new helper or silent strict fallback |
+| Compatibility | all currently served indices, with explicit assertions that `VN30` and `VNALLSHARE`/`VNALL` remain served; all deny-only indices including VN100, price-path rejection, current strict/stitched guards, public snapshots/docs/imports |
 | Release | docs/skill/CHANGELOG/API snapshot if public behavior changes; focused/full offline tests, build, blacklist/secret/diff/path/object/clean-tree gates |
+
+The wrong-index cases in this matrix are future VN100 qualification/adapter identity-mismatch
+fixtures, not public request rejections for already-served selectors. `VN30` and
+`VNALLSHARE`/`VNALL` must continue to reach their current served behavior; only current deny-only
+identifiers such as `VN100` retain the recognized-but-not-served zero-network guard.
 
 This matrix is a release design, not permission to create tests or code in #222.
 
