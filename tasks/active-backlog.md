@@ -692,6 +692,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   the exact final review handoff; actor is `vnfin-oss-reviewer`; next action
   `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve empty chain, `DISABLE_PENDING_PERMISSION`, no
   tests/runtime/probe/push/resolution/close/#219 activation, and all queued issues/exclusions.
+  Final provenance review at exact `2a6fbff60a77c2f0cbc07b4dd7c4d8ec4e40917c` was BLOCKED in
+  `reviews/review-202608232202-issue221-final-provenance-review.md` at reviewer `84d89ee`:
+  historical bindings pass, but `63679b0` combined BLOCK recording with correction and the
+  `e92b2b5` receipt remains described as current although it belongs to the prior
+  `bb6a575`/`c84fc12` review. Record this BLOCK before the separate provenance correction;
+  no tests/runtime/probe/push/close/#219 activation.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
