@@ -1050,14 +1050,16 @@ _None._
 
 ## Next
 
-- **#215 — DESIGN_BLOCKED (2026-08-23), corrected source/design gate.** Actor `vnfin-oss-reviewer`;
-  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Published handoff anchor is exact
-  `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; correction anchor is exact
-  `1e82b0f54eea5255c540285c4a2b03bee9e94893`; lifecycle HEAD is exact
+- **#215 — DOCS_ONLY_CORRECTION_IN_PROGRESS (2026-08-23), corrected source/design gate.** Actor
+  `vnfin-oss`; next action `RETURN_EXACT_SHA_DESIGN_REVIEW`. Published handoff anchor is exact
+  `8126dd5510b6390f91c9feeb43e047b2b9b88bc1`; prior correction is
+  `1e82b0f54eea5255c540285c4a2b03bee9e94893`; prior lifecycle is
   `74befbd7e1a35bff66931e0a297768614218df8f`. BLOCK receipt `1a23ff1c`, addressed report
-  `reviews/review-202608231605-issue215-corrected-design-rereview.md` at `0fc3467`. Correct only
-  the research PARTIAL/unreconciled-page semantics, the publishable lifecycle anchor wording, and
-  research semantic-label non-binding clarity. Preserve current cash-only VSDC, empty new chain, and
+  `reviews/review-202608231605-issue215-corrected-design-rereview.md` at `0fc3467`. The final
+  review anchor is the commit containing this record; its exact SHA is supplied in the handoff, and
+  the range is `8126dd5..this-anchor`. Correct only provider-declared/reconciled PARTIAL semantics,
+  no-row unreconciled-page failure, publishable lifecycle wording, and research semantic-label
+  non-binding clarity. Preserve current cash-only VSDC, empty new share-distribution chain, and
   queued #217. No RED/model/accessor/code/push/close before exact-SHA design PASS.
 
 - **#217 — QUEUED_AFTER_#215 (2026-08-23), source/design only.** Actor `vnfin-oss-reviewer`; next

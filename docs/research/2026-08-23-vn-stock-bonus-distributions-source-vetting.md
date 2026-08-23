@@ -28,6 +28,11 @@ live event ratio/date/value, screenshot, or response digest is retained. The onl
 in this report are synthetic and explicitly labelled. The two candidate event kinds are evaluated
 independently; agreement between sources cannot repair a missing axis in either source.
 
+**Non-binding terminology:** `SourceAttempt`, `ShareDistributionEvent`, `ex_date`,
+`shares_per_100`, and the status labels below are semantic shorthand for this research only. They
+are not approved public model names, fields, exports, exception names, or serialization contracts.
+Those choices belong to a later qualified-source design.
+
 ## Executive decision
 
 The direct probes found useful official material, but no single no-login source unit proves all of
@@ -175,14 +180,19 @@ inclusive request `2018-08-13..2026-08-19`.
 | Status | Executable meaning | Allowed output |
 |---|---|---|
 | `FULL` | Provider-declared complete history for the exact window; first/last pages, totals/cursors, boundaries, duplicates, locale variants, and revisions reconcile; no capped or skipped page remains. | Rows may be returned only with a non-null response-backed ex/effective date and exact kind/unit. |
-| `PARTIAL` | Provider explicitly declares a bounded partial interval or the design proves a boundary, but the requested window is not complete. | Only a typed partial result may be returned later; it must expose served bounds and cannot claim absence/full coverage. |
-| `UNKNOWN` | Rows or an empty page were observed but the provider has not proved the requested boundaries/total/absence semantics. | No confirmed empty result; future public facade must return typed diagnostics, not `[]` as proof. |
+| `PARTIAL` | Provider declares served bounds and every page/cursor within those bounds reconciles, but the requested window is not complete. | Only a typed partial result may be returned later; it must expose served bounds and cannot claim absence/full coverage. |
+| `UNKNOWN` | A syntactically valid response was observed but the provider has not proved the requested boundaries/total/absence semantics. | No rows or confirmed empty result; future public facade must return typed diagnostics, not `[]` as proof. |
 | `NOT_SERVED` | No admissible no-login source route, or a transport/auth/legal gate prevents use. | No events and a bounded source-gap diagnostic. |
 
 A provider-declared empty result is confirmed empty only when the same qualified unit proves exact
 symbol identity, complete pagination, complete requested-window coverage, and an owner-backed empty
 semantics. Search misses, empty HTML tables, an empty JSON page, a bounded page cap, an HTTP/TLS
 failure, a generic HTML page, or a missing event-kind row are never evidence that no event exists.
+
+`PARTIAL` requires both provider-declared served bounds and complete reconciliation of every page or
+cursor inside those bounds; a design-inferred boundary alone is insufficient. If any page/cursor is
+missing, mismatched, changing, truncated, or otherwise unreconciled, the result is a typed fatal
+pagination or unknown-coverage outcome with **no returned rows**, never a partial history.
 
 ### Pagination and revision rules
 
@@ -196,7 +206,8 @@ A future route adapter must:
    the same ID fail closed;
 4. require a provider revision/update/cancellation rule before replacing a prior event; “keep first”
    and “keep last” are not revision policies; and
-5. return `UNKNOWN`/`PARTIAL` diagnostics rather than silently dropping an unreconciled page.
+5. fail closed on an unreconciled page/cursor with a typed pagination or unknown-coverage outcome and
+   no returned rows; never silently drop it or relabel it `PARTIAL`.
 
 VSDC's observed HTML/first-party AJAX controls and VNDIRECT's observed JSON totals are technical
 observations only. Neither is a qualified complete-history contract for the requested window.
@@ -319,4 +330,5 @@ strings; observed request parameters are described in prose only.
 This report does not claim that VSDC, VNDIRECT, HOSE, or HNX lack stock-dividend or bonus-share
 records. It records that no one candidate currently satisfies the legal, route, identity, date,
 unit, revision, coverage, and budget gate as one lawful no-login history source. The only safe current
-state is `SOURCE-GAP CLOSURE`, with the new chain empty and the cash-only VSDC surface preserved.
+state is `SOURCE-GAP CLOSURE`, with the new share-distribution chain empty and the cash-only VSDC
+surface preserved.

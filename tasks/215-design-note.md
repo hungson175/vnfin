@@ -143,7 +143,10 @@ The future design must explicitly choose whether each status is a returned resul
 error; no condition may be both. Fatal transport/schema/identity/pagination/revision/budget failure
 returns no history and never masquerades as an empty result. Page/cursor totals, first/last boundaries,
 empty semantics, duplicate/locale/revision reconciliation, and cancellation precedence must be bound
-before any partial or full result is allowed.
+before any partial or full result is allowed. `PARTIAL` requires both provider-declared served bounds
+and reconciliation of every page/cursor within those bounds; a design-inferred boundary alone is
+insufficient. An unreconciled page/cursor is a typed fatal pagination or unknown-coverage outcome with
+no returned rows, never a partial history.
 
 ## 6. Future atomic budget and diagnostic gate
 
