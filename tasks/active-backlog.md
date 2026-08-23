@@ -602,26 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#225 — DESIGN_REVIEW (2026-08-24, corrected source/design handoff).** Actor
+- **#225 — DESIGN_REVIEW (2026-08-24, lifecycle-only correction).** Actor
   `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `7b7fe0b`;
-  public receipt `issuecomment-5387048240`. Prior exact handoff
-  `24363bfe887a7f4c9e269fe9ac1034a63f959069` was BLOCKED in
-  `reviews/review-202608240153-issue225-design-source-gate.md` at reviewer `d7118d4`; clean
-  BLOCK-first receipt is `8606569`. Corrected research/design content and merged-review anchor is
-  `35fd9ceb871ba3e7aab0a87f3924d37342652420`; this final backlog-only commit is the exact handoff.
-  It is rebuilt directly from published base `bdfe06bba330bdf36fec0cf7c18bb79e96e5c28e` and
-  excludes local activation `ae8087d`. Preserve `SOURCE-GAP`/empty new chain, Fmarket
-  `DISABLE_PENDING_PERMISSION`/unprobed, and no RED, code, push, or close.
-
-- **#224 — DESIGN_REVIEW (2026-08-24, narrow B1-B2 correction).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `b8ee1e5` for
-  `tasks/224-daily-eurvnd-fx-history-spec.md`, public receipt `issuecomment-5387048240`.
-  BLOCK receipt `ece9b14` records the prior exact handoff and report
-  `reviews/review-202608240124-issue224-corrected-design-rereview.md` at reviewer `9fcebc2`.
-  Corrected research/design anchor is `2678fbc`; both conjunctive reopen gates now require terms
-  amendment/revocation separately from observation revision/retention, and unrelated legal-table
-  cells are `NOT_RETAINED`. Preserve SOURCE-GAP/empty daily chain, annual USD/VND, #225 queue, and
-  no probe, RED, code, push, or close before exact-SHA design PASS.
+  public receipt `issuecomment-5387048240`. Corrected handoff `22dcbfd3031712a6c9c07deb10c062542aaebaf0`
+  is BLOCKED only on lifecycle in `reviews/review-202608240208-issue225-corrected-design-rereview.md`
+  at reviewer `ab90607`; B1-B5 and source/legal/API/budget contracts remain approved. Research/design
+  content and merged-review anchor remain `35fd9ceb871ba3e7aab0a87f3924d37342652420`; this
+  backlog-only correction is rebuilt from published `bdfe06bba330bdf36fec0cf7c18bb79e96e5c28e`,
+  excludes `ae8087d`, and leaves this as the sole #225 row. Preserve `SOURCE-GAP`/empty new chain,
+  Fmarket `DISABLE_PENDING_PERMISSION`/unprobed, and no RED, code, push, or close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1047,13 +1036,6 @@ _None._
 
 ## Next
 
-- **#225 — QUEUED_AFTER_#224 (2026-08-23).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_224_CLOSURE`; packet anchor `7b7fe0b` for
-  `tasks/225-equity-fund-nav-authorized-source-spec.md`, public receipt
-  `issuecomment-5387048240`. Scope is a filtered authorized-source design for equity-fund NAV;
-  Fmarket remains disabled and unprobed. Keep queued behind #224; no #225 source-design, probe,
-  RED, code, push, or close before its turn and exact-SHA design PASS.
-
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
@@ -1087,22 +1069,31 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#224 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `bdfe06bba330bdf36fec0cf7c18bb79e96e5c28e` to `origin/master`; clean base ancestry,
+  excluded local receipt checks, and exactly the three approved research/design/backlog paths were
+  verified. Resolution `issuecomment-5387750119`; GitHub re-read `CLOSED`/`COMPLETED` at
+  `2026-08-23T18:32:14Z`. The daily EUR/VND source chain remains empty, annual USD/VND behavior is
+  unchanged, and no probe, RED, production code, source registration, or runtime capability was
+  added. #225 is the sole active reviewer-owned source/design handoff above.
+
 - **#223 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `728bb99c26901dcc2397b895253f6cc94f59a65e` to `origin/master` from clean base
   `c3921a1a7a31c5de8b21f838173fd1c288b0e698`; remote HEAD, base ancestry, exclusion checks, and
   exactly the three approved research/design/backlog paths were verified. Resolution
   `issuecomment-5387538803`; GitHub re-read `CLOSED`/`COMPLETED` at `2026-08-23T17:46:59Z`.
   The VNCOND source chain remains empty and no provider probe, RED test, production code, source
-  registration, proxy/basket, downstream signal, or runtime capability was added. #224 is blocked
-  above for the clean-line source/design correction; #225 remains queued.
+  registration, proxy/basket, downstream signal, or runtime capability was added. #224 was subsequently
+  verified `DONE/CLOSED` at exact `bdfe06b`; #225 is the active reviewer-owned source/design handoff above.
 
 - **#222 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `c3921a1a7a31c5de8b21f838173fd1c288b0e698` to `origin/master`; the approved three
   research/design/backlog paths and clean ancestry were verified. Resolution
   `issuecomment-5387257982`; GitHub re-read `CLOSED`/`COMPLETED` at `2026-08-23T17:11:38Z`.
   The VN100 source chain remains empty; no provider route, probe, RED, production code, source
-  registration, proxy/basket, downstream observable, or runtime capability was added. #223 is the
-  active reviewer-owned source/design handoff above; #224/#225 remain queued.
+  registration, proxy/basket, downstream observable, or runtime capability was added. #223 and
+  #224 were subsequently verified `DONE/CLOSED`; #225 is the active reviewer-owned source/design
+  handoff above.
 
 - **#220 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `0d7977a21386acd754d3fa220b040fa1d89b03c7` to `origin/master`; base
@@ -1114,7 +1105,8 @@ _None._
   coverage, lawful bounded runtime, and redistribution together; the new source chain remains
   empty, current `Period.UNKNOWN` and the 26-metric zero-ratio behavior are unchanged, and no RED,
   production code, source registration, runtime capability, derivation, substitution, or coverage
-  claim was added. #222 was later verified `DONE/CLOSED` at exact `c3921a1`; #223 is active above.
+  claim was added. #222 and #223 were later verified `DONE/CLOSED`; #224 was verified `DONE/CLOSED`
+  at exact `bdfe06b`; #225 is the active reviewer-owned source/design handoff above.
 
 - **#219 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `e478f4ff0e6ad846e31dbf6a5412c16e8382a768` to `origin/master`; remote HEAD,
@@ -1124,8 +1116,9 @@ _None._
   `2026-08-23T15:59:21Z`. The official-source review did not qualify a direct no-login national
   monthly IIP YoY provider; the new source chain remains empty, current runtime is unchanged,
   and no enum, API, data capability, RED test, or downstream signal was added. #220 was activated
-  above for independent annual-ROE source/design only and is now `DONE/CLOSED`; #222 was later
-  verified `DONE/CLOSED` at exact `c3921a1`; #223 is active above for independent VNCOND source/design.
+  above for independent annual-ROE source/design only and is now `DONE/CLOSED`; #222 and #223 were
+  later verified `DONE/CLOSED`; #224 was verified `DONE/CLOSED` at exact `bdfe06b`; #225 is active
+  above for the authorized equity-fund source/design correction.
 
 - **#221 — DONE/CLOSED (2026-08-23), approved Fmarket runtime disable.** Published exact approved
   anchor `a69f3c5901f97e95f1c183c64792f933a82cf7a6` to `origin/master`; remote HEAD is exact,
