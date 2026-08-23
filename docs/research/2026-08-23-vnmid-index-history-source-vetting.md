@@ -163,8 +163,8 @@ The following axes are intentionally independent:
 - **MIME:** the full normalized values were `application/json; charset=utf-8` for VPS/SSI
   history and identity, and `text/plain;charset=UTF-8` for VNDirect history. VNDirect identity
   was `404` with `application/json`. A future route validator must parse the complete value and
-  reject an unexpected status or MIME; it must not accept a JSON-shaped body as permission to
-  ignore the header.
+  reject an unexpected status or MIME, including a colon-suffixed MIME/value; it must not truncate
+  the value or accept a JSON-shaped body as permission to ignore the header.
 - **Authentication/session:** no login, API key, authorization header, or pre-existing session
   was used. SSI and VNDirect emitted cookies, which were discarded. Cookie issuance is not a
   requirement to reuse the cookie and is not evidence of public redistribution rights.
@@ -211,8 +211,9 @@ A later implementation may add only a private observer seam:
   physical dispatch, including any future retry; and
 - the types, observer, headers, URLs, query values, bodies, provider prose, and raw exceptions
   are not public exports, re-exports, snapshots, or diagnostics. Route validation checks exact
-  expected status, the complete MIME value, exact effective host/path, and redirect policy. A
-  JSON-shaped body cannot override a status/full-MIME/effective-route mismatch.
+  expected status, the complete MIME value, exact effective host/path, and redirect policy; a
+  colon-suffixed MIME/value fails closed. A JSON-shaped body cannot override a
+  status/full-MIME/effective-route mismatch.
 
 This seam preserves the current three-/four-argument injection boundary and makes metadata absence
 an explicit transport/identity gap instead of inferred success. It is not implemented here.
@@ -361,6 +362,7 @@ per strict call/segment and 64 entries for a stitched aggregate. Each warning is
 stitched_multi_source
 partial_start_coverage
 partial_end_coverage
+out_of_reviewed_horizon
 diagnostics_truncated
 deduped_duplicate_daily_index_bars
 quarantined_invalid_bars
@@ -390,7 +392,7 @@ entry now. Every fixture is synthetic and contains no broker row or live payload
 |---|---|---|
 | Selector and zero-network | Exact/lower/padded `VNMID` normalize once; wrong-sector, proxy, unknown, punctuation, non-string, internal-space, and non-D1 fail typed before transport. Current deny-only strict and explicit stitched calls make zero calls. | Existing selectors, errors, imports, snapshots, and deny-only behavior remain unchanged. |
 | Identity and routing | For each `vps_index`, `ssi_index`, and `vndirect_index`, wrong/missing symbol, exchange, index type, interval, point scale, timezone, or provenance fails closed; request echo is insufficient. | Same-provider identity/history binding is mandatory; VPS/SSI observations are not promoted to complete identity. |
-| Status/MIME/metadata | Wrong status, redirect, complete MIME, effective host/path, or missing metadata fails closed; JSON-shaped body with wrong full MIME fails. | Legacy 3-arg GET/4-arg POST string stubs remain valid; private metadata is not exported. |
+| Status/MIME/metadata | Wrong status, redirect, complete MIME (including a colon-suffixed MIME/value), effective host/path, or missing metadata fails closed; JSON-shaped body with wrong full MIME fails. | Legacy 3-arg GET/4-arg POST string stubs remain valid; private metadata is not exported. |
 | Points/D1/RAW/volume | Non-finite points, wrong D1, timestamp/date errors, unknown RAW, missing/null/wrong-type/misaligned/negative/non-finite volume, and missing-volume-to-zero are RED. | Only finite provider-reported points with documented D1/RAW/time/volume are released. |
 | Coverage/calendar | Fixed boundary, official calendar/horizon, gaps, duplicates/conflicts, invalid rows, page/total/cursor, capped/recent-only, and out-of-horizon cases are distinct. Out-of-horizon is typed `COVERAGE_GAP`/`NOT_SERVED`, never false absence. | Fixed, arbitrary, and `PARTIAL` contracts remain separate; no fabricated or silently repaired bars. |
 | Strict atomicity | Failed capable source gives the next source the same whole range; incapable source consumes zero calls/attempts. No date merge, fill, strict-to-stitched fallback, or partial result. | Strict result is whole-window atomic and canonical. |

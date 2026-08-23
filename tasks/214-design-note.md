@@ -120,7 +120,8 @@ A later implementation may add only a private observer seam:
 - the types, observer, headers, URLs, query values, bodies, provider prose, and raw exceptions
   are not public exports, re-exports, snapshots, or diagnostics. Route validation checks exact
   expected status, the complete MIME value, exact effective host/path, and redirect policy. A
-  JSON-shaped body cannot override a status/full-MIME/effective-route mismatch.
+  JSON-shaped body cannot override a status/full-MIME/effective-route mismatch; a
+  colon-suffixed MIME/value is rejected rather than truncated.
 
 This seam preserves the current three-/four-argument injection boundary and makes metadata absence
 an explicit transport/identity gap instead of inferred success. It is not implemented here.
@@ -293,6 +294,7 @@ must be one of:
 stitched_multi_source
 partial_start_coverage
 partial_end_coverage
+out_of_reviewed_horizon
 diagnostics_truncated
 deduped_duplicate_daily_index_bars
 quarantined_invalid_bars
@@ -322,7 +324,7 @@ commit. All fixtures are synthetic and per-symbol; no VNREAL evidence is reused.
 |---|---|---|
 | Selector and zero-network | Exact/lower/padded selector positives; wrong sector/proxy/unknown/punctuation/non-string/internal-space/non-D1 failures before network. Current strict and explicit stitched deny-only calls make zero calls. | Existing public errors, imports, served/deny-only selector behavior, and snapshots remain unchanged. |
 | Identity and provider routing | Wrong/missing symbol, exchange, index type, D1 token, point scale, timezone, or provenance fails for each canonical role; request echo is insufficient. | Same-provider response identity/history binding is mandatory; VPS/SSI observations are not promoted to complete identity. |
-| Status/MIME/metadata | Wrong status, redirect, full MIME, effective host/path, or metadata absence fails closed; JSON-shaped body with wrong complete MIME fails. | Legacy 3-arg GET/4-arg POST string stubs remain valid; private metadata stays unexported. |
+| Status/MIME/metadata | Wrong status, redirect, full MIME (including a colon-suffixed MIME/value), effective host/path, or metadata absence fails closed; JSON-shaped body with wrong complete MIME fails. | Legacy 3-arg GET/4-arg POST string stubs remain valid; private metadata stays unexported. |
 | Points/D1/RAW/volume | Non-finite points, wrong interval, timestamp/date errors, unknown RAW, missing/null/wrong-type/misaligned/negative/non-finite volume, and missing-volume-to-zero are RED. | Only finite provider-reported points with documented D1/RAW/time/volume are released. |
 | Coverage/calendar/duplicates | Fixed boundary, official calendar/horizon, internal gaps, duplicate/conflicts, invalid rows, page/total/cursor, capped/recent-only, and out-of-horizon cases are distinct. Out-of-horizon is typed `COVERAGE_GAP`/`NOT_SERVED`, never false absence. | Fixed, arbitrary, and `PARTIAL` contracts remain separate; no fabricated or silently repaired bars. |
 | Strict atomic failover | Failed capable source gives the next source the same whole range; incapable source consumes zero calls/attempts. No date merge, fill, strict-to-stitched fallback, or partial result. | Strict result is whole-window atomic and canonical. |
