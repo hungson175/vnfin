@@ -50,84 +50,132 @@ search used the mandatory exclusion:
 
 No prohibited result, page, code, documentation, schema, endpoint map, test, package, or
 behavior was opened, cited, compared, or used. All retained evidence below comes from official
-provider/regulator pages, official provider documentation, or previously reviewed primary-source
-notes in this repository. No blacklisted-derived material is part of the design.
+provider/regulator pages, official provider documentation, the repository's existing primary-source
+contract, or previously reviewed primary-source notes. No blacklisted-derived material is part of
+the design.
 
-This was a **no-probe** research round:
+This round has two explicitly separate evidence channels:
 
-| Evidence activity | Logical retrievals | Physical HTTP/API calls | Retries | Response/body/header retention |
-| --- | ---: | ---: | ---: | --- |
-| Official page/document reading and source-catalogue inspection | 0 | 0 | 0 | None |
-| Candidate route/API dispatch | 0 | 0 | 0 | Not performed |
-| Credentials, cookies, browser session, proxy, challenge bypass | 0 | 0 | 0 | None |
+1. **Static document research:** official pages, catalogues, PDFs, and documentation were read as
+   source evidence. The research tool did not retain or measure its underlying web transport log;
+   therefore static-document logical/physical counts are `NOT_RETAINED`/`NOT_MEASURED`, not zero.
+   The canonical references below are an evidence inventory, not a claim that a provider data route
+   was dispatched. No raw page body, header block, cookie, query URL, response digest, or provider
+   exception was retained.
+2. **Candidate data/API dispatch:** no EUR/VND candidate data endpoint, API route, page/cursor, or
+   retry was dispatched. This channel has exactly `0 / 0 / 0 / 0` for
+   `logical targets / physical calls / page-or-cursor calls / retries`. Those zeros do not describe
+   static-document transport or a provider's future allowance.
 
-The route/path entries below are canonical, path-only references. No query-bearing URL, live
-rate, raw response, raw header block, cookie, credential, response digest, provider exception,
-or reporter artifact is retained. `NOT_RETAINED` means that a field was not obtained in this
-no-probe round; it is not a negative response and not a coverage oracle.
+| Evidence channel | Logical retrievals | Physical calls | Pages/cursors | Retries | Retained transport material |
+| --- | --- | --- | --- | --- | --- |
+| Official static page/document research | `NOT_RETAINED` / `NOT_MEASURED` | `NOT_RETAINED` / `NOT_MEASURED` | `NOT_RETAINED` | `NOT_RETAINED` | Sanitized source facts and canonical references only |
+| Candidate EUR/VND data/API dispatch | `0` | `0` | `0` | `0` | No live rate, response, body, header, exception, or artifact |
+| Credentials, cookies, browser session, proxy, challenge bypass | `0` | `0` | `0` | `0` | None |
+
+`NOT_RETAINED` means that the field was not obtained or transport-measured in this design round;
+it is not a negative response and not a coverage oracle. `0` in the second row means no candidate
+data/API dispatch occurred. The route/path entries below are query-free canonical references and
+static evidence labels, not recorded HTTP methods or live request logs.
 
 ## 3. Evidence inventory and candidate ledger
 
 ### 3.1 Candidate disposition matrix
 
-| Candidate unit | Official owner/route inspected | What is actually evidenced without a probe | Missing qualification axes | Disposition |
-| --- | --- | --- | --- | --- |
-| Vietcombank current/dated-rate family, each EUR cash/transfer/sell field independently | [Vietcombank rate page](https://www.vietcombank.com.vn/vi-VN/KHCN/Cong-cu-Tien-ich/Ty-gia) | The current page lists EUR and three distinct bank quote columns; it labels the table as reference information and offers an XML link. This is current-surface evidence only. | Historical response-backed field identity, direct EUR/VND scale/date/revision, requested-span retention, pagination, automation/rate/retry, caller return, storage, redistribution, commercial use | `COVERAGE_GAP` + `BASIS_GAP` + `IDENTITY_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| State Bank of Vietnam official cross-rate product | [SBV official portal](https://www.sbv.gov.vn/) and [official statistical-product catalogue](https://www.sbv.gov.vn/documents/d/sbv_portal/527697) | The official menu distinguishes central rate, reference rates, and VND cross rates. The catalogue describes the VND cross-rate product as weekly and for tax-calculation purposes. | Daily historical direct EUR/VND response, field/basis/scale/date/revision, 2018–2026 bounds, transport/pagination, reuse and automation terms | `COVERAGE_GAP` + `BASIS_GAP` + `IDENTITY_GAP` + `LEGAL_GAP` |
-| ECB euro reference-rate roster | [ECB reference rates](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html) and [framework](https://www.ecb.europa.eu/stats/pdf/exchange/Frameworkfortheeuroforeignexchangereferencerates.en.pdf) | The official page publishes a finite EUR-base roster; its current page contains 30 currencies and no VND row. The framework says an official EUR rate can use a USD cross when direct EUR data is unavailable. | A direct EUR/VND owner field, requested coverage, library redistribution terms, and a basis compatible with the packet's direct-only rule | `NOT_SERVED` + `BASIS_GAP` |
-| Frankfurter v2, unfiltered facade | [Frankfurter v2 documentation](https://frankfurter.dev/) | The owner documentation says the default is blended across providers, provider filtering is separate, and underlying provider terms control use. The currency catalogue lists VND, but a currency listing is not a direct EUR/VND response or owner identity. | One direct provider/basis, response-backed EUR/VND field, exact coverage/revision, provider-specific rights, route rate policy, bounded runtime | `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| Frankfurter v2 with ECB provider selection | [Frankfurter ECB provider page](https://frankfurter.dev/providers/ecb/) | The facade describes an ECB provider with a published historical span and provider-specific filter examples. The current ECB official roster does not include VND; the facade page does not prove a direct EUR/VND ECB observation. | Direct provider response, VND membership in the selected ECB series, field/basis/revision, legal redistribution, route budget | `NOT_SERVED` or `IDENTITY_GAP` pending a future response; not a qualified unit |
-| BIS bilateral exchange rates | [BIS bilateral exchange-rate overview](https://data.bis.org/topics/XRU) and [BIS exchange-rate statistics](https://www.bis.org/statistics/dataportal/exr.htm) | BIS describes its bilateral dataset as nominal rates against USD, with sources combined for consistency. That is not direct EUR/VND. | Direct EUR/VND identity, single-owner basis, and packet coverage; any legal grant cannot repair the wrong pair | `IDENTITY_GAP` + `BASIS_GAP` |
-| World Bank WDI official exchange rate | [World Bank `PA.NUS.FCRF`](https://data.worldbank.org/indicator/PA.NUS.FCRF) | The indicator is official exchange rate in local currency per US dollar, period average, annual, with CC BY 4.0 shown by the catalogue. It is the existing annual USD/VND source. | Daily EUR/VND identity, cadence, direct pair, and coverage | `NOT_SERVED` + `BASIS_GAP`; preserve annual only |
-| Federal Reserve/FRED negative controls | [Federal Reserve H.10](https://www.federalreserve.gov/releases/h10/current/) and [FRED DEXCHUS](https://fred.stlouisfed.org/series/DEXCHUS) | Prior reviewed #217 source evidence records H.10/FRED as USD-bilateral or USD/CNY controls, not direct EUR/VND. No new request was made here. | Direct EUR/VND owner field, basis, requested span, and reuse contract | `NOT_SERVED` + `IDENTITY_GAP` |
-| Unofficial aggregators, copied datasets, open-rate facades without a direct owner contract, login/paid/broker/private routes | Excluded by packet and clean-room policy | No candidate evidence retained; no request made. | All axes | `EXCLUDED`, never a fallback |
+Every row is a separate provider/route/version/basis unit. A shared host does not merge economic
+fields, response identities, legal terms, or budgets. The matrix is a source-gap ledger, not a
+failover chain.
 
-The matrix is a source-gap ledger, not a ranking. A candidate may be reopened only as the same
-provider + route/version + basis unit; evidence from one row cannot repair another row.
+| Candidate unit | Official owner/route evidence | What is actually evidenced without candidate dispatch | Missing qualification axes | Deterministic disposition |
+| --- | --- | --- | --- | --- |
+| VCB historical EUR cash field | [Vietcombank rate page](https://www.vietcombank.com.vn/vi-VN/KHCN/Cong-cu-Tien-ich/Ty-gia) | Current page labels a EUR cash-buy column and a reference surface only | Historical response field/date/revision, direct scale, requested bounds, automation, caller return, storage, redistribution, rate policy | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB historical EUR transfer field | Same official rate page | Current page labels a distinct EUR transfer-buy column and a reference surface only | Same axes, independently of cash and sell | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB historical EUR sell field | Same official rate page | Current page labels a distinct EUR sell column and a reference surface only | Same axes, independently of cash and transfer | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| SBV central VND/USD product | [SBV portal](https://www.sbv.gov.vn/) and [catalogue](https://www.sbv.gov.vn/documents/d/sbv_portal/527697) | Official menu distinguishes a central-rate product | Direct EUR/VND field, daily history, scale/date/revision, requested bounds, reuse/runtime | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` |
+| SBV reference-rate product | Same official portal/catalogue | Official menu distinguishes reference rates between VND and foreign currencies | Direct daily EUR/VND response, field/basis/date, requested bounds, reuse/runtime | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` |
+| SBV weekly tax cross-rate product | Same official portal/catalogue | Official catalogue describes a weekly VND cross-rate product for tax calculation | Daily market-history identity, requested daily span, reusable automation/return terms | `NOT_SERVED` + `BASIS_GAP` |
+| ECB direct EUR/VND reference-rate unit | [ECB roster](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html) and [framework](https://www.ecb.europa.eu/stats/pdf/exchange/Frameworkfortheeuroforeignexchangereferencerates.en.pdf) | Current official EUR roster has 30 currencies and no VND row; framework permits USD-cross construction | Direct VND owner field, requested coverage, direct-only basis, reuse contract | `NOT_SERVED` + `BASIS_GAP` |
+| Frankfurter v2 unfiltered facade | [Frankfurter docs](https://frankfurter.dev/) and [VND catalogue](https://frankfurter.dev/currencies/vnd/) | Official facade says default output is blended and VND has catalogue metadata | One direct owner field/basis, exact response identity, coverage/revision, underlying rights, route policy | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| Frankfurter v2 `providers=ECB` unit | [Frankfurter ECB provider](https://frankfurter.dev/providers/ecb/) | Provider-filter documentation exists; no provider-filter response was obtained; inspected ECB roster has no VND | Response-backed direct ECB/VND identity, field/basis, revision, rights, bounded route | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| Frankfurter underlying-provider inventory | [Frankfurter providers](https://frankfurter.dev/providers/) | The facade says underlying provider terms control use; the complete provider inventory was not independently reviewed for this pair | Per-provider route/field/basis, response identity, coverage, rights, revision, rate policy | `SOURCE-GAP` + `IDENTITY_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| BIS bilateral exchange-rate unit | [BIS overview](https://data.bis.org/topics/XRU) and [statistics](https://www.bis.org/statistics/dataportal/exr.htm) | Official dataset is nominally against USD and combines sources | Direct EUR/VND identity and one-provider basis; legal review cannot repair wrong pair | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` |
+| World Bank `PA.NUS.FCRF` | [World Bank indicator](https://data.worldbank.org/indicator/PA.NUS.FCRF) | Official annual local-currency-per-USD period-average with CC BY 4.0; this is the current annual USD/VND source | Daily EUR/VND pair, cadence, direct basis, requested coverage | `NOT_SERVED` + `BASIS_GAP` |
+| Federal Reserve H.10 | [Federal Reserve H.10](https://www.federalreserve.gov/releases/h10/current/) | Prior primary-source review records USD-based controls; no new data request | Direct EUR/VND field/basis, span, reuse/runtime | `NOT_SERVED` + `IDENTITY_GAP` |
+| FRED DEXCHUS | [FRED DEXCHUS](https://fred.stlouisfed.org/series/DEXCHUS) | Prior primary-source review records a wrong-pair/USD control; no new data request | Direct EUR/VND owner field/basis, span, reuse/runtime | `NOT_SERVED` + `IDENTITY_GAP` |
+| `open.er-api` current endpoint | [Repository source contract](../sources/fx-open-er-api.md) | Existing route is current-only, USD-anchored, derives EUR/VND from two USD legs, is rate-limited, and prohibits raw redistribution | Direct historical provider field/basis, requested coverage, lawful raw return, bounded historical route | `NOT_SERVED` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| Unofficial aggregators, copied data, login/paid/broker/private/proxy routes | Excluded by packet and clean-room policy | No candidate evidence retained and no request made | All axes | `EXCLUDED` — never a fallback |
+
+`COVERAGE_GAP` is deliberately absent from this no-probe matrix. It is reserved for a qualified
+unit whose owner-declared or response-backed boundary proves that a requested span is outside its
+served coverage; unproven history uses `SOURCE-GAP` plus the proven specific gaps above.
 
 ### 3.2 Per-unit no-probe transport ledger
 
-The packet requires route, transport, budget, and identity axes to be total even when the round
-does not dispatch a candidate. This ledger makes the no-probe state explicit. `GET` below means
-an official page/document inspection only; it is not a data/API dispatch. The four counters are
-`logical targets / physical calls / page or cursor calls / retries`, and every candidate is
-`0 / 0 / 0 / 0`.
+The packet requires route, transport, budget, and identity axes to be total even when no candidate
+is dispatched. `Static reference` identifies a page/document used as evidence; it is not an HTTP
+method claim. Candidate counters are always
+`logical targets / physical calls / page-or-cursor calls / retries` and are independent of static
+document research.
 
-| Unit | Canonical host/path (query-free) | Method / parameter intent | HTTP / complete MIME / effective route | Auth / session / UA / WAF | Counters | Response identity / bounds |
-| --- | --- | --- | --- | --- | --- | --- |
-| VCB current rate surface; cash, transfer, sell kept as separate units | `www.vietcombank.com.vn/vi-VN/KHCN/Cong-cu-Tien-ich/Ty-gia` | `GET` page inspection; no API/date parameter | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no candidate dispatch | `0 / 0 / 0 / 0` | Current EUR/quote-column labels only; historical pair, field, bounds `NOT_RETAINED` |
-| SBV cross-rate product | `www.sbv.gov.vn/` and `www.sbv.gov.vn/documents/d/sbv_portal/527697` | `GET` menu/catalogue inspection; no route parameter | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no candidate dispatch | `0 / 0 / 0 / 0` | Weekly tax-cross-rate catalogue fact; direct daily response/bounds `NOT_RETAINED` |
-| ECB EUR reference roster/framework | `www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html` and `www.ecb.europa.eu/stats/pdf/exchange/Frameworkfortheeuroforeignexchangereferencerates.en.pdf` | `GET` page/PDF inspection; no SDMX series key | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no candidate dispatch | `0 / 0 / 0 / 0` | Roster has no current VND row; direct EUR/VND bounds `NOT_SERVED`/not established |
-| Frankfurter unfiltered facade | `frankfurter.dev/` and `frankfurter.dev/currencies/vnd/` | `GET` documentation/catalogue inspection; no API pair/date request | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no API dispatch | `0 / 0 / 0 / 0` | Nominal VND provider catalogue only; owner field/basis/pair bounds `NOT_RETAINED` |
-| Frankfurter ECB provider | `frankfurter.dev/providers/ecb/` | `GET` provider-page inspection; no provider-filter request | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no API dispatch | `0 / 0 / 0 / 0` | Provider metadata only; direct VND response/bounds `NOT_RETAINED` |
-| BIS bilateral exchange rates | `data.bis.org/topics/XRU` and `www.bis.org/statistics/dataportal/exr.htm` | `GET` overview/methodology inspection; no SDMX key | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no candidate dispatch | `0 / 0 / 0 / 0` | Official dataset is USD-relative/combined-source; direct EUR/VND `IDENTITY_GAP` |
-| World Bank annual exchange-rate indicator | `data.worldbank.org/indicator/PA.NUS.FCRF` | `GET` catalogue inspection; no WDI API request | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no candidate dispatch | `0 / 0 / 0 / 0` | Annual USD period-average/CC BY 4.0; daily EUR/VND `NOT_SERVED` |
-| Federal Reserve/FRED negative controls | `www.federalreserve.gov/releases/h10/current/` and `fred.stlouisfed.org/series/DEXCHUS` | `GET` page references only; no new request | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED`; no new dispatch | `0 / 0 / 0 / 0` | Prior reviewed wrong-pair/USD controls; direct EUR/VND `NOT_SERVED` |
+| Unit | Canonical host/path (query-free) | Static reference/evidence | Candidate dispatch | HTTP / complete MIME / effective route | Auth / session / UA / WAF | Candidate counters | Response identity / bounds |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| VCB EUR cash | `www.vietcombank.com.vn/vi-VN/KHCN/Cong-cu-Tien-ich/Ty-gia` | Page reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Current cash label; historical response/bounds `NOT_RETAINED` |
+| VCB EUR transfer | Same VCB path | Page reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Current transfer label; historical response/bounds `NOT_RETAINED` |
+| VCB EUR sell | Same VCB path | Page reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Current sell label; historical response/bounds `NOT_RETAINED` |
+| SBV central VND/USD | `www.sbv.gov.vn/` + catalogue path `documents/d/sbv_portal/527697` | Portal/catalogue reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Product label only; direct EUR/VND `NOT_RETAINED` |
+| SBV reference rate | Same SBV paths | Portal/catalogue reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Product label only; daily field/bounds `NOT_RETAINED` |
+| SBV weekly tax cross-rate | Same SBV paths | Catalogue cadence/product reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Weekly tax product; daily market history `NOT_SERVED` |
+| ECB direct EUR/VND | `www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html` + framework PDF | Roster/framework reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Current roster lacks VND; direct unit `NOT_SERVED` |
+| Frankfurter unfiltered | `frankfurter.dev/` + `frankfurter.dev/currencies/vnd/` | Docs/catalogue reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | VND catalogue/blend metadata only; direct identity `NOT_RETAINED` |
+| Frankfurter `providers=ECB` | `frankfurter.dev/providers/ecb/` | Provider-page reference only; no filter request | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Provider metadata only; direct VND response `NOT_RETAINED` |
+| Frankfurter underlying inventory | `frankfurter.dev/providers/` | Inventory reference incomplete; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Per-provider fields/bounds `NOT_RETAINED` |
+| BIS bilateral | `data.bis.org/topics/XRU` + `www.bis.org/statistics/dataportal/exr.htm` | Overview/methodology reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | USD-relative/combined-source method; direct pair `IDENTITY_GAP` |
+| World Bank annual | `data.worldbank.org/indicator/PA.NUS.FCRF` | Catalogue/licence reference only; transport not retained/measured | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Annual USD period average; daily unit `NOT_SERVED` |
+| Federal Reserve H.10 | `www.federalreserve.gov/releases/h10/current/` | Prior primary-source reference; no new request | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | USD control; direct pair `NOT_SERVED` |
+| FRED DEXCHUS | `fred.stlouisfed.org/series/DEXCHUS` | Prior primary-source reference; no new request | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Wrong-pair/USD control; direct pair `NOT_SERVED` |
+| `open.er-api` current | `open.er-api.com/v6/latest/USD` | Existing repository contract reference only; no live request | None | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `NOT_RETAINED` | `0 / 0 / 0 / 0` | Current USD anchor/cross-derived only; history `NOT_SERVED` |
 
 No route-specific complete MIME, redirect/effective-route, WAF, session, user-agent, body-size,
-page, retry, or rate-policy fact is silently filled in. The zero counters are real for this
-round; they do not describe a provider's future allowance.
+page, retry, or rate-policy fact is silently filled in. Candidate zeroes are real for the dispatch
+channel only; they do not describe static-document transport or a provider's future allowance.
 
 ### 3.3 Coverage and outcome ledger
 
-The requested bounds are always the same for this issue. The table separates provider/catalogue
-facts from response-backed row accounting; no response-backed row count is invented:
+The requested bounds are inclusive `2018-01-01 / 2026-08-20`. This table is response-row
+accounting, not dispatch accounting. Each response column is `NOT_RETAINED` when no candidate
+response was obtained, or `NOT_APPLICABLE` when the official evidence already proves that the
+exact daily unit is not the product. Candidate dispatch counts remain only in §3.2.
 
-| Unit | Requested start/end | Provider-declared cadence/bounds | Response rows / distinct / duplicates / gaps | Outcome |
+| Unit | Requested interval | Provider-declared cadence/bounds | Response rows / distinct / duplicates / missing publication dates | Deterministic outcome |
 | --- | --- | --- | --- | --- |
-| VCB cash | `2018-01-01 / 2026-08-20` | Current page only; historical bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `COVERAGE_GAP` |
-| VCB transfer | `2018-01-01 / 2026-08-20` | Current page only; historical bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `COVERAGE_GAP` |
-| VCB sell | `2018-01-01 / 2026-08-20` | Current page only; historical bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `COVERAGE_GAP` |
-| SBV cross-rate | `2018-01-01 / 2026-08-20` | Official catalogue says weekly tax-calculation product; historical direct EUR/VND bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `COVERAGE_GAP` + `BASIS_GAP` |
-| ECB direct EUR/VND | `2018-01-01 / 2026-08-20` | Current roster has no VND direct row | `0 / 0 / 0 / 0` candidate dispatch; no row oracle | `NOT_SERVED` for current roster |
-| Frankfurter facade/ECB filter | `2018-01-01 / 2026-08-20` | Nominal VND catalogue/provider metadata only; pair bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `IDENTITY_GAP` + `COVERAGE_GAP` |
-| BIS bilateral | `2018-01-01 / 2026-08-20` | USD-relative dataset; not direct EUR/VND | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `IDENTITY_GAP` + `BASIS_GAP` |
-| World Bank annual | `2018-01-01 / 2026-08-20` | Annual period-average USD basis | `NOT_RETAINED` for this no-probe round | `NOT_SERVED` for daily EUR/VND |
-| Federal Reserve/FRED | `2018-01-01 / 2026-08-20` | Prior reviewed wrong-pair/USD controls | `NOT_RETAINED` for this no-probe round | `NOT_SERVED` + `IDENTITY_GAP` |
+| VCB EUR cash | `2018-01-01 / 2026-08-20` | Current reference page; historical bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/basis/legal/rate gaps |
+| VCB EUR transfer | `2018-01-01 / 2026-08-20` | Current reference page; historical bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/basis/legal/rate gaps |
+| VCB EUR sell | `2018-01-01 / 2026-08-20` | Current reference page; historical bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/basis/legal/rate gaps |
+| SBV central VND/USD | `2018-01-01 / 2026-08-20` | Central product label; direct EUR/VND history `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/basis/legal gaps |
+| SBV reference rate | `2018-01-01 / 2026-08-20` | Reference-product label; direct daily bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/basis/legal gaps |
+| SBV weekly tax cross-rate | `2018-01-01 / 2026-08-20` | Official catalogue says weekly tax-calculation product | `NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE` | `NOT_SERVED` + `BASIS_GAP` |
+| ECB direct EUR/VND | `2018-01-01 / 2026-08-20` | Current roster has no VND row | `NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE` | `NOT_SERVED` + `BASIS_GAP` |
+| Frankfurter unfiltered | `2018-01-01 / 2026-08-20` | VND catalogue/blend metadata; pair bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/basis/legal/rate gaps |
+| Frankfurter `providers=ECB` | `2018-01-01 / 2026-08-20` | Provider metadata; direct VND bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/basis/legal/rate gaps |
+| Frankfurter underlying inventory | `2018-01-01 / 2026-08-20` | Provider inventory not fully reviewed; bounds `NOT_RETAINED` | `NOT_RETAINED / NOT_RETAINED / NOT_RETAINED / NOT_RETAINED` | `SOURCE-GAP` + identity/legal/rate gaps |
+| BIS bilateral | `2018-01-01 / 2026-08-20` | USD-relative/combined-source dataset, wrong direct unit | `NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE` | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` |
+| World Bank annual | `2018-01-01 / 2026-08-20` | Annual USD period-average only | `NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE` | `NOT_SERVED` + `BASIS_GAP` |
+| Federal Reserve H.10 | `2018-01-01 / 2026-08-20` | Prior USD control; no direct unit | `NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE` | `NOT_SERVED` + `IDENTITY_GAP` |
+| FRED DEXCHUS | `2018-01-01 / 2026-08-20` | Prior wrong-pair/USD control; no direct unit | `NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE` | `NOT_SERVED` + `IDENTITY_GAP` |
+| `open.er-api` current | `2018-01-01 / 2026-08-20` | Current USD endpoint only; no history bounds | `NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE / NOT_APPLICABLE` | `NOT_SERVED` + identity/basis/legal/rate gaps |
 
-An empty, timed-out, WAF, or unreconciled future retrieval would be `TRANSPORT_INCONCLUSIVE`
-or another bounded failure, never a zero-row `NOT_SERVED` result. `FULL` and
-`QUALIFIED_PARTIAL` are unavailable in this round because no direct response was retained.
+A future qualified unit may use `COVERAGE_GAP` only after its direct identity, basis, legal, and
+runtime axes pass and an owner-declared or response-backed boundary proves that the requested span
+is outside the served range. No row above qualifies, so none uses `COVERAGE_GAP`.
+
+For a future qualified daily source, a missing date is deterministic:
+
+- an owner calendar/status that says the date was not published yields `NONPUBLICATION_RECONCILED`,
+  no row, and no fatal error; the date is not shifted, filled, or fabricated;
+- a publication-eligible date with no row is `missing_requested_endpoint` and fails the whole source;
+- an empty, timed-out, WAF, connection, or unreconciled response is transport/schema failure, not
+  zero-row `NOT_SERVED` and not `COVERAGE_GAP`; and
+- unknown calendar/status evidence is unresolved and returns no series. No false absence is inferred.
 
 ### 3.4 Vietcombank — current quote surface does not prove history
 
@@ -202,42 +250,52 @@ future owner-evidence review, not a source registration or failover member.
   packet's primary-source/legal gate. They are not a substitute merely because they display EUR
   and VND symbols.
 
+### 3.9 `open.er-api` — current-only USD anchor is a negative control
+
+The existing repository source contract at [`docs/sources/fx-open-er-api.md`](../sources/fx-open-er-api.md)
+records the canonical current route `https://open.er-api.com/v6/latest/USD`. It returns rates keyed
+as currencies per USD, derives EUR/VND by combining the USD/VND and USD/EUR fields, refreshes about
+daily, and documents rate limiting. Its terms prohibit redistribution of raw data. No route was
+called in this round. It therefore cannot be a direct historical EUR/VND unit, and its exact
+negative disposition is `NOT_SERVED + IDENTITY_GAP + BASIS_GAP + LEGAL_GAP + RATE_POLICY_GAP`.
+
 ## 4. Legal and reuse posture
 
-The following axes are independent and must be proven per provider route:
+The following axes are independent and are recorded for every candidate unit:
 
 ```text
 owner identity; automated access; caller-facing return; storage/cache;
-redistribution; attribution; commercial use; rate/retry/pacing; revision/correction/retention
+redistribution; attribution; commercial use; rate/retry/pacing;
+terms amendment/revocation; observation/data revision/retention
 ```
 
-| Unit | Public/legal evidence retained | Conservative result |
-| --- | --- | --- |
-| Vietcombank | Official page labels the table as reference information. No dated-history automation, cache, return, redistribution, or rate/retry terms were retained. | `LEGAL_GAP` and `RATE_POLICY_GAP`; no historical use authorization |
-| SBV | Official ownership and a public menu/catalogue establish a public information surface only. No library automation, caching, caller-return, redistribution, or revision contract was retained. | `LEGAL_GAP`; public reachability is not permission |
-| ECB | Reference rates are described as informational; the framework describes publication and methodology, not a vnfin redistribution grant for a missing VND series. | Direct pair already `NOT_SERVED`; reuse remains unproven |
-| Frankfurter/underlying providers | Frankfurter says commercial use is allowed subject to each underlying provider's terms, and rate limiting prevents abuse. That does not grant a direct EUR/VND provider identity or a route-specific cache/redistribution contract. | `LEGAL_GAP` + `RATE_POLICY_GAP` for this unit |
-| BIS | Official source/methodology can explain the USD-bilateral dataset, but its wrong pair/basis is decisive. | No qualification; legal review cannot repair identity |
-| World Bank | CC BY 4.0 is explicitly shown for the annual indicator. | Annual USD/VND only; no daily EUR/VND substitution |
+`PROVEN` means only that the cited primary source explicitly supports the narrow cell. `NOT_RETAINED`
+means this no-probe design did not retain the answer. `CONDITIONAL` means provider terms may govern
+but the exact unit is not bound. `NOT_APPLICABLE` means the axis cannot qualify the wrong product;
+it is not permission.
 
-No source receives an inferred licence from being public, no-login, free, or technically
-reachable. Written owner permission would still need to be accompanied by response-backed direct
-identity, coverage, bounded runtime, and compatibility evidence.
+| Unit | Owner identity | Automated access | Caller return | Storage/cache | Redistribution | Attribution | Commercial use | Rate/retry/pacing | Terms amendment/revocation | Observation/data revision/retention |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| VCB EUR cash | Surface owner `PROVEN`; historical field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| VCB EUR transfer | Surface owner `PROVEN`; historical field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| VCB EUR sell | Surface owner `PROVEN`; historical field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| SBV central VND/USD | Product owner `PROVEN`; direct EUR/VND field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| SBV reference rate | Product owner `PROVEN`; direct daily field `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| SBV weekly tax cross-rate | Product owner `PROVEN`; daily market unit `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN weekly product; daily data `NOT_APPLICABLE` |
+| ECB direct EUR/VND | Roster owner `PROVEN`; direct VND `NOT_SERVED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN roster absence/current boundary` |
+| Frankfurter unfiltered | Facade owner `PROVEN`; direct owner `GAP` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `NOT_RETAINED` |
+| Frankfurter `providers=ECB` | Facade/provider label `PROVEN`; direct ECB/VND `GAP` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `CONDITIONAL` | `CONDITIONAL` | `NOT_RETAINED` | `NOT_RETAINED` |
+| Frankfurter underlying inventory | Inventory not fully reviewed | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| BIS bilateral | Dataset owner/method `PROVEN`; requested pair wrong | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_APPLICABLE` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN combined/USD-relative; not direct unit` |
+| World Bank annual | Indicator owner/basis `PROVEN`; daily pair wrong | `NOT_RETAINED` | `PROVEN annual CC BY 4.0 only` | `PROVEN annual CC BY 4.0 conditions` | `PROVEN annual CC BY 4.0 conditions` | `PROVEN attribution requirement` | `PROVEN subject to CC BY 4.0` | `NOT_RETAINED` | `NOT_RETAINED` | `PROVEN annual period-average/revision boundary` |
+| Federal Reserve H.10 | Owner `PROVEN`; direct pair `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| FRED DEXCHUS | Owner `PROVEN`; direct pair `GAP` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` | `NOT_RETAINED` |
+| `open.er-api` current | Route owner/source contract `PROVEN`; historical direct unit `GAP` | `PROVEN current no-key route only` | `PROVEN current client use only` | `PROVEN cache allowed for current client` | `PROVEN raw redistribution prohibited` | `PROVEN requested attribution` | `PROVEN commercial use stated` | `PROVEN current rate limit; history NOT_APPLICABLE` | `NOT_RETAINED` | `PROVEN current-update timestamp; no historical revision` |
 
-For auditability, the nine legal/runtime axes are total per candidate even when the answer is
-unknown:
-
-| Unit | Owner identity | Automated access | Caller return | Storage/cache | Redistribution | Attribution | Commercial | Rate/retry | Revision/retention |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| VCB historical field units | Surface owner known; historical field identity `GAP` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` |
-| SBV cross-rate product | Product owner known; direct daily field `GAP` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` |
-| ECB direct EUR/VND | Current direct unit `NOT_SERVED` | `UNKNOWN` for this unit | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` | `UNKNOWN` |
-| Frankfurter facade/provider | Facade owner known; underlying direct owner `GAP` | Public no-key docs only; permission `UNKNOWN` | Underlying terms `UNKNOWN` | Underlying terms `UNKNOWN` | Underlying terms `UNKNOWN` | Provider-specific | Commercial use conditional on underlying terms | Abuse-limited; numeric policy `UNKNOWN` | Provider-specific/`UNKNOWN` |
-| BIS bilateral | Owner/dataset known; pair is wrong | Not decisive | Not decisive | Not decisive | Not decisive | Provider terms | Provider terms | Weekly publication; route policy `UNKNOWN` | Combined-source/revision semantics not direct EUR/VND |
-| World Bank annual | Owner/indicator known; cadence/basis is wrong | Provider terms | CC BY 4.0 for annual data | CC BY 4.0 conditions | CC BY 4.0 conditions | Required attribution | CC BY 4.0 | Provider terms | Annual series only |
-
-`UNKNOWN`/`GAP` is intentionally not a permission, and an axis marked “not decisive” cannot
-repair the candidate's wrong pair or cadence.
+No public/no-login/free surface receives an inferred licence. Terms amendment/revocation is kept
+separate from observation/data revision/retention: a provider may revise observations without
+changing terms, and terms may change without changing historical rows. A future qualification must
+refresh both columns for the exact route/unit.
 
 ## 5. Current repository/API boundary
 
@@ -258,7 +316,7 @@ Current code still has the following compatibility contract:
 | Pair validation | Non-USD/VND history remains a typed pre-network rejection. |
 | Models | Reuse of `FXPoint`/`FXHistory` is future-only design vocabulary; no second model/facade is added. |
 | `Frequency` export | No `__all__` or snapshot change is made by this source-gap packet. A qualified future implementation must review additive export compatibility separately. |
-| Accessors | `rate_on()` is exact-match-only; `rate_for_year()` remains annual-only and must not reinterpret daily Jan-1 observations. |
+| Accessors | `rate_on()` is exact-match-only. Current facade-produced histories are annual, but `rate_for_year()` is presently exact Jan-1 sugar over `rate_on()` with no frequency guard; a manually constructed daily history can therefore return a Jan-1 point. A future authorized daily implementation must add and test explicit non-annual rejection. No runtime change is made here. |
 | Diagnostics | Existing offline coverage diagnostics and annual source/error wording remain unchanged. No transport or failover carrier is invented. |
 | Spot | Existing spot adapters and their legal scope are untouched by #224. |
 
@@ -313,34 +371,41 @@ The future validation contract is:
    without an owner-supplied publication timestamp, documentation must not promise same-day
    availability or a Vietnamese-session cutoff, and callers use a strict-prior date rule;
 5. provider calendar/status evidence may explain a weekend, holiday, or declared nonpublication;
-   an unexplained internal gap, missing requested endpoint, duplicate, out-of-window row, empty
-   response, or unreconciled page fails the whole source and returns no partial history; and
-6. `rate_on()` remains exact-match-only and `rate_for_year()` rejects daily histories.
+   that date is recorded as `NONPUBLICATION_RECONCILED` with no row. A publication-eligible date
+   with no row is `missing_requested_endpoint` and fails the whole source. Empty responses,
+   unknown calendar status, and unreconciled pages also fail the whole source with no partial history;
+6. `rate_on()` remains exact-match-only and a future daily implementation must make
+   `rate_for_year()` reject non-annual histories.
 
 Any future `rate_basis` field, warning tuple, public coverage result, error carrier, or provider
 attempt carrier must be additive, finite, sanitized, snapshot-tested, and reviewed with annual
-constructor/DataFrame/diagnostic compatibility. This source-gap packet does not add or promise
-one.
+constructor/DataFrame/diagnostic compatibility. This source-gap packet does not add or promise one.
 
 ### 6.3 Coverage and no-false-absence
 
 `FULL` is possible only when the provider declares or proves served bounds covering both requested
-endpoints and page/count/cursor/calendar reconciliation succeeds. `QUALIFIED_PARTIAL` is possible
-only when the provider declares a narrower bound and all identity, basis, legal, and runtime axes
-still pass; it must expose that bound and never imply the requested full span.
+endpoints (or proves that a boundary endpoint is a provider-calendar nonpublication) and
+page/count/cursor/calendar reconciliation succeeds. `QUALIFIED_PARTIAL` is possible only when a
+qualified provider declares a narrower bound and all identity, basis, legal, and runtime axes still
+pass; it must expose that bound and never imply requested full coverage.
 
-The following are unresolved, not absence claims:
+`COVERAGE_GAP` is a qualified-provider coverage disposition only: it requires an owner-declared or
+response-backed served boundary that is known to exclude part of the requested interval. It cannot
+be inferred from a no-probe page, empty response, timeout, WAF, or missing retained rows. In this
+round every unproven history remains `SOURCE-GAP` or an exact `NOT_SERVED` negative.
+
+For a future qualified source, the exact date rule is:
 
 ```text
-empty response; HTTP 200 HTML/challenge; timeout/TLS/connection failure;
-redirect/effective-route mismatch; wrong MIME/status; schema/identity/basis failure;
-budget or decompressed-byte exhaustion; unreconciled page/count/cursor; unknown calendar gap
+publication-eligible date + no row       -> missing_requested_endpoint (fatal, no series)
+provider calendar/status says no publish -> NONPUBLICATION_RECONCILED (no row, not fatal)
+unknown calendar/status                  -> unexplained_gap (fatal, no series)
+empty/WAF/timeout/connection/unreconciled -> transport/schema failure (no absence claim)
 ```
 
-They produce no series and cannot establish `NOT_SERVED` or `COVERAGE_GAP`. `NOT_SERVED` requires
-owner/catalogue evidence that the exact unit is not published; `COVERAGE_GAP` requires a qualified
-provider's declared/response-backed boundary. No false absence is inferred from this no-probe
-round.
+No result in the last two rows may be returned as a successful empty series or as `NOT_SERVED` or
+`COVERAGE_GAP`. No weekend/holiday row may be fabricated, shifted, forward-filled, backfilled,
+interpolated, resampled, or synthesized through USD.
 
 ### 6.4 Future bounded transport and atomic budget
 
@@ -362,22 +427,37 @@ route, page/cursor contract, body size, and rate policy. The mechanics are fixed
 For a future JSON owner route, the complete `Content-Type` value must be parsed after the first
 colon, its media-type portion lower-cased and trimmed, and compared exactly with `application/json`.
 HTML/XML, missing, malformed, or colon-suffixed non-JSON media types fail closed. A route that
-uses another documented media type must receive its own exact parser contract; generic “JSON-like”
-acceptance is not allowed.
+uses another media type must receive its own exact parser contract; generic “JSON-like” acceptance
+is not allowed.
 
-The future internal validation vocabulary is closed by design, but is not a current public API:
+The following is an explicitly **provisional, non-public** internal classification map for the
+source-gap design. It is complete for the currently named transport/response classes; a later
+route-qualified design must add any provider-specific class before implementation and must not
+silently map it to absence:
 
-```text
-ok, unexpected_http_status, mime_mismatch, redirect, effective_route_mismatch,
-timeout, tls_error, rate_limited, server_error, waf_challenge, body_limit,
-json_parse_error, schema_error, identity_mismatch, basis_mismatch,
-duplicate_or_overlap, page_reconciliation_error, out_of_window_date,
-missing_requested_endpoint, unexplained_gap, budget_exhausted
-```
+| Condition | Provisional internal token/outcome | Series/absence rule |
+| --- | --- | --- |
+| Successful validated response | `ok` | May proceed to coverage reconciliation |
+| DNS/connect/reset before complete response | `connection_error` | No series; not `NOT_SERVED` |
+| TLS handshake/chain failure | `tls_error` | No series; not `NOT_SERVED` |
+| Timeout | `timeout` | No series; not `NOT_SERVED` |
+| HTTP rate limit | `rate_limited` | No series; not `NOT_SERVED` |
+| Other unexpected status | `unexpected_http_status` | No series; not `NOT_SERVED` |
+| Redirect/effective-route mismatch | `redirect` or `effective_route_mismatch` | No series; not `NOT_SERVED` |
+| WAF/challenge HTML | `waf_challenge` | No series; not `NOT_SERVED` |
+| Body/decompressed byte ceiling | `body_limit` | No partial series |
+| Zero-byte successful body | `empty_response` | No series; not `NOT_SERVED` |
+| Valid schema with zero observations | `empty_result` | No series; not an absence oracle |
+| Wrong/missing/malformed MIME | `mime_mismatch` | No series |
+| Parse/schema/identity/basis failure | `json_parse_error`, `schema_error`, `identity_mismatch`, or `basis_mismatch` | No series |
+| Duplicate/page/date reconciliation failure | `duplicate_or_overlap`, `page_reconciliation_error`, `out_of_window_date`, or `unexplained_gap` | No series |
+| Publication-eligible requested date missing | `missing_requested_endpoint` | No series |
+| Provider calendar/status proves nonpublication | `NONPUBLICATION_RECONCILED` | No row; not fatal; no filling |
+| Atomic budget exhaustion | `budget_exhausted` | No partial series |
 
-No raw URL, query, body, header, exception, cookie, credential, provider prose, or live rate may
-escape into public diagnostics. Public status/warning tokens, if later needed, require a separate
-compatibility review rather than being silently inferred from these internal names.
+These names are internal design vocabulary only, not a current public API. Raw URL, query, body,
+header, exception, cookie, credential, provider prose, and live rate never enter public diagnostics.
+Public status/warning tokens require a separate compatibility review.
 
 ## 7. Conjunctive reopen criteria
 
@@ -425,13 +505,14 @@ Official sources inspected or used as bounded negative controls:
 - [World Bank official exchange-rate indicator](https://data.worldbank.org/indicator/PA.NUS.FCRF)
 - [Federal Reserve H.10](https://www.federalreserve.gov/releases/h10/current/)
 - [FRED DEXCHUS](https://fred.stlouisfed.org/series/DEXCHUS)
+- [Repository `open.er-api` source contract](../sources/fx-open-er-api.md)
 - [Previously reviewed #217 primary-source note](2026-08-23-daily-cnyvnd-fx-history-source-vetting.md)
 
 ## Bottom summary
 
 - Decision: **SOURCE-GAP CLOSURE**; no direct daily EUR/VND unit qualifies.
 - Current daily chain stays empty; annual World Bank USD/VND behavior is unchanged.
-- No candidate route was probed: 0 logical calls, 0 physical calls, 0 retries, no live data retained.
+- Candidate data/API dispatch: 0 logical calls, 0 physical calls, 0 page/cursor calls, 0 retries; static-document transport was not retained or measured.
 - VCB/SBV lack response-backed daily identity, coverage, runtime, and reuse proof.
 - ECB does not publish VND in the inspected EUR roster; cross-rate derivation is forbidden.
 - Frankfurter is a blended facade with underlying-provider/legal/rate gaps, not a direct source.

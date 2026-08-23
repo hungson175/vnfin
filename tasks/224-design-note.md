@@ -31,7 +31,7 @@ The current API boundary stays exact:
 | Daily EUR/VND | Typed `InvalidData` rejection before source access. |
 | Models | Existing `FXPoint`/`FXHistory` remain unchanged; no duplicate model. |
 | `Frequency` | No export/snapshot change in this source-gap packet. |
-| Accessors | `rate_on()` exact-only; `rate_for_year()` remains annual-only. |
+| Accessors | `rate_on()` is exact-only. Current facade histories are annual, but `rate_for_year()` is currently Jan-1 sugar over `rate_on()` without a frequency guard; future daily code must add explicit non-annual rejection. |
 | Diagnostics | Existing offline annual diagnostics remain unchanged; no fabricated attempt carrier. |
 | Spot | Existing spot adapters and legal scope are untouched. |
 
@@ -41,28 +41,44 @@ The current published base at handoff is `origin/master=728bb99`; the packet's e
 
 ## 2. Candidate dispositions
 
-| Candidate | Independent result | Disposition |
-| --- | --- | --- |
-| Vietcombank current/dated family | Current page lists EUR and separate cash/transfer/sell quotes, but no retained historical response, direct basis/date/revision, full span, or reuse/rate policy. | `COVERAGE_GAP` + `BASIS_GAP` + `IDENTITY_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| SBV cross-rate product | Official catalogue describes a weekly VND cross-rate product for tax calculation; no daily direct EUR/VND response or reuse contract. | `COVERAGE_GAP` + `BASIS_GAP` + `IDENTITY_GAP` + `LEGAL_GAP` |
-| ECB reference roster | Current official EUR roster has no VND; framework allows USD-cross construction, which fails direct-only identity. | `NOT_SERVED` + `BASIS_GAP` |
-| Frankfurter unfiltered | Official facade blends providers by default; VND catalogue presence does not prove one direct owner field/basis or rights. | `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| Frankfurter `ECB` provider | Provider documentation is not a direct ECB VND response, and ECB's inspected roster has no VND. | `NOT_SERVED` or `IDENTITY_GAP`; not qualified |
-| BIS bilateral | Official bilateral dataset is against USD and combines sources; wrong pair/basis. | `IDENTITY_GAP` + `BASIS_GAP` |
-| World Bank | Annual period-average local currency per US dollar; existing annual source only. | `NOT_SERVED` + `BASIS_GAP` |
-| Federal Reserve/FRED | Previously reviewed negative controls are USD-based or wrong-pair; no new request made. | `NOT_SERVED` + `IDENTITY_GAP` |
+Each row is an independent provider/route/version/basis unit. The full transport and ten-axis
+legal ledgers are in the research artifact §§3–4; this design note repeats their deterministic
+outcomes so no unit is silently collapsed into a failover candidate.
 
-The candidate matrix is not a failover chain. The daily chain is `()` until one complete unit
-qualifies.
+| Candidate unit | Evidence boundary | Deterministic disposition |
+| --- | --- | --- |
+| VCB EUR cash / transfer / sell | Current page has distinct quote columns; no historical response identity, direct basis, bounds, or reuse/runtime contract | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` per field |
+| SBV central VND/USD and reference-rate units | Official product labels only; no direct daily EUR/VND response or reuse/runtime contract | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` per unit |
+| SBV weekly tax cross-rate | Official catalogue says weekly tax-calculation product, not requested daily market history | `NOT_SERVED` + `BASIS_GAP` |
+| ECB direct EUR/VND | Current official roster has no VND; USD-cross methodology is forbidden | `NOT_SERVED` + `BASIS_GAP` |
+| Frankfurter unfiltered | Default is blended; VND catalogue is not direct owner/field/basis proof | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| Frankfurter `providers=ECB` | No provider-filter response; direct ECB/VND identity and rights remain unproven | `SOURCE-GAP` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| Frankfurter underlying-provider inventory | Complete provider inventory was not independently reviewed for this pair | `SOURCE-GAP` + `IDENTITY_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| BIS bilateral, World Bank annual, H.10, FRED | Wrong pair/basis/cadence or annual-only negative controls | Exact `NOT_SERVED`/`IDENTITY_GAP`/`BASIS_GAP` outcomes recorded in research §3.1 |
+| `open.er-api` current endpoint | Current USD anchor, cross-derived, rate-limited, raw redistribution prohibited, no history | `NOT_SERVED` + `IDENTITY_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+
+`COVERAGE_GAP` is reserved for a qualified unit with an owner-declared or response-backed boundary
+that excludes part of the requested range. No no-probe row above uses it. The daily chain is `()`
+until one complete unit qualifies.
 
 ## 3. No-probe evidence contract
 
-This handoff performed only bounded page/document reading against official primary sources.
-There were **0 logical retrievals, 0 physical API calls, 0 retries, and 0 retained responses**.
-No credentials, cookies, browser session, proxy, query-bearing URL, live rate, raw body, raw
-headers, exception, digest, or provider artifact is stored.
+This handoff used two separate channels. Official pages, catalogues, PDFs, and documentation were
+read as static evidence, but the research tool did not retain or measure the underlying web
+transport log: static-document logical/physical counts are `NOT_RETAINED`/`NOT_MEASURED`, not zero.
+No candidate EUR/VND data/API route, page/cursor, or retry was dispatched. Candidate dispatch is
+exactly `0 / 0 / 0 / 0` for logical targets / physical calls / page-or-cursor calls / retries.
 
-Evidence fields are typed as follows until a future successful owner response exists:
+No credentials, cookies, browser session, proxy, query-bearing URL, live rate, raw body, raw
+headers, exception, digest, or provider artifact is stored. Static page references are not HTTP
+method claims and candidate zeroes do not describe static traffic or a provider's future allowance.
+
+| Channel | Logical | Physical | Pages/cursors | Retries | Interpretation |
+| --- | --- | --- | --- | --- | --- |
+| Static official document research | `NOT_RETAINED` / `NOT_MEASURED` | `NOT_RETAINED` / `NOT_MEASURED` | `NOT_RETAINED` | `NOT_RETAINED` | Evidence inventory only |
+| Candidate data/API dispatch | `0` | `0` | `0` | `0` | No candidate route was called |
+
+Evidence fields remain typed as follows until a future successful owner response exists:
 
 ```text
 response_pair       = NOT_RETAINED
@@ -113,7 +129,7 @@ vnfin.fx.history(
 )
 ```
 
-The future design gates are:
+The future validation contract is:
 
 1. `base == "EUR"`, `quote == "VND"`, and `frequency == Frequency.DAILY` are validated before
    network; both bounds are required plain `datetime.date` values, inclusive, non-reversed, and
@@ -123,43 +139,42 @@ The future design gates are:
 3. every row is a provider observation in the requested window, ascending and unique, with a
    finite positive non-boolean rate and `unit == value_unit == "VND per 1 EUR"`;
 4. observation date, publication date, revision date, and `fetched_at_utc` remain distinct;
-   `fetched_at_utc` is retrieval time only. Without provider publication timestamps, no same-day
-   availability or Vietnam-session cutoff is asserted, and caller documentation uses a
-   strict-prior rule;
-5. provider-owned calendar/status evidence is required for weekends, holidays, or declared
-   nonpublication; unexplained gaps, duplicates, out-of-window rows, missing requested endpoints,
-   empty responses, and unreconciled pages fail the whole source with no partial history; and
-6. `rate_on()` remains exact-match-only; `rate_for_year()` rejects daily histories and never
-   treats a daily Jan-1 point as an annual observation.
+   without provider publication timestamps, no same-day availability or Vietnam-session cutoff is
+   asserted, and caller documentation uses a strict-prior rule;
+5. a provider calendar/status may explain a weekend, holiday, or declared nonpublication, yielding
+   `NONPUBLICATION_RECONCILED` and no row. A publication-eligible requested date with no row is
+   `missing_requested_endpoint` and fails the whole source. Empty responses, unknown calendar
+   status, and unreconciled pages also fail the whole source and return no partial history; and
+6. `rate_on()` remains exact-match-only; a future daily implementation must make `rate_for_year()`
+   reject non-annual histories.
 
-Any future public `rate_basis`, coverage result, warning tuple, error carrier, or attempt carrier
-requires an additive compatibility review covering constructor defaults/positional callers,
-`DataFrame.attrs`, snapshots, repr/equality, serialization, diagnostics, docs, and release
-notes. No such field is frozen here.
+Any future public `rate_basis`, coverage result, warning tuple, error carrier, or provider attempt
+carrier must be additive, finite, sanitized, snapshot-tested, and reviewed with annual
+constructor/DataFrame/diagnostic compatibility. This source-gap packet does not add or promise one.
 
 ## 6. Coverage and no-false-absence contract
 
-The future result dispositions are conjunctive:
+`FULL` is possible only when provider-served bounds cover both requested endpoints, or provider
+calendar/status evidence proves an endpoint is a nonpublication, and page/count/cursor/calendar
+reconciliation succeeds. `QUALIFIED_PARTIAL` requires a qualified provider-declared narrower bound
+and all identity, basis, legal, and runtime axes; it must expose that bound and never imply requested
+full coverage.
 
-| Result | Exact meaning |
-| --- | --- |
-| `FULL` | Provider-served bounds cover both request endpoints; all page/count/cursor and calendar reconciliation passes. |
-| `QUALIFIED_PARTIAL` | Provider declares a narrower bound; every other identity, basis, legal, and runtime axis passes; the narrower bound is surfaced and never presented as full requested coverage. |
-| `NOT_SERVED` | Official provider catalogue/owner evidence says the exact direct unit is not published; it is not inferred from an empty response. |
-| `SOURCE-GAP` | At least one required axis remains unproven; daily chain stays empty. |
-
-These are unresolved failures, not absence:
+`COVERAGE_GAP` is only a qualified-provider disposition with a declared/response-backed boundary
+that excludes part of the requested interval. No page inspection, empty response, timeout, WAF, or
+unreconciled no-probe state can establish it. No current candidate is qualified, so this packet uses
+`SOURCE-GAP` or exact `NOT_SERVED` instead.
 
 ```text
-empty/WAF response; timeout/TLS/connection; redirect/effective-route mismatch;
-wrong/missing MIME or unexpected status; schema/identity/basis failure;
-page/count/cursor mismatch; duplicate/out-of-window row; budget or byte exhaustion;
-missing requested endpoint; unexplained internal gap
+publication-eligible date + no row       -> missing_requested_endpoint (fatal, no series)
+provider calendar/status says no publish -> NONPUBLICATION_RECONCILED (no row, not fatal)
+unknown calendar/status                  -> unexplained_gap (fatal, no series)
+empty/WAF/timeout/connection/unreconciled -> transport/schema failure (no absence claim)
 ```
 
-No unresolved result can be returned as a successful empty series or a coverage warning. No
-weekend/holiday row may be fabricated, shifted, forward-filled, backfilled, interpolated,
-resampled, or synthesized through USD.
+No unresolved result can be returned as a successful empty series or as `NOT_SERVED`/`COVERAGE_GAP`.
+No weekend/holiday row may be fabricated, shifted, filled, interpolated, resampled, or synthesized
+through USD.
 
 ## 7. Future bounded transport and diagnostics
 
@@ -169,33 +184,38 @@ contract, body bound, and rate policy. The mechanics are fixed:
 - one request-scoped sequential ledger globally bounds logical source attempts, physical calls,
   pages/cursors, retries, redirects, and decompressed bytes;
 - each physical dispatch atomically reserves its source/page/retry/physical units before transport;
-  failed reservation means zero network calls;
+  a failed reservation performs zero network calls;
 - streamed decompressed bytes are charged after dispatch; byte overflow returns no partial result;
 - hidden client retries, date-per-call fan-out, concurrency, unbounded redirects, and cross-source
   stitching are forbidden;
-- exhaustion retains only bounded sanitized real attempts and never fabricates a final attempt or
-  `diagnostics_truncated`; and
-- an owner-approved rate/pacing policy is a prerequisite, not a number imported from another
-  provider or from current spot behavior.
+- exhaustion retains only bounded sanitized real attempts and never fabricates a final attempt or a
+  `diagnostics_truncated` attempt; and
+- owner-approved rate/pacing policy is a prerequisite, not an invented number.
 
-For a future JSON route, parse the complete `Content-Type` value after the first colon, normalize
-the media-type portion by trimming/lower-casing, and require exact `application/json`. HTML/XML,
-missing/malformed media types, or a colon-suffixed non-JSON media type fail closed. A provider
-route using another media type needs a separate exact parser contract.
+For a future JSON route, parse the complete `Content-Type` value after the first colon, trim and
+lower-case the media type, and require exact `application/json`. HTML/XML, missing/malformed media
+types, or colon-suffixed non-JSON media types fail closed.
 
-The future internal failure vocabulary is closed for design purposes only and is not a current
-public API:
+The internal vocabulary is explicitly **provisional and non-public**, with deterministic mappings for
+the currently named classes:
 
-```text
-ok, unexpected_http_status, mime_mismatch, redirect, effective_route_mismatch,
-timeout, tls_error, rate_limited, server_error, waf_challenge, body_limit,
-json_parse_error, schema_error, identity_mismatch, basis_mismatch,
-duplicate_or_overlap, page_reconciliation_error, out_of_window_date,
-missing_requested_endpoint, unexplained_gap, budget_exhausted
-```
+| Condition | Token/outcome | Rule |
+| --- | --- | --- |
+| Successful validated response | `ok` | Continue to coverage reconciliation |
+| DNS/connect/reset | `connection_error` | No series; not absence |
+| TLS / timeout / rate limit | `tls_error` / `timeout` / `rate_limited` | No series; not absence |
+| Unexpected status / WAF | `unexpected_http_status` / `waf_challenge` | No series; not absence |
+| Redirect/effective-route mismatch | `redirect` / `effective_route_mismatch` | No series |
+| Zero-byte body / valid zero-row result | `empty_response` / `empty_result` | No series; no absence claim |
+| MIME/parse/schema/identity/basis failure | `mime_mismatch` / `json_parse_error` / `schema_error` / `identity_mismatch` / `basis_mismatch` | No series |
+| Duplicate/page/date/gap failure | `duplicate_or_overlap` / `page_reconciliation_error` / `out_of_window_date` / `unexplained_gap` | No series |
+| Publication-eligible missing date / calendar-proven nonpublication | `missing_requested_endpoint` / `NONPUBLICATION_RECONCILED` | Fatal / no row and not fatal |
+| Body or atomic budget exhaustion | `body_limit` / `budget_exhausted` | No partial series |
 
-Raw URL/query, body, header, exception, cookie, credential, provider prose, and live rate never
-enter public diagnostics. Public sanitized status/warning names require a fresh API review.
+A route-qualified implementation must extend this provisional map before introducing a new provider
+condition; it must not map an unknown condition to `NOT_SERVED`. These names are not current public
+status/warning/error carriers. No raw URL, query, body, header, exception, cookie, credential,
+provider prose, or live rate enters public diagnostics.
 
 ## 8. Legal/runtime reopen gate
 
@@ -253,12 +273,13 @@ accessor changes, source registration, daily capability, or a new implementation
 - [World Bank `PA.NUS.FCRF`](https://data.worldbank.org/indicator/PA.NUS.FCRF)
 - [Federal Reserve H.10](https://www.federalreserve.gov/releases/h10/current/)
 - [FRED DEXCHUS](https://fred.stlouisfed.org/series/DEXCHUS)
+- [Repository `open.er-api` source contract](../docs/sources/fx-open-er-api.md)
 - [Prior reviewed #217 source note](../docs/research/2026-08-23-daily-cnyvnd-fx-history-source-vetting.md)
 
 ## Bottom summary
 
 - Disposition: **SOURCE-GAP CLOSURE**; daily EUR/VND chain remains empty.
-- No source route was probed: 0 logical calls, 0 physical calls, 0 retries, no live data.
+- Candidate data/API dispatch: 0 logical calls, 0 physical calls, 0 page/cursor calls, 0 retries; static-document transport was not retained or measured.
 - Direct VND-per-1-EUR identity, basis, coverage, runtime, and legal axes are unproven.
 - Current annual USD/VND facade/models/diagnostics remain unchanged.
 - Future budgets stay numeric-unfrozen but require atomic global reservation and fail-closed exhaustion.
