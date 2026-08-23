@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-23 (UTC+7)
 **Packet:** `tasks/217-daily-cnyvnd-fx-history-spec.md` (reviewer packet `4159d74`)
-**Reviewed block:** exact `55f0b1b4d46ece6cab30b647d4c443a4cc3338d6`; report
-`reviews/review-202608231638-issue217-design-source-gate.md` at reviewer `4c317f5`
+**Reviewed block:** exact `b32ca024d93a1e56eb345f707adb4ca717c54ee5`; report
+`reviews/review-202608231705-issue217-corrected-design-rereview.md` at reviewer `dd89975`
 **Requested window:** inclusive `2018-01-01..2026-08-19`
 **Decision:** **SOURCE-GAP CLOSURE** — no daily CNY/VND capability, RED tests, production
 code, source registration, or source-backed daily API claim is authorized by this report.
@@ -51,13 +51,19 @@ redistribute data.
 
 The initial direct-probe session used a fresh process, no credentials, no cookie jar, no
 browser session, no proxy, IPv4, a 5-second connect timeout, a 15-second total timeout, no
-automatic retry, and an explicit desktop User-Agent. One bounded manual repeat was made for
-the Vietcombank 2018 date route after a DNS timeout; it is recorded as retry `1`, not a
-hidden library retry. The correction session repeated the same bounded policy and added
-current Frankfurter v2 and BIS v2 probes with redirect following disabled. Only status,
-complete MIME, effective host/path, envelope shape, counts, dates, and legal statements
-were retained. Query-bearing date/format parameters were used only during probes and are
-not written below or committed; canonical route references are path-only.
+automatic retry, and a benign desktop-class User-Agent. Its retained session-start marker is
+`2026-08-23T16:17:20+07:00`; an end marker was not retained. One bounded manual repeat was
+made for the Vietcombank 2018 date route after a DNS timeout; it is recorded as retry `1`,
+not a hidden library retry. The correction session repeated the same bounded policy and added
+current Frankfurter v2 and BIS v2 probes with redirect following disabled. The exact benign
+correction-session User-Agent value was `vnfin-oss source-design probe` (a descriptive,
+non-browser probe identifier); the initial desktop-class value was not retained verbatim.
+The Frankfurter correction-session timestamp marker was
+`2026-08-23T16:46:44.967256+07:00` (the corresponding UTC probe start); no body, credential,
+cookie, or end marker was retained. Only status, complete MIME, effective host/path, envelope
+shape, counts, dates, and legal statements were retained. Query-bearing date/format parameters
+were used only during probes and are not written below or committed; canonical route references
+are path-only.
 
 ## 3. Exact bounded probe accounting
 
@@ -71,11 +77,11 @@ exploratory probes and is never used as qualification evidence.
 
 ### 3.1 Direct dispatch ledger
 
-The following table is the complete **reproducible publishable** dispatch accounting for the
-source/design packet. Two earlier exploratory BIS requests did not retain full
-MIME/effective-route evidence; they are explicitly retired, excluded from this total, and
-not used to make an absence or qualification claim. The exact v2 correction rows supersede
-them.
+The following table is the complete **evidence-complete reproducible** dispatch accounting for
+the source/design packet. Two earlier exploratory BIS requests were real direct research
+traffic but did not retain full MIME/effective-route evidence. They remain visible as retired
+`NOT_RETAINED` rows below and are excluded from this reproducible subset; the exact v2 correction
+rows supersede them for evidence. They are not used to make an absence or qualification claim.
 
 | Dispatch group | Canonical route/path | Logical targets | Physical calls | Retry reservations | Status / complete MIME / effective route |
 | --- | --- | ---: | ---: | ---: | --- |
@@ -94,14 +100,47 @@ them.
 | Frankfurter v2 provider catalogue | `api.frankfurter.dev/v2/providers` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path |
 | **Reproducible publishable dispatches** | — | **17** | **18** | **1** | **11 × HTTP 200, 2 × HTTP 404, 5 × timeout; 13 complete MIME values retained** |
 
-The exact publishable ledger therefore reports **17 logical targets, 18 physical calls, and
-one explicit retry**. The 11 HTTP 200 rows include current/annual/page data and do not imply
-a qualified daily pair. The two exact BIS v2 404s are not absence oracles; the two successful
-BIS v2 rows prove only that the available VND series in those keys is monthly VND/USD. No
-body or live rate is stored. The two retired exploratory dispatches are outside the evidence
-total by design.
+The two earlier BIS dispatches are counted in total research traffic even though their exact
+target/path and response headers were not retained:
 
-### 3.2 Non-dispatch source and legal inspections
+| Retired direct dispatch | Sanitized target record | Logical targets | Physical calls | Retry reservations | Status / complete MIME / effective route |
+| --- | --- | ---: | ---: | ---: | --- |
+| Earlier BIS exploratory A | `BIS v2 exploratory target; exact path not retained` | 1 | 1 | 0 | `NOT_RETAINED` / `NOT_RETAINED` / `NOT_RETAINED` |
+| Earlier BIS exploratory B | `BIS v2 exploratory target; exact path not retained` | 1 | 1 | 0 | `NOT_RETAINED` / `NOT_RETAINED` / `NOT_RETAINED` |
+| **All direct research traffic, including retired rows** | — | **at least 19** | **at least 20** | **1** | Evidence subset plus two non-authoritative retired dispatches |
+
+The exact evidence-complete subset therefore reports **17 logical targets, 18 physical calls,
+and one explicit retry**. The all-traffic accounting reports **at least 19 logical targets, at
+least 20 physical calls, and one retry**; the lower bound preserves the fact that the two retired
+rows were performed without turning their missing metadata into evidence. The 11 HTTP 200 rows
+include current/annual/page data and do not imply a qualified daily pair. The two exact BIS v2
+404s are not absence oracles; the two successful BIS v2 rows prove only that the available VND
+series in those keys is monthly VND/USD. No body or live rate is stored.
+
+### 3.2 Sanitized target and session detail
+
+These fields make the evidence-complete subset reproducible without storing query-bearing URLs,
+response data, credentials, cookies, or raw headers. A target date or parameter below is an
+intent label, not a claim that the provider served that date.
+
+| Target intent | Canonical path (path-only) | Physical/outcome detail |
+| --- | --- | --- |
+| VCB dated `2018-01-01` initial | `www.vietcombank.com.vn/api/exchangerates` | 1 timeout before response; no MIME/effective route |
+| VCB dated `2018-01-01` bounded repeat | `www.vietcombank.com.vn/api/exchangerates` | 1 retry, HTTP 200, `application/json; charset=utf-8`, canonical path |
+| VCB dated `2020-01-01` | `www.vietcombank.com.vn/api/exchangerates` | 1 timeout before response; no MIME/effective route |
+| VCB dated `2026-08-19` | `www.vietcombank.com.vn/api/exchangerates` | 1 HTTP 200, `application/json; charset=utf-8`, canonical path |
+| SBV SGD route | `dttktt.sbv.gov.vn/TyGia/faces/TyGiaSGD.jspx` | 1 timeout before response; no MIME/effective route |
+| SBV cross-rate route | `dttktt.sbv.gov.vn/TyGia/faces/TyGiaCheo.jspx` | 1 timeout before response; no MIME/effective route |
+| SBV central-rate route | `dttktt.sbv.gov.vn/TyGia/faces/TyGiaTrungTam.jspx` | 1 timeout before response; no MIME/effective route |
+| WDI annual JSON probe intent | `api.worldbank.org/v2/country/VNM/indicator/PA.NUS.FCRF` | Parameter intent `format=json`, `per_page=20000`; 1 HTTP 200 JSON response, canonical path; query omitted |
+
+The initial session marker was `2026-08-23T16:17:20+07:00`; its exact desktop-class User-Agent
+value was not retained. The correction-session marker retained for the Frankfurter probes was
+`2026-08-23T16:46:44.967256+07:00`; its exact benign User-Agent was
+`vnfin-oss source-design probe`. These markers identify bounded research sessions only. The two
+retired BIS rows remain counted all-traffic rows but are not in the reproducible target table.
+
+### 3.3 Non-dispatch source and legal inspections
 
 These are page/document inspections, not successful retrievals and not rows in the direct
 ledger: the Vietcombank quote page; the SBV home/menu; the PBOC RMB-parity announcement;
@@ -120,18 +159,19 @@ candidate unit. The response does not state a stable base/quote, scale, historic
 publication time, or revision rule. The 2018 empty envelope is not historical absence and the
 2020 timeout is transport-unknown.
 
-| Candidate unit | Response-backed observation | Missing for qualification | Disposition |
-| --- | --- | --- | --- |
-| VCB dated `cash` | Recent CNY object contains `cash`; page labels cash purchase | Direct CNY/VND direction, scale, economic basis, historical coverage, revisions, rate policy, caller/storage/redistribution rights | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB dated `transfer` | Recent CNY object contains `transfer`; page labels transfer purchase | Same independent axes; no averaging or substitution with another field | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB dated `sell` | Recent CNY object contains `sell`; page labels sale | Same independent axes; bank sale is not central parity or a midpoint | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB XML `Buy` | Current CNY `Buy` node field; complete XML response | Current/spot only, no dated-history identity, selected economic basis, retention, or reuse permission | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` |
-| VCB XML `Transfer` | Current CNY `Transfer` node field; complete XML response | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` |
-| VCB XML `Sell` | Current CNY `Sell` node field; complete XML response | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` |
+| Candidate unit | Response-backed observation and retained type/nullability | Direction / scale / route-specific rate-retry status | Missing for qualification | Disposition |
+| --- | --- | --- | --- | --- |
+| VCB dated `cash` | Recent CNY JSON object has the `cash` key; value is a JSON scalar or `null` at the response boundary, but exact scalar subtype and historical nullability are unknown; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `transfer` | Recent CNY JSON object has the `transfer` key; value is a JSON scalar or `null` at the response boundary, but exact scalar subtype and historical nullability are unknown; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights; no averaging or substitution with another field | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `sell` | Recent CNY JSON object has the `sell` key; value is a JSON scalar or `null` at the response boundary, but exact scalar subtype and historical nullability are unknown; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights; bank sale is not central parity or a midpoint | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Buy` | Current CNY `Buy` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Current/spot only, no dated-history identity, selected economic basis, retention, or reuse permission | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Transfer` | Current CNY `Transfer` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Sell` | Current CNY `Sell` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
 
 The dated fields share the VCB dated ledger rows but do not share qualification. The XML
-fields share one current response but do not become historical candidates. No field is
-averaged, inverted, midpointed, or used to fill another field.
+fields share one current response but do not become historical candidates. The XML route's
+five-minute note is recorded independently for each XML field and is not silently applied to
+the dated route. No field is averaged, inverted, midpointed, or used to fill another field.
 
 **VCB legal axes:** owner identity is visible; automated access, caller-facing return,
 storage/cache, redistribution/commercial use, attribution, dated-route rate/retry/WAF
@@ -184,8 +224,16 @@ option. The current V2 probes returned:
   provider's terms, and says requests are rate-limited to prevent abuse without publishing
   a route-specific retry/cache/redistribution contract for this library.
 
+The current [Frankfurter owner changelog](https://github.com/lineofflight/frankfurter/blob/main/CHANGELOG.md)
+documents under the v2.0.0 entry (2026-05-18) that default `/v2/rates` values are a blend
+derived from a USD-anchored blend; its current release notes also describe the materialized
+blend as refreshed when provider data arrives. Accordingly, the default CNY/VND response is
+syntactic pair output from a USD-anchored, cross-derived blend, not a direct owner-published
+CNY/VND observation. Provider updates can therefore change the default output. This is a
+positive basis/lineage observation about the facade, not a direct-source or false-absence claim.
+
 Therefore Frankfurter v2 is **not** a qualified direct source. It is a multi-provider facade
-with response-backed pair syntax but unresolved one-owner identity, economic basis, exact
+with response-backed pair syntax but unresolved one-owner identity, direct economic basis, exact
 requested-span coverage, underlying terms, and bounded reuse posture. It is recorded as
 `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP`, not as an
 ECB-v1 absence and not as a route to implement. Provider filtering and attribution would
@@ -258,8 +306,12 @@ current annual contract:
 4. **Facade/result boundary:** the final result rechecks the same invariants and preserves
    one source, one basis, exact dates, and sanitized diagnostics. Existing annual
    `FXHistory` construction, repr, equality, serialization, DataFrame columns, Jan-1
-   period-average semantics, `rate_on()`, `rate_for_year()`, and source token remain byte
-   compatible.
+   period-average semantics, `rate_on()`, and source token remain byte compatible. A future
+   `rate_for_year(year)` is annual-only: on a daily history it raises a typed frequency error
+   before any Jan-1 lookup, so a Jan-1 daily observation can never be misread as an annual
+   period average; annual history retains the current exact Jan-1 behavior. The later RED
+   matrix must exercise both the daily rejection (with a Jan-1 daily point) and the unchanged
+   annual positive path.
 
 The current public `FXPoint`/`FXHistory` shape has no `rate_basis` field. #217 does not add or
 populate one, and annual history is not relabeled. A future qualified-source design must
@@ -290,12 +342,17 @@ observed_start / observed_end    = first/last actual returned observations
   is accounted rather than filled. For a range containing both observations and confirmed
   non-publication dates, the typed result contains only actual points plus one finite
   non-publication warning. If every requested date is confirmed non-publication, the typed
-  result is empty with `points=()`, `latest() is None`, a full evaluated-coverage status,
-  and the same warning. `rate_on(d)` remains exact-match-only and raises for that date; it
-  never returns zero, a prior point, or a nearest date.
+  result is empty with `points=()`, `observed_start = observed_end = None`, `latest() is None`,
+  a full evaluated-coverage status, and the same warning. Its future DataFrame contract is
+  exact and testable: `columns == ["date", "rate"]`, an empty `RangeIndex` (the current
+  `TimeSeriesResult.to_dataframe()` shape, not an implicit empty date index), and the usual
+  provenance attrs; any additive coverage/warning attrs must not alter those columns or index.
+  `rate_on(d)` remains exact-match-only and raises for that date; it never returns zero, a prior
+  point, or a nearest date.
 - A no-row page without provider confirmation is `UNKNOWN`/coverage failure and returns no
-  history. Timeout, HTML/WAF, redirect, 404, truncation, invalid MIME, budget exhaustion,
-  and unreconciled pages never become confirmed non-publication.
+  history. Timeout, HTML/WAF, redirect, 404, truncation, invalid MIME, reservation-budget
+  exhaustion, streaming byte-cap failure, and unreconciled pages never become confirmed
+  non-publication.
 
 The exact public carrier for coverage status, served/observed bounds, and finite warnings is
 not frozen until a source qualifies. It must preserve the total behavior above and current
@@ -309,22 +366,27 @@ retry evidence. The future request nevertheless has these non-negotiable invaria
 - one request-scoped, sequential ledger; no per-source reset, date fan-out, cross-source
   row stitch, or accidental partial result;
 - atomic pre-dispatch reservation for source/page/retry/physical counters; a failed
-  reservation performs no network call;
+  reservation is `reservation_budget_exhausted`, performs no network call, creates no attempt
+  row, and charges no physical dispatch;
 - response bytes are not pre-reserved from an unknown `Content-Length`; while streaming and
   decompressing, each chunk is atomically charged to both the response and global byte
-  counters; overflow aborts before the cap, retains the physical-call charge, and cannot
+  counters; a response/global cap failure is `stream_byte_cap_exhausted` after dispatch,
+  retains the real attempt row and physical-call charge, returns no history, and cannot
   fabricate a successful empty page;
 - a retry reuses the same logical page/cursor, validates its existing ledger row, increments
   only retry and physical counters, and cannot reserve a second logical page for the same
   cursor;
 - capability selection and a source-level skip consume no dispatch budget and create no
-  dispatch attempt record; budget exhaustion is a pre-dispatch source outcome. Dispatch
-  records exist only after a real reservation, so no `SKIPPED` or budget-exhausted phantom
-  attempt is emitted; and
+  dispatch attempt record. Reservation exhaustion is pre-dispatch as specified above, while
+  stream-byte exhaustion is post-dispatch and retains the real attempt. Dispatch records exist
+  only after a real reservation, so no `SKIPPED` or reservation-budget phantom attempt is
+  emitted; and
 - every real dispatch records status, complete MIME, effective route, row count, and
   provider cursor/total once. Missing, duplicate, or unreconciled rows fail the source as a
   whole. Public diagnostic names and exact numeric ceilings are deferred to a qualified
-  source plus a compatibility review.
+  source plus a compatibility review. `reservation_budget_exhausted` and
+  `stream_byte_cap_exhausted` are internal design/test labels here, not frozen public enum or
+  message names.
 
 Only HTTP 200 with an exact source-approved complete MIME may be data-success. A complete
 MIME is parsed after the first colon; 3xx is not followed, and 204/4xx/5xx, DNS/connection/
@@ -385,8 +447,10 @@ A source-gap closure has no implementation step. After a final docs-only design 
 4. leave #218 queued and untouched.
 
 Only if a future source qualifies does a fresh source design plus implementation review
-become necessary. No later implementation, model/accessor, source registration, code, RED,
-push, or close is authorized by this correction.
+become necessary. Before final docs-only PASS, no push or close is authorized. After that PASS,
+the exact publication, remote-verification, resolution, and close sequence above is allowed;
+this correction still authorizes no RED, model/accessor, source registration, code, or runtime
+capability.
 
 ## 8. Sources
 
@@ -402,6 +466,7 @@ push, or close is authorized by this correction.
 - [BIS permitted-use/API terms](https://data.bis.org/help/legal)
 - [ECB reference-rate roster](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)
 - [Frankfurter v2 API documentation](https://frankfurter.dev/)
+- [Frankfurter owner v2 changelog](https://github.com/lineofflight/frankfurter/blob/main/CHANGELOG.md)
 - [Frankfurter currency catalogue](https://frankfurter.dev/currencies/)
 - [Frankfurter CNY coverage page](https://frankfurter.dev/currencies/cny/)
 - [Frankfurter VND coverage page](https://frankfurter.dev/currencies/vnd/)
