@@ -619,7 +619,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   pytest, build, and diff gates pass. The final merged-handoff HEAD is returned with this reviewer
   request; the content anchor is not relabeled as that HEAD. Preserve `SOURCE-GAP CLOSURE`, the
   empty source chain, current `Period.UNKNOWN` and 26-metric behavior, no RED/code/push/close, and
-  queued #222/#223/#224.
+  queued #222/#223/#224/#225.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
@@ -1052,7 +1052,7 @@ _None._
   Prepare fresh VN100-specific VPS/SSI/VNDirect source/design evidence first; exact v0.2.0 predates
   the current registry guard. No proxy, basket, downstream observable, probe, RED/code, push, or
   close before exact-SHA design PASS. Keep queued behind #220; queue order remains #220 → #222 →
-  #223 → #224 and do not interrupt active #220.
+  #223 → #224 → #225 and do not interrupt active #220.
 
 - **#223 — QUEUED_AFTER_#222 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_222_CLOSURE`; packet anchor `6939ba4` for
@@ -1065,7 +1065,15 @@ _None._
   `ACTIVATE_AFTER_223_CLOSURE`; packet anchor `b8ee1e5` for
   `tasks/224-daily-eurvnd-fx-history-spec.md`. Scope is direct daily EUR/VND only; exclude USD
   cross, spot/annual substitution, VN30F logic, and any premature API claim. Keep queued behind
-  #223; no #224 probe, RED, code, push, or close before its turn and exact-SHA design PASS.
+  #223; no #224 probe, RED, code, push, or close before its turn and exact-SHA design PASS. #225
+  remains queued behind #224.
+
+- **#225 — QUEUED_AFTER_#224 (2026-08-23).** Actor `vnfin-oss`; next action
+  `ACTIVATE_AFTER_224_CLOSURE`; packet anchor `7b7fe0b` for
+  `tasks/225-equity-fund-nav-authorized-source-spec.md`, public receipt
+  `issuecomment-5387048240`. Scope is a filtered authorized-source design for equity-fund NAV;
+  Fmarket remains disabled and unprobed. Keep queued behind #224; no #225 source-design, probe,
+  RED, code, push, or close before its turn and exact-SHA design PASS.
 
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
