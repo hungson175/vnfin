@@ -76,17 +76,21 @@ The unit is:
 ```
 
 Every field must be proven for the same unit. The sanitized matrix is in the companion research
-artifact. The binding verdict is:
+artifact. Its §4.2 attempt ledger is normative: every candidate unit has separate route-evidence
+logical/physical counts and cohort logical/physical counts, with explicit skip tokens; no listed/
+UPCoM, issuer/general, or HOSE route units are merged. The binding verdict is:
 
 | Unit | Exact current observation | Verdict |
 |---|---|---|
 | Alpha Vantage | Official `NEWS_SENTIMENT` requires an API key; it remains the existing baseline, not a no-login Vietnamese source. | `NOT_SERVED` for #211; preserve Alpha unchanged. |
-| HNX listed/UPCoM | Strict local TLS-chain verification failed before an admissible response, so no HNX response shape or schema claim is made. | `TRANSPORT_INCONCLUSIVE`; identity, time, pagination, coverage, legal, and rate posture remain unproven. |
+| HNX listed disclosure | Strict local TLS-chain verification failed before an admissible response, so no HNX response shape or schema claim is made. | `TRANSPORT_INCONCLUSIVE`; identity, schema, coverage, legal, and rate posture remain unproven. |
+| HNX UPCoM disclosure | Strict local TLS-chain verification failed before an admissible response, so no HNX response shape or schema claim is made. | `TRANSPORT_INCONCLUSIVE`; identity, schema, coverage, legal, and rate posture remain unproven. |
 | VSDC issuer category | Official HTML `GET /en/alo/ISSUER` returns a broad listing; observed full MIME is `text/html; charset=utf-8`; first-party paging uses the same route with a current-page JSON field. | Technical `PARTIAL` listing only; `IDENTITY_GAP + TIME_GAP + COVERAGE_GAP + PAGINATION_GAP + SENTIMENT_GAP + LEGAL_GAP + RATE_POLICY_GAP`; not a qualified source. |
 | VSDC general news | Official category page mixes issuer/depository/member/VSDC/carbon content and exposes update timestamps, not a complete issuer-news identity/coverage contract. | `NOT_SERVED + IDENTITY_GAP + TIME_GAP + COVERAGE_GAP + LEGAL_GAP + RATE_POLICY_GAP`. |
 | FPT issuer-owned pages | FPT identity and a year-indexed disclosure page are strong issuer-reference evidence, but the public terms limit extraction/sharing to personal/non-commercial use unless FPT gives written consent. | `PARTIAL` reference only; `LEGAL_GAP + RATE_POLICY_GAP + PAGINATION_GAP + COVERAGE_GAP`; no cohort source. |
 | Vingroup issuer-owned page | Official disclosure UI has year/count controls but mixes issuer, bond, and exchange/depository documents; no common item/time/rights contract was accepted. | `PARTIAL` reference only; `IDENTITY_GAP + TIME_GAP + LEGAL_GAP + RATE_POLICY_GAP + COVERAGE_GAP`. |
-| HOSE disclosure/issuer UI | Official page routes exist, but the bounded response is a JavaScript application without an accepted no-login response envelope; no guessed API or login path is allowed. | `TRANSPORT_INCONCLUSIVE + IDENTITY_GAP + TIME_GAP + PAGINATION_GAP + COVERAGE_GAP + LEGAL_GAP + RATE_POLICY_GAP`. |
+| HOSE issuer disclosure | The official issuer-news route is a JavaScript application without an accepted no-login response envelope; no guessed API or login path is allowed. | `TRANSPORT_INCONCLUSIVE + IDENTITY_GAP + TIME_GAP + PAGINATION_GAP + COVERAGE_GAP + LEGAL_GAP + RATE_POLICY_GAP`. |
+| HOSE information disclosure | The official information-disclosure route is a separate JavaScript application without an accepted no-login response envelope; no guessed API or login path is allowed. | `TRANSPORT_INCONCLUSIVE + IDENTITY_GAP + PAGINATION_GAP + COVERAGE_GAP + LEGAL_GAP + RATE_POLICY_GAP`. |
 | SSC disclosure material | Official regulator/legal material is not a returned company-news provider. | `NOT_SERVED + LEGAL_GAP + PAGINATION_GAP + COVERAGE_GAP`. |
 | Issuer-owned feeds | No single owner, schema, route/version, bulk contract, or common rights policy covers the cohort. | `NOT_SERVED + LEGAL_GAP + RATE_POLICY_GAP + COVERAGE_GAP`. |
 | FiinGroup API Datafeed | General official product/terms page identifies a licensed-data candidate; no exact news schema/version is admitted. | `LEGAL_GAP + RATE_POLICY_GAP + PAGINATION_GAP + COVERAGE_GAP + IDENTITY_GAP`; licensed lead only. |
@@ -171,15 +175,26 @@ one audit-global ledger for a 30-manifest/source run. The global ledger is not r
 | retries | 64 maximum (`1/page`) | 1,920 maximum |
 | physical calls | 128 maximum (`64 × (1 initial + 1 retry)`) | 3,840 maximum |
 | candidate rows | 10,000 maximum | 300,000 maximum (`30 × 10,000`) |
-| response body bytes | 8 MiB maximum | 240 MiB maximum (`30 × 8 MiB`) |
+| wire body bytes | 8 MiB maximum | 240 MiB maximum (`30 × 8 MiB`) |
+| decompressed body bytes | 8 MiB maximum | 240 MiB maximum (`30 × 8 MiB`) |
 | concurrency | exactly 1 | exactly 1 |
 | redirects | 0 | 0 |
 | TLS | strict chain verification | strict chain verification |
 
-The row counter charges every decoded item object before deduplication. `response body bytes` means
-`len(response.content)` after transport decompression and before text decode/schema parsing; headers,
-cache, and local serialization do not count. A redirect is never followed and consumes a failed
-reservation. The audit-global ceiling applies even when one bulk request covers multiple symbols.
+The row counter charges every decoded item object before deduplication. The transport must use
+bounded streaming and bounded decompression; it must never call an unbounded `.content` convenience
+accessor or allocate a body based only on `Content-Length`. Only `identity` and one explicitly
+supported compressed encoding (currently `gzip`) are admissible; any other or multiple content
+encoding is terminal. The raw-byte iterator requests chunks no larger than 64 KiB and requests at
+most `min(64 KiB, remaining_wire_cap + 1)` bytes, so it cannot read an unbounded overrun. Charge raw
+wire bytes and decompressed bytes cumulatively against both the query and audit-global ledgers before
+retaining either. `Content-Length` is advisory: missing, compressed, or misleading lengths do not
+weaken enforcement. Feed compressed chunks through a bounded decompressor; reserve decompressed
+output before parsing and allow at most one output-byte overrun sentinel. If wire or decompressed
+bytes would exceed either remaining cap, consume at most that one-byte sentinel, abort the stream,
+and discard the sentinel plus all raw/decoded buffers. No full oversized body is ever materialized or
+parsed. A redirect is never followed and consumes a failed reservation. The audit-global ceiling
+applies even when one bulk request covers multiple symbols.
 
 One request-scoped pair of ledgers is created before network. Every initial page and retry atomically
 reserves `(audit_id, provider, query_id, symbol_scope, page_ordinal, retry_ordinal)` against both
@@ -233,18 +248,14 @@ Only bounded counts, enum values, safe source token, and future-approved coverag
 public. Never leak query URLs, raw cursors/tokens/cookies, headers, provider free text, article
 titles/snippets, bodies, credentials, exception strings, or a failed-source trail.
 
-The future fatal budget outcome is a design-only catch surface, not a current export:
-`NewsBudgetExhausted(VnfinError)` with frozen fields
-`scope: Literal["query", "audit"]`,
-`limit: Literal["logical_queries", "pages", "retries", "physical_calls", "rows", "response_bytes"]`,
-`limit_value: int`, `used_value: int`, `provider: str`, and
-`warnings: tuple[str, ...]`. `provider` is an allow-listed adapter token; `limit_value` is one of
-the table ceilings; `used_value = min(observed_value, limit_value + 1)`; warnings obey the 8-token
-rule. Its sanitized string is exactly
-`news budget exhausted: scope=<scope>; limit=<limit>; used=<used>; provider=<provider>` and is
-bounded to 128 ASCII characters. It carries no URL, symbol, cursor, response text, header, cookie,
-credential, or exception detail. A later qualified-source design must lock this type, export,
-snapshot, and catch behavior before implementation.
+This source-gap note intentionally removes the deferred budget-exception contract: it proposes no
+fatal budget exception, class name, export, constructor, catch surface, or public message.
+`budget_exhausted` is only one bounded warning token in the future review vocabulary; it is not a
+current catch surface or public exception message. A later qualified-source design may choose a fatal
+outcome, but that is a new design obligation and must first specify the exact module/export,
+constructor fields and bounded types, repr/string/snapshot behavior, direct-source propagation,
+facade propagation/catch behavior, and interaction with `NewsResult`/`EmptyData`. Until that fresh
+design passes, no runtime budget exception or message is authorized.
 
 `confirmed_empty` is only future review vocabulary until the coverage API design is approved. A
 qualified source may use it only after its response-backed query scope, authoritative total, and

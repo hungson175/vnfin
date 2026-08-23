@@ -129,9 +129,12 @@ The following is a route-level source-vetting observation, not an archive crawl 
 | Candidate family | Direct observation boundary | Pagination/retry/body behavior |
 |---|---|---|
 | Alpha Vantage | Official documentation and terms only; no credential was used for #211 evidence. | No Alpha request was used as no-login evidence. Existing runtime remains one physical request. |
-| HNX listed and UPCoM disclosure pages | A strict HTTPS request was attempted for each named official route; certificate-chain failure in the local strict verifier prevented any admissible status, MIME, body, or response-shape evidence. | No insecure TLS bypass, redirect follow, page loop, or article/attachment fetch. |
-| VSDC issuer/general-news pages | One sanitized observation of each official category route and its first-party page controls. | No page `POST`, numeric-ID walk, cookie/token reuse, article route, attachment, or body fetch was made for this report. |
-| HOSE disclosure/issuer-news pages | Official route names were recorded as candidate owner paths; no admissible structured response was retained in this pass. | No guessed API call, login route, browser/challenge bypass, or article fetch was used. |
+| HNX listed disclosure | A strict HTTPS request was attempted for the named official listed route; certificate-chain failure in the local strict verifier prevented any admissible status, MIME, body, or response-shape evidence. | No insecure TLS bypass, redirect follow, page loop, or article/attachment fetch. |
+| HNX UPCoM disclosure | A strict HTTPS request was attempted for the named official UPCoM route; the same certificate-chain failure prevented any admissible response evidence. | No insecure TLS bypass, redirect follow, page loop, or article/attachment fetch. |
+| VSDC issuer announcements | One sanitized observation of the official issuer category route and its first-party page controls. | No page `POST`, numeric-ID walk, cookie/token reuse, article route, attachment, or body fetch was made for this report. |
+| VSDC general news | One sanitized observation of the official general-news category route. | No page walk, cookie/token reuse, article route, attachment, or body fetch was made for this report. |
+| HOSE issuer disclosures | The official issuer-news route was recorded as a candidate owner path; no admissible structured response was retained in this pass. | No guessed API call, login route, browser/challenge bypass, or article fetch was used. |
+| HOSE information disclosure | The official information-disclosure route was recorded as a separate candidate owner path; no admissible structured response was retained in this pass. | No guessed API call, login route, browser/challenge bypass, or article fetch was used. |
 | SSC | Official regulator/legal material only. | No regulator page was treated as a company-news feed. |
 | SSI count observation | One already-retained no-login count observation, summarized above; it has no reviewable member manifest. | No member values, history query, or news crawl was added. |
 
@@ -144,8 +147,8 @@ budget and atomic scheduler required before any implementation are in
 | Candidate/unit | Owner and route/method/version | Transport, MIME, envelope, session | Response-backed identity and item shape | Time, ordering, pagination, coverage | Sentiment | Legal/runtime disposition |
 |---|---|---|---|---|---|---|---|
 | Alpha baseline | Alpha Vantage; official `GET /query`; `function=NEWS_SENTIMENT`; documented provider route, no new version selected | API key required; JSON contract documented by provider; not no-login | Provider docs do not establish Vietnamese legal issuer/ISIN binding or a stable owner `provider_id` for this lane. Existing parser preserves publisher `source` separately. | Provider docs describe publication-time filters, sort, and limit; no documented cursor/total/retention/completeness contract for the requested 2,929-day window. | Current fields are provider-owned overall sentiment only; no new Vietnamese ticker-specific lineage is proven. | **NOT_SERVED for #211 candidate lane**; preserve existing BYOK Alpha. |
-| HNX listed disclosure | Hanoi Stock Exchange; `GET /en-gb/thong-tin-cong-bo-ny-hnx.html`; candidate owner route, version not published | Strict local TLS-chain verification failed before any admissible status/MIME/body/shape; no `-k` bypass. | No response-backed issuer, item, or provider-ID evidence is admitted from this route. | No date, page, total, ordering, retention, or requested-window evidence is admitted. | No sentiment fields or licensed model lineage. | **TRANSPORT_INCONCLUSIVE**; identity, time, pagination, coverage, legal, and rate posture remain unproven. |
-| HNX UPCoM disclosure | Hanoi Stock Exchange; `GET /en-gb/thong-tin-cong-bo-up-hnx.html`; candidate owner route, version not published | Same strict TLS-chain failure; no insecure retry or alternate response source. | No response-backed issuer, item, or provider-ID evidence is admitted from this route. | No date, page, total, ordering, retention, or requested-window evidence is admitted. | None proven. | **TRANSPORT_INCONCLUSIVE**; identity, time, pagination, coverage, legal, and rate posture remain unproven. |
+| HNX listed disclosure | Hanoi Stock Exchange; `GET /en-gb/thong-tin-cong-bo-ny-hnx.html`; candidate owner route, version not published | Strict local TLS-chain verification failed before any admissible status/MIME/body/shape; no `-k` bypass. | No response-backed issuer, item, or provider-ID evidence is admitted from this route. | No date, page, total, ordering, retention, or requested-window evidence is admitted. | No sentiment fields or licensed model lineage. | **TRANSPORT_INCONCLUSIVE**; identity, schema, coverage, legal, and rate posture remain unproven. |
+| HNX UPCoM disclosure | Hanoi Stock Exchange; `GET /en-gb/thong-tin-cong-bo-up-hnx.html`; candidate owner route, version not published | Same strict TLS-chain failure; no insecure retry or alternate response source. | No response-backed issuer, item, or provider-ID evidence is admitted from this route. | No date, page, total, ordering, retention, or requested-window evidence is admitted. | None proven. | **TRANSPORT_INCONCLUSIVE**; identity, schema, coverage, legal, and rate posture remain unproven. |
 | VSDC issuer announcements | Vietnam Securities Depository and Clearing Corporation; `GET /en/alo/ISSUER`; first-party script observed an HTML-returning `POST` to the same route with a JSON current-page field; no versioned API contract | Direct `GET` returned `200`, full `Content-Type: text/html; charset=utf-8`, normalized `text/html`, and HTML controls. The server sets an ephemeral HttpOnly token cookie and language cookie; no value is retained or reused. | The page is broad issuer/depository news. It exposes title links such as `/en/ad/<numeric-id>` and a row's update time, but a title/ticker prefix or numeric ID alone is not issuer identity. The category includes rights, dividends, bonds, and member/depository notices, not a complete general company-news namespace. | First page observed 15 rows and a displayed 90,311-record total over 6,021 page controls at observation time. `Date update` is not proven `published_at`; page totals, sort, deletions, retention, arbitrary-date semantics, and complete cohort coverage are unproven. | No exact sentiment field, article-vs-ticker scope, model/version, or reuse right. All sentiment remains `None`. | **PARTIAL technical listing only; not a qualified #211 source**: `IDENTITY_GAP + TIME_GAP + COVERAGE_GAP + PAGINATION_GAP + SENTIMENT_GAP + LEGAL_GAP + RATE_POLICY_GAP`. Legacy numeric VSDC C4 from #203 remains active/non-authoritative for its separate corporate-action scope; it is not a new company-news capability. |
 | VSDC general news | VSDC; `GET /en/tin-tuc`; official category page | Public HTML page; no login was supplied. It exposes category sections and update times, but no owner-backed API/reuse contract. | Category sections include depository, issuer, member, VSDC and carbon-market news; category/title text is not a complete response-backed issuer identity. | UI filters exist, but no authoritative company-news page/total/coverage contract for the requested window was proven. | None proven. | **NOT_SERVED + IDENTITY_GAP + TIME_GAP + COVERAGE_GAP + LEGAL_GAP + RATE_POLICY_GAP**. |
 | FPT issuer-owned disclosure/news | FPT Corporation; official stock identity and public-disclosure/news routes. The disclosure page exposes year controls reaching 2018; the stock page binds FPT Corporation to ticker `FPT`. | Public HTML/sitemap surfaces are reachable without a login, but no stable machine API, owner item ID, or route-specific rate contract was accepted. | Issuer identity is strong for FPT itself, but a single issuer cannot qualify the 30-symbol cohort. URL is not an owner-declared provider ID. | Public dates are update/date values; no source-wide completeness, stable pagination, retention, or publication-time timezone contract was accepted. | No exact provider sentiment lineage. | **PARTIAL issuer reference only + LEGAL_GAP + RATE_POLICY_GAP + PAGINATION_GAP + COVERAGE_GAP**. FPT's terms permit extraction/sharing for personal, non-commercial use with attribution; commercial copying/distribution requires prior written consent, so OSS caller-facing reuse is not authorized. |
@@ -174,28 +177,37 @@ request produced an unusable empty response. This is a transport dependency, not
 permission or a rate contract. The ephemeral `__VPToken`/cookie flow is not logged, cached, or
 republished, and no new runtime request is authorized.
 
-### 4.2 Required count and source-gate accounting
+### 4.2 Required count and source-gate attempt accounting
 
 The observation contains a count of 30 rows/unique values, but no reviewable 30-symbol manifest.
 It therefore has `COHORT_IDENTITY_GAP`; no per-symbol cell or independently retained position is
-claimed. Each candidate unit records the actual zero-call or route-level gate skip below:
+claimed. The exact bounded ledger below separates route evidence from a manifest-based cohort crawl.
+A route-evidence logical attempt is one named official URL/document request; a physical attempt is
+one network dispatch. A cohort logical attempt is one explicit manifest/bulk request scope; its
+physical count is the number of network dispatches. No retry occurred in this evidence pass.
 
-| Candidate unit | Calls against a 30-symbol manifest | Exact source-level disposition |
-|---|---:|---|
-| Alpha Vantage | 0 | `SOURCE_GATE_SKIPPED_NO_LOGIN_EVIDENCE`; existing BYOK baseline is preserved and no VN coverage is inferred. |
-| HNX listed | 0 usable responses | `SOURCE_GATE_SKIPPED_TRANSPORT_INCONCLUSIVE`; no response shape or coverage is claimed. |
-| HNX UPCoM | 0 usable responses | `SOURCE_GATE_SKIPPED_TRANSPORT_INCONCLUSIVE`; no response shape or coverage is claimed. |
-| VSDC issuer/general | 0 cohort crawl calls | `SOURCE_GATE_SKIPPED_IDENTITY_RIGHTS_GAP`; route-level observation is not per-symbol coverage. |
-| HOSE/SSC | 0 cohort crawl calls | `SOURCE_GATE_SKIPPED_TRANSPORT_SCHEMA_GAP`; no absence claim. |
-| Issuer-owned feeds | 0 bulk/cohort calls | `SOURCE_GATE_SKIPPED_NO_SINGLE_SOURCE_UNIT`; one-off routes are not a source. |
-| FiinGroup/GDELT | 0 cohort calls | `SOURCE_GATE_SKIPPED_IDENTITY_RIGHTS_COVERAGE_GAP`; no schema or 30-cell claim. |
-| Other licensed aggregator | 0 cohort calls | `SOURCE_GATE_SKIPPED_NO_QUALIFIED_CANDIDATE`; rights and identity remain unresolved. |
+| Candidate unit | Route evidence (logical/physical) | Cohort crawl (logical/physical) | Exact source-level disposition |
+|---|---:|---:|---|
+| Alpha Vantage | 2 / 2 official documentation/terms fetches; 0 API calls | 0 / 0 | `SOURCE_GATE_SKIPPED_NO_LOGIN_EVIDENCE`; existing BYOK baseline is preserved. |
+| HNX listed disclosure | 1 / 1 strict route attempt; TLS failed before a usable response | 0 / 0 | `SOURCE_GATE_SKIPPED_TRANSPORT_INCONCLUSIVE`; no response shape or coverage is claimed. |
+| HNX UPCoM disclosure | 1 / 1 strict route attempt; TLS failed before a usable response | 0 / 0 | `SOURCE_GATE_SKIPPED_TRANSPORT_INCONCLUSIVE`; no response shape or coverage is claimed. |
+| VSDC issuer announcements | 1 / 1 bounded GET observation; no page POST/walk | 0 / 0 | `SOURCE_GATE_SKIPPED_IDENTITY_RIGHTS_GAP`; route-level observation is not per-symbol coverage. |
+| VSDC general news | 1 / 1 bounded route observation | 0 / 0 | `SOURCE_GATE_SKIPPED_IDENTITY_RIGHTS_GAP`; no general-news cohort claim. |
+| HOSE issuer disclosures | 1 / 1 bounded official-route observation | 0 / 0 | `SOURCE_GATE_SKIPPED_TRANSPORT_SCHEMA_GAP`; no absence claim. |
+| HOSE information disclosure | 1 / 1 bounded official-route observation | 0 / 0 | `SOURCE_GATE_SKIPPED_TRANSPORT_SCHEMA_GAP`; no absence claim. |
+| SSC regulator material | 1 / 1 bounded official-portal/legal observation | 0 / 0 | `SOURCE_GATE_SKIPPED_NOT_A_COMPANY_NEWS_UNIT`; no issuer-news coverage claim. |
+| FPT issuer-owned disclosure/news | 2 / 2 bounded official-page observations | 0 / 0 | `SOURCE_GATE_SKIPPED_COHORT_BREADTH_LEGAL_GAP`; one issuer is not a cohort source. |
+| Vingroup issuer-owned disclosure | 1 / 1 bounded official-page observation | 0 / 0 | `SOURCE_GATE_SKIPPED_COHORT_BREADTH_LEGAL_GAP`; no cohort source. |
+| Issuer-owned IR/news feeds | 0 / 0; no single feed selected | 0 / 0 | `SOURCE_GATE_SKIPPED_NO_SINGLE_SOURCE_UNIT`; one-off routes are not a source. |
+| FiinGroup licensed datafeed | 1 / 1 official product/terms observation; no news schema call | 0 / 0 | `SOURCE_GATE_SKIPPED_RIGHTS_SCHEMA_GAP`; no schema or 30-cell claim. |
+| GDELT licensed/open metadata | 1 / 1 official terms observation | 0 / 0 | `SOURCE_GATE_SKIPPED_IDENTITY_COVERAGE_GAP`; rights alone do not qualify the cohort. |
+| Other licensed publisher/aggregator | 0 / 0; no named candidate selected | 0 / 0 | `SOURCE_GATE_SKIPPED_NO_QUALIFIED_CANDIDATE`; rights and identity remain unresolved. |
 
-No `0 articles`, `0 coverage`, or `confirmed_empty` value is emitted for any symbol. “0 calls”
-means that the source gate prevented a crawl; it does not mean the provider returned no news. A
-future reopen must attach a newly authorized reviewable manifest with 30 distinct canonical symbols,
-owner/caller provenance, retrieval timestamp, and a digest or equivalent content identity before
-any per-symbol coverage accounting begins.
+The source-level route count is not a provider row count and does not prove absence. “0 / 0” in the
+cohort column means that the source gate prevented a manifest crawl; it does not mean the provider
+returned no news. A future reopen must attach a newly authorized reviewable manifest with 30 distinct
+canonical symbols, owner/caller provenance, retrieval timestamp, and a digest or equivalent content
+identity before any per-symbol coverage accounting begins.
 
 ## 5. Identity, time, content, and sentiment gate
 
@@ -220,9 +232,9 @@ closed.
 
 `published_at_utc` may be populated only from a provider field whose meaning, timezone, precision,
 and publication-versus-update distinction are documented or response-backed. A date-only value is
-not midnight UTC. `fetched_at_utc` is retrieval time only. VSDC's observed `Date update` and HNX's
-portal `Time` are not silently promoted to publication instants. No item is mapped to a VN cash or
-futures session by this issue.
+not midnight UTC. `fetched_at_utc` is retrieval time only. VSDC's observed `Date update` and any
+unverified portal date/time label are not silently promoted to publication instants. No item is mapped
+to a VN cash or futures session by this issue.
 
 The library may return metadata only: URL, licensed title, exact publisher, publication instant,
 content kind, exact tickers, optional licensed snippet, and provider-owned sentiment. It must reject
@@ -289,14 +301,24 @@ audit-global ledger for one 30-manifest/source run. The global ledger is not res
 | retries | 64 maximum (`1/page`) | 1,920 maximum |
 | physical calls | 128 maximum (`64 × (1 initial + 1 retry)`) | 3,840 maximum |
 | candidate rows | 10,000 maximum | 300,000 maximum (`30 × 10,000`) |
-| response body bytes | 8 MiB maximum | 240 MiB maximum (`30 × 8 MiB`) |
+| wire body bytes | 8 MiB maximum | 240 MiB maximum (`30 × 8 MiB`) |
+| decompressed body bytes | 8 MiB maximum | 240 MiB maximum (`30 × 8 MiB`) |
 | concurrency | exactly 1 | exactly 1 |
 
 The row counter charges every decoded item object before deduplication, so duplicates cannot evade a
-cap. `response body bytes` is `len(response.content)` after transport decompression and before text
-decode/schema parsing; headers, cached data, and local serialization do not count. A redirect is
-never followed and consumes a failed reservation. The audit-global ceiling applies even when one
-bulk request covers multiple symbols.
+cap. The transport must use bounded streaming and bounded decompression; it must never call an
+unbounded `.content` convenience accessor or allocate a body based only on `Content-Length`. Only
+`identity` and one explicitly supported compressed encoding (currently `gzip`) are admissible; any
+other or multiple content encoding is terminal. The raw-byte iterator requests chunks no larger than
+64 KiB and requests at most `min(64 KiB, remaining_wire_cap + 1)` bytes, so it cannot read an
+unbounded overrun. Charge raw wire bytes and decompressed bytes cumulatively against both the query and
+audit-global ledgers before retaining either. `Content-Length` is advisory: missing, compressed, or
+misleading lengths do not weaken enforcement. Feed compressed chunks through a bounded decompressor;
+reserve decompressed output before parsing and allow at most one output-byte overrun sentinel. If
+wire or decompressed bytes would exceed either remaining cap, consume at most that one-byte sentinel,
+abort the stream, and discard the sentinel plus all raw/decoded buffers. No full oversized body is
+ever materialized or parsed. A redirect is never followed and consumes a failed reservation. The
+audit-global ceiling applies even when one bulk request covers multiple symbols.
 
 ### 6.3 Atomic deterministic scheduler
 
@@ -353,18 +375,14 @@ These tokens are design vocabulary only; no new token is added to the current ru
 this commit. `coverage_partial_known` requires authoritative observed bounds and a bounded reason;
 it is not an empty-list token. `source_gap` is the current disposition.
 
-The future fatal budget outcome is a design-only catch surface, not a current export:
-`NewsBudgetExhausted(VnfinError)` with frozen fields
-`scope: Literal["query", "audit"]`,
-`limit: Literal["logical_queries", "pages", "retries", "physical_calls", "rows", "response_bytes"]`,
-`limit_value: int`, `used_value: int`, `provider: str`, and
-`warnings: tuple[str, ...]`. `provider` is an allow-listed adapter token; `limit_value` is one of
-the table ceilings; `used_value = min(observed_value, limit_value + 1)`; warnings obey the 8-token
-rule. Its sanitized string is exactly
-`news budget exhausted: scope=<scope>; limit=<limit>; used=<used>; provider=<provider>` and is
-bounded to 128 ASCII characters. It carries no URL, symbol, cursor, response text, header, cookie,
-credential, or exception detail. A later qualified-source design must lock this type, export,
-snapshot, and catch behavior before any implementation.
+This source-gap note intentionally removes the deferred budget-exception contract: it proposes no
+fatal budget exception, class name, export, constructor, catch surface, or public message.
+`budget_exhausted` is only one bounded warning token in the future review vocabulary; it is not a
+current catch surface or public exception message. A later qualified-source design may choose a fatal
+outcome, but that is a new design obligation and must first specify the exact module/export,
+constructor fields and bounded types, repr/string/snapshot behavior, direct-source propagation,
+facade propagation/catch behavior, and interaction with `NewsResult`/`EmptyData`. Until that fresh
+design passes, no runtime budget exception or message is authorized.
 
 ## 7. Legal, rate, and owner contact closure
 
@@ -413,11 +431,11 @@ must explicitly cover both where they differ.
 These are owner contact routes for a permission/contract question, not data sources and not evidence
 that permission exists:
 
-| Owner | Official contact path | Question to ask |
+| Owner | Candidate official contact path | Question to ask |
 |---|---|---|
-| HNX | [HNX contact](https://www.hnx.vn/en-gb/lien-he.html); `hnx@hnx.vn`, investor support `hotline@hnx.vn` | Whether the exact issuer-disclosure route permits no-login automated metadata retrieval, rate/concurrency, title/link storage, attribution, retention, and redistribution. |
-| HOSE | [HOSE contact](https://www.hsx.vn/vi/lien-he); `hotline@hsx.vn` | Same questions for the issuer-news/disclosure route, including JS/API access and original issuer attachment rights. |
-| VSDC | [VSDC contact](https://vsd.vn/vi/ads/tAPN4%47%65z5an%47D8ztNn7I_w); IT `0243 974 7125`, general `(+84.24) 3 9747 123` | Permission for exact category route, token/cookie behavior if applicable, rate/concurrency, fields, storage, derived rows, deletion, attribution, and redistribution. |
+| HNX | [HNX contact](https://www.hnx.vn/en-gb/lien-he.html) | Whether the exact issuer-disclosure route permits no-login automated metadata retrieval, rate/concurrency, title/link storage, attribution, retention, and redistribution. |
+| HOSE | [HOSE contact](https://www.hsx.vn/vi/lien-he) | Same questions for the issuer-news/disclosure route, including JS/API access and original issuer attachment rights. |
+| VSDC | [VSDC contact](https://vsd.vn/vi/ads/tAPN4%47%65z5an%47D8ztNn7I_w) | Permission for exact category route, token/cookie behavior if applicable, rate/concurrency, fields, storage, derived rows, deletion, attribution, and redistribution. |
 | Issuer/aggregator | Owner's published legal/IR contact only | Written authorization from both aggregator and original publisher where title/link/sentiment rights differ. |
 
 Until written owner evidence is received and reviewed, `legal_status=UNRESOLVED_PERMISSION_REQUIRED`,
