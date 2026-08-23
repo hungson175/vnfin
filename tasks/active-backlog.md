@@ -1048,6 +1048,14 @@ _None._
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind #218 and
   do not start source/design, RED, code, push, or close before its turn and exact-SHA design PASS.
 
+- **#220 — QUEUED_AFTER_#219 (2026-08-23).** Actor `vnfin-oss`; next action
+  `SOURCE_DESIGN_AFTER_219_REVIEW_HANDOFF`; packet anchor
+  `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for `tasks/220-annual-roe-ratio-history-spec.md`,
+  public receipt `issuecomment-5385517511`. Scope provider-published annual ROE through the
+  existing fundamentals call only if qualified; exclude current/TTM/request-echo/derived/proxy
+  ROE and the reporter's external artifact. Keep queued behind #219; no #220 source-design, RED,
+  code, push, or close before its turn and exact-SHA design PASS.
+
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
