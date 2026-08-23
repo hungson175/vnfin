@@ -1035,6 +1035,16 @@ _None._
 
 ## Next
 
+- **#221 — QUEUED_AFTER_#218_BEFORE_#219_#220 (2026-08-23).** Actor `vnfin-oss`; next action
+  `SOURCE_DESIGN_AFTER_218_REVIEW_HANDOFF`; packet anchor
+  `1cc60cd99e7ed8b28214eb3a5cf9375c4a7c5376` for
+  `tasks/221-fmarket-current-runtime-terms-audit-spec.md`; public issue
+  `https://github.com/hungson175/vnfin/issues/221`. Record only now and do not interrupt #218.
+  After the #218 handoff, prepare exact source/legal design for current Fmarket listing, NAV,
+  holdings, and allocation and choose `CLEARED_AS_IS`, `CLEARED_WITH_LIMITS`,
+  `DISABLE_PENDING_PERMISSION`, or `REMOVE_SOURCE`. No Fmarket API probe, RED/code/push/close before
+  exact design PASS; keep #219/#220 queued behind this handoff.
+
 - **#219 — QUEUED_AFTER_#218 (2026-08-23).** Actor `vnfin-oss`; next action
   `SOURCE_DESIGN_AFTER_218_REVIEW_HANDOFF`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind #218 and
