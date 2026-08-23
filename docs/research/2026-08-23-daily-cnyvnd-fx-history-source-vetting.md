@@ -29,8 +29,9 @@ Therefore:
 - `vnfin.fx.history(..., frequency=Frequency.DAILY)` remains unserved and unchanged;
 - no provider is promoted by numerical agreement, cross-rate arithmetic, a facade, a
   current quote, a search result, or an empty response;
-- no raw response, live rate, cookie, header, query-bearing URL, or live fixture is
-  retained in this repository; and
+- no raw response, live rate, cookie, raw header block, query-bearing URL, or live fixture is
+  retained in this repository; sanitized complete-MIME fields are retained only as ledger
+  metadata; and
 - a later implementation requires a fresh design/implementation authorization. This
   report is not a production capability.
 
@@ -60,8 +61,8 @@ not a hidden library retry. The correction session repeated the same bounded pol
 current Frankfurter v2 and BIS v2 probes with redirect following disabled. The exact benign
 correction-session User-Agent value was `correction_user_agent=vnfin-oss source-design probe`
 (a descriptive, non-browser probe identifier). The Frankfurter correction-session timestamp
-marker was `correction_session_start=2026-08-23T16:46:44.967256+07:00` (the corresponding UTC
-probe start); `correction_session_end=NOT_RETAINED` and
+marker was `correction_session_start=2026-08-23T16:46:44.967256+07:00` (UTC+7; the
+corresponding UTC instant is `2026-08-23T09:46:44.967256Z`); `correction_session_end=NOT_RETAINED` and
 `bis_correction_session_marker=NOT_RETAINED`. No body, credential, or cookie was retained.
 Only status, complete MIME, effective host/path, envelope shape, counts, dates, and legal
 statements were retained. Query-bearing date/format parameters were used only during probes and
@@ -74,8 +75,10 @@ the same response does not multiply calls. A **physical call** is one actual HTT
 A **retry** reuses an existing logical target after its first physical dispatch. `complete
 MIME` means the complete `Content-Type` value after the first colon, including parameters;
 `effective route` is the final host/path with redirect following disabled. `NONE_BEFORE_RESPONSE`
-means a timeout occurred before a response. `NOT_RETAINED` is used only for two earlier BIS
-exploratory probes and is never used as qualification evidence.
+means a timeout occurred before a response. `NOT_RETAINED` means the field was not durably
+captured and cannot support qualification or absence. The two retired BIS exploratory rows use
+it for missing dispatch path/MIME/status metadata; session/UA fields and the dated VCB observed-
+type/nullability cells use the same marker for their own missing retained fields.
 
 ### 3.1 Direct dispatch ledger
 
