@@ -601,19 +601,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#218 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), SOURCE-GAP CLOSURE handoff.** Actor
-  `vnfin-oss`; next action `RETURN_EXACT_SHA_VERDICT` to reviewer `vnfin-oss-reviewer`. Activation
-  followed verified #217 closure at published exact anchor
-  `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`, clean-resolution receipt `issuecomment-5385552728`,
-  and local activation `77671d4`. Authoritative packet
-  `tasks/218-etf-discovery-nav-history-spec.md` at reviewer `5acb355`, public receipt
-  `issuecomment-5385276364`. The exact handoff commit contains only
-  `docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md`,
-  `tasks/218-design-note.md`, and this backlog lifecycle record. It keeps Fmarket ETF discovery and
-  provider-published NAV history unserved: no single source proves product type, code/product/NAV
-  identity, requested coverage, bounded runtime, and lawful reuse together. Discount/first-
-  difference/VN30F remain caller-side. No #218 RED/code/push/close before exact-SHA design PASS;
-  #219/#220 remain queued.
+- **#218 — DESIGN_BLOCKED (2026-08-23), source/design gate.** Record BLOCK first at reviewed exact
+  anchor `ce1db49fe2508a900ed2f68b43054401cb0b8da5`; report
+  `reviews/review-202608231755-issue218-design-source-gate.md`, reviewer
+  `958a39fbaeb8a9a17b89020372d21cbf5f6e1fc1`, delivery `ecb1cb61`. Expected correction actor is
+  `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Correct B1-B6 only:
+  reconcile Fmarket terms with the existing mutual-fund runtime as a separate durable legal-risk
+  disposition; independently evaluate official owner route sets without Fmarket probes; correct
+  support/Dragon/blacklist wording; defer unsupported code grammar and numeric budgets while
+  recording real current seams; bind one owner route set; and pin the lifecycle/docs transition.
+  Preserve SOURCE-GAP, caller-side discount/first-difference/VN30F, no probes/RED/code/push/close,
+  and queued #219/#220.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
