@@ -27,6 +27,22 @@ from vnfin.funds import (
     SectorWeight,
 )
 
+
+@pytest.fixture(autouse=True)
+def _allow_synthetic_fmarket_parser(monkeypatch):
+    """Keep legacy parser/schema fixtures offline without exposing a public bypass.
+
+    #221's real disable contract is exercised in ``test_issue221_fmarket_disable.py``.
+    Existing tests in this module intentionally exercise parser behavior with fabricated
+    payloads, so they use this private test-only seam rather than a runtime/config toggle.
+    """
+    monkeypatch.setattr(
+        FmarketFundSource,
+        "_raise_disabled_pending_permission",
+        lambda self: None,
+        raising=False,
+    )
+
 # ---------------------------------------------------------------------------
 # synthetic payloads (shapes mirror api.fmarket.vn, no real rows)
 # ---------------------------------------------------------------------------
