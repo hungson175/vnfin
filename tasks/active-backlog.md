@@ -603,12 +603,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 ## Now (WIP)
 
 - **#219 — ACTIVE SOURCE_DESIGN (2026-08-23).** Actor `vnfin-oss`; next action
-  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor `f2d0187` for
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
   `issuecomment-5385376214`. #221 is verified `CLOSED`/`COMPLETED`, so #219 is now active for
   source/design only. Scope is provider-published VNM national monthly IIP YoY through the existing
   macro surface if qualified; annual/index/cumulative substitutes and acceleration/VN30F logic
-  remain excluded. No RED, code, push, or close before exact-SHA design PASS.
+  remain excluded. Source/design artifacts are prepared in
+  `docs/research/2026-08-23-vietnam-monthly-industrial-production-yoy-source-vetting.md` and
+  `tasks/219-design-note.md`; disposition is `SOURCE-GAP CLOSURE` with an empty new source chain.
+  No RED, code, push, or close before exact-SHA design PASS. #220, #222, #223, and #224 remain
+  queued and are not activated by this handoff.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
@@ -1048,8 +1052,21 @@ _None._
   `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
   Prepare fresh VN100-specific VPS/SSI/VNDirect source/design evidence first; exact v0.2.0 predates
   the current registry guard. No proxy, basket, downstream observable, probe, RED/code, push, or
-  close before exact-SHA design PASS. Keep queued behind #220; queue order remains #221 → #219 →
-  #220 → #222 and do not interrupt active #221.
+  close before exact-SHA design PASS. Keep queued behind #220; queue order remains #219 → #220 →
+  #222 → #223 → #224 and do not interrupt active #219.
+
+- **#223 — QUEUED_AFTER_#222 (2026-08-23).** Actor `vnfin-oss`; next action
+  `ACTIVATE_AFTER_222_CLOSURE`; packet anchor `6939ba4` for
+  `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
+  Current master recognizes VNCOND deny-only; exact v0.2.0 predates the current registry guard.
+  Keep queued behind #222; no #223 source-design, probe, RED, code, push, or close before its turn
+  and exact-SHA design PASS.
+
+- **#224 — QUEUED_AFTER_#223 (2026-08-23).** Actor `vnfin-oss`; next action
+  `ACTIVATE_AFTER_223_CLOSURE`; packet anchor `b8ee1e5` for
+  `tasks/224-daily-eurvnd-fx-history-spec.md`. Scope is direct daily EUR/VND only; exclude USD
+  cross, spot/annual substitution, VN30F logic, and any premature API claim. Keep queued behind
+  #223; no #224 probe, RED, code, push, or close before its turn and exact-SHA design PASS.
 
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
