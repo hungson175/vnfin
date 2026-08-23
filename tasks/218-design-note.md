@@ -3,242 +3,198 @@
 **Status:** `SOURCE-GAP CLOSURE`; exact-SHA source/design only; no RED, code, source registration,
 model/accessor change, push, or close
 **Packet:** `tasks/218-etf-discovery-nav-history-spec.md` at reviewer `5acb355`
-**Research:** [`docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md`](../docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md)
+**Research:** [source vetting](../docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md)
 **Requested inclusive span:** `2018-01-01..2026-08-19`
-**Published base:** `8350329d3d881e34df62937aacf7ea4d74f99f91`
-**Current published tree:** `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`
+**Published base:** `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`
+**Block record:** `9c48084`; reviewed anchor `ce1db49fe2508a900ed2f68b43054401cb0b8da5`
 **Local activation:** `77671d42d9be16d1c4264397cf9939c266f6b4d8` (backlog-only and unpushed)
 
-This note is the exact design handoff for a documentation-only source-gap closure. It does not
-authorize a new ETF token, public model, parser, source registration, runtime call, RED test, or
-coverage assertion. The current Fmarket surface remains open-ended mutual funds. Discount,
-first-difference, replay, strategy, and VN30F comparison stay caller-side.
+This is a documentation-only source-gap correction. It does not authorize a new ETF token, public
+model, parser, source registration, runtime call, RED test, or coverage assertion. The current
+Fmarket surface remains open-ended mutual funds. Discount, first-difference, replay, strategy, and
+VN30F comparison stay caller-side.
 
 ## 1. Decision and source-gap boundary
 
-`SOURCE-GAP CLOSURE` is the only qualified disposition for the requested Fmarket-backed capability.
-The reviewed official Fmarket catalogue and product pages describe open-ended funds; the official
-Fmarket terms restrict software collection/copying/monitoring and do not grant API automation,
-caller return, storage, or redistribution rights. Fmarket's own ETF explainer establishes only a
-conceptual distinction, not an ETF product row or data route.
+`SOURCE-GAP CLOSURE` is the only qualified disposition for the requested capability. Fmarket's
+official terms restrict software collection/copying/monitoring and do not grant API automation,
+caller return, storage, or redistribution rights. The no-probe decision is therefore preserved.
 
-Official manager/exchange documents corroborate that Vietnamese ETFs and provider-published NAV
-reports exist, but they do not bind those products to Fmarket's `product_id` or route and do not
-provide an OSS runtime/redistribution grant. Cross-source ticker matching is not allowed to repair
-that gap. No candidate therefore passes the complete source unit:
+Alternative official owner route sets were independently reviewed rather than rejected for lacking a
+Fmarket ID. VinaCapital's VN100 ETF page plus its linked NAV-document family is a real candidate:
+it proves FUEVN100/ETF/HOSE identity, product inception, and named daily/weekly NAV reports. It does
+not prove the requested 2018 start, a complete historical index, correction semantics, bounded
+machine retrieval, or lawful OSS reuse. HOSE contributes a one-document NAV identity shape; Dragon
+and VSDC provide narrower support/context. No owner route set passes all axes, so the new chain stays
+empty and SOURCE-GAP remains honest. No cross-owner stitch is permitted.
+
+The complete future qualification unit is:
 
 ```text
-owner + exact route/version + response-backed ETF product identity
-+ code/product/detail/NAV binding + provider-published NAV semantics
-+ requested or declared partial coverage + bounded runtime
+one owner + one approved bounded route set
++ response/document-backed ETF identity and selected product basis
++ discovery/detail/NAV binding + provider-published NAV semantics
++ requested or declared partial coverage + revision/non-publication rules
 + lawful automation/caller-return/storage/redistribution posture
 ```
 
-The future daily/caller-side calculations are not part of this source gap and no existing annual or
-other fund behavior is changed.
-
 ## 2. Current API and compatibility contract
 
-The exact v0.2.0/current comparison leaves these public seams unchanged:
+The v0.2.0/current comparison is not identical:
+
+| Seam | v0.2.0 | Current published tree | #218 |
+| --- | --- | --- | --- |
+| `list_funds` | `asset_type=None, search="", page_size=100` | Adds `include_metadata=True`, validation, and existing warnings | Unchanged |
+| `Fund` | Original code/name/id/nav/manager/asset_type/currency fields | Adds optional `nav_as_of`, `management_fee_pct`, `inception_date`, `description` | Unchanged |
+| `NavHistory` | Existing product-ID history, VND/unit, optional `code` | Same public shape with current window/diagnostic behavior | Unchanged |
+| Code/search seams | Search is free text; response helper is existing | `search` remains free text; `canonical_fund_code` remains current `[A-Z][A-Z0-9]*` response grammar | No ETF grammar |
+| Fmarket routes | Mutual-fund filter/detail/NAV baselines | Same provider route family | No ETF route |
+
+The following is a future compatibility sketch, not a working capability:
 
 ```python
 src = vnfin.funds.source()
-listing = src.list_funds(
-    asset_type="ETF", search="E1VFVN30", include_metadata=True
-)
-history = src.nav_history(
-    product_id, from_date="2018-01-01", to_date="2026-08-19"
-)
+listing = src.list_funds(asset_type="ETF", search="E1VFVN30", include_metadata=True)
+history = src.nav_history(product_id, from_date="2018-01-01", to_date="2026-08-19")
 ```
 
-The snippet is a future compatibility target, not a working capability. In the current adapter:
+Current `list_funds.search` is free text and `asset_type` is forwarded to
+`fundAssetTypes`; no official proof makes `ETF` a selector or product-type token. Current
+`nav_history` requires a response-backed mutual-fund product ID. A blank/unserved filter is not
+confirmed absence. No new ETF code grammar is frozen: any selector normalization, provider
+translation, or future `NavHistory.code` provenance is deferred to source proof plus a fresh
+RED/API review. Legacy asset strings and response-code compatibility remain protected.
 
-- `list_funds()` is documented for the provider's existing mutual-fund asset classes;
-- the current adapter forwards an asset string to `fundAssetTypes`, but no official evidence proves
-  that `ETF` is a provider token or that it means product type rather than investment asset class;
-- an empty `ETF` result is not confirmed empty and must not be broadened to all funds or fuzzy-matched
-  locally;
-- `nav_history()` requires a response-backed provider product ID and currently serves the existing
-  open-ended-fund contract only; no ETF ID is known;
-- `Fund.asset_type` is a provider asset-class field, not a proven ETF product-type field; and
-- `Fund`, `FundList`, `NavPoint`, and `NavHistory` remain byte-compatible and unchanged in this note.
+## 3. Qualification predicates
 
-A future implementation may translate a normalized public `asset_type="ETF"` selector to a
-provider-specific token only after official response/docs proof. It must preserve existing arbitrary
-legacy asset strings and must not silently reinterpret an empty filter. If the provider cannot prove
-that selector, a future implementation must return a typed source/selector outcome before network
-rather than `EmptyData`; the exact public exception/message requires a fresh RED/API review and is
-not frozen here.
+A future positive fixture must prove, without cross-source joins:
 
-For future ETF code inputs, the design-only grammar is: trim ASCII spaces, uppercase, require one
-ASCII letter followed by at most 15 ASCII letters/digits, and reject punctuation, internal/control
-characters, blank values, and overlong values before network. This is a future validation contract,
-not a change to the current fund-code helper. Legacy fund asset strings remain compatibility-sensitive.
+1. the owner route accepted an exact ETF selector/code and identified ETF product type independently
+   from an investment asset class;
+2. the selected product has response/document-backed code, legal name, manager, owner/product identity,
+   and exchange/listing identity;
+3. discovery/detail/NAV documents bind the same selected product without duplicate, renamed, delisted,
+   share-class, or cross-product ambiguity;
+4. every NAV row is scoped to that selected product and is provider-published NAV per unit in VND,
+   not iNAV, market price, adjusted price, or local derivation;
+5. date/publication/timezone, unit, cadence, correction, cancellation, revision, and same-date conflict
+   semantics are explicit; and
+6. requested or provider-declared partial coverage, pages/totals/cursors, non-publication, and observed
+   endpoints reconcile for `2018-01-01..2026-08-19`.
 
-## 3. Qualification unit and identity predicates
+Existing repository route baselines are not ETF proof:
 
-Discovery and NAV history are separate route units but qualify only conjunctively for the same
-selected product. A future positive fixture must prove:
-
-1. the provider response accepted the ETF selector or exact code search and identifies product type
-   `ETF` independently from an investment asset class such as equity or bond;
-2. the selected row contains a public code, legal fund name, manager, provider `product_id`, and
-   exchange/listing identity where the owner publishes it;
-3. a detail response, if used, repeats the same provider ID/code/name/product type without duplicate,
-   renamed, delisted, share-class, or cross-product ambiguity;
-4. every NAV row either carries the same provider ID or is provably scoped to the selected ID; a
-   present wrong, null, boolean, or malformed ID fails closed;
-5. code, product ID, legal name, manager, and listing identity are all response-backed; no name-only
-   fuzzy match, market quote, or cross-source join can complete a missing field; and
-6. a second discovery row with the same canonical code or ID is an identity failure, not a dedupe.
-
-The existing provider route baseline is:
-
-| Unit | Existing repository route baseline | Future required proof | Current disposition |
+| Unit | Current baseline | Required owner proof | Disposition |
 | --- | --- | --- | --- |
-| ETF discovery | `POST https://api.fmarket.vn/res/products/filter` | Official selector/token, exact body, success envelope, response identity, totals/pages, MIME, redirect/WAF and legal permission | `SOURCE-GAP` |
-| Selected-product detail | `GET https://api.fmarket.vn/res/products/{id}` | Stable ID-to-code/product/manager/type/listing binding, exact MIME, legal permission | `SOURCE-GAP` |
-| ETF NAV history | `POST https://api.fmarket.vn/res/product/get-nav-history` | Same product ID, provider-published NAV field, date/unit/currency/revision semantics, pages/totals/cadence, legal permission | `SOURCE-GAP` |
+| ETF discovery | `POST https://api.fmarket.vn/res/products/filter` | Owner selector/token, success/document identity, totals/pages, transport, legal permission | `SOURCE-GAP` |
+| Selected detail | `GET https://api.fmarket.vn/res/products/{id}` | Same owner/product/code/type/listing binding and permission | `SOURCE-GAP` |
+| ETF NAV history | `POST https://api.fmarket.vn/res/product/get-nav-history` | Same basis, NAV/unit/date/revision/cadence/bounds, permission | `SOURCE-GAP` |
 
-The route names above are current repository assumptions for mutual funds, not current ETF API proof.
-No direct API dispatch was made because the official terms did not grant automated collection.
+No Fmarket dispatch was made. The three paths are mutual-fund compatibility assumptions only.
 
-## 4. Provider-published NAV contract
+## 4. Independent official route-set evidence
 
-A future qualified NAV row must be the provider's NAV per fund certificate/unit in VND. The source
-must document or response-bind:
+The following evidence is read-only official-page/document research, not Fmarket probing:
 
-- whether `navDate` is valuation, publication, or effective date;
-- publication timestamp and timezone, if any;
-- unit and currency, with no per-100 or per-lot ambiguity;
-- whether the value is end-of-day NAV, not iNAV, exchange close, trade price, adjusted price, or
-  a locally derived number;
-- correction, cancellation, restatement, duplicate, and same-date conflict semantics; and
-- the relationship between ETF market price, iNAV, and provider-published NAV.
+| Route set | Identity/document evidence | Coverage/transport/revision/legal disposition |
+| --- | --- | --- |
+| **VinaCapital owner set**: [manager ETF page](https://wm.vinacapital.com/investment-solutions/onshore-funds/vinacapital-vn100-etf/), [disclosure index](https://wm.vinacapital.com/information-disclosure/), linked report family, and sampled [official PDF](https://wm.vinacapital.com/wp-content/uploads/2026/02/20260212-VINACAPITAL-VN100-ETF_Monthly-Factsheet_Jan-2026-EN.pdf) | The manager page names VinaCapital VN100 ETF/FUEVN100, HOSE, product inception `2020-06-16`, daily dealing, and daily/weekly NAV report labels. The sampled linked document is an official `application/pdf` factsheet with the same ETF identity and NAV-per-share field context. | Product inception is later than requested `2018-01-01`; recent report labels do not prove earliest bound, totals, complete history, or a non-publication calendar. Individual daily-link status/effective redirect/MIME and machine schema were not dispatched. No correction/cancellation contract or owner permission for automation, caller return, storage, or redistribution was found. `UNKNOWN` / `RUNTIME_GAP` / `LEGAL_GAP`; not `FULL` or `PARTIAL`. |
+| **HOSE document set**: [official E1VFVN30 disclosure PDF](https://staticfile.hsx.vn/Uploads/UploadDocuments/2453325/20260415%20-%20E1VFVN30%20-%20NAV%20April%2013%2C%202026.pdf) | Official exchange-hosted PDF identity binds ETF/code/manager/report and NAV per fund certificate/per lot in VND context. | One document is not a history index or route set with requested bounds, page/total reconciliation, cadence, revision, or reuse terms. `DOCUMENT_SUPPORT_ONLY` / `LEGAL_GAP`; no Dragon/Vina stitch. |
+| **Dragon manager page**: [official ETF list article](https://dautu.dragoncapital.com.vn/kien-thuc/danh-sach-quy-etf-tai-viet-nam) | Official HTML lists ETF ticker/index pairs and discusses market price versus iNAV. | It does not establish a provider-published NAV-per-unit route/history or legal automation grant. Label `IDENTITY_SUPPORT_ONLY`; do not claim it proves NAV/unit. |
+| **VSDC context**: [official services page](https://www.vsd.vn/vi/) | Official service page describes fund services and securities-code role. | It is infrastructure context, not an ETF NAV owner route. Label `SERVICE_CONTEXT_ONLY`. |
 
-The official HOSE document and manager pages show why these axes must stay separate: an ETF report
-can publish NAV per fund certificate while the listed certificate also has an exchange price and
-an intraday iNAV concept. None of those values may be substituted for another. Current Fmarket
-mutual-fund NAV documentation cannot be inherited by an ETF without fresh proof.
+Each route set is evaluated on its own owner/basis. No row is dismissed for lacking a Fmarket ID; no
+row is promoted beyond the evidence it owns. The new source chain remains empty.
 
-## 5. Coverage contract and no-false-absence rules
+## 5. Coverage and no-false-absence contract
 
-The requested interval is inclusive `2018-01-01..2026-08-19`. A future result must retain separate:
+Retain these separate fields for every future route set:
 
 ```text
 requested_start/end
-provider_declared_served_start/end
+provider_declared_product_or_served_start/end
 provider_total/page/cursor/revision evidence
 observed_start/end and distinct in-range count
-provider cadence and confirmed non-publication calendar
+provider cadence and confirmed non-publication evidence
 ```
 
-`FULL` requires provider-served bounds covering the request, reconciled pages/totals/cursors,
-response-backed product identity on every row, distinct ordered observations after explicit revision
-handling, and provider status for every non-publication gap. `PARTIAL` requires provider-declared
-narrower bounds plus exact page/total reconciliation; it must not be mislabeled as requested full
-coverage. `UNKNOWN` is mandatory for any unreconciled bound, page, identity, cadence, or revision.
+`FULL` requires provider bounds covering the request, reconciled pages/totals/cursors, identity on
+every row, ordered distinct observations after revision handling, and provider calendar/non-publication
+semantics for missing dates. `PARTIAL` requires provider-declared narrower bounds plus exact
+reconciliation and must not be called full requested coverage. `UNKNOWN` is mandatory for any
+unproven bound, page, identity, publication, cadence, or revision axis.
 
-The following are distinct and cannot be collapsed:
+`UNVERIFIED_SELECTOR`, `UNSERVED`, `CONFIRMED_EMPTY`, and `UNKNOWN` remain distinct. A blank,
+HTML/WAF/error/timeout/missing-page response or an open-ended-only page is not proof that no ETF
+exists. No new enum or public exception is added in this closure.
 
-- `UNVERIFIED_SELECTOR`: no official proof that `ETF` is accepted by the route;
-- `UNSERVED`: the owner declares the route/catalogue does not serve ETFs;
-- `CONFIRMED_EMPTY`: the exact ETF selector is accepted, the success envelope is valid, totals are
-  reconciled, and the scoped result is genuinely zero; and
-- `UNKNOWN`: a blank/HTML/WAF/error/timeout/missing-page response or unsupported scope.
+## 6. Future runtime invariants; exact budgets deferred
 
-These are design outcomes only; no new public enum or exception is added in this source-gap closure.
-A blank Fmarket filter response, open-ended-only page, or missing route is never proof that no ETF
-exists.
+No numeric page, retry, physical-dispatch, response-byte, or request-byte value is source-approved
+here. Exact values are `DEFERRED_UNTIL_QUALIFIED_OWNER_ROUTE`; they are not frozen API/RED contracts.
 
-## 6. Exact bounded runtime design for a future qualified source
+After one owner route set qualifies, the future scheduler must have:
 
-No runtime is implemented now. If a source later qualifies, the future scheduler uses one sequential
-request-scoped ledger with these deterministic design ceilings:
+- one sequential request-scoped ledger with atomic reservation before dispatch;
+- capability skips that create no attempt and consume no budget;
+- owner-approved retries that reuse the same logical target and same global ledger;
+- atomic streaming/decompression-byte accounting and bounded sanitized attempts;
+- pre-dispatch reservation exhaustion versus post-dispatch stream-byte exhaustion; and
+- fatal status/MIME/parse/page/identity/revision/total/budget failure returning no partial discovery,
+  selected-detail, or NAV accumulator.
 
-| Reservation | Ceiling | Rule |
-| --- | ---: | --- |
-| Discovery pages | 2 | At most two provider pages; no unbounded broad search |
-| Selected-product detail | 1 | One detail dispatch for the selected ID |
-| NAV pages | 8 | At most eight provider pages/cursors; no date fan-out or source stitch |
-| Logical targets | 11 | Two discovery + one detail + eight NAV page targets |
-| Retries | 11 | At most one retry per logical target, same page/cursor only |
-| Physical dispatches | 22 | Eleven initial reservations plus at most eleven retries |
-| Decompressed bytes per response | 4,000,000 | Charge each streamed chunk atomically |
-| Decompressed bytes per request | 16,000,000 | Global request ledger; no raw payload retention |
+No source failover, cross-owner stitch, product fan-out, or name-only join is allowed. Exact finite
+diagnostic names, MIME/status rules, and public error text are deferred until a source-specific
+design. Raw URLs with queries, bodies, headers, cookies, credentials, provider prose, and exception
+text never enter public results or fixtures.
 
-A reservation is atomic before dispatch. A capability skip creates no attempt and consumes no budget.
-`reservation_budget_exhausted` is pre-dispatch, with no attempt row and no physical charge.
-`stream_byte_cap_exhausted` is post-dispatch, retains the real sanitized attempt and physical charge,
-and returns no partial history. A retry increments retry and physical counters but not logical page
-count. No source failover, cross-source stitch, product fan-out, or M1-style helper is permitted.
+## 7. Legal gate and separate existing-runtime risk
 
-Only HTTP 200 with a source-approved complete MIME can be data-success. Redirects are not followed.
-204, 3xx, 4xx, 5xx, HTML/WAF, DNS/connection/TLS/timeout, wrong MIME, parse, identity, duplicate,
-revision, body-limit, page mismatch, and budget outcomes remain distinct internal diagnostics.
-Attempts expose only bounded source name, path-only route, target/page/retry ordinals, status,
-complete normalized MIME, effective host/path, row count, provider total/bounds, and an outcome token.
-Raw query URLs, request/response bodies, headers, cookies, credentials, provider prose, and exception
-text never enter a public result or repository fixture.
+Fmarket terms are a provider-wide legal blocker, not an ETF-only exemption. The current mutual-fund
+adapter is unchanged, but its runtime-fetch-only/no-redistribution posture is engineering behavior,
+not an owner permission. Record this separate durable disposition:
 
-The exact ceilings are design-only finite guards for a future RED matrix, not a claim that Fmarket
-currently supports those pages, retries, MIME values, or byte sizes. A source cannot qualify merely by
-fitting the scheduler; it must also prove the owner-approved runtime and legal axes.
+```text
+MUTUAL_RUNTIME_LEGAL_RISK
+  Existing Fmarket mutual-fund automation/caller-return/storage posture is unresolved under
+  provider-wide terms. Maintainer/legal triage is required; #218 neither blesses nor revokes it.
 
-## 7. Legal gate and reopen evidence
+ETF_SOURCE_LEGAL_GAP
+  New ETF automation/caller-return/storage/redistribution/rate/revision rights are unproven.
+```
 
-The official Fmarket terms are a hard blocker for automated reuse until written permission is obtained.
-The nine axes are evaluated separately:
+For a future qualified route, all nine axes remain conjunctive: owner identity, automated access,
+caller-facing return, storage/cache, redistribution, attribution, commercial use, rate/retry, and
+revision/correction. Public reachability, a page/PDF, or a distribution licence is not a reuse grant.
 
-| Axis | Required evidence | Current status |
-| --- | --- | --- |
-| Owner identity | Fincorp/Fmarket owner and route confirmation | Partially identified |
-| Automated access | Written permission for bounded software/API access | `LEGAL_GAP` |
-| Caller-facing return | Permission to return ETF rows/NAV through vnfin | `LEGAL_GAP` |
-| Storage/cache | Retention/cache window and deletion rules | `LEGAL_GAP` |
-| Redistribution | OSS caller redistribution and documentation rights | `LEGAL_GAP` |
-| Attribution | Required attribution/notice | `LEGAL_GAP` |
-| Commercial use | Explicit commercial-use permission | `LEGAL_GAP` |
-| Rate/retry | Quota, WAF, retry, and backoff policy | `RATE_POLICY_GAP` |
-| Revision/correction | Restatement/cancellation and historical correction policy | `REVISION_GAP` |
+## 8. Exact lifecycle and release boundary
 
-The official contact paths are [`hello@fmarket.vn`](https://fmarket.vn/lien-he), `1900 571 299`, and
-`028 3636 0755` during 08:30–17:00 Monday–Friday. A written request should name the ETF discovery
-and NAV-history routes and ask specifically about automation, finite rate/retry limits, caller return,
-storage/cache, attribution, commercial use, redistribution, and corrected historical observations.
-No such request was sent in this task.
+The blocker was recorded first in backlog commit `9c48084`; correction actor is `vnfin-oss`.
+A corrected exact-SHA handoff must retain the published base `8d1490f`, name its exact
+`8d1490f..<approved-anchor>` range, and change only:
 
-Reopen requires one same owner/route/basis to provide all of the following conjunctively:
+- `docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md`
+- `tasks/218-design-note.md`
+- `tasks/active-backlog.md`
 
-1. written legal permission for all nine axes;
-2. official selector/token and route/schema contract;
-3. exact ETF code/product/name/manager/listing identity and row/detail/NAV binding;
-4. provider-published VND-per-unit NAV semantics, date/timezone, publication, revision, and
-   iNAV/market-price exclusion;
-5. requested or declared partial coverage with reconciled pages/totals/cursors and cadence/non-
-   publication semantics for `2018-01-01..2026-08-19`; and
-6. source-approved bounded transport, retry, page, byte, and sanitized-diagnostic behavior.
+After a future design PASS: rerun merged gates; push only the approved anchor; verify remote exact
+HEAD/base ancestry/three paths; post a clean no-capability `SOURCE-GAP` resolution; close and
+re-read #218; only then activate #219. #220 remains queued. No later commit may be pushed in that
+approved range. A future implementation requires a fresh design PASS and must include fund API/source/
+diagnostics/tutorial and agent-facing AI docs, the maintainer skill, `CHANGELOG.md`, release notes,
+tests, build, blacklist/secret, diff, and path gates.
 
-Only after a fresh exact-SHA design PASS may a TDD task add RED fixtures and production changes. A
-source-gap docs PASS authorizes only exact-range documentation publication, clean no-capability
-resolution, close, and re-read; it does not authorize TDD or runtime capability.
+## 9. Future RED/release matrix (not authorized now)
 
-## 8. Future RED/release matrix (not authorized now)
+After a fresh design PASS only, synthetic fixtures must cover identity positives/negatives, selector
+compatibility and zero-network rejection, provider-published VND/unit NAV versus iNAV/market-price/
+adjusted-price negatives, inclusive bounds/pages/totals/cursors, cadence/non-publication, revisions,
+`FULL`/`PARTIAL`/`UNKNOWN`, no-false-absence, reservation-versus-stream exhaustion, sanitized
+diagnostics, and no partial accumulator. The exact numeric ledger values are not specified here.
 
-After a fresh design PASS only, synthetic fixtures must cover:
-
-- exact ETF product/code/name/manager/listing identity positive;
-- wrong, duplicate, renamed, delisted, share-class, missing, null, boolean, and cross-product IDs;
-- exact `asset_type="ETF"` selector/translation positive, malformed/unsupported selector negatives,
-  zero-network rejection, and compatibility with current legacy asset types;
-- provider-published VND/unit NAV positive; iNAV, market price, adjusted price, wrong currency/unit,
-  wrong product, malformed date/value, negative/non-finite/boolean values fail closed;
-- inclusive bounds, provider totals/pages/cursors, first/last endpoints, cadence, duplicates,
-  revisions/conflicts, confirmed non-publication, `FULL`/`PARTIAL`/`UNKNOWN`, and no false absence;
-- atomic 11/22 logical/physical, one-retry, 4,000,000/16,000,000-byte, reservation versus stream
-  exhaustion, sanitized diagnostics, and no partial accumulator after fatal exhaustion; and
-- existing fund listing, NAV, holdings, allocation, warnings, DataFrame/API snapshots, import/version,
-  all unrelated domains, offline suite, secret/blacklist/path/diff gates, and isolated package build.
+Existing fund listing/NAV/holdings/allocation/warnings/DataFrame/API snapshots, imports/version,
+unrelated domains, offline suite, package build, blacklist/secret/path/diff checks, and the release
+documentation/skill/changelog obligations remain required in any later implementation.
 
 No RED, code, model/accessor, source registration, production capability, discount calculation,
-first difference, or VN30F logic is part of this source/design handoff.
+first difference, or VN30F logic is part of this handoff.
