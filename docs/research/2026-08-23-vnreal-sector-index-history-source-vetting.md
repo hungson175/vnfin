@@ -49,7 +49,7 @@ screenshot, short/live content digest, or provider dataset is committed here.
 ### Current clean ancestry and release boundary
 
 The clean production boundary for this review is `origin/master` at the full SHA
-`4c85fbc6a1101b3a904b1dc68ac37bc29477ef6`. The current registry and zero-network claims
+`4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f`. The current registry and zero-network claims
 are bound to that reachable clean base. Backlog-only commits `202b5d5` and later
 commits in this review cycle record queue/review state only; they do not alter the
 production boundary, registry, source chain, or runtime behavior.

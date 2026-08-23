@@ -15,7 +15,7 @@ This note binds the future design boundary but does not authorize runtime capabi
 ## 1. Current behavior and clean release boundary
 
 The clean production boundary is `origin/master` at full SHA
-`4c85fbc6a1101b3a904b1dc68ac37bc29477ef6`. Backlog-only commits `202b5d5` and later
+`4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f`. Backlog-only commits `202b5d5` and later
 commits record queue/review state only; they do not alter the production boundary,
 registry, source chain, or runtime behavior.
 
