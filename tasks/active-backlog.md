@@ -601,19 +601,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#217 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), one narrow docs-only R1-R5 correction.**
-  Correction actor `vnfin-oss`; next action `RETURN_EXACT_SHA_VERDICT` to reviewer
-  `vnfin-oss-reviewer`. Previous reviewed exact anchor
-  `b32ca024d93a1e56eb345f707adb4ca717c54ee5`; BLOCK report
-  `reviews/review-202608231705-issue217-corrected-design-rereview.md` at reviewer `dd89975`,
-  delivery `28a8c2e2`. The new handoff commit is the exact docs/source/backlog anchor returned
-  with the re-review request, from clean published base `8350329d3d881e34df62937aacf7ea4d74f99f91`.
-  It records all-traffic versus evidence-subset totals and sanitized targets; independent VCB
-  type/nullability/direction/scale/route-rate parity; decisive Frankfurter USD-cross owner
-  evidence; daily `rate_for_year`, empty bounds/DataFrame, reservation-versus-stream-byte
-  exhaustion; and corrected post-PASS lifecycle wording. Preserve SOURCE-GAP, empty daily chain,
-  annual World Bank, and queued #218/#219. No RED/model/accessor/source-registration/code/push/
-  close before final design PASS.
+- **#217 — DESIGN_BLOCKED (2026-08-23), one narrow docs-only R1-R3 precision correction.** Expected
+  actor `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Reviewed exact anchor
+  `262c6b8508f6b87cdaae48f761960b5d4da392c4`; BLOCK report
+  `reviews/review-202608231719-issue217-final-design-rereview.md` at reviewer `5a45543`, delivery
+  `935a3d2a`. Correct only the retained-evidence reproducibility label/markers, dated VCB observed
+  type/null state, and XML `IDENTITY_GAP` disposition. Preserve SOURCE-GAP, annual World Bank,
+  empty daily chain, and queued #218/#219. No new probes, RED/model/accessor/source-registration/
+  code/push/close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
