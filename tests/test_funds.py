@@ -1604,16 +1604,70 @@ def test_asset_allocation_absent_update_at_leaves_as_of_none():
     assert alloc.as_of_utc is None
 
 
-def test_asset_allocation_empty_raises_empty():
-    with pytest.raises(EmptyData):
-        _src(_holdings_payload_with(productAssetHoldingList=[])).asset_allocation(FAKE_ID_A)
-
-
-def test_asset_allocation_absent_raises_empty():
+@pytest.mark.parametrize("shape", ["empty", "absent", "null"])
+def test_asset_allocation_known_empty_returns_typed_result(shape):
     base = json.loads(_holdings_payload())
-    base["data"].pop("productAssetHoldingList", None)
-    with pytest.raises(EmptyData):
-        _src(json.dumps(base)).asset_allocation(FAKE_ID_A)
+    if shape == "empty":
+        base["data"]["productAssetHoldingList"] = []
+    elif shape == "absent":
+        base["data"].pop("productAssetHoldingList", None)
+    else:
+        base["data"]["productAssetHoldingList"] = None
+    get = _capture_get(json.dumps(base))
+
+    alloc = FmarketFundSource(http_get=get).asset_allocation(FAKE_ID_A)
+
+    assert alloc.classes == ()
+    assert len(alloc) == 0
+    assert alloc.source == "fmarket"
+    assert alloc.currency == "VND"
+    assert alloc.product_id == FAKE_ID_A
+    assert alloc.code == "TESTCO"
+    assert alloc.sector_weights and alloc.sector_weights[0].industry == "Fake industry one"
+    assert alloc.inception_date == date(2026, 3, 15)
+    assert alloc.description == "FAKE synthetic fund description blurb"
+    assert alloc.as_of_utc is None
+    assert alloc.fetched_at_utc is not None and alloc.fetched_at_utc.tzinfo is not None
+    assert alloc.warnings.count("no_asset_allocation_published") == 1
+    assert sum(w.startswith("no_asset_allocation_published") for w in alloc.warnings) == 1
+    # The pre-existing detail-document coverage diagnostic is preserved and composed once.
+    assert sum(w.startswith("fund_partial_holdings:") for w in alloc.warnings) == 1
+    assert len(get.calls) == 1
+
+
+@pytest.mark.parametrize("existing", ["STOCK", "BOND", "CASH"])
+def test_asset_allocation_preserves_other_alongside_each_known_class(existing):
+    rows = [
+        {"assetType": {"code": "OTHER"}, "assetPercent": 12.5},
+        {"assetType": {"code": existing}, "assetPercent": 37.5},
+    ]
+    alloc = _src(_holdings_payload_with(productAssetHoldingList=rows)).asset_allocation(FAKE_ID_A)
+    assert [(item.asset_class, item.weight_pct) for item in alloc] == [
+        ("OTHER", 12.5),
+        (existing, 37.5),
+    ]
+
+
+def test_asset_allocation_preserves_other_alone():
+    rows = [{"assetType": {"code": "OTHER"}, "assetPercent": 100.0}]
+    alloc = _src(_holdings_payload_with(productAssetHoldingList=rows)).asset_allocation(FAKE_ID_A)
+    assert [(item.asset_class, item.weight_pct) for item in alloc] == [("OTHER", 100.0)]
+
+
+def test_asset_allocation_duplicate_other_fails_closed():
+    rows = [
+        {"assetType": {"code": "OTHER"}, "assetPercent": 20.0},
+        {"assetType": {"code": "OTHER"}, "assetPercent": 30.0},
+    ]
+    with pytest.raises(InvalidData, match="duplicate asset-allocation class OTHER"):
+        _src(_holdings_payload_with(productAssetHoldingList=rows)).asset_allocation(FAKE_ID_A)
+
+
+@pytest.mark.parametrize("weight", [float("nan"), float("inf"), -0.01, 100.01])
+def test_asset_allocation_other_weight_must_be_finite_and_in_range(weight):
+    rows = [{"assetType": {"code": "OTHER"}, "assetPercent": weight}]
+    with pytest.raises(InvalidData):
+        _src(_holdings_payload_with(productAssetHoldingList=rows)).asset_allocation(FAKE_ID_A)
 
 
 @pytest.mark.parametrize("rows", [{}, "", False, 0])
@@ -1629,9 +1683,10 @@ def test_asset_allocation_present_non_list_raises_invalid(rows):
         {"assetType": {"code": "BOND"}, "assetPercent": 150.0},
         {"assetType": "BOND", "assetPercent": 50.0},  # assetType not a dict
         {"assetType": {"code": "   "}, "assetPercent": 50.0},  # blank code
+        {"assetType": {"code": True}, "assetPercent": 50.0},  # non-string code
         {"assetType": {}, "assetPercent": 50.0},  # missing code
     ],
-    ids=["weight", "weight_oob", "asset_type_str", "blank_code", "missing_code"],
+    ids=["weight", "weight_oob", "asset_type_str", "blank_code", "non_string_code", "missing_code"],
 )
 def test_asset_allocation_malformed_row_raises_invalid(bad_row):
     with pytest.raises(InvalidData):
@@ -1643,9 +1698,10 @@ def test_asset_allocation_non_object_row_raises_invalid():
         _src(_holdings_payload_with(productAssetHoldingList=["not-a-dict"])).asset_allocation(FAKE_ID_A)
 
 
-def test_asset_allocation_unknown_class_raises_invalid():
-    # A present-but-unrecognized asset class fails closed (not STOCK/BOND/CASH).
-    asset = [{"assetType": {"code": "DERIVATIVE"}, "assetPercent": 50.0}]
+@pytest.mark.parametrize("unknown", ["DERIVATIVE", "OTHER2"])
+def test_asset_allocation_unknown_class_raises_invalid(unknown):
+    # A present-but-unrecognized asset class fails closed; OTHER is the only new class.
+    asset = [{"assetType": {"code": unknown}, "assetPercent": 50.0}]
     with pytest.raises(InvalidData):
         _src(_holdings_payload_with(productAssetHoldingList=asset)).asset_allocation(FAKE_ID_A)
 
