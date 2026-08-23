@@ -601,16 +601,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#217 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), one narrow docs-only R1-R3 correction.**
-  Correction actor `vnfin-oss`; next action `RETURN_EXACT_SHA_VERDICT` to reviewer
-  `vnfin-oss-reviewer`. Reviewed exact anchor `262c6b8508f6b87cdaae48f761960b5d4da392c4`; BLOCK
-  report `reviews/review-202608231719-issue217-final-design-rereview.md` at reviewer `5a45543`,
-  delivery `935a3d2a`. The new handoff commit is the exact docs/source/backlog anchor returned
-  for final closure review from clean published base `8350329d3d881e34df62937aacf7ea4d74f99f91`.
-  It explicitly marks missing UA/session retention, dated VCB observed type/null state, and XML
-  `IDENTITY_GAP` while preserving all-traffic/evidence counts. Preserve SOURCE-GAP, annual World
-  Bank, empty daily chain, and queued #218/#219. No new probes, RED/model/accessor/source-
-  registration/code/push/close before final design PASS.
+- **#217 — DESIGN_BLOCKED (2026-08-23), one final research/backlog wording correction.** Expected
+  actor `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Reviewed exact anchor
+  `3013927da051c9c1016d3702e50d9ff202a8e800`; BLOCK report
+  `reviews/review-202608231728-issue217-final-closure-review.md` at reviewer
+  `bcd1a982b84326edc200a4b8e46a4a1b77310d60`, delivery `98b1ed69`. Correct only the general
+  `NOT_RETAINED` definition, the UTC+7 timestamp label, and the raw-header/sanitized-MIME wording.
+  Preserve SOURCE-GAP, annual World Bank, empty daily chain, and queued #218/#219/#220. No probes,
+  RED/model/accessor/source-registration/code/push/close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
