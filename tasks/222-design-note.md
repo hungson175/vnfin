@@ -108,11 +108,16 @@ retained only as bounded internal provenance with a documented canonical mapping
 A qualified response must establish, in one response/route unit:
 
 - provider symbol, owner, exchange/index type, and price-index versus VN100TRI distinction;
-- finite point values and point scale (the typed unit is `points`, never VND price);
+- explicit rejection/identity negatives for request or response values `VN30`, `VNMID`,
+  `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE`; none may canonicalize, map, or be accepted
+  as `VN100`, even though some are current served aliases or recognized deny-only identifiers;
+- strictly positive finite point/OHLC values and point scale (the typed unit is `points`, never
+  VND price); zero, negative, non-finite, and malformed values are RED negatives;
 - local trading date, timezone/session/close meaning, and adjustment policy `RAW`;
 - OHLC structural rules, if OHLC is served; and
-- volume presence/unit/nullability/meaning. Missing volume must remain missing/unsupported, never
-  an invented zero or a stock-volume interpretation.
+- volume presence/unit/nullability/meaning. Current `PriceHistory` requires a whole non-negative
+  integer volume; a qualified response that omits volume is therefore unqualified unless a separate
+  model/API PASS authorizes an optional carrier. Never invent zero or a stock-volume interpretation.
 
 ### 5.2 Coverage and one-source atomicity
 
@@ -125,8 +130,12 @@ rows, unreconciled pages, or truncation are terminal unknown/failure.
 
 Strict history is one provider for the whole request. There is no cross-provider stitch, constituent
 reconstruction, ETF/other-index proxy, silent strict-to-stitched route, or basket. The existing
-stitched API remains opt-in and unchanged; adding VN100 to it would require a separate, fresh
-compatibility review.
+stitched API remains opt-in and unchanged. If a future qualification/API PASS authorizes VN100 in
+that existing path, it must preserve calendar-year segmentation, inclusive year boundaries,
+per-segment validation, identical/conflicting seam behavior, atomic mid-range failure, canonical
+segment provenance, deterministic aggregate retrieval metadata, and the global identity/history
+ledger including every identity/page/retry/redirect/byte reservation; it cannot invent a helper or
+silently route strict calls to stitched history.
 
 ### 5.3 Atomic budget and diagnostics design
 
@@ -134,11 +143,12 @@ No numeric public ceiling is frozen until a qualified route's written/public rat
 one. A future implementation must nevertheless obey this ledger shape:
 
 1. validate input and capability before network;
-2. reserve one logical source attempt before adapter entry;
-3. reserve one physical dispatch immediately before each initial/page/cursor/retry/redirect request;
-4. count response/decompression bytes separately from network dispatches;
-5. share one request-scoped ledger across all sources/pages/retries, with no reset per source or
-   calendar year; and
+2. reserve one logical source attempt before adapter entry, including the same-owner identity route;
+3. reserve one physical dispatch immediately before each history or identity initial/page/cursor/
+   retry/redirect request;
+4. count response/decompression bytes separately from network dispatches, for both history and identity;
+5. share one request-scoped ledger across all sources, history calls, identity calls, pages, redirects,
+   retries, and bytes, with no reset per source or calendar year; and
 6. discard private rows on budget/reconciliation exhaustion and emit one bounded terminal outcome,
    never a partial accumulator or false-empty/full result.
 
@@ -162,12 +172,13 @@ cover:
 
 | Area | Required cases |
 |---|---|
-| Input/zero network | exact/padded/lowercase VN100; malformed/proxy/unknown/constituent; D1 positive and all non-D1 negatives |
-| Identity | correct/wrong/missing provider symbol, owner, exchange/type, price-vs-TRI, point scale, timezone/session, provenance |
+| Input/zero network | exact/padded/lowercase VN100; explicit wrong-index requests `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE`; malformed/proxy/unknown/constituent; D1 positive and all non-D1 negatives |
+| Identity | correct/wrong/missing provider symbol, owner, exchange/type, price-vs-TRI, point scale, timezone/session, provenance; explicit `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE` request/response/provider-alias negatives with no alias collapse |
 | Transport | exact complete-MIME parsing and normalized MIME; expected envelope/status; wrong status, HTML/login, redirect/effective-host, malformed envelope |
-| Values | finite point/OHLC rows, negative/zero where allowed, timestamp/date rules, volume present/absent/null/unit, RAW; no synthetic volume/adjustment |
+| Values | strictly positive finite point/OHLC rows; negative/zero/non-finite/malformed values fail; volume is independently provider-defined whole/non-negative, and omitted volume is unqualified for the current carrier unless a later optional-carrier API PASS; timestamp/date rules, null/unit, RAW; no synthetic volume/adjustment |
 | Coverage | requested boundaries, declared partial, provider totals/pages/cursors, trading-calendar exceptions, gaps, duplicate/conflict, revision/no-false-absence |
-| Atomicity | one-source whole-window, capability skip, retry/page/redirect/byte/global-budget exhaustion, no partial return after terminal failure |
+| Atomicity | one-source whole-window, capability skip, direct identity-call initialization/page/retry/redirect/byte exhaustion, history-only exhaustion, combined history-plus-identity aggregate exhaustion, retry/page/redirect/byte/global-budget charging with no per-source/year reset, no partial return after terminal failure |
+| Stitched | existing opt-in single-year/multi-year, inclusive year boundaries, identical/conflicting seams, atomic mid-range failure, segment provenance, deterministic aggregate retrieval metadata, identity/page/retry charging, global exhaustion, no helper/silent strict fallback |
 | Compatibility | current served indices, all deny-only indices, price-path guard, strict/stitched behavior, public snapshots/docs/imports |
 | Release | docs/skill/CHANGELOG/API snapshot if changed; focused/full offline tests, build, blacklist/secret/diff/path/object/clean-tree gates |
 
@@ -199,7 +210,7 @@ reviewer authorizes their transition.
 
 ## 8. Primary references
 
-- [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15%66f11e7994%38abd11677%61d0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- [HOSE official index-data landing page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so)
 - [HOSE VN100 factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2396611/Form_Factsheet_MCIndices_VN_T08.2025.pdf)
 - [HOSE-Index factsheet, January 2026](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf)
 - [HOSE official index-data presentation](https://www1.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/theo-bo-chi-so-tri)

@@ -62,8 +62,11 @@ The requested primitive is a single provider's daily index-value series, not an 
 - value semantics: finite index points with response-backed scale and point meaning;
 - adjustment: raw index values, not split/dividend-adjusted security prices;
 - one normalized observation per served trading date, with provider timezone/session semantics;
-- volume: only if the provider defines it for this index response; never synthesize zero or a stock
-  volume; and
+- OHLC/point values: strictly positive finite numbers, matching the current shared validator;
+- volume: only if the provider defines it for this index response; the current `PriceHistory`
+  carrier requires a whole non-negative integer, so an omitted volume makes the unit unqualified
+  unless a separate model/API PASS first authorizes an optional carrier; never synthesize zero or a
+  stock volume; and
 - no cross-provider stitch, constituent-basket reconstruction, VN30/VNMidcap proxy, ETF, or
   downstream leadership/VN30F observable.
 
@@ -120,7 +123,7 @@ logical/physical/page/retry counts, and the exact identity fields. A missing fie
 
 ### 4.1 Identity and index semantics
 
-The official [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15%66f11e7994%38abd11677%61d0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf), issued under Decision 747/QĐ-SGDHCM on 30 December 2024, defines the HOSE index series as price and total-return indices and defines VN100 as the constituents of VN30 and VNMidcap. This is strong owner/methodology evidence.
+The official [HOSE index-data landing page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so) is the stable owner-side document/data index for the HOSE-Index family. The linked [HOSE-Index factsheet, updated 30 January 2026](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf) records the official rule summary: the HOSE index series has price and total-return forms, and VN100 comprises VN30 and VNMidcap. The factsheet identifies the Ground Rules as the official construction reference issued under Decision 747/QĐ-SGDHCM on 30 December 2024. This is strong owner/methodology evidence.
 
 The official [VN100 factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2396611/Form_Factsheet_MCIndices_VN_T08.2025.pdf) records a VN100 base date of 24 January 2014, base value `560.19`, price and total-return forms, real-time VN100 calculation and end-of-day VN100TRI cadence, free-float market-cap methodology, a 10% cap, and a VND field. Those facts establish the index family and a static base-date reference. They do not establish an anonymous daily history response, an observation timezone, a provider page total, a revision/as-of contract, or a redistribution licence.
 
@@ -360,10 +363,12 @@ before RED:
 ### 10.1 Atomic request and budget contract
 
 - Validate canonical `VN100`, exact D1, date range, and source capability before any network call.
-- Use one request-scoped ledger across every source attempt, page/cursor, redirect, and retry; do
-  not reset at source or calendar-year boundaries.
-- Reserve an attempt before entering a source and reserve one physical dispatch immediately before
-  each initial/page/retry/redirect request. A capability skip consumes neither.
+- Use one request-scoped ledger across every history source attempt **and every identity-route
+  call**, including each identity page/cursor, redirect, and retry; do not reset at source or
+  calendar-year boundaries.
+- Reserve an attempt before entering a source or identity route and reserve one physical dispatch
+  immediately before each history or identity initial/page/retry/redirect request. A capability skip
+  consumes neither.
 - Count response/decompression bytes separately from dispatches; byte exhaustion cannot fabricate a
   successful empty series or a `SourceAttempt` for an uncalled source.
 - The numeric ceilings must be derived from the qualified route's public/written policy. Until then
@@ -380,8 +385,12 @@ unambiguous `PARTIAL` outcome; an unexplained interior gap, identity mismatch, c
 unreconciled page, or truncated transport is terminal failure/unknown.
 
 The current opt-in stitched API remains unchanged and the current VN100 guard remains deny-only.
-A future VN100 implementation must separately prove whether a qualified source may participate in
-that existing opt-in path; it cannot silently add a provider or a new helper.
+If a future qualification/API PASS authorizes VN100 participation, it must use this existing opt-in
+path: calendar-year segmentation, inclusive segment boundaries, per-segment validation, atomic
+mid-range failure, identical/conflicting seam rules, canonical segment provenance, deterministic
+aggregate retrieval metadata, and one global ledger covering history, identity, pages, retries,
+redirects, and bytes. It cannot invent a helper, silently route strict calls to stitched history,
+or reset budgets per year/source.
 
 ### 10.3 Future bounded outcomes
 
@@ -419,13 +428,14 @@ cover, at minimum:
 
 | Dimension | Required future RED cases |
 |---|---|
-| Selector | exact/lowercase/padded `VN100` positives; proxy, constituent, unknown, punctuation, wrong index, and non-D1 zero-network negatives |
-| Identity | provider symbol/owner/type/exchange positive; missing/wrong/ambiguous symbol, price-vs-TRI, wrong owner, wrong scale, and provenance mismatch negatives |
+| Selector | exact/lowercase/padded `VN100` positives; explicit wrong-index request negatives for `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE`; proxy, constituent, unknown, punctuation, and non-D1 zero-network negatives |
+| Identity | provider symbol/owner/type/exchange positive; response/provider-alias negatives for `VN30`, `VNMID`, `VNALLSHARE`, `VNALL`, `VNXALL`, and `VNXALLSHARE` must never collapse to `VN100`; missing/wrong/ambiguous symbol, price-vs-TRI, wrong owner, wrong scale, and provenance mismatch negatives |
 | Transport | exact MIME parsing after the first colon, normalized media type, expected envelope/status, redirect/effective-host, wrong status/MIME/HTML/login/WAF/JSON shape negatives |
-| Values | finite point values, negative/zero where provider permits, OHLC consistency, timestamp/date/session, volume present/absent/null/unit; no synthesized volume or adjustment |
+| Values | strictly positive finite point/OHLC values; negative, zero, non-finite, or malformed values are RED negatives; volume is independently whole/non-negative only when provider-defined, with omitted volume unqualified for the current carrier; no synthesized volume or adjustment |
 | Coverage | requested boundaries, provider bounds, total/page/cursor reconciliation, trading-calendar holidays, interior gaps, duplicate/conflict, revision and no-false-absence negatives |
-| Atomicity | one-source whole-window behavior, source capability skip, retry/page/redirect/byte/global-budget exhaustion, no returned partial accumulator after terminal failure |
+| Atomicity | one-source whole-window behavior, source capability skip, direct identity-call initialization/page/retry/redirect/byte exhaustion, history-only exhaustion, combined history-plus-identity aggregate exhaustion, retry/page/redirect/byte/global-budget charging, no per-source/year reset, and no returned partial accumulator after terminal failure |
 | Provenance | bounded canonical source identity, provider symbol, retrieval stamp, fixed warnings, finite attempts, no raw URL/query/header/body/value leakage |
+| Stitched history | existing opt-in single-year and multi-year paths; inclusive calendar-year boundaries; identical seam dedupe; conflicting seam failure; mid-range atomic failure; per-segment source/identity/page/retry charging; canonical segment provenance; deterministic aggregate retrieval metadata; global exhaustion with no partial result; no new helper or silent strict fallback |
 | Compatibility | all currently served indices, all deny-only indices including VN100, price-path rejection, current strict/stitched guards, public snapshots/docs/imports |
 | Release | docs/skill/CHANGELOG/API snapshot if public behavior changes; focused/full offline tests, build, blacklist/secret/diff/path/object/clean-tree gates |
 
@@ -452,7 +462,7 @@ or runtime capability.
 
 ## 13. Primary references
 
-- [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15%66f11e7994%38abd11677%61d0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- [HOSE official index-data landing page](https://www.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/bo-chi-so)
 - [HOSE VN100 factsheet, updated 31 July 2025](https://staticfile.hsx.vn/Uploads/UploadDocuments/2396611/Form_Factsheet_MCIndices_VN_T08.2025.pdf)
 - [HOSE-Index factsheet, updated 30 January 2026](https://staticfile.hsx.vn/Uploads/UploadDocuments/2438018/Form_Factsheet_MCIndices_VN_T02.2026.pdf)
 - [HOSE official index-data presentation](https://www1.hsx.vn/vi/du-lieu-giao-dich/quy-mo-giao-dich/theo-bo-chi-so-tri)
