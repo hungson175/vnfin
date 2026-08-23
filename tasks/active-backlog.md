@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final R1-R2 correction handoff.**
+- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), final F1-F3 correction required.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -618,11 +618,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   BLOCKED exact head `aab7cb3`: completed #218/#221 lifecycle text remained prospective and the
   positive-only docs regression missed contradictions; live-derived numeric/backlog/code/task
   evidence remained outside the bounded redaction scan. BLOCK recorded at `fd5a828`; RED-first
-  regression tests are committed at `c2ad71d`; final docs/fixture correction is committed at
-  `e78ddf7201fbadad7a24090e29ef63aa4868b980`. This is the final correction anchor for review.
-  Actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve
-  `DISABLE_PENDING_PERMISSION`, no runtime/probe/push/resolution/close, no #219 activation, and
-  queued #219/#220/#222; exclude local queue receipts `65d6ac6` and `0fd103d`.
+  regression tests were committed at `c2ad71d`; correction/handoff `a76c530` was reviewed in
+  `reviews/review-202608232051-issue221-final-correction-review.md` at reviewer `e31e6a4` and
+  BLOCKED on F1 contradiction coverage, F2 known-token/path coverage, and F3 durable anchoring.
+  Actor is `vnfin-oss`; next action `RED_FIRST_FINAL_F1_F3_DOCS_TEST_LIFECYCLE_CORRECTION`.
+  Preserve `DISABLE_PENDING_PERMISSION`, no runtime/probe/push/resolution/close, no #219
+  activation, and queued #219/#220/#222; exclude local queue receipts `65d6ac6` and `0fd103d`.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
