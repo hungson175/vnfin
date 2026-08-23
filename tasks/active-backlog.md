@@ -602,18 +602,20 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#219 — DESIGN_CORRECTION_READY (2026-08-23).** Actor `vnfin-oss`; next action
-  `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_DESIGN_REVIEW`; packet anchor `f2d0187` for
+- **#219 — DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
   `issuecomment-5385376214`. Reviewed exact merged head is
-  `7aad9c1b5c82c2cd049d2485b81a535b863ad344`; prior correction content anchor is
-  `9326b15c43f69383a1959c0f7f77da7f9ab09d65`; BLOCK-before-correction receipt is
-  `d7096bcbb898eec151d8a478b9b7e9bf978cdf05`. BLOCK report is
+  `3920d05f546290b737b6bb93c9367d26d787acc1` for the corrected content tree; prior reviewed
+  merged head was `7aad9c1b5c82c2cd049d2485b81a535b863ad344`, and prior correction content anchor
+  was `9326b15c43f69383a1959c0f7f77da7f9ab09d65`. BLOCK-before-correction receipt is
+  `d7096bcbb898eec151d8a478b9b7e9bf978cdf05`; BLOCK report is
   `reviews/review-202608232247-issue219-corrected-design-review.md` at reviewer `2f7ac46`.
-  R1-R2 are corrected docs/backlog-only seams: retained PXWeb shell-route accounting is split
-  from browser/UI/subresource traffic marked `NOT_RETAINED`, and the next handoff distinguishes
-  content anchor from merged review head. Preserve `SOURCE-GAP CLOSURE`, the empty new source
-  chain, current runtime, and no RED/code/push/close. #220, #222, #223, and #224 remain queued.
+  This separate reviewer-owned lifecycle receipt binds the final exact handoff to the corrected
+  content anchor; the exact current HEAD is returned with the handoff. R1-R2 are closed by splitting
+  retained PXWeb shell-route accounting from browser/UI/subresource traffic marked `NOT_RETAINED`.
+  Preserve `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime, and no RED/code/push/
+  close. #220, #222, #223, and #224 remain queued.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
