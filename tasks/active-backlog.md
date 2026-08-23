@@ -1051,6 +1051,14 @@ _None._
   ROE and the reporter's external artifact. Keep queued behind #219; no #220 source-design, RED,
   code, push, or close before its turn and exact-SHA design PASS.
 
+- **#222 — QUEUED_AFTER_#220 (2026-08-23).** Actor `vnfin-oss`; next action
+  `ACTIVATE_AFTER_220_CLOSURE`; packet anchor `001ad85` for
+  `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
+  Prepare fresh VN100-specific VPS/SSI/VNDirect source/design evidence first; exact v0.2.0 predates
+  the current registry guard. No proxy, basket, downstream observable, probe, RED/code, push, or
+  close before exact-SHA design PASS. Keep queued behind #220; queue order remains #221 → #219 →
+  #220 → #222 and do not interrupt active #221.
+
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
