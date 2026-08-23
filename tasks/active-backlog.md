@@ -1062,12 +1062,14 @@ _None._
   non-binding clarity. Preserve current cash-only VSDC, empty new share-distribution chain, and
   queued #217. No RED/model/accessor/code/push/close before exact-SHA design PASS.
 
-- **#217 — QUEUED_AFTER_#215 (2026-08-23), source/design only.** Actor `vnfin-oss-reviewer`; next
-  action `SOURCE_DESIGN_AFTER_#215`. Authoritative packet
+- **#217 — SOURCE_DESIGN_IN_PROGRESS (2026-08-23), activated after verified #215 closure.** Actor
+  `vnfin-oss`; next action `PREPARE_EXACT_SHA_SOURCE_DESIGN`. #215 handoff/closure is verified at
+  published `origin/master` `8350329d3d881e34df62937aacf7ea4d74f99f91`, resolution
+  `issuecomment-5385242516`, CLOSED/COMPLETED. Authoritative packet
   `tasks/217-daily-cnyvnd-fx-history-spec.md`, reviewer packet anchor `4159d74`, public receipt
   `issuecomment-5385114544`. Scope is direct daily CNY/VND only: prove exact basis, coverage, and
-  legal provenance. Exclude USD cross-synthesis, annual/spot substitution, and VN30F signal.
-  Do not interrupt active #215 exact review. No RED/code/push/close before exact-SHA design PASS.
+  legal provenance. Exclude USD cross-synthesis, annual/spot substitution, and VN30F signal. No
+  RED/code/push/close before exact-SHA design PASS.
 
 - **#208 — annual operating profit (DESIGN_CORRECTION_IN_PROGRESS; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
