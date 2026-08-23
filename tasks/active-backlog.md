@@ -602,111 +602,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final F2 provenance handoff.**
-  Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
-  `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
-  `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
-  implementation line `issue221-fmarket-disable` from the design anchor; local queue receipt
-  `65d6ac6` is excluded and remains unpushed. RED commits are `3aa66a5`, `17a085d`, and `18803a7`;
-  production commit is `3a8ffe4` and public/docs contract commit is `b94c836`. Code-review report
-  `reviews/review-202608231955-issue221-code-review.md` at reviewer `ae46900` was addressed by
-  RED correction `e8fe053` and implementation/docs correction `13bd60d`: B1 transport chokepoints,
-  B2 exact cache-key proof, B3 current documentation truth, and B4 fabricated fixture boundary.
-  Correction review `reviews/review-202608232014-issue221-correction-review.md` at reviewer
-  `58f4a95` was corrected at `d758f66`/`aab7cb3`, but final R1-R2 review
-  `reviews/review-202608232034-issue221-r1-r2-correction-review.md` at reviewer `fc82bbf`
-  BLOCKED exact head `aab7cb3`: completed #218/#221 lifecycle text remained prospective and the
-  positive-only docs regression missed contradictions; live-derived numeric/backlog/code/task
-  evidence remained outside the bounded redaction scan. BLOCK recorded at `fd5a828`; RED-first
-  regression tests were committed at `c2ad71d`. The superseding exact head `a76c530` was reviewed
-  in `reviews/review-202608232051-issue221-final-correction-review.md` at reviewer `e31e6a4` and
-  BLOCKED on F1 contradiction coverage, F2 known-token/path coverage, and F3 durable anchoring;
-  that BLOCK was recorded at `3ce5484`. Final RED tests are at `14f351d`; final test/docs correction
-  content anchor is `6949a53ecd46dc61197afb9eee8dd245109ef95c`. This lifecycle receipt is the exact
-  final review handoff. The final review at exact `9c0b9f9` was BLOCKED in
-  `reviews/review-202608232105-issue221-final-f1-f3-review.md` at reviewer `f6efee3`: F1 direct
-  parser/current API-Fmarket/cache-use/compound-negation contradictions bypass the matcher; F2
-  known-form/path self-tests are missing and a residual provider fund-code example remains. BLOCK was recorded
-  before edits at `d154d48`. Final RED tests are at `c2f3248`; final test/docs correction content
-  anchor is `62a8a0ac707600d8f9f71452ea40dc183a5cef7c`. This lifecycle receipt is the exact final review
-  handoff. Actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve
-  `DISABLE_PENDING_PERMISSION`, no runtime/probe/push/resolution/close, no #219 activation, and queued
-  #219/#220/#222; exclude local queue receipts `65d6ac6` and `0fd103d`.
-  The final F1-F2 review at exact `545c8543da2576f1ebaeb3a4759ec3d3e2847377` was BLOCKED in
-  `reviews/review-202608232115-issue221-final-f1-f2-review.md` at reviewer `903d33b`: ordinary
-  direct-parser, `produce`/`yield` `EmptyData`, and compound-negation variants still bypassed F1;
-  the F2 known-form matrix sampled pattern indexes without exhaustively covering listed alternatives.
-  BLOCK was recorded before edits at exact receipt `ed2accae8c80a3e3a5c8c5e5026f59a514213aab`. Apply one narrow exhaustive RED-first
-  guard correction only; no runtime/probe/push/close/#219 activation.
-  Final RED tests are at `83720c9656438a5df909483d2bb56c37bf157b95`; final test/docs correction
-  content anchors are `9a09bf080491a1bf8d12d430cd6a0cda62b58bdd` and
-  `e56a048b55cb413102f13b44d54c1922e262eb6d`. The exhaustive RED-first guard/content correction is
-  `83720c9656438a5df909483d2bb56c37bf157b95`, with exact-unit allow-list hardening in
-  `e56a048b55cb413102f13b44d54c1922e262eb6d`: the F1 scanner now normalizes bounded current-call
-  cells, allows only entire exact approved fail-closed sentences/cells, and rejects every other
-  unsafe current API/Fmarket-call marker; all nine reported parser, `EmptyData`, and compound-negation
-  counterexamples are positive rejection fixtures. The F2 matrix now pins every listed fund token,
-  ID value/separator spelling, row count, date, and integer/float spelling while retaining the exact
-  14-path assertion and clean-corpus scan. This is test-only guard correction; no runtime/probe/source
-  capability changed.
-  This lifecycle receipt is the exact final review handoff. Actor is `vnfin-oss-reviewer`; next action
-  `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve `DISABLE_PENDING_PERMISSION`, no runtime/probe/push/
-  resolution/close, no #219 activation, and queued #219/#220/#222; exclude local queue receipts
-  `65d6ac6` and `0fd103d`.
-  Closure review at exact `62bf9926219880bd549d8724231c760947de8fae` was BLOCKED in
-  `reviews/review-202608232138-issue221-exhaustive-closure-review.md` at reviewer `983cd27`:
-  F1 passes, but the F2 matrix omitted compact identifier/product forms (including required compact
-  value `27`) and
-  singular fund-count forms accepted by its regex. The durable BLOCK receipt for this closure cycle
-  is `9c0f9a47e13dc104ff21b226a648bdcd554b3ff5`, bound to reviewed head
-  `62bf9926219880bd549d8724231c760947de8fae` / reviewer `983cd27`; retain
-  `ed2accae8c80a3e3a5c8c5e5026f59a514213aab` only for the earlier `545c854` review. Apply one narrow F2 grammar/matrix plus
-  lifecycle-anchor correction only. Preserve F1, `DISABLE_PENDING_PERMISSION`, no runtime/probe/
-  push/resolution/close, no #219 activation, and queued #219/#220/#222.
-  Final compact-F2 RED matrix commit is `01f9dadfbf0e9e9d168dd9401e1be8be15e2aed7`: it pins
-  compact `id`/`product_id`/`product id`/`productid` forms for every accepted value and separator,
-  plus singular/plural fund-count forms. F1 and the exact 14-path clean corpus remain unchanged;
-  no runtime/probe/source capability changed. This lifecycle receipt is the exact final review
-  handoff. Actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`.
-  Final F2 closure review at exact `bb6a5753aa9b375d2e14d437e30b8574ba69aba3` was BLOCKED in
-  `reviews/review-202608232147-issue221-final-f2-closure-review.md` at reviewer `c84fc12`: F1
-  passes, but the F2 regex still accepts unpinned product separator mixtures and spacing variants
-  around slash/colon/equal/tilde. Apply one narrow finite-grammar or two-way matrix correction;
-  no runtime/probe/push/close/#219 activation. Bind current BLOCK receipt `9c0f9a47e13dc104ff21b226a648bdcd554b3ff5`
-  to review `983cd27` above; preserve all prior anchors and exclusions.
-  The preceding closure BLOCK receipt `9c0f9a47e13dc104ff21b226a648bdcd554b3ff5` belongs to
-  reviewed head `62bf9926219880bd549d8724231c760947de8fae` and reviewer `983cd27`; the older
-  `ed2accae8c80a3e3a5c8c5e5026f59a514213aab` remains bound only to the earlier `545c854` review.
-  Final finite-grammar F2 content is `3c2ad085c4218b87564a1a06b6e70a0c1113d6f8`: product
-  prefixes/separators and slash/colon/equal/tilde spacing are finite, with two-way positive/negative
-  tests. F1 and runtime remain unchanged. This lifecycle receipt is the exact final review handoff;
-  actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`.
-  Final finite-F2 review at exact `3932d7d70d56bfa18cc11d90b327a3236441bac6` was BLOCKED in
-  `reviews/review-202608232158-issue221-final-f2-grammar-review.md` at reviewer `90afc61`: F1/F2
-  pass, but lifecycle provenance remained stale. Historical combined provenance receipt
-  `63679b0796acd5a6b5b687dcf0ce259819d8e59c` recorded the BLOCK for this review and is bound
-  to reviewed head `3932d7d70d56bfa18cc11d90b327a3236441bac6` / reviewer `90afc61`; receipt
-  `e92b2b54a19dd39e3b779208d242faafbe4e5bf7` belongs to the prior `bb6a575`/`c84fc12` review.
-  Apply one backlog-only provenance correction; do not change tests/runtime/probe/push/close/#219.
-  The historical receipt bindings are `ed2acca` → `545c854`/`903d33b`, `9c0f9a4` →
-  `62bf992`/`983cd27`, and `e92b2b5` → `bb6a575`/`c84fc12`; `e92b2b5` is not current.
-  Final provenance review at exact `2a6fbff60a77c2f0cbc07b4dd7c4d8ec4e40917c` was BLOCKED in
-  `reviews/review-202608232202-issue221-final-provenance-review.md` at reviewer `84d89ee`; the
-  BLOCK was recorded first at exact receipt `e5d27aea0834b504ce1d201149346b16fd727998`. This
-  separate backlog-only correction binds that receipt to reviewed head
-  `2a6fbff60a77c2f0cbc07b4dd7c4d8ec4e40917c` / reviewer `84d89ee`; actor is `vnfin-oss-reviewer`,
-  next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve empty chain, `DISABLE_PENDING_PERMISSION`,
-  no tests/runtime/probe/push/resolution/close/#219 activation, and all queued issues/exclusions.
-  Corrected-provenance BLOCK was recorded first at exact receipt
-  `765dfb8cf4526044a69340f949c63564287d8a3d`; this separate wording-only correction binds that
-  receipt to reviewed head `d63e8dd74636c81a3ceadcd6aeb5f0de2ab36de5` / reviewer `94ae4bd`. Actor
-  is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve the empty
-  chain and no tests/runtime/probe/push/resolution/close/#219 activation.
-  Corrected provenance review at exact `d63e8dd74636c81a3ceadcd6aeb5f0de2ab36de5` was BLOCKED in
-  `reviews/review-202608232205-issue221-corrected-provenance-review.md` at reviewer `94ae4bd`:
-  the `e5d27ae` BLOCK-before-correction passes, but lines 684-688 bind `e92b2b5` to the wrong
-  `3932d7d`/`90afc61` review; bind historical combined `63679b0` to that review instead. Record
-  this BLOCK before the separate wording-only fix; no tests/runtime/probe/push/close/#219 activation.
+- **#219 — ACTIVE SOURCE_DESIGN (2026-08-23).** Actor `vnfin-oss`; next action
+  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor `f2d0187` for
+  `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`, public receipt
+  `issuecomment-5385376214`. #221 is verified `CLOSED`/`COMPLETED`, so #219 is now active for
+  source/design only. Scope is provider-published VNM national monthly IIP YoY through the existing
+  macro surface if qualified; annual/index/cumulative substitutes and acceleration/VN30F logic
+  remain excluded. No RED, code, push, or close before exact-SHA design PASS.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
@@ -1133,12 +1035,6 @@ _None._
 
 ## Next
 
-- **#219 — QUEUED_AFTER_#221 (2026-08-23).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_221_CLOSURE`; packet anchor `f2d0187` for
-  `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind verified #221
-  closure and do not start source/design, RED, code, push, or close before its turn and exact-SHA
-  design PASS.
-
 - **#220 — QUEUED_AFTER_#219 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_219_CLOSURE`; packet anchor
   `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for `tasks/220-annual-roe-ratio-history-spec.md`,
@@ -1187,6 +1083,19 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#221 — DONE/CLOSED (2026-08-23), approved Fmarket runtime disable.** Published exact approved
+  anchor `a69f3c5901f97e95f1c183c64792f933a82cf7a6` to `origin/master`; remote HEAD is exact,
+  approved ancestry/path checks pass, and local queue receipts `65d6ac6`/`0fd103d` are excluded.
+  Final approval `reviews/review-202608232207-issue221-final-approval.md` at reviewer `a9ad0e3`;
+  clean resolution `issuecomment-5386706340`; GitHub re-read `CLOSED`/`COMPLETED` at
+  `2026-08-23T15:09:56Z`. Fmarket access is fail-closed pending explicit permission; no live probe
+  or automatic fallback was added. Full `pytest -q`, build, diff, and scope gates passed. #219 is
+  activated below for source/design only; #220 remains closure-gated behind #219.
+  Historical reviewer lifecycle was `CODE_REVIEW_CORRECTION_REVIEW_REQUESTED`; Actor is `vnfin-oss-reviewer`,
+  next action `RETURN_FINAL_EXACT_SHA_VERDICT`, and this lifecycle receipt is
+  the exact final review handoff. Final test/docs correction content anchor is
+  `3c2ad085c4218b87564a1a06b6e70a0c1113d6f8`; these are retained historical markers, not an open state.
 
 - **#218 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `c646c37ca948a1747d3483d9b40c296263b85496` to `origin/master`; final approval
