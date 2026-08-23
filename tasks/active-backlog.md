@@ -602,20 +602,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#220 — DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss`; next action
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
+- **#220 — DESIGN BLOCKED (2026-08-23).** Actor `vnfin-oss-reviewer`; next action
+  `RECORD_DOCS_ONLY_CORRECTION`; packet anchor
   `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for
   `tasks/220-annual-roe-ratio-history-spec.md`, public receipt `issuecomment-5385517511`.
-  Activation receipt is `8dea6df9beb1acdbcf3583af2ef51a84bff0e6df`; final docs content anchor is
-  `e0949e103b7df6c90d5ef7a27dde5dfa5f2c2d14` (superseding content anchor
-  `ce3503371f417ea291d77889145d6dd5f6bac5ef` only to remove an opaque official-reference path
-  that failed the repository secret-like-blob scanner). The source/design artifacts conclude
-  `SOURCE-GAP CLOSURE`: no candidate proves annual fiscal ROE identity, complete coverage,
-  bounded lawful runtime, and redistribution together. Preserve the existing single-symbol
-  fundamentals call, current `Period.UNKNOWN` ratio behavior, zero-ratio metrics, and no
-  RED/code/push/close before exact-SHA design PASS. #222, #223, and #224 remain queued behind
-  #220. The final merged-handoff HEAD is returned with the reviewer request; the content anchor
-  is not relabeled as that HEAD.
+  Reviewed exact merged head is `8dfc9fc2b9e03c86bfec536a1c95298bb8c71a6b` with final docs content
+  anchor `e0949e103b7df6c90d5ef7a27dde5dfa5f2c2d14`; BLOCK report is
+  `reviews/review-202608232313-issue220-design-source-review.md` at reviewer `405f990`.
+  B1-B7 are docs/backlog-only precision seams: reconcile probe/transport counts, distinguish
+  caller-selected categories from response-backed templates, remove unretained route/semantic
+  claims, require all eight periods for `FULL`, add null/absent cadence and no-fabrication REDs,
+  correct reviewer-owned lifecycle, and remove diff-check trailing whitespace. Record this BLOCK
+  before edits. Preserve `SOURCE-GAP CLOSURE`, the empty source chain, current `Period.UNKNOWN`
+  and 26-metric behavior, no RED/code/push/close, and queued #222/#223/#224.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
