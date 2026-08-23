@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), final F2 grammar correction.**
+- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final finite F2 handoff.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -672,6 +672,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   around slash/colon/equal/tilde. Apply one narrow finite-grammar or two-way matrix correction;
   no runtime/probe/push/close/#219 activation. Bind current BLOCK receipt `9c0f9a47e13dc104ff21b226a648bdcd554b3ff5`
   to review `983cd27` above; preserve all prior anchors and exclusions.
+  The preceding closure BLOCK receipt `9c0f9a47e13dc104ff21b226a648bdcd554b3ff5` belongs to
+  reviewed head `62bf9926219880bd549d8724231c760947de8fae` and reviewer `983cd27`; the older
+  `ed2accae8c80a3e3a5c8c5e5026f59a514213aab` remains bound only to the earlier `545c854` review.
+  Final finite-grammar F2 content is `3c2ad085c4218b87564a1a06b6e70a0c1113d6f8`: product
+  prefixes/separators and slash/colon/equal/tilde spacing are finite, with two-way positive/negative
+  tests. F1 and runtime remain unchanged. This lifecycle receipt is the exact final review handoff;
+  actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
