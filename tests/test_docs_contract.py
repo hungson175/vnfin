@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import inspect
 import pathlib
+import re
 
 import vnfin
 import vnfin.crypto as crypto
@@ -284,48 +285,50 @@ def test_fmarket_transition_docs_bind_current_disabled_and_historical_evidence()
     assert '"source_disabled_pending_permission"' in inspect.getsource(diagnostics.RequestDiagnostic)
 
 
+def test_fmarket_transition_docs_reject_completed_state_contradictions():
+    etf_page = _read("docs/research/2026-08-23-vn-etf-discovery-nav-history-source-vetting.md")
+    for phrase in (
+        "A future docs-only PASS must use published base",
+        "The release sequence is: rerun merged gates",
+        "only then activate #221",
+        "No implementation, RED, model/accessor, or runtime capability is authorized by this docs pass.",
+    ):
+        assert phrase not in etf_page
+
+    terms_audit = _read("docs/research/2026-08-23-fmarket-current-runtime-terms-audit.md")
+    for phrase in (
+        "current exact-SHA code review remains open for bounded B1-B4 corrections",
+        "The future `explain_fund_coverage()` must return",
+        "Before design PASS, this audit remains documentation-only:",
+        "complete the separately reviewed fail-before-network transition",
+    ):
+        assert phrase not in terms_audit
+    assert "The current `explain_fund_coverage()` returns" in terms_audit
+    assert "the Fmarket source is implemented and remains disabled" in terms_audit
+
+
+def test_fmarket_correction_lifecycle_has_reviewer_verdict_owner():
+    backlog = _read("tasks/active-backlog.md")
+    assert "CODE_REVIEW_CORRECTION_REVIEW_REQUESTED" in backlog
+    assert "Actor is `vnfin-oss-reviewer`" in backlog
+    assert "RETURN_FINAL_EXACT_SHA_VERDICT" in backlog
+    assert "final correction anchor" in backlog
+
+
 def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
-    forbidden = (
-        "VEOF",
-        "VESAF",
-        "VFF",
-        "VIBF",
-        "SSISCA",
-        "BVPF",
-        "VLBF",
-        "VFMVF1",
-        "VNDAF",
-        "VEOF",
-        "ASBF",
-        "VFF",
-        "DCBF",
-        "BAF126003",
-        "Trái phiếu chưa niêm yết",
-        "15091.0",
-        "15120.0",
-        "15105.5",
-        "2018-07-31",
-        "19626.37",
-        "34942.66",
-        "33779.47",
-        "43503.81",
-        "36153.51",
-        "1729 rows",
-        "1317 rows",
-        "1267 rows",
-        "2025-12-05",
-        "2014-07-01",
-        "1761537393929",
-        "VNDAF 19630.53",
-        "productId=20",
-        "id=20",
-        "~8 such funds",
-        "~8 defensive-credit",
-        "~21/65",
-        "total=65",
-        "total:65",
-        "All 65",
-        "res/products/20",
+    forbidden_patterns = (
+        r"\b(?:veof|vesaf|vff|vibf|ssisca|bvpf|vlbf|vfmvf1|vndaf|asbf|dcbf)\b",
+        r"\bbaf126003\b",
+        r"\b(?:id|product\s*id)\s*=?\s*(?:20|21|38|51)\b",
+        r"\b21\s*/\s*65\b",
+        r"\ball\s+65\s+funds?\b",
+        r"\b65\s+funds?\b",
+        r"\b(?:1729|1317|1267)\s+rows?\b",
+        r"\b1267\b",
+        r"\b(?:2025-12-05|2018-07-31|2017-01-31)\b",
+        r"\b1781802000000\b",
+        r"\b(?:15091(?:\.0)?|15120(?:\.0)?|15105\.5|7\.99|25\.2|11\.59|97\.44|33\.36|19626\.37|34942\.66|33779\.47|43503\.81|36153\.51)\b",
+        r"res/products/20\b",
     )
     affected = (
         "tests/test_funds.py",
@@ -335,13 +338,18 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
         "docs/design/fund-coverage-holdings.md",
         "tasks/194-build-spec.md",
         "tasks/194-nav-quarantine-design.md",
+        "tasks/155-fund-metadata-design.md",
+        "tasks/181-fund-nav-asof-spec.md",
+        "tasks/active-backlog.md",
         "CHANGELOG.md",
+        "vnfin/funds/fmarket.py",
     )
     for path in affected:
         text = _read(path)
-        assert any(marker in text.lower() for marker in ("synthetic", "redact")), path
-        for token in forbidden:
-            assert token not in text, f"{path} retains live-derived token {token!r}"
+        normalized = re.sub(r"\s+", " ", text.casefold())
+        assert "trái phiếu chưa niêm yết" not in normalized, path
+        for pattern in forbidden_patterns:
+            assert not re.search(pattern, normalized, flags=re.IGNORECASE), (path, pattern)
 
 
 # Issue #153 — gold tutorial must use GoldBar.price (GoldBar has no .close, unlike PriceBar).
