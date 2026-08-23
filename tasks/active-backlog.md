@@ -1021,25 +1021,6 @@ _None._
 - **#140 — "financial news" FEATURE request** (enhancement label). NOT a bug → Boss/product-scope
   decision; parked (reviewer agrees, like #137). Not implementing autonomously.
 
-## Next
-
-- **#207 — daily USD/VND FX history (SOURCE_DESIGN_IN_PROGRESS; builder, 2026-08-23).**
-  Filtered tech-lead packet `tasks/207-daily-usdvnd-fx-history-spec.md` at reviewer `3d60102`.
-  Source/design artifacts are committed at `26ad4f510484ff4233d38950461a283dc0227ccc`:
-  `docs/research/2026-08-23-daily-usdvnd-fx-history-source-vetting.md` and
-  `tasks/207-design-note.md`. Disposition is SOURCE-GAP CLOSURE: annual World Bank behavior is
-  preserved; SBV remains blocked on reuse rights, bounded pagination/WAF reliability, and rate
-  policy. Exact design review `reviews/review-202608230822-issue207-source-design-gate.md`
-  (reviewer `a8910c5`) was BLOCKED on docs-only B1-B6 precision. First correction `bebc45e` was
-  reviewed by `reviews/review-202608230838-issue207-corrected-design-rereview.md` (reviewer
-  `9906cd3`) and remained BLOCKED on narrow R1-R4 precision. Final docs-only correction is the
-  exact anchor `81baabc909c5d11f2be814644363decd3283c60e` on the same two Markdown paths: total
-  unexpected-status handling, closed internal/offline tokens and mappings, typed-basis reopen gate,
-  corrected page=0 provenance and VCB wording, plus future enum/string daily-parity RED coverage.
-  Merged-tree diff checks, full/focused/docs-secret tests, offline imports, and isolated sdist/wheel
-  build pass. No RED tests, production code, push, or close before exact-SHA re-review. Actor is
-  `vnfin-oss` builder; backlog receipt is local-only.
-
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
 - **#173 N1/N2 (reviewer nits, review-202606201616, reviewed-follow-up — re-review before push):**
@@ -1055,6 +1036,14 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#207 — DONE/CLOSED (2026-08-23), documentation-only source-gap closure.** Published exact
+  approved `origin/master` anchor `81baabc909c5d11f2be814644363decd3283c60e` with approved
+  research/design/backlog paths; resolution `issuecomment-5383664063`; GitHub re-read
+  `CLOSED`/`COMPLETED` (`closedAt=2026-08-23T01:51:30Z`). No RED tests, production code, daily
+  source, or capability claim; annual World Bank behavior remains preserved. Final design PASS:
+  `reviews/review-202608230849-issue207-final-design-pass.md` at reviewer `685f94a`. Local
+  backlog receipts remain intentionally unpushed.
 
 - **#206 — DONE/CLOSED (2026-08-22), documentation-only source-gap closure.** Published exact
   approved `origin/master` anchor `4eb281b0309dd7603bc4c1afae6be5efc2ebacd9` with only approved
