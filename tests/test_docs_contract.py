@@ -14,6 +14,7 @@ import inspect
 import pathlib
 import re
 
+import pytest
 import vnfin
 import vnfin.crypto as crypto
 import vnfin.diagnostics as diagnostics
@@ -301,16 +302,46 @@ def test_fmarket_transition_docs_reject_completed_state_contradictions():
         "The future `explain_fund_coverage()` must return",
         "Before design PASS, this audit remains documentation-only:",
         "complete the separately reviewed fail-before-network transition",
+        "before that transition",
+        "already-authorized disable RED path",
     ):
         assert phrase not in terms_audit
-    for pattern in (
-        r"current valid calls\s+(?:forward|send|include).*fundassett?ypes",
-        r"current valid calls\s+(?:return|serve).*cached",
-        r"current valid calls\s+(?:produce|return).*emptydata",
-    ):
-        assert not re.search(pattern, terms_audit, flags=re.IGNORECASE), pattern
+    assert "may reopen the **source/legal disposition** while the implemented disable remains in force" in terms_audit
+    assert "does not authorize a new RED/implementation path" in terms_audit
+    for document in (etf_page, terms_audit):
+        _assert_no_current_fmarket_contradictions(document)
     assert "The current `explain_fund_coverage()` returns" in terms_audit
     assert "the fmarket source is implemented and remains disabled" in terms_audit.casefold()
+
+
+_CURRENT_FMARKET_CONTRADICTION_PATTERNS = (
+    re.compile(
+        r"\bcurrent(?:\s+valid)?\s+calls?\b(?!\s+do\s+not\b)"
+        r"(?:\s+[a-z0-9_`-]+){0,8}\s+"
+        r"(?:can|may|will|forward|send|include|build|construct|dispatch|parse|return|serve|produce|yield)\b"
+        r"[^.!?\n]{0,180}\b(?:fundassett?ypes|cache(?:d|\s+lookup|\s+text)?|emptydata|parse(?:d|s)?\s+(?:response|payload|row))\b",
+        re.IGNORECASE,
+    ),
+)
+
+
+def _assert_no_current_fmarket_contradictions(text: str) -> None:
+    normalized = re.sub(r"\s+", " ", text.casefold())
+    for pattern in _CURRENT_FMARKET_CONTRADICTION_PATTERNS:
+        assert not pattern.search(normalized), pattern.pattern
+
+
+@pytest.mark.parametrize(
+    "contradiction",
+    (
+        "Current valid calls can forward `fundAssetTypes` and parse provider rows.",
+        "Current calls return cached response text before network.",
+        "Current valid calls may parse provider payloads and produce `EmptyData`.",
+    ),
+)
+def test_fmarket_contradiction_matcher_covers_modal_and_short_forms(contradiction):
+    normalized = re.sub(r"\s+", " ", contradiction.casefold())
+    assert any(pattern.search(normalized) for pattern in _CURRENT_FMARKET_CONTRADICTION_PATTERNS)
 
 
 def test_fmarket_correction_lifecycle_has_reviewer_verdict_owner():
@@ -318,21 +349,25 @@ def test_fmarket_correction_lifecycle_has_reviewer_verdict_owner():
     assert "CODE_REVIEW_CORRECTION_REVIEW_REQUESTED" in backlog
     assert "Actor is `vnfin-oss-reviewer`" in backlog
     assert "RETURN_FINAL_EXACT_SHA_VERDICT" in backlog
-    assert "final correction anchor" in backlog
+    assert re.search(r"final test/docs correction content anchor [`'][0-9a-f]{40}[`']", backlog)
+    assert "this lifecycle receipt is the exact final review handoff" in backlog
 
 
 def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
     forbidden_patterns = (
-        r"\b(?:veof|vesaf|vff|vibf|ssisca|bvpf|vlbf|vfmvf1|vndaf|asbf|dcbf)\b",
+        r"\b(?:veof|vesaf|vff|vibf|ssisca|bvpf|vlbf|vcbfbcf|vfmvf1|rvpf24|vndaf|asbf|dcbf)\b",
         r"\bbaf126003\b",
-        r"\b(?:id|product\s*id)\s*=?\s*(?:20|21|27|38|51)\b",
+        r"\b(?:id|product[_\s]*id)\s*=?\s*(?:20|21|27|38|51)\b",
         r"\b21\s*/\s*65\b",
         r"\ball\s+65\s+funds?\b",
         r"\b65\s+funds?\b",
+        r"\btotal\s*[:=]\s*65\b",
         r"\b(?:1729|1317|1267)\s+rows?\b",
         r"\b1267\b",
-        r"\b(?:2025-12-05|2018-07-31|2017-01-31)\b",
+        r"\b(?:2025-12-05|2018-07-31|2017-01-31|2014-07-01)\b",
         r"\b1781802000000\b",
+        r"\b1761537393929\b",
+        r"~\s*8\s+(?:such\s+funds|defensive-credit)\b",
         r"\b(?:15091(?:\.0)?|15120(?:\.0)?|15105\.5|7\.99|25\.2|11\.59|97\.44|33\.36|19626\.37|34942\.66|33779\.47|43503\.81|36153\.51)\b",
         r"res/products/20\b",
     )
@@ -348,6 +383,8 @@ def test_fmarket_affected_evidence_contains_no_live_rows_or_identifiers():
         "tasks/181-fund-nav-asof-spec.md",
         "tasks/active-backlog.md",
         "CHANGELOG.md",
+        "tests/test_contract_keys.py",
+        "vnfin/_contracts/keys.py",
         "vnfin/funds/fmarket.py",
     )
     for path in affected:
