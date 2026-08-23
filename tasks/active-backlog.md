@@ -1042,13 +1042,13 @@ _None._
   No Fmarket API probe, RED/code/push/close before exact design PASS; #219/#220 remain behind #221.
 
 - **#219 — QUEUED_AFTER_#221 (2026-08-23).** Actor `vnfin-oss`; next action
-  `SOURCE_DESIGN_AFTER_221_REVIEW_HANDOFF`; packet anchor `f2d0187` for
+  `ACTIVATE_AFTER_221_CLOSURE`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind verified #221
   closure and do not start source/design, RED, code, push, or close before its turn and exact-SHA
   design PASS.
 
 - **#220 — QUEUED_AFTER_#219 (2026-08-23).** Actor `vnfin-oss`; next action
-  `SOURCE_DESIGN_AFTER_219_REVIEW_HANDOFF`; packet anchor
+  `ACTIVATE_AFTER_219_CLOSURE`; packet anchor
   `314cd53b4a7f3a0c36f6a1bb45efed2611733f4a` for `tasks/220-annual-roe-ratio-history-spec.md`,
   public receipt `issuecomment-5385517511`. Scope provider-published annual ROE through the
   existing fundamentals call only if qualified; exclude current/TTM/request-echo/derived/proxy
