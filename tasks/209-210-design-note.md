@@ -240,17 +240,24 @@ key insertion are one atomic operation under the coordinator's private lock, eve
 though the approved scheduler is sequential. A retry is a new reservation and is
 charged independently.
 
-If the first reservation for an eligible source fails, the coordinator returns the
-typed terminal `BudgetGlobalExhausted(symbol, interval, attempts=(),
-diagnostic="budget_global_exhausted")`; the adapter is not invoked and no
-`SourceAttempt` is appended. This future typed result/error is distinct from current
-`AllSourcesFailed`'s ambiguous `no sources attempted` message and must preserve the
-global-budget reason. If exhaustion occurs after an adapter is invoked (for example
+If the first reservation for an eligible source fails, the outer
+`FailoverPriceClient.get_history()` boundary raises the future public
+`vnfin.exceptions.BudgetGlobalExhausted`, a subclass of `VnfinError`, with exactly
+these stable fields: `symbol: str`, `interval: Interval`,
+`attempts: tuple[SourceAttempt, ...]`, and
+`diagnostic: Literal["budget_global_exhausted"]`. The `attempts` value is exactly
+`tuple(prior_sanitized_attempts)`: a fresh zero-call ledger has `()`, while exhaustion
+before a later source preserves every earlier sanitized attempt. The uninvoked source
+adds no attempt. This is a public exception exported only from `vnfin.exceptions` (not re-exported from
+`vnfin` or `vnfin.prices`), listed in `vnfin.exceptions.__all__`, and catchable
+specifically or as `VnfinError`; no private sentinel crosses the public boundary, and it
+is not a `SourceError` failover trigger. `prices.history()` delegates
+to `get_history()` and propagates this exception; it returns only `PriceHistory`, never
+a terminal object. If exhaustion occurs after an adapter is invoked (for example
 before a later page or identity control), its private buffer is discarded and the
 coordinator emits one failed logical attempt with the canonical budget reason;
-page/retry reservations never create their own attempts. The pre-dispatch terminal is
-not thrown through the current engine; this is a future private/public engine seam, not
-current runtime behavior.
+page/retry reservations never create their own attempts. This is a future public
+engine seam, not current runtime behavior.
 
 The aggregate ceiling is distinct from the request-scoped 32-call ceiling and is named
 `audit_global_physical_ceiling`. It is a finite absolute envelope of
@@ -334,10 +341,15 @@ Only after a future design PASS may a RED-first matrix be written. It must cover
 single/multi/final pages, totals, cursor stalls/reversal/overlap/conflict, MIME/status
 drift, wrong symbol/interval, timestamp and volume semantics, adjustment mismatch,
 retry and both budget caps, atomic discard, no calls after success/fatal failure,
-no date fan-out/concurrency, diagnostic sanitization, `FULL_SPAN` and
-`QUALIFIED_PARTIAL` manifests, facade attempts 1/2/3/4, capability skips, earlier
-partial winners, later-source reachability, direct/facade parity, M1-vs-M5 separation,
-and D1/source-order compatibility. All fixtures must be synthetic.
+no date fan-out/concurrency, diagnostic sanitization, arbitrary custom-source names
+outside the qualified built-in path, success and all-failure attempt sanitization, all
+four preserved UDF warning prefixes, `FULL_SPAN` and `QUALIFIED_PARTIAL` manifests,
+facade attempts 1/2/3/4, capability skips, earlier partial winners, later-source
+reachability, direct/facade parity, M1-vs-M5 separation, and D1/source-order
+compatibility. The budget terminal matrix must cover zero-call exhaustion, later-source
+exhaustion with prior attempts preserved, no attempt for the uninvoked source, zero
+network calls after failure, and the exact exception export/public snapshot. All
+fixtures must be synthetic.
 
 ### 4.6 Conditional public diagnostics grammar
 
@@ -403,6 +415,7 @@ one reviewed change; this source-gap commit does none of them:
 
 M1 and M5 are each **SOURCE-GAP CLOSURE**. The new qualified deep-history chain remains
 empty and no
-runtime capability is claimed. This commit contains only the two required source/design
-artifacts; it requests exact-SHA design review and does not authorize TDD, RED tests,
-production code, push, or issue closure.
+runtime capability is claimed. This correction commit contains three tracked paths: the
+two required source/design artifacts plus the required `tasks/active-backlog.md` mirror;
+it requests exact-SHA design review and does not authorize TDD, RED tests, production
+code, push, or issue closure.

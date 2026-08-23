@@ -540,16 +540,27 @@ The source and global checks plus key insertion are one atomic operation under t
 coordinator's private lock, even though the approved scheduler is sequential. A retry
 is a new reservation and is charged independently.
 
-There are two exhaustion seams. If the coordinator cannot reserve the first request of
-an otherwise eligible source, it returns the typed terminal
-`BudgetGlobalExhausted(symbol, interval, attempts=(), diagnostic="budget_global_exhausted")`;
-no adapter is invoked and no `SourceAttempt` is appended. This terminal is distinct
-from current `AllSourcesFailed`'s ambiguous `no sources attempted` message and is the
-future public error/result contract for this seam. If exhaustion occurs after an
-adapter has been invoked (for example, before a later page or identity control), the
-adapter discards its private buffer and returns one failed logical source attempt with
-the canonical budget reason; page/retry reservations never create their own attempts.
-This is a future private/public engine seam, not current runtime behavior.
+There are two exhaustion seams, with one exact public terminal contract. If the
+coordinator cannot reserve the first request of an otherwise eligible source, the
+outer `FailoverPriceClient.get_history()` boundary raises the future public
+`vnfin.exceptions.BudgetGlobalExhausted`, a subclass of `VnfinError`, with exactly
+these stable fields: `symbol: str`, `interval: Interval`,
+`attempts: tuple[SourceAttempt, ...]`, and
+`diagnostic: Literal["budget_global_exhausted"]`. The `attempts` value is exactly
+`tuple(prior_sanitized_attempts)`: a fresh zero-call ledger has `()`, while exhaustion
+before a later source preserves every earlier sanitized attempt. The uninvoked source
+adds no attempt. This is a public exception exported only from `vnfin.exceptions` (not re-exported from
+`vnfin` or `vnfin.prices`), listed in `vnfin.exceptions.__all__`, and catchable
+specifically or as `VnfinError`; no private sentinel crosses the public boundary, and it
+is not a `SourceError` failover trigger. `prices.history()` delegates
+to `get_history()` and propagates this exception; it returns only `PriceHistory`, never
+a terminal object.
+
+If exhaustion occurs after an adapter has been invoked (for example, before a later
+page or identity control), the adapter discards its private buffer and returns one
+failed logical source attempt with the canonical budget reason; page/retry reservations
+never create their own attempts. This is a future public engine seam, not current
+runtime behavior.
 
 The aggregate ceiling for a future frozen-cohort qualification is distinct from the
 request-scoped 32-call ceiling and is named `audit_global_physical_ceiling`. It is a
@@ -714,8 +725,13 @@ facade reachability. If neither outcome's manifest is complete, the issue remain
    repeated/reversing/out-of-range cursor, overlap/conflict, MIME/status drift, wrong
    symbol/interval, timestamp-unit/convention, volume, adjustment, cap exhaustion,
    atomic discard, no date fan-out, no calls after success, public diagnostic
-   sanitization, and both `FULL_SPAN` and `QUALIFIED_PARTIAL` manifests. All fixtures
-   must be synthetic and visibly non-provider data.
+   sanitization, arbitrary custom-source names outside the qualified built-in path,
+   success and all-failure attempt sanitization, all four preserved UDF warning
+   prefixes, and both `FULL_SPAN` and `QUALIFIED_PARTIAL` manifests. The budget
+   terminal matrix must cover zero-call exhaustion, later-source exhaustion with prior
+   attempts preserved, no attempt for the uninvoked source, zero network calls after
+   failure, and the exact exception export/public snapshot. All fixtures must be
+   synthetic and visibly non-provider data.
 
 ## 9. Current decision
 

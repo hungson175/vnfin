@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-08-22 +07_
+_Last synced: 2026-08-23 +07_
 
 > **✅ DONE 2026-07-22: #198 corporate fundamentals P0 — inverted routing + broken catalog + pagination — PUSHED + CLOSED.**
 > Reviewer-routed external issue (VIC missing net_income/equity). Root cause widened to a systemic repair: corporate
@@ -601,21 +601,26 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#209 — DESIGN_BLOCK (2026-08-23), combined with #210 as the historical VN cash M1 source-depth
-  batch.** Actor `vnfin-oss`; next action `SOURCE_DESIGN_HISTORY_CORRECTION`. Reviewer packet
+- **#209 — DESIGN_REVIEW_BLOCKED (2026-08-23), combined with #210 as the historical VN cash M1
+  source-depth batch.** Phase/transition: `EXACT_SHA_DESIGN_REVIEW` at anchor
+  `782341caf0644816a1871d9044bf538955b264ff`; expected actor/reviewer `vnfin-oss-reviewer`;
+  correction actor `vnfin-oss`; next action
+  `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`. Reviewer report commit: `e18e13d`; verified
+  handoff delivery receipt: `ff817c87`; latest BLOCK delivery receipt: `99d313b4`. Reviewer packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/209-210-historical-vn-cash-intraday-spec.md`,
-  triage receipts `5384151534` and `5384151605`. Latest reviewer report commit `ff817c87` at
-  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608231158-issue209-210-corrected-design-rereview.md`.
-  Rebuild the publish candidate from `origin/master`; add per-unit semantic axes, compatible
-  `SourceAttempt.name` diagnostics, and a finite audit-global budget. Preserve SOURCE-GAP and
-  the empty new qualified chain; no RED tests, production code, push, or close.
+  triage receipts `5384151534` and `5384151605`. Apply only the typed budget-terminal and
+  lifecycle-mirror correction; preserve SOURCE-GAP and the empty new qualified chain. No RED
+  tests, production code, push, or close.
 
-- **#210 — DESIGN_BLOCK (2026-08-23), combined with #209 as the historical VN cash M5 source-depth
-  batch.** Actor `vnfin-oss`; next action `SOURCE_DESIGN_HISTORY_CORRECTION`. Same reviewer packet
-  and latest report `ff817c87`. Rebuild from `origin/master` with independent M5 coverage,
-  timestamp/price/volume/adjustment axes, compatible diagnostics, and bounded audit accounting;
-  preserve SOURCE-GAP and the empty new qualified chain. No M1-to-M5 synthesis, RED tests,
-  production code, push, or close.
+- **#210 — DESIGN_REVIEW_BLOCKED (2026-08-23), combined with #209 as the historical VN cash M5
+  source-depth batch.** Phase/transition: `EXACT_SHA_DESIGN_REVIEW` at anchor
+  `782341caf0644816a1871d9044bf538955b264ff`; expected actor/reviewer `vnfin-oss-reviewer`;
+  correction actor `vnfin-oss`; next action
+  `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`. Reviewer report commit: `e18e13d`; verified
+  handoff delivery receipt: `ff817c87`; latest BLOCK delivery receipt: `99d313b4`. Same reviewer
+  packet and triage receipts. Apply only the typed budget-terminal and lifecycle-mirror
+  correction; preserve independent M5 coverage, SOURCE-GAP, and the empty new qualified chain.
+  No M1-to-M5 synthesis, RED tests, production code, push, or close.
 
 - **#211 — SPEC_SENT (2026-08-23), queued after the #209+#210 exact design handoff.** Actor
   `vnfin-oss`; next action `SOURCE_DESIGN_AFTER_209_210_REVIEW_HANDOFF`. Reviewer packet
