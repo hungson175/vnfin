@@ -1023,13 +1023,15 @@ _None._
 
 ## Next
 
-- **#208 — annual operating profit (SOURCE_DESIGN_IN_PROGRESS; builder, 2026-08-23).** Filtered
+- **#208 — annual operating profit (DESIGN_REVIEW_PENDING; builder, 2026-08-23).** Filtered
   tech-lead packet `/home/hungson175/tools/vnfin-oss-reviewer/tasks/208-annual-operating-profit-spec.md`
   at reviewer `3699ae5`; intake anchor is local `b3fbfe5`. Prepare only
   `docs/research/2026-08-23-annual-operating-profit-source-vetting.md` and `tasks/208-design-note.md`.
   Preserve the exact 26-metric catalog, `RAW_MAPPED` annual/template binding, bank
   `NOT_APPLICABLE`, quarterly source-gap, zero ratio calls, and tagged-v0.2.0 distinction. Actor is
-  `vnfin-oss` builder; no RED tests, production code, push, or close before exact-SHA design PASS.
+  `vnfin-oss` builder. Docs commit `5d2c3d763a5b5eec7f6eff4afe5c35a45d37cb87`; merged gates are
+  green (focused/full offline tests, diff/blacklist/secret/import/catalog/build). Exact-SHA design
+  review requested; no RED tests, production code, push, or close before PASS.
 
 ## Non-blocking follow-ups (only if Boss/reviewer prioritizes — NOT open issues)
 
