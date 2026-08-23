@@ -601,14 +601,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#218 — FINAL_CLOSURE_BLOCKED (2026-08-23), token precision.** BLOCK recorded first at reviewed
-  exact anchor `412ada80705ecf08b2da4e27d882dbf3bc256327`; report
-  `reviews/review-202608231822-issue218-final-closure-rereview.md`, reviewer `e4275fd`, delivery
-  `f1c1c7f4`. Expected correction actor is `vnfin-oss`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Change only the #219/#220 next-action tokens to
-  closure-gated actions `ACTIVATE_AFTER_221_CLOSURE` and `ACTIVATE_AFTER_219_CLOSURE`; preserve
-  all other approved bytes, SOURCE-GAP, empty ETF chain, current mutual-fund behavior, queued
-  #221/#219/#220, and no probe/RED/code/push/close.
+- **#221 — SOURCE_DESIGN (2026-08-23), activated after verified #218 closure; current-runtime
+  source/legal design.** Actor `vnfin-oss`; next action `PREPARE_EXACT_SHA_SOURCE_DESIGN`. Activation
+  is after #218 was re-read `CLOSED`/`COMPLETED` with published exact anchor
+  `c646c37ca948a1747d3483d9b40c296263b85496`, clean-resolution receipt
+  `issuecomment-5385760373`, and remote exact `HEAD`. Authoritative packet
+  `tasks/221-fmarket-current-runtime-terms-audit-spec.md` at reviewer
+  `1cc60cd99e7ed8b28214eb3a5cf9375c4a7c5376`; public issue
+  `https://github.com/hungson175/vnfin/issues/221`. Prepare exact source/legal design for current
+  Fmarket listing, NAV, holdings, and allocation and choose `CLEARED_AS_IS`,
+  `CLEARED_WITH_LIMITS`, `DISABLE_PENDING_PERMISSION`, or `REMOVE_SOURCE`. No Fmarket API probe,
+  RED/code/push/close before exact design PASS; #219/#220 remain queued behind verified #221
+  closure.
+
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1032,15 +1037,6 @@ _None._
 
 ## Next
 
-- **#221 — QUEUED_AFTER_#218 (2026-08-23).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_218_CLOSURE`; packet anchor
-  `1cc60cd99e7ed8b28214eb3a5cf9375c4a7c5376` for
-  `tasks/221-fmarket-current-runtime-terms-audit-spec.md`; public issue
-  `https://github.com/hungson175/vnfin/issues/221`. Activate only after verified #218 closure, then
-  prepare exact source/legal design for current Fmarket listing, NAV, holdings, and allocation and
-  choose `CLEARED_AS_IS`, `CLEARED_WITH_LIMITS`, `DISABLE_PENDING_PERMISSION`, or `REMOVE_SOURCE`.
-  No Fmarket API probe, RED/code/push/close before exact design PASS; #219/#220 remain behind #221.
-
 - **#219 — QUEUED_AFTER_#221 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_221_CLOSURE`; packet anchor `f2d0187` for
   `tasks/219-vietnam-monthly-industrial-production-yoy-spec.md`. Keep queued behind verified #221
@@ -1088,6 +1084,16 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#218 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `c646c37ca948a1747d3483d9b40c296263b85496` to `origin/master`; final approval
+  `reviews/review-202608231827-issue218-final-closure-approval.md` at reviewer `61c2553`, clean
+  resolution `issuecomment-5385760373`. Remote `HEAD` is exact, `8d1490f` ancestry and exactly
+  the three approved research/design/backlog paths were verified. GitHub re-read
+  `CLOSED`/`COMPLETED` at `2026-08-23T11:29:30Z`. The ETF discovery/NAV-history chain remains
+  empty: no qualified provider capability or coverage claim; current mutual-fund behavior is
+  unchanged. No probe, RED, production code, source registration, or runtime capability was
+  added. Local #221 activation receipt remains unpushed; #219/#220 remain closure-gated.
+
 - **#217 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16` from the approved docs/source range;
   remote HEAD, clean base ancestry, and the approved research/design/backlog paths were verified.
@@ -1095,7 +1101,7 @@ _None._
   `41f218c344ee8e58f812cf07be46fa56c12df736`; clean resolution `issuecomment-5385552728`; GitHub
   re-read `CLOSED`/`COMPLETED` at `2026-08-23T10:35:09Z`. The daily CNY/VND chain remains empty,
   annual World Bank behavior is unchanged, and no RED, runtime, or coverage capability was added.
-  Local #218 activation and design handoff receipts remain unpushed.
+  Local #221 activation receipt remains unpushed.
 
 - **#215 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `8350329d3d881e34df62937aacf7ea4d74f99f91` from the approved
@@ -1110,7 +1116,7 @@ _None._
   `8126dd5510b6390f91c9feeb43e047b2b9b88bc1` with approved independent artifact paths and
   clean-base ancestry; resolution receipts `5385033626`/`5385033721`; both issues re-read
   `CLOSED`/`COMPLETED`. VNREAL/VNMID chains remain empty/deny-only; no RED, production code,
-  proxy, basket, downstream signal, or capability claim. #218 is the current WIP.
+  proxy, basket, downstream signal, or capability claim. #221 is the current WIP.
 
 - **#212 — DONE/CLOSED (2026-08-23), approved Fmarket runtime correction.** Published exact approved
   anchor `4c85fbc6a1101b3a904b1dc68ac37bc29477ef6f` to `origin/master`; approved range was
@@ -1119,8 +1125,7 @@ _None._
   12 approved paths were verified. Final approval `reviews/review-202608231410-issue212-final-code-approval.md`
   at reviewer `71907f3`; resolution `issuecomment-5384775032`; GitHub re-read `CLOSED`/`COMPLETED`.
   Full 4,033-test suite, focused/build/API/blacklist/secret/diff gates passed. No unrelated source,
-  endpoint, credential, or capability was added; #217 is now closed and #218 is active for
-  source-design only.
+  endpoint, credential, or capability was added; #217 and #218 are now closed; #221 is active for source/legal design.
 
 - **#211 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact approved
   anchor `a1410be39105bd02e09bccf9c7ea83e79a049eb6` to `origin/master` from clean `a4df33f` ancestry;
