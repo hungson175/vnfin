@@ -601,9 +601,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#213 — DESIGN_REVIEW_BLOCKED (2026-08-23), combined docs correction with independent #214.**
-  Correction actor `vnfin-oss`; next action `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`.
-  Current merged head `af70154`; prior artifact anchor `72ab675`; synthesized report
+- **#213 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), correction complete.**
+  Actor `vnfin-oss`; next action `AWAIT_EXACT_SHA_DESIGN_VERDICT`.
+  Clean merged HEAD `1fca05fc4d46cd66265a844428c77cbcc1040852`; separate #213 artifact anchor
+  `4cf6134c6cf367a14eeddbeb0beb8c040c8c20e4`; prior merged head `af70154`; prior artifact anchor
+  `72ab675`; addressed synthesized report
   `reviews/review-202608231438-issues213-214-design-source-gate.md` at reviewer `d5dff00`;
   reviewer packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/213-vnreal-index-history-source-spec.md`,
@@ -613,11 +615,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   with #214 but keep symbols, artifacts, anchors, and receipts independent. No RED tests,
   production code, push, or close before exact-SHA design PASS.
 
-- **#214 — DESIGN_REVIEW_BLOCKED (2026-08-23), independent companion in the combined correction.**
-  Correction actor `vnfin-oss`; next action `DOCS_BACKLOG_CORRECTION_THEN_EXACT_SHA_REREVIEW`.
-  Current merged head `af70154`; prior artifact anchor `c302948` (supersedes isolated `b8d3aeb`);
-  synthesized report `reviews/review-202608231438-issues213-214-design-source-gate.md` at reviewer
-  `d5dff00`; reviewer packet
+- **#214 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), correction complete and independent.**
+  Actor `vnfin-oss`; next action `AWAIT_EXACT_SHA_DESIGN_VERDICT`.
+  Clean merged HEAD `1fca05fc4d46cd66265a844428c77cbcc1040852`; separate #214 artifact anchor
+  `1fca05fc4d46cd66265a844428c77cbcc1040852`; prior merged head `af70154`; prior artifact anchor
+  `c302948` (supersedes isolated `b8d3aeb`); addressed synthesized report
+  `reviews/review-202608231438-issues213-214-design-source-gate.md` at reviewer `d5dff00`; reviewer packet
   `tasks/214-vnmid-index-history-source-spec.md`, packet commit `bd4038e`, public receipt
   `issuecomment-5384680920`. Qualify VNMID independently using the shared batch methodology but
   separate artifacts/anchors/receipts: VPS/SSI/VNDirect identity, D1 points/volume/time, exact
