@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), final F1-F2 correction required.**
+- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final F1-F2 handoff.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -626,11 +626,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   final review handoff. The final review at exact `9c0b9f9` was BLOCKED in
   `reviews/review-202608232105-issue221-final-f1-f3-review.md` at reviewer `f6efee3`: F1 direct
   parser/current API-Fmarket/cache-use/compound-negation contradictions bypass the matcher; F2
-  known-form/path self-tests are missing and a residual provider fund-code example remains. BLOCK is recorded
-  before edits; actor is `vnfin-oss`; next action
-  `RED_FIRST_FINAL_F1_F2_SELFTEST_LIFECYCLE_CORRECTION`. Preserve `DISABLE_PENDING_PERMISSION`,
-  no runtime/probe/push/resolution/close, no #219 activation, and queued #219/#220/#222; exclude
-  local queue receipts `65d6ac6` and `0fd103d`.
+  known-form/path self-tests are missing and a residual provider fund-code example remains. BLOCK was recorded
+  before edits at `d154d48`. Final RED tests are at `c2f3248`; final test/docs correction content
+  anchor is `62a8a0ac707600d8f9f71452ea40dc183a5cef7c`. This lifecycle receipt is the exact final review
+  handoff. Actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve
+  `DISABLE_PENDING_PERMISSION`, no runtime/probe/push/resolution/close, no #219 activation, and queued
+  #219/#220/#222; exclude local queue receipts `65d6ac6` and `0fd103d`.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
