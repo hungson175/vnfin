@@ -601,17 +601,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), narrow R1-R5 correction complete.**
-  BLOCK was recorded first at reviewed exact anchor `08df58bde52eed8629365a90f36f0035e0bf0499` in
-  `8418ed4`; report `reviews/review-202608231907-issue221-corrected-design-rereview.md`, reviewer
-  `d7d7c99`, delivery `2b08c5e0`. The correction commit containing this record is the exact
-  handoff anchor returned to the reviewer. Actor is `vnfin-oss`; next action
-  `RETURN_EXACT_SHA_DESIGN_REVIEW`. It closes the owner-evidence/disable-RED distinction,
-  direct-constructor-only cache/retry matrix with named test seam, frozen `source_capabilities()`
-  and diagnostics output, exact approved remote anchor/ancestry/path verification, remaining
-  units/failover/module/adapter/exception/public-snapshot surfaces, and subsection numbering.
-  Preserve `DISABLE_PENDING_PERMISSION`, official evidence, no Fmarket API probe, no RED/code,
-  push, or close; #219/#220/#222 remain queued in order.
+- **#221 — IMPLEMENTATION_ACTIVE (2026-08-23), design PASS → RED-first code line.** Exact design
+  PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
+  `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
+  `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
+  implementation line `issue221-fmarket-disable` from the design anchor; local queue receipt
+  `65d6ac6` is excluded and remains unpushed. Actor is `vnfin-oss`; next action
+  `RED_FIRST_IMPLEMENTATION`. Commit RED tests before production changes. Preserve
+  `DISABLE_PENDING_PERMISSION`, no Fmarket probe/push/resolution/close, no #219 activation, and
+  queued #219/#220/#222/#223.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
