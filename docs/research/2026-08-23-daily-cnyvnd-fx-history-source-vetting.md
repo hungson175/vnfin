@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-23 (UTC+7)
 **Packet:** `tasks/217-daily-cnyvnd-fx-history-spec.md` (reviewer packet `4159d74`)
-**Reviewed block:** exact `b32ca024d93a1e56eb345f707adb4ca717c54ee5`; report
-`reviews/review-202608231705-issue217-corrected-design-rereview.md` at reviewer `dd89975`
+**Reviewed block:** exact `262c6b8508f6b87cdaae48f761960b5d4da392c4`; report
+`reviews/review-202608231719-issue217-final-design-rereview.md` at reviewer `5a45543`
 **Requested window:** inclusive `2018-01-01..2026-08-19`
 **Decision:** **SOURCE-GAP CLOSURE** — no daily CNY/VND capability, RED tests, production
 code, source registration, or source-backed daily API claim is authorized by this report.
@@ -52,18 +52,20 @@ redistribute data.
 The initial direct-probe session used a fresh process, no credentials, no cookie jar, no
 browser session, no proxy, IPv4, a 5-second connect timeout, a 15-second total timeout, no
 automatic retry, and a benign desktop-class User-Agent. Its retained session-start marker is
-`2026-08-23T16:17:20+07:00`; an end marker was not retained. One bounded manual repeat was
+`initial_session_start=2026-08-23T16:17:20+07:00`; its end marker is
+`initial_session_end=NOT_RETAINED`, and its exact User-Agent is
+`initial_user_agent=NOT_RETAINED`. One bounded manual repeat was
 made for the Vietcombank 2018 date route after a DNS timeout; it is recorded as retry `1`,
 not a hidden library retry. The correction session repeated the same bounded policy and added
 current Frankfurter v2 and BIS v2 probes with redirect following disabled. The exact benign
-correction-session User-Agent value was `vnfin-oss source-design probe` (a descriptive,
-non-browser probe identifier); the initial desktop-class value was not retained verbatim.
-The Frankfurter correction-session timestamp marker was
-`2026-08-23T16:46:44.967256+07:00` (the corresponding UTC probe start); no body, credential,
-cookie, or end marker was retained. Only status, complete MIME, effective host/path, envelope
-shape, counts, dates, and legal statements were retained. Query-bearing date/format parameters
-were used only during probes and are not written below or committed; canonical route references
-are path-only.
+correction-session User-Agent value was `correction_user_agent=vnfin-oss source-design probe`
+(a descriptive, non-browser probe identifier). The Frankfurter correction-session timestamp
+marker was `correction_session_start=2026-08-23T16:46:44.967256+07:00` (the corresponding UTC
+probe start); `correction_session_end=NOT_RETAINED` and
+`bis_correction_session_marker=NOT_RETAINED`. No body, credential, or cookie was retained.
+Only status, complete MIME, effective host/path, envelope shape, counts, dates, and legal
+statements were retained. Query-bearing date/format parameters were used only during probes and
+are not written below or committed; canonical route references are path-only.
 
 ## 3. Exact bounded probe accounting
 
@@ -77,10 +79,10 @@ exploratory probes and is never used as qualification evidence.
 
 ### 3.1 Direct dispatch ledger
 
-The following table is the complete **evidence-complete reproducible** dispatch accounting for
+The following table is the complete **evidence-complete for retained response fields** dispatch accounting for
 the source/design packet. Two earlier exploratory BIS requests were real direct research
 traffic but did not retain full MIME/effective-route evidence. They remain visible as retired
-`NOT_RETAINED` rows below and are excluded from this reproducible subset; the exact v2 correction
+`NOT_RETAINED` rows below and are excluded from this retained-field evidence subset; the exact v2 correction
 rows supersede them for evidence. They are not used to make an absence or qualification claim.
 
 | Dispatch group | Canonical route/path | Logical targets | Physical calls | Retry reservations | Status / complete MIME / effective route |
@@ -98,7 +100,7 @@ rows supersede them for evidence. They are not used to make an absence or qualif
 | Frankfurter v2 CNY metadata | `api.frankfurter.dev/v2/currency/CNY` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path |
 | Frankfurter v2 VND metadata | `api.frankfurter.dev/v2/currency/VND` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path |
 | Frankfurter v2 provider catalogue | `api.frankfurter.dev/v2/providers` | 1 | 1 | 0 | HTTP 200 / `application/json; charset=utf-8` / canonical path |
-| **Reproducible publishable dispatches** | — | **17** | **18** | **1** | **11 × HTTP 200, 2 × HTTP 404, 5 × timeout; 13 complete MIME values retained** |
+| **Evidence-complete-for-retained-fields dispatches** | — | **17** | **18** | **1** | **11 × HTTP 200, 2 × HTTP 404, 5 × timeout; 13 complete MIME values retained** |
 
 The two earlier BIS dispatches are counted in total research traffic even though their exact
 target/path and response headers were not retained:
@@ -109,9 +111,9 @@ target/path and response headers were not retained:
 | Earlier BIS exploratory B | `BIS v2 exploratory target; exact path not retained` | 1 | 1 | 0 | `NOT_RETAINED` / `NOT_RETAINED` / `NOT_RETAINED` |
 | **All direct research traffic, including retired rows** | — | **at least 19** | **at least 20** | **1** | Evidence subset plus two non-authoritative retired dispatches |
 
-The exact evidence-complete subset therefore reports **17 logical targets, 18 physical calls,
-and one explicit retry**. The all-traffic accounting reports **at least 19 logical targets, at
-least 20 physical calls, and one retry**; the lower bound preserves the fact that the two retired
+The retained-field evidence subset reports **17 logical targets, 18 physical calls, and one
+explicit retry**. The all-traffic accounting reports **at least 19 logical targets, at least 20
+physical calls, and one retry**; the lower bound preserves the fact that the two retired
 rows were performed without turning their missing metadata into evidence. The 11 HTTP 200 rows
 include current/annual/page data and do not imply a qualified daily pair. The two exact BIS v2
 404s are not absence oracles; the two successful BIS v2 rows prove only that the available VND
@@ -119,9 +121,11 @@ series in those keys is monthly VND/USD. No body or live rate is stored.
 
 ### 3.2 Sanitized target and session detail
 
-These fields make the evidence-complete subset reproducible without storing query-bearing URLs,
-response data, credentials, cookies, or raw headers. A target date or parameter below is an
-intent label, not a claim that the provider served that date.
+These fields describe the evidence-complete-for-retained-fields subset without storing
+query-bearing URLs, response data, credentials, cookies, or raw headers. They do not establish
+subset replayability because the session/UA fields explicitly marked `NOT_RETAINED` are missing.
+A target date or parameter below is an intent label, not a claim that the provider served that
+date.
 
 | Target intent | Canonical path (path-only) | Physical/outcome detail |
 | --- | --- | --- |
@@ -134,11 +138,19 @@ intent label, not a claim that the provider served that date.
 | SBV central-rate route | `dttktt.sbv.gov.vn/TyGia/faces/TyGiaTrungTam.jspx` | 1 timeout before response; no MIME/effective route |
 | WDI annual JSON probe intent | `api.worldbank.org/v2/country/VNM/indicator/PA.NUS.FCRF` | Parameter intent `format=json`, `per_page=20000`; 1 HTTP 200 JSON response, canonical path; query omitted |
 
-The initial session marker was `2026-08-23T16:17:20+07:00`; its exact desktop-class User-Agent
-value was not retained. The correction-session marker retained for the Frankfurter probes was
-`2026-08-23T16:46:44.967256+07:00`; its exact benign User-Agent was
-`vnfin-oss source-design probe`. These markers identify bounded research sessions only. The two
-retired BIS rows remain counted all-traffic rows but are not in the reproducible target table.
+| Session field | Retained value |
+| --- | --- |
+| `initial_session_start` | `2026-08-23T16:17:20+07:00` |
+| `initial_session_end` | `NOT_RETAINED` |
+| `initial_user_agent` | `NOT_RETAINED` |
+| `correction_session_start` | `2026-08-23T16:46:44.967256+07:00` |
+| `correction_session_end` | `NOT_RETAINED` |
+| `correction_user_agent` | `vnfin-oss source-design probe` |
+| `bis_correction_session_marker` | `NOT_RETAINED` |
+
+These markers identify bounded research sessions only; they do not establish replayability.
+The two retired BIS rows remain counted all-traffic rows but are not in the retained-field
+evidence table.
 
 ### 3.3 Non-dispatch source and legal inspections
 
@@ -161,12 +173,12 @@ publication time, or revision rule. The 2018 empty envelope is not historical ab
 
 | Candidate unit | Response-backed observation and retained type/nullability | Direction / scale / route-specific rate-retry status | Missing for qualification | Disposition |
 | --- | --- | --- | --- | --- |
-| VCB dated `cash` | Recent CNY JSON object has the `cash` key; value is a JSON scalar or `null` at the response boundary, but exact scalar subtype and historical nullability are unknown; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB dated `transfer` | Recent CNY JSON object has the `transfer` key; value is a JSON scalar or `null` at the response boundary, but exact scalar subtype and historical nullability are unknown; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights; no averaging or substitution with another field | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB dated `sell` | Recent CNY JSON object has the `sell` key; value is a JSON scalar or `null` at the response boundary, but exact scalar subtype and historical nullability are unknown; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights; bank sale is not central parity or a midpoint | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB XML `Buy` | Current CNY `Buy` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Current/spot only, no dated-history identity, selected economic basis, retention, or reuse permission | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB XML `Transfer` | Current CNY `Transfer` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB XML `Sell` | Current CNY `Sell` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal gaps | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `cash` | Recent CNY JSON object has the `cash` key; `observed_type=NOT_RETAINED`; `observed_nullability=NOT_RETAINED`; historical nullability `UNKNOWN`; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `transfer` | Recent CNY JSON object has the `transfer` key; `observed_type=NOT_RETAINED`; `observed_nullability=NOT_RETAINED`; historical nullability `UNKNOWN`; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights; no averaging or substitution with another field | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `sell` | Recent CNY JSON object has the `sell` key; `observed_type=NOT_RETAINED`; `observed_nullability=NOT_RETAINED`; historical nullability `UNKNOWN`; the 2018 empty `Data` response has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical coverage, revisions, caller/storage/redistribution rights; bank sale is not central parity or a midpoint | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Buy` | Current CNY `Buy` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Current/spot only, no dated-history identity, selected economic basis, retention, or reuse permission | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Transfer` | Current CNY `Transfer` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal gaps | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Sell` | Current CNY `Sell` attribute text was observed in a complete XML response; XML attribute lexical type is string at the parser boundary, while historical absence/null semantics are unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal gaps | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
 
 The dated fields share the VCB dated ledger rows but do not share qualification. The XML
 fields share one current response but do not become historical candidates. The XML route's

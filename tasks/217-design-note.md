@@ -1,7 +1,7 @@
 # #217 design note — daily CNY/VND FX history
 
 **Status:** SOURCE-GAP CLOSURE; docs/source evidence only; one narrow correction after BLOCK at
-exact `b32ca024d93a1e56eb345f707adb4ca717c54ee5`
+exact `262c6b8508f6b87cdaae48f761960b5d4da392c4`
 **Packet:** `tasks/217-daily-cnyvnd-fx-history-spec.md` at reviewer `4159d74`
 **Research:** [`docs/research/2026-08-23-daily-cnyvnd-fx-history-source-vetting.md`](../docs/research/2026-08-23-daily-cnyvnd-fx-history-source-vetting.md)
 **Requested span:** inclusive `2018-01-01..2026-08-19`
@@ -57,12 +57,12 @@ make the cells one candidate and do not multiply the call ledger.
 
 | Candidate cell | Proven response shape/type/nullability | Direction / scale / route-specific rate-retry status | Required before qualification | Disposition |
 | --- | --- | --- | --- | --- |
-| VCB dated `cash` | Recent CNY JSON object has `cash`; scalar subtype and historical nullability unknown; 2018 empty `Data` has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical bounds, revision, reuse | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB dated `transfer` | Recent CNY JSON object has `transfer`; scalar subtype and historical nullability unknown; 2018 empty `Data` has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical bounds, revision, reuse; never average with another field | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB dated `sell` | Recent CNY JSON object has `sell`; scalar subtype and historical nullability unknown; 2018 empty `Data` has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical bounds, revision, reuse; not a central or midpoint rate | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB XML `Buy` | Current CNY `Buy` attribute text observed; XML lexical type is string at parser boundary; historical absence/null semantics unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Historical/date semantics, selected basis, coverage, caller/reuse rights | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB XML `Transfer` | Current CNY `Transfer` attribute text observed; XML lexical type is string at parser boundary; historical absence/null semantics unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal proof | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| VCB XML `Sell` | Current CNY `Sell` attribute text observed; XML lexical type is string at parser boundary; historical absence/null semantics unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal proof | `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `cash` | Recent CNY JSON object has `cash`; `observed_type=NOT_RETAINED`; `observed_nullability=NOT_RETAINED`; historical nullability `UNKNOWN`; 2018 empty `Data` has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical bounds, revision, reuse | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `transfer` | Recent CNY JSON object has `transfer`; `observed_type=NOT_RETAINED`; `observed_nullability=NOT_RETAINED`; historical nullability `UNKNOWN`; 2018 empty `Data` has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical bounds, revision, reuse; never average with another field | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB dated `sell` | Recent CNY JSON object has `sell`; `observed_type=NOT_RETAINED`; `observed_nullability=NOT_RETAINED`; historical nullability `UNKNOWN`; 2018 empty `Data` has no field instance | Direction `UNKNOWN`; scale `UNKNOWN`; dated-route rate/retry policy `UNKNOWN` (one bounded retry observed, not a policy grant) | Economic basis, historical bounds, revision, reuse; not a central or midpoint rate | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_UNKNOWN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Buy` | Current CNY `Buy` attribute text observed; XML lexical type is string at parser boundary; historical absence/null semantics unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Historical/date semantics, selected basis, coverage, caller/reuse rights | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Transfer` | Current CNY `Transfer` attribute text observed; XML lexical type is string at parser boundary; historical absence/null semantics unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal proof | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| VCB XML `Sell` | Current CNY `Sell` attribute text observed; XML lexical type is string at parser boundary; historical absence/null semantics unknown | Direction `UNKNOWN`; scale `UNKNOWN`; route note says one request per five minutes, but automated rate/retry permission is unknown; 0 retry observed | Same independent current/spot and legal proof | `IDENTITY_GAP` + `BASIS_GAP` + `COVERAGE_GAP` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
 
 The dated 2018 empty envelope is not absence; the 2020 timeout is transport-unknown. The XML
 response is current/spot and its five-minute reference note is recorded independently for each
@@ -93,23 +93,24 @@ separate underlying rights and rate-policy proof.
 
 ## 4. Exact evidence ledger
 
-The research artifact records the evidence-complete reproducible ledger: **17 logical targets,
-18 physical calls, one retry**. All direct research traffic is **at least 19 logical targets,
+The research artifact records the evidence-complete-for-retained-fields ledger: **17 logical
+targets, 18 physical calls, one retry**. All direct research traffic is **at least 19 logical targets,
 at least 20 physical calls, one retry**, because two earlier BIS exploratory dispatches were
 performed traffic even though their complete headers/routes were not retained. Those two rows
 remain retired `NOT_RETAINED` records, are outside the evidence subset, and never support absence
 or qualification. Four exact BIS v2 correction rows supersede them. Frankfurter v2 correction
 probes were four separate logical/physical calls, all HTTP 200 JSON, with no retry.
 
-The sanitized reproducible targets retain VCB date intents `2018-01-01` (initial and bounded
+The sanitized retained target fields include VCB date intents `2018-01-01` (initial and bounded
 repeat), `2020-01-01`, and `2026-08-19`; the three individual SBV paths
 `TyGiaSGD.jspx`, `TyGiaCheo.jspx`, and `TyGiaTrungTam.jspx`; and WDI parameter intent
-`format=json`, `per_page=20000` without query-bearing URLs. The initial session marker was
-`2026-08-23T16:17:20+07:00` with a desktop-class User-Agent value not retained verbatim. The
-Frankfurter correction-session marker was `2026-08-23T16:46:44.967256+07:00` and its exact
-benign User-Agent was `vnfin-oss source-design probe`, a descriptive non-browser identifier.
-These are bounded session markers, not provider observations; no response data, credentials,
-cookies, or raw headers are stored.
+`format=json`, `per_page=20000` without query-bearing URLs. Session retention is explicit:
+`initial_session_start=2026-08-23T16:17:20+07:00`, `initial_session_end=NOT_RETAINED`,
+`initial_user_agent=NOT_RETAINED`, `correction_session_start=2026-08-23T16:46:44.967256+07:00`,
+`correction_session_end=NOT_RETAINED`, `correction_user_agent=vnfin-oss source-design probe`,
+and `bis_correction_session_marker=NOT_RETAINED`. These markers are not provider observations
+and do not establish subset replayability; no response data, credentials, cookies, or raw headers
+are stored.
 
 For every future response, `complete_mime` is the complete header value after the first colon;
 `effective_route` is the no-follow host/path. A timeout has no effective route. A provider field
