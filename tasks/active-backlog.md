@@ -698,6 +698,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `2a6fbff60a77c2f0cbc07b4dd7c4d8ec4e40917c` / reviewer `84d89ee`; actor is `vnfin-oss-reviewer`,
   next action `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve empty chain, `DISABLE_PENDING_PERMISSION`,
   no tests/runtime/probe/push/resolution/close/#219 activation, and all queued issues/exclusions.
+  Corrected provenance review at exact `d63e8dd74636c81a3ceadcd6aeb5f0de2ab36de5` was BLOCKED in
+  `reviews/review-202608232205-issue221-corrected-provenance-review.md` at reviewer `94ae4bd`:
+  the `e5d27ae` BLOCK-before-correction passes, but lines 684-688 bind `e92b2b5` to the wrong
+  `3932d7d`/`90afc61` review; bind historical combined `63679b0` to that review instead. Record
+  this BLOCK before the separate wording-only fix; no tests/runtime/probe/push/close/#219 activation.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
