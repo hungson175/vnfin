@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), final F2 provenance correction.**
+- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final F2 provenance handoff.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -686,6 +686,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   pass, but lifecycle provenance remained stale. Current BLOCK receipt is `e92b2b54a19dd39e3b779208d242faafbe4e5bf7`,
   bound to reviewed head `bb6a5753aa9b375d2e14d437e30b8574ba69aba3` / reviewer `c84fc12`.
   Apply one backlog-only provenance correction; do not change tests/runtime/probe/push/close/#219.
+  Final backlog-only provenance correction is `63679b0796acd5a6b5b687dcf0ce259819d8e59c`:
+  `ed2acca` remains bound to the earlier `545c854`/`903d33b` review, `9c0f9a4` is bound to
+  `62bf992`/`983cd27`, and `e92b2b5` is bound to `bb6a575`/`c84fc12`. This lifecycle receipt is
+  the exact final review handoff; actor is `vnfin-oss-reviewer`; next action
+  `RETURN_FINAL_EXACT_SHA_VERDICT`. Preserve empty chain, `DISABLE_PENDING_PERMISSION`, no
+  tests/runtime/probe/push/resolution/close/#219 activation, and all queued issues/exclusions.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
