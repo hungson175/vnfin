@@ -601,16 +601,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_BLOCKED (2026-08-23), exact `d370941` review blocked.**
+- **#221 — CODE_REVIEW_CORRECTION_IN_PROGRESS (2026-08-23), B1-B4 correction committed.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
   implementation line `issue221-fmarket-disable` from the design anchor; local queue receipt
   `65d6ac6` is excluded and remains unpushed. RED commits are `3aa66a5`, `17a085d`, and `18803a7`;
   production commit is `3a8ffe4` and public/docs contract commit is `b94c836`. Code-review report
-  `reviews/review-202608231955-issue221-code-review.md` at reviewer `ae46900` blocks B1 transport
-  chokepoints, B2 cache-key proof, B3 current documentation truth, and B4 real-derived fixture
-  removal. Actor is `vnfin-oss`; next action `RED_FIRST_B1_B4_CORRECTION`. Preserve
+  `reviews/review-202608231955-issue221-code-review.md` at reviewer `ae46900` was addressed by
+  RED correction `e8fe053` and implementation/docs correction `13bd60d`: B1 transport chokepoints,
+  B2 exact cache-key proof, B3 current documentation truth, and B4 fabricated fixture boundary.
+  Actor is `vnfin-oss`; next action `RUN_MERGED_GATES_AND_RETURN_EXACT_SHA_REVIEW`. Preserve
   `DISABLE_PENDING_PERMISSION`, no Fmarket probe/push/resolution/close, no #219 activation, and
   queued #219/#220/#222.
 
