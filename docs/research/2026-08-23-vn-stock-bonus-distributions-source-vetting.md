@@ -81,7 +81,7 @@ because this inventory makes it reproducible.
 | VNDIRECT events | `GET https://api-finfo.vndirect.com.vn/v4/events` | `q` with code/type/locale predicates; `size`, `sort`, optional `page`; no key/cookie/body | HTTP 200, `application/json`, no redirect; envelope fields `data`, `currentPage`, `size`, `totalElements`, `totalPages` | No login/key/cookie observed; browser-like UA; no WAF/interstitial observed | One page each for the two unqualified kind filters; no history crawl |
 | VNDIRECT terms/support | `GET https://www.vndirect.com.vn/dieu-khoan-su-dung/` and `GET https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/` | None | HTTP 403, HTML body not read; no permission conclusion | No bypass, retry, or alternate path | Legal posture remains unresolved |
 | HOSE issuer disclosure | `GET https://www.hsx.vn/vi/tin-tuc/tin-to-chuc-niem-yet` | None | HTTP 200, `text/html`; application shell, no accepted event envelope | No login/API guess/browser bypass | `SCHEMA_DRIFT`/not served |
-| HNX listed and UPCoM disclosure | `GET https://hnx.vn/vi-vn/thong-tin-cong-bo-ny-hnx.html` and `GET https://hnx.vn/vi-vn/thong-tin-cong-bo-up-hnx.html` | None | Strict TLS certificate-chain failure before status/MIME/body | No `-k`, proxy, redirect follow, or retry | `TRANSPORT_INCONCLUSIVE`/not served |
+| HNX listed and UPCoM disclosure | `GET https://www.hnx.vn/en-gb/thong-tin-cong-bo-ny-hnx.html` and `GET https://www.hnx.vn/en-gb/thong-tin-cong-bo-up-hnx.html` | None | Strict TLS certificate-chain failure before status/MIME/body | No `-k`, proxy, redirect follow, or retry | `TRANSPORT_INCONCLUSIVE`/not served |
 
 The VSDC contact URL rendered by the site's navigation is intentionally not copied here because its
 opaque percent-encoded path is not a stable data-route identifier. The official home page is the real
@@ -299,8 +299,8 @@ strings; observed request parameters are described in prose only.
 - [VNDIRECT terms lead](https://www.vndirect.com.vn/dieu-khoan-su-dung/)
 - [VNDIRECT support lead](https://www.vndirect.com.vn/dich-vu-dau-tu-huu-tri/ho-tro/)
 - [HOSE issuer-disclosure route](https://www.hsx.vn/vi/tin-tuc/tin-to-chuc-niem-yet)
-- [HNX listed-disclosure route](https://hnx.vn/vi-vn/thong-tin-cong-bo-ny-hnx.html)
-- [HNX UPCoM-disclosure route](https://hnx.vn/vi-vn/thong-tin-cong-bo-up-hnx.html)
+- [HNX listed-disclosure route](https://www.hnx.vn/en-gb/thong-tin-cong-bo-ny-hnx.html)
+- [HNX UPCoM-disclosure route](https://www.hnx.vn/en-gb/thong-tin-cong-bo-up-hnx.html)
 
 ## Final source-gap statement
 
