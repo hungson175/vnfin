@@ -601,16 +601,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#217 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), source-gap design handoff.**
-  Expected actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`. The exact
-  handoff anchor is the commit containing this record and is supplied in the tm-send receipt.
-  Reviewer packet `tasks/217-daily-cnyvnd-fx-history-spec.md` at `4159d74`, public intake
-  `issuecomment-5385114544`; artifacts are exactly
-  `docs/research/2026-08-23-daily-cnyvnd-fx-history-source-vetting.md` and
-  `tasks/217-design-note.md`. Disposition is SOURCE-GAP CLOSURE: no direct qualified CNY/VND
-  unit, empty daily chain, annual World Bank behavior preserved, and no RED/model/accessor/
-  source-registration/code/push/close before exact-SHA design PASS. Scope excludes USD
-  cross-synthesis, annual/spot substitution, and VN30F signal.
+- **#217 — DESIGN_BLOCKED (2026-08-23), docs-only correction required.** Expected actor `vnfin-oss`;
+  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Reviewed exact anchor
+  `55f0b1b4d46ece6cab30b647d4c443a4cc3338d6`; BLOCK report
+  `reviews/review-202608231638-issue217-design-source-gate.md` at reviewer `4c317f5`, delivery
+  `9f667c3b`. Correct only B1-B5: split VCB field/basis cells and exact logical/physical/retry/status/
+  MIME/route totals; inspect current Frankfurter v2 as its own candidate; make model, bounds, and
+  confirmed non-publication outcomes total; defer unqualified numeric budgets/API names or repair
+  their byte/retry/status/diagnostic seams; and correct source-gap close/path plus existing-spot legal
+  scope. Preserve SOURCE-GAP CLOSURE, empty daily chain, annual World Bank behavior, and queued #218.
+  No RED/model/accessor/source-registration/code/push/close before exact-SHA design PASS.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
