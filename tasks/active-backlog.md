@@ -1035,14 +1035,17 @@ _None._
 
 ## Next
 
-- **#218 — QUEUED_AFTER_217 (2026-08-23), separate ETF discovery/NAV-history source design.**
-  Actor `vnfin-oss`; next action `SOURCE_DESIGN_AFTER_217_REVIEW_HANDOFF`. Authoritative packet
+- **#218 — SOURCE_DESIGN (2026-08-23), activated after verified #217 closure; separate ETF
+  discovery/NAV-history source design.** Actor `vnfin-oss`; next action
+  `PREPARE_EXACT_SHA_SOURCE_DESIGN`. Activation is after #217 was re-read `CLOSED`/`COMPLETED`
+  with published exact anchor `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16` and clean-resolution
+  receipt `issuecomment-5385552728`. Authoritative packet
   `tasks/218-etf-discovery-nav-history-spec.md` at reviewer `5acb355`, public receipt
   `issuecomment-5385276364`. Preserve existing funds ETF discovery and provider-published NAV
   history only; prove ETF product type versus asset-class mapping, exact code/product/NAV
   identity, `2018-01-01..2026-08-19` coverage/cadence, bounded runtime, and legal rights.
-  Discount/first-difference/VN30F remain caller-side. Do not interrupt #217; no #218 RED/code/
-  push/close before its design PASS.
+  Discount/first-difference/VN30F remain caller-side. No #218 RED/code/push/close before exact-
+  SHA design PASS; #219/#220 remain queued.
 
 - **#219 — QUEUED_AFTER_#218 (2026-08-23).** Actor `vnfin-oss`; next action
   `SOURCE_DESIGN_AFTER_218_REVIEW_HANDOFF`; packet anchor `f2d0187` for
