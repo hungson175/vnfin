@@ -617,8 +617,6 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   traffic marked `NOT_RETAINED` and by keeping the corrected content anchor distinct from the
   merged-handoff HEAD. Preserve `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime,
   and no RED/code/push/close. #220, #222, #223, and #224 remain queued.
-  Preserve `SOURCE-GAP CLOSURE`, the empty new source chain, current runtime, and no RED/code/push/
-  close. #220, #222, #223, and #224 remain queued.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
