@@ -13,7 +13,8 @@ Example::
     funds = src.list_funds(asset_type="STOCK")
     hist = src.nav_history(funds[0].id)         # full NAV history (VND/unit)
     holdings = src.holdings(funds[0].id)        # top disclosed holdings (stocks + bonds)
-    alloc = src.asset_allocation(funds[0].id)   # asset-class split (equity/bond/cash)
+    alloc = src.asset_allocation(funds[0].id)   # STOCK/BOND/CASH/OTHER split; absent/null/[]
+                                                  # -> typed empty + no_asset_allocation_published
 """
 from __future__ import annotations
 

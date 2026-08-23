@@ -171,8 +171,6 @@ empty allocation (`classes == ()`, `as_of_utc is None`) with exactly one
 `no_asset_allocation_published` warning, while retaining any existing detail-coverage warning(s) and
 metadata from the same response. This is a known-empty disclosure, not proof of no assets. A present
 non-array list, `OTHER2`, malformed/duplicate class, or bad weight remains `InvalidData`.
-The industry allocation list is present in the payload and may be exposed later.
-
 ## Authentication
 
 None. The endpoints are reachable anonymously with a normal browser

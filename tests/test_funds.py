@@ -1630,6 +1630,7 @@ def test_asset_allocation_known_empty_returns_typed_result(shape):
     assert alloc.fetched_at_utc is not None and alloc.fetched_at_utc.tzinfo is not None
     assert alloc.warnings.count("no_asset_allocation_published") == 1
     assert sum(w.startswith("no_asset_allocation_published") for w in alloc.warnings) == 1
+    assert get.calls[0]["url"] == f"https://api.fmarket.vn/res/products/{FAKE_ID_A}"
     # The pre-existing detail-document coverage diagnostic is preserved and composed once.
     assert sum(w.startswith("fund_partial_holdings:") for w in alloc.warnings) == 1
     assert len(get.calls) == 1
@@ -1638,14 +1639,29 @@ def test_asset_allocation_known_empty_returns_typed_result(shape):
 @pytest.mark.parametrize("existing", ["STOCK", "BOND", "CASH"])
 def test_asset_allocation_preserves_other_alongside_each_known_class(existing):
     rows = [
-        {"assetType": {"code": "OTHER"}, "assetPercent": 12.5},
+        {
+            "assetType": {"code": "OTHER"},
+            "assetPercent": 12.5,
+            "updateAt": 1700000100000,
+        },
         {"assetType": {"code": existing}, "assetPercent": 37.5},
     ]
-    alloc = _src(_holdings_payload_with(productAssetHoldingList=rows)).asset_allocation(FAKE_ID_A)
+    get = _capture_get(_holdings_payload_with(productAssetHoldingList=rows))
+    before = datetime.now(timezone.utc)
+    alloc = FmarketFundSource(http_get=get).asset_allocation(FAKE_ID_A)
+    after = datetime.now(timezone.utc)
     assert [(item.asset_class, item.weight_pct) for item in alloc] == [
         ("OTHER", 12.5),
         (existing, 37.5),
     ]
+    assert alloc.source == "fmarket"
+    assert alloc.currency == "VND"
+    assert alloc.as_of_utc == datetime.fromtimestamp(1700000100000 / 1000.0, tz=timezone.utc)
+    assert alloc.fetched_at_utc is not None
+    assert alloc.fetched_at_utc.tzinfo is not None
+    assert before <= alloc.fetched_at_utc <= after
+    assert get.calls[0]["url"] == f"https://api.fmarket.vn/res/products/{FAKE_ID_A}"
+    assert len(get.calls) == 1
 
 
 def test_asset_allocation_preserves_other_alone():
