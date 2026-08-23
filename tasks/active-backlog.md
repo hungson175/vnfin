@@ -603,7 +603,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 - **#213 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), active with independent #214 batch.**
   Actor `vnfin-oss`; next action `AWAIT_EXACT_SHA_DESIGN_VERDICT`. Final local docs anchor
-  `d45263d` (clean `origin/master` ancestry at `4c85fbc`); reviewer packet
+  `72ab675` (clean `origin/master` ancestry at `4c85fbc`; terminal budget contract correction);
+  reviewer packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/213-vnreal-index-history-source-spec.md`,
   packet commit `bc37f58`, delivery receipt `c1ce4913`. Qualify fresh VPS/SSI/VNDirect VNREAL D1
   evidence independently for strict versus stitched identity, points, volume, coverage, global
@@ -613,7 +614,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 - **#214 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), active independent companion to #213.**
   Actor `vnfin-oss`; next action `AWAIT_EXACT_SHA_DESIGN_VERDICT`. Final local docs anchor
-  `52614f1` (clean `origin/master` ancestry at `4c85fbc`; supersedes isolated `b8d3aeb`); reviewer packet
+  `c302948` (clean `origin/master` ancestry at `4c85fbc`; terminal budget contract correction;
+  supersedes isolated `b8d3aeb`); reviewer packet
   `tasks/214-vnmid-index-history-source-spec.md`, packet commit `bd4038e`, public receipt
   `issuecomment-5384680920`. Qualify VNMID independently using the shared batch methodology but
   separate artifacts/anchors/receipts: VPS/SSI/VNDirect identity, D1 points/volume/time, exact
