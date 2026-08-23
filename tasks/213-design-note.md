@@ -100,11 +100,12 @@ passes recorded 24 logical and 24 physical calls with zero retries; they do not 
 the future runtime budget.
 
 Before every identity or history dispatch, the ledger atomically reserves one physical
-slot. If no slot remains, it emits a typed `BudgetGlobalExhausted` outcome, preserves all
-previous sanitized attempts, sends no request, and returns no partial `PriceHistory`.
-There is no hidden redirect/retry/page loop, no concurrent dispatch, no per-segment
-counter, and no synthetic attempt for budget exhaustion. Any nonzero retry policy or
-provider pagination must be a new reviewed design that revises these exact totals.
+slot. If no slot remains, the public strict/stitched call raises the typed future
+`BudgetGlobalExhausted` (`VnfinError`) with all previous sanitized attempts and bounded counters;
+it sends no request and returns no sentinel or partial `PriceHistory`. There is no hidden
+redirect/retry/page dispatch, no concurrent dispatch, no per-segment counter, and no synthetic
+attempt for budget exhaustion. Any pagination, redirect, retry, or rate-policy change requires
+a new reviewed finite formula.
 
 ## 6. Diagnostics and no-false-absence rules
 

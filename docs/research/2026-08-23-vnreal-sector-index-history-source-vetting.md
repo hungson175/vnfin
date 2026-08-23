@@ -227,11 +227,12 @@ The future VNREAL contract uses one atomic ledger for the entire public call:
 An identity failure may stop before history, so actual physical use can be lower; the
 bound is deterministic and never exceeded. Each identity, history, or future retry
 dispatch reserves from the same request ledger **before** dispatch. Reservations are
-atomic: an exhausted reservation does not send the request, does not add a fake
-`SourceAttempt`, and raises/records a typed `BudgetGlobalExhausted` outcome while
-preserving all prior sanitized attempts. Stitched segments cannot reset the counter,
-run concurrently, or multiply the cap. No hidden page loop, redirect loop, retry storm,
-or per-segment `max_attempts` is permitted.
+atomic: an exhausted reservation does not send the request or add a fake `SourceAttempt`.
+In this design, the public strict/stitched call raises the typed future
+`BudgetGlobalExhausted` (`VnfinError`) with all prior sanitized attempts and bounded counters;
+it never returns a sentinel or partial `PriceHistory`. Stitched segments cannot reset the
+counter, run concurrently, or multiply the cap. No page/cursor dispatch is admitted here;
+any pagination, redirect, retry, or rate-policy change requires a new reviewed finite formula.
 
 The logical/physical distinction is public diagnostic design only: a logical attempt is
 one `(provider, symbol, interval, segment)` qualification evaluation; physical count is
