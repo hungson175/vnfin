@@ -602,14 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#223 — EXACT_SHA_DESIGN_REREVIEW (2026-08-24, clean-line lifecycle correction).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `6939ba4` for
-  `tasks/223-vncond-index-history-source-spec.md`, public receipt `issuecomment-5385933554`.
-  BLOCK at `567460afb29e7dcdc096e60256829806354c50db` is recorded in
-  `reviews/review-202608240040-issue223-corrected-design-rereview.md` at reviewer `ab2c9ba`.
-  The clean-line correction restores verified #222 DONE/CLOSED facts and removes excluded-receipt
-  wording; substantive B1-B5 source/design contracts remain unchanged. Preserve SOURCE-GAP/empty
-  chain and #224/#225 queue; no probe, RED, code, push, or close.
+- **#224 — DESIGN_BLOCK (2026-08-24, clean-base correction).** Actor `vnfin-oss`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `b8ee1e5` for
+  `tasks/224-daily-eurvnd-fx-history-spec.md`, public receipt `issuecomment-5387048240`.
+  Reviewed handoff `02beca7cfe15037d468d81d143af8202bf7af2ec` is blocked by
+  `reviews/review-202608240111-issue224-design-source-gate.md` at reviewer `a29a8ac`.
+  Rebuild directly from clean `origin/master=728bb99c26901dcc2397b895253f6cc94f59a65e`; local-only
+  #224 activation `82c0093e590d24d1544ac1c51ebf6d773f7eda1e` must not enter the corrected ancestry.
+  Preserve SOURCE-GAP/empty daily chain, annual USD/VND, #225 queue, and no probe, RED, code, push,
+  or close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1035,13 +1036,6 @@ _None._
 
 ## Next
 
-- **#224 — QUEUED_AFTER_#223 (2026-08-23).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_223_CLOSURE`; packet anchor `b8ee1e5` for
-  `tasks/224-daily-eurvnd-fx-history-spec.md`. Scope is direct daily EUR/VND only; exclude USD
-  cross, spot/annual substitution, VN30F logic, and any premature API claim. Keep queued behind
-  #223; no #224 probe, RED, code, push, or close before its turn and exact-SHA design PASS. #225
-  remains queued behind #224.
-
 - **#225 — QUEUED_AFTER_#224 (2026-08-23).** Actor `vnfin-oss`; next action
   `ACTIVATE_AFTER_224_CLOSURE`; packet anchor `7b7fe0b` for
   `tasks/225-equity-fund-nav-authorized-source-spec.md`, public receipt
@@ -1081,6 +1075,15 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#223 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `728bb99c26901dcc2397b895253f6cc94f59a65e` to `origin/master` from clean base
+  `c3921a1a7a31c5de8b21f838173fd1c288b0e698`; remote HEAD, base ancestry, exclusion checks, and
+  exactly the three approved research/design/backlog paths were verified. Resolution
+  `issuecomment-5387538803`; GitHub re-read `CLOSED`/`COMPLETED` at `2026-08-23T17:46:59Z`.
+  The VNCOND source chain remains empty and no provider probe, RED test, production code, source
+  registration, proxy/basket, downstream signal, or runtime capability was added. #224 is blocked
+  above for the clean-line source/design correction; #225 remains queued.
 
 - **#222 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `c3921a1a7a31c5de8b21f838173fd1c288b0e698` to `origin/master`; the approved three
