@@ -167,11 +167,38 @@ The following finite table defines which outcomes may consume the one reserved r
 | Any `3xx`, redirect, or effective-host/path mismatch | `redirect` or `effective_route_mismatch` | No | Fail closed; do not follow or infer identity from the redirected route. |
 | `429` or `5xx` | `rate_limited` or `server_error` | One reserved retry, only with owner-approved pacing | `transport_inconclusive` on exhaustion; no partial result. |
 | Timeout, TLS, connection, or other transport exception | `timeout`, `tls_error`, or `transport_error` | One reserved retry, only with owner-approved pacing | `transport_inconclusive` on exhaustion; no partial result. |
-| JSON parse, schema, identity, numeric, duplicate, count/page, endpoint, or gap failure | matching deterministic token | No | Fail the whole source; never retry a bad deterministic payload. |
+| Any other HTTP status (all `1xx`, `2xx` other than `200`/`204`, or `4xx` other than `429`) | `unexpected_http_status` | No | Fail the whole source; never classify it as provider absence or coverage evidence. |
+| JSON parse, schema, identity, numeric, duplicate, count/page, endpoint, or gap failure | See the closed deterministic-token mapping below | No | Fail the whole source; never retry a bad deterministic payload. |
 
 The runtime must refuse to schedule any request without the owner-approved rate policy; this table
 does not invent a delay. Every retry reserves its physical unit before transport. No raw exception,
 URL, body, cookie, credential, or provider text is retained.
+
+The deterministic validation-token mapping is closed and exact:
+
+| Validation failure | Exact internal token |
+| --- | --- |
+| JSON decoding failure | `json_parse_error` |
+| Envelope, field-presence, or field-type failure | `schema_error` |
+| Pair, direction, source, or document identity mismatch | `identity_mismatch` |
+| Economic rate-basis mismatch | `basis_mismatch` |
+| Boolean, string, non-finite, non-positive, or otherwise invalid numeric value | `numeric_value_error` |
+| Duplicate or overlapping item identity | `duplicate_or_overlap` |
+| Page metadata, total, or count reconciliation failure | `page_count_mismatch` |
+| Row outside the inclusive requested window | `out_of_window_date` |
+| A requested endpoint is absent after reconciliation | `missing_requested_endpoint` |
+| Unexplained internal date gap | `unexplained_gap` |
+| A required physical reservation cannot be made within the fixed ceiling | `call_budget_gap` |
+
+For this future FX retrieval, the complete internal-token set is exactly `ok`, `waf_html`,
+`transport_inconclusive`, `empty_body`, `no_content`, `mime_mismatch`, `redirect`,
+`effective_route_mismatch`, `rate_limited`, `server_error`, `timeout`, `tls_error`,
+`transport_error`, `unexpected_http_status`, `json_parse_error`, `schema_error`,
+`identity_mismatch`, `basis_mismatch`, `numeric_value_error`, `duplicate_or_overlap`,
+`page_count_mismatch`, `out_of_window_date`, `missing_requested_endpoint`, `unexplained_gap`,
+and `call_budget_gap`. `source_gap`, `coverage_gap`, `provider_nonpublication`, and
+`holiday_gap` are public diagnostic/disposition tokens only and are not substitutes for an
+unresolved transport or validation token.
 
 ## 5. Future diagnostics and no-false-absence contract
 
@@ -183,19 +210,19 @@ source qualifies, daily is `unsupported_frequency`, not a claimed coverage gap.
 
 The three layers are distinct:
 
-1. **Offline `RequestDiagnostic.status`** performs no network call and may use only reviewed
-   statuses such as `unsupported_frequency`, `unsupported_pair`, `source_gap`, `coverage_gap`, or
-   `ok`. It never reports a transport exception. The `sources` entries carry the typed
-   `rate_basis` when the additive capability field is reviewed and populated.
+1. **Offline `RequestDiagnostic.status`** performs no network call; for this FX diagnostic the
+   exact closed status set is `unsupported_frequency`, `unsupported_pair`, `source_gap`,
+   `coverage_gap`, and `ok`. It never reports a transport exception. The `sources` entries carry
+   the typed `rate_basis` when the additive capability field is reviewed and populated.
 2. **Successful `FXHistory.warnings`** contains only provider-calendar/time caveats:
    `provider_nonpublication`, `holiday_gap`, `publication_time_unavailable`, and
    `revision_or_release_lag`. The exact maximum is four tokens. Deduplicate first, then emit in
    that canonical order; never preserve arbitrary provider/order text. A failed retrieval returns
    no `FXHistory` and therefore no warning tuple.
-3. **Internal/failure reasons** use only finite tokens from the transport table plus
-   `source_gap`, `coverage_gap`, `provider_nonpublication`, `holiday_gap`, `unexplained_gap`, and
-   `call_budget_gap`. These reasons are typed/sanitized and never contain a URL, query, response
-   body, raw exception, cookie, credential, provider free text, or live rate.
+3. **Internal/failure reasons** use exactly the internal-token set and deterministic mappings above;
+   public diagnostics use only the reviewed sanitized allow-list in the research report. These
+   reasons never contain a URL, query, response body, raw exception, cookie, credential, provider
+   free text, or live rate.
 
 The distinction is mandatory: `transport_inconclusive`, `schema_error`, `identity_mismatch`,
 `call_budget_gap`, and `source_gap` are unresolved outcomes, never provider absence; `coverage_gap`
@@ -220,6 +247,10 @@ All criteria are conjunctive. The issue remains source-gap closed if any one is 
 - exact requested endpoints, provider-calendar explanation for any non-publication dates, no
   duplicate/out-of-window rows, and no fabricated observations;
 - separate reference/publication/retrieval/revision semantics and the strict-prior caveat;
+- the reviewed trailing public `FXHistory.rate_basis` field (or an explicitly reviewed typed
+  alternative), with exact annual/daily tokens, annual/daily population, matching
+  `DataFrame.attrs`, `SourceCapability`/diagnostics, public snapshots, repr/equality/serialization,
+  docs/release compatibility, and unchanged annual behavior;
 - annual source/model/diagnostic compatibility; and
 - a new exact-SHA reviewer design PASS before any RED-first TDD work.
 
@@ -236,7 +267,9 @@ exhaustion, endpoint/gap/holiday semantics, numeric guards, strict-prior behavio
 diagnostics, and no-stitch/single-source behavior. The release matrix must additionally cover:
 
 - plain-`date`/datetime/non-date rejection before network, facade/direct-source parity, and all
-  annual/default/unsupported-frequency compatibility;
+  annual/default/unsupported-frequency compatibility, including parity between
+  `frequency=Frequency.DAILY` and `frequency="daily"` for normalization, route selection,
+  result, warning/diagnostic, and call-budget behavior;
 - trailing-field constructor compatibility, annual/daily `rate_basis` guards,
   `DataFrame.attrs["rate_basis"]`, repr/equality/serialization, public API snapshot, and docs
   contract updates;

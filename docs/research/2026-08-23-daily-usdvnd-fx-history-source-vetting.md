@@ -62,7 +62,7 @@ repository. The nine HTTP calls were bounded as follows:
 
 | Candidate | Calls | Route/observation | Sanitized result |
 | --- | ---: | --- | --- |
-| SBV | 3 | Headless structured-content route: a deliberately negative wire `page=0`, wire `page=1`, and a date-filter variant; `pageSize=100` | All were HTTP 200, `text/html; charset=utf-8`, no redirect, 246-byte HTML `Request Rejected` pages; no JSON envelope or rows. |
+| SBV | 3 | Headless structured-content route: wire `page=0` (a legacy probe, not a deliberate negative test; it is now known invalid under the documented one-based contract), wire `page=1`, and a date-filter variant; `pageSize=100` | All were HTTP 200, `text/html; charset=utf-8`, no redirect, 246-byte HTML `Request Rejected` pages; no JSON envelope or rows. The WAF response proved nothing about page base. |
 | BIS | 2 | Official SDMX `WS_XRU`: `M.VN.VND.E` and the explicit daily key `D.VN.VND.E` | Monthly route was HTTP 200 CSV; daily key was HTTP 404 XML. |
 | Federal Reserve | 1 | Official H.10 current release/country table | HTTP 200 HTML; the table had 23 bilateral currency rows plus index rows and no VND/Vietnam row. |
 | Vietcombank | 2 | Official `api/exchangerates?date=` at `2018-08-01` and `2020-01-02` | HTTP 200 JSON envelope with `Count`, `Data`, `Date`, `UpdatedDate`; both `Data` arrays were empty. This is not proof of historical absence. |
@@ -87,7 +87,7 @@ proven; and `BASIS_GAP` means the quote is economically different from the reque
 | **State Bank of Vietnam (SBV)**, `sbv.gov.vn` | Official central USD/VND concept; route is `/o/headless-delivery/v1.0/content-structures/137473/structured-contents`; fields named by the packet include `NgayBatDau`, `NgayBanHanh`, `TyGiaSo`, `TyGiaChu`, `SoVanBan`. | No response-backed identity or dates in the fresh probe: every request was an HTML WAF rejection. Prior `totalCount=1947`/20-page observation was not reconciled. | No API automation, rate, caching, storage, or redistribution permission was found. The official publication duty is not a licence. | `LEGAL_GAP` + `CALL_BUDGET_GAP` + `TRANSPORT_INCONCLUSIVE`; **not TDD-qualified**. |
 | **BIS**, `stats.bis.org`, `WS_XRU` | Official CSV proved Vietnam/VND, USD bilateral, monthly **end-of-period** series (`FREQ=M`, 833 distinct periods, 1957-01 through 2026-05). | `D.VN.VND.E` returned 404. BIS documentation says daily exists only for a subset of economies; it cannot promote Vietnam's monthly series to daily. | Statistics terms permit reuse with BIS attribution and no misleading endorsement; API terms are separately as-is and may be limited/suspended. | `NOT_SERVED` for daily; monthly end-of-period is a different frequency/basis. |
 | **Federal Reserve H.10**, `federalreserve.gov` | Current official table publishes bilateral rates for its listed currencies and separate indexes. | The current country table had no Vietnam/VND row. A guessed FRED identifier was not used as evidence. | Official public table, but no requested VND series was served by the inspected H.10 route. | `NOT_SERVED`. |
-| **Vietcombank**, `vietcombank.com.vn` | First-party route/documentation describes `cash`, `transfer`, and `sell` bank quotes, not an SBV central reference rate; the page says “for reference only”. | Bounded calls at the 2018 boundary and a 2020 date returned empty `Data`; intake found no 2018 rows and did not establish a complete start. A one-date-per-request crawl would require thousands of calls, while the date API's own rate policy is unknown. | No open-data licence; public access and “for reference only” do not authorize automated history retrieval or redistribution. | `COVERAGE_GAP` + `BASIS_GAP` + `LEGAL_GAP` + `CALL_BUDGET_GAP`. |
+| **Vietcombank**, `vietcombank.com.vn` | First-party route/documentation describes a commercial-bank `cash`, `transfer`, and `sell` history route, not an SBV central reference rate; the page says “for reference only”. | Bounded calls at the 2018 boundary and a 2020 date returned empty `Data`; intake found no 2018 rows and did not establish a complete start. A one-date-per-request crawl would require thousands of calls, while the date API's own rate policy is unknown; full-span coverage is unproven. | No explicit reuse licence; public access and “for reference only” do not authorize automated history retrieval or redistribution. | `TRANSPORT_INCONCLUSIVE` + `BASIS_GAP` + `LEGAL_GAP` + `CALL_BUDGET_GAP`; no `COVERAGE_GAP` is inferred from the empty response. |
 | **World Bank WDI**, `api.worldbank.org` | `PA.NUS.FCRF` is official exchange rate, LCU per US$, **annual period average**. VNM maps to VND/USD; current library behavior is already qualified for annual history. | WDI catalogue metadata says annual periodicity; it cannot serve the requested daily observations. | CC BY 4.0 with attribution; existing library remains runtime-fetch-only with no bundled rows. | `NOT_SERVED` for daily; preserve as the annual source. |
 | **ECB / Frankfurter** | ECB reference rates are EUR-base working-day information rates and the official published roster does not include VND. Frankfurter cannot create an independent owner, VND series, or licence. | No official VND daily series was found in the roster; no cross-quote or facade was used as a history oracle. | ECB page is informational and does not supply the requested VND basis; a facade cannot repair that source gap. | `NOT_SERVED` + `BASIS_GAP`. |
 | **open.er-api** | Repository source note documents `latest/USD`, current/spot only, approximately daily refresh; no historical endpoint. | No historical route or full-span coverage. | Terms prohibit raw-data redistribution; caching is allowed under the provider terms, but this does not authorize a new daily-history product. | `NOT_SERVED` + `LEGAL_GAP`; never backfill history. |
@@ -197,27 +197,55 @@ of retry loops. Redirects are not followed; the effective host/path must remain 
 | Any `3xx`, redirect, or effective-host/path mismatch | `redirect` / `effective_route_mismatch` | No | Fail closed; no follow-up route or source identity inference. |
 | `429` or `5xx` | `rate_limited` / `server_error` | Once, only if owner pacing is authorized and a reservation succeeds | On exhaustion, `transport_inconclusive`; no partial result. |
 | Timeout, TLS, connection, or other transport exception | `timeout`, `tls_error`, or `transport_error` | Once, only if owner pacing is authorized and a reservation succeeds | On exhaustion, `transport_inconclusive`; no partial result. |
-| JSON parse, schema, identity, numeric, duplicate, count/page, endpoint, or gap validation failure | Corresponding deterministic failure token | No | Fail the whole retrieval; never retry a bad deterministic payload. |
+| Any other HTTP status (all `1xx`, `2xx` other than `200`/`204`, or `4xx` other than `429`) | `unexpected_http_status` | No | Fail the whole retrieval; never classify it as provider absence or coverage evidence. |
+| JSON parse, schema, identity, numeric, duplicate, count/page, endpoint, or gap validation failure | See the closed deterministic-token mapping below | No | Fail the whole retrieval; never retry a bad deterministic payload. |
 
 MIME normalization is strict: parse the complete `Content-Type` value, lower-case and trim its
 media-type portion, and require exactly `application/json`; parameters do not turn HTML/XML into
 JSON. Every retry consumes a reserved physical unit before transport. The runtime must refuse to
 schedule any source request without owner-approved pacing, so this table does not invent a delay.
 
+The deterministic validation-token mapping is closed and exact; no free-form replacement is allowed:
+
+| Validation failure | Exact internal token |
+| --- | --- |
+| JSON decoding failure | `json_parse_error` |
+| Envelope, field-presence, or field-type failure | `schema_error` |
+| Pair, direction, source, or document identity mismatch | `identity_mismatch` |
+| Economic rate-basis mismatch | `basis_mismatch` |
+| Boolean, string, non-finite, non-positive, or otherwise invalid numeric value | `numeric_value_error` |
+| Duplicate or overlapping item identity | `duplicate_or_overlap` |
+| Page metadata, total, or count reconciliation failure | `page_count_mismatch` |
+| Row outside the inclusive requested window | `out_of_window_date` |
+| A requested endpoint is absent after reconciliation | `missing_requested_endpoint` |
+| Unexplained internal date gap | `unexplained_gap` |
+| A required physical reservation cannot be made within the fixed ceiling | `call_budget_gap` |
+
+For this future FX retrieval, the complete internal-token set is exactly `ok`, `waf_html`,
+`transport_inconclusive`, `empty_body`, `no_content`, `mime_mismatch`, `redirect`,
+`effective_route_mismatch`, `rate_limited`, `server_error`, `timeout`, `tls_error`,
+`transport_error`, `unexpected_http_status`, `json_parse_error`, `schema_error`,
+`identity_mismatch`, `basis_mismatch`, `numeric_value_error`, `duplicate_or_overlap`,
+`page_count_mismatch`, `out_of_window_date`, `missing_requested_endpoint`, `unexplained_gap`,
+and `call_budget_gap`. `source_gap`, `coverage_gap`, `provider_nonpublication`, and
+`holiday_gap` are public diagnostic/disposition tokens only and are not substitutes for an
+unresolved transport or validation token.
+
 The three diagnostic layers are separate:
 
-1. **Offline `RequestDiagnostic.status`:** no network is performed; current daily status remains
-   `unsupported_frequency`. A future additive daily registry may use only reviewed statuses such
-   as `source_gap`, `coverage_gap`, or `ok`, with a typed `rate_basis` on each capability; transport
-   exceptions never appear in an offline result.
+1. **Offline `RequestDiagnostic.status`:** no network is performed; for this FX diagnostic the
+   exact closed status set is `unsupported_frequency`, `unsupported_pair`, `source_gap`,
+   `coverage_gap`, and `ok`. Current daily status remains `unsupported_frequency`. A future
+   additive daily registry may select only from that set, with a typed `rate_basis` on each
+   capability; transport exceptions never appear in an offline result.
 2. **Successful `FXHistory.warnings`:** only provider-calendar/time caveats can accompany a
    successful fully reconciled history: `provider_nonpublication`, `holiday_gap`,
    `publication_time_unavailable`, and `revision_or_release_lag`. The maximum is four tokens;
    deduplicate first, then emit in that canonical order, never caller/order/provider-text order.
-3. **Internal/failure reasons:** only the finite tokens in the transport table and the coverage
-   tokens `source_gap`, `coverage_gap`, `provider_nonpublication`, `holiday_gap`,
-   `unexplained_gap`, and `call_budget_gap` may be retained. No raw URL, body, exception, cookie,
-   credential, provider text, or live rate is public. A failed retrieval returns no `FXHistory`.
+3. **Internal/failure reasons:** the exact internal set and deterministic mappings above are
+   exhaustive. Public diagnostics may expose only the sanitized allow-list in §6.3 below; no raw
+   URL, body, exception, cookie, credential, provider text, or live rate is public. A failed
+   retrieval returns no `FXHistory`.
 
 **Coverage and calendar.** A qualifying result must be one **fully reconciled retrieval from one
 qualified source**, not one wire response: every required wire page succeeds, page/count metadata
@@ -275,7 +303,7 @@ No guessed FRED identifier was used as a substitute for the owner catalogue.
 Sources: [H.10 current release](https://www.federalreserve.gov/releases/H10/) and
 [H.10 summary/index definitions](https://www.federalreserve.gov/releases/h10/summary/default.htm).
 
-### 5.4 Vietcombank — spot bank quote, not the requested historical basis
+### 5.4 Vietcombank — commercial-bank quote/history route, not the requested central basis
 
 The official API shape is `GET https://www.vietcombank.com.vn/api/exchangerates?date=YYYY-MM-DD`.
 The bounded calls returned a stable JSON envelope (`Count`, `Data`, `Date`, `UpdatedDate`) with an
@@ -474,9 +502,9 @@ source/design review. One failed item keeps the chain empty and daily capability
 
 SBV is the only technically plausible full-span candidate, but the current strict transport chain
 fails and the legal/reuse and rate-policy contract is absent. BIS serves Vietnam monthly rather than
-daily; H.10 and ECB do not serve VND; Vietcombank is a legally restricted spot bank quote with no
-qualified historical coverage; World Bank remains annual; and spot/CDN routes cannot be expanded
-into daily history.
+daily; H.10 and ECB do not serve VND; Vietcombank is a commercial-bank quote/history route with
+unknown date-API rate policy, no explicit reuse licence, and unproven full-span coverage; World Bank
+remains annual; and spot/CDN routes cannot be expanded into daily history.
 
 Therefore #207 is **SOURCE-GAP CLOSURE**. The two requested artifacts may be reviewed and, if
 approved, published as a no-capability resolution. No RED tests, production code, daily source
