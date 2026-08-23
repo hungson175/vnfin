@@ -7,6 +7,13 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Fmarket funds source disabled pending permission** (#221) — `FmarketFundSource`,
+  `vnfin.funds.source()`, and `vnfin.funds.client()` remain lazy and preserve imports, models,
+  signatures, and the client alias, but every valid listing/NAV/holdings/allocation call now raises
+  `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` before cache, transport, retry, or
+  network. The offline fund diagnostic is fail-closed; no fallback, proxy, mirror, or alternate
+  source is introduced. Parser/schema tests use fabricated private fixtures only.
+  ([#221](https://github.com/hungson175/vnfin/issues/221))
 - **Fmarket `OTHER` allocation and known-empty disclosure** (#212) — `asset_allocation(product_id)`
   now preserves the provider-declared `OTHER` class alongside `STOCK`/`BOND`/`CASH` while still
   rejecting unknown tags such as `OTHER2`, malformed rows, duplicates, and invalid weights. An

@@ -4,17 +4,26 @@ Adapter: `vnfin.funds.fmarket.FmarketFundSource`.
 Models: `vnfin.funds.models` (`Fund`, `FundList`, `NavPoint`, `NavHistory`, `FundHolding`,
 `AssetAllocation`, `AssetClassWeight`, `SectorWeight`).
 
-This document records the provenance and compliance posture for the Fmarket
-public fund-data API. It was written clean-room from direct live probes of the
-provider's own public server (`api.fmarket.vn`) and inspection of the raw JSON
-shapes — no third-party library, code, or documentation was consulted. The
-VNStock clean-room exclusion was applied throughout.
+> **CURRENT STATUS (#221): `DISABLE_PENDING_PERMISSION`.** This page is a historical provenance,
+> schema, and synthetic-parser reference. It is **not** a live-access guide or permission grant.
+> `FmarketFundSource` construction is lazy, and every valid `list_funds`, `nav_history`,
+> `holdings`, or `asset_allocation` call raises
+> `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` before cache lookup, transport, retry,
+> or network. No Fmarket request is made by the current runtime; no alternate source is used.
+> The route/shape notes below were recorded before #221 and are retained only to explain the
+> compatibility surface.
+
+This document records historical provenance and compliance posture for the Fmarket public fund-data
+API. It was written clean-room from the provider's own public server and inspection of historical
+JSON shapes — no third-party library, code, or documentation was consulted. The VNStock clean-room
+exclusion was applied throughout. The historical observations do not establish current permission
+to automate, return, cache, retain, or redistribute provider data.
 
 ## Scope
 
-Covers VN **open-ended mutual funds** distributed on Fmarket (equity / bond /
-balanced) — 65 funds at time of probing, no auth required. Provides the three
-required fund data types:
+Covers the historical VN **open-ended mutual-fund** model distributed on Fmarket (equity / bond /
+balanced). At the time of the historical probe, the provider response shapes supported the three
+required data types below. Current production calls are disabled pending permission.
 
 1. **Fund list** — code, name, internal id, latest NAV, manager, asset type.
 2. **NAV history** — daily/business-day NAV time series (VND per unit).
@@ -23,7 +32,7 @@ required fund data types:
 
 ETF iNAV for HOSE-listed ETFs is a known gap (not on Fmarket); out of scope here.
 
-## Endpoints
+## Historical route inventory (not a callable runtime contract)
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -32,11 +41,11 @@ ETF iNAV for HOSE-listed ETFs is a known gap (not on Fmarket); out of scope here
 | `GET`  | `https://api.fmarket.vn/res/products/{id}` | fund detail incl. holdings + asset allocation |
 
 `{id}` is the provider's internal product id returned by the filter endpoint
-(e.g. `20` = VEOF, `38` = VNDAF). It is used as `productId` for NAV history and as
+(the examples below use a fabricated `999`/`DEMO1` identity). It is used as `productId` for NAV history and as
 the path id for holdings. `holdings()` and `asset_allocation()` both read this one
 detail document (and both enforce the #21 fund-identity guard on it).
 
-### Fund list request body
+### Historical fund-list request shape (synthetic reference only)
 
 ```json
 {
@@ -61,14 +70,14 @@ detail document (and both enforce the #21 fund-identity guard on it).
   "status": 200,
   "code": 200,
   "data": {
-    "total": 65,
+    "total": 1,
     "rows": [
       {
-        "id": 20,
-        "code": "VEOF",
-        "shortName": "VEOF",
-        "name": "...",
-        "nav": 34942.66,
+        "id": 999,
+        "code": "DEMO1",
+        "shortName": "DEMO1",
+        "name": "Synthetic fund fixture",
+        "nav": 12345.67,
         "dataFundAssetType": {"code": "STOCK", "name": "..."},
         "owner": {"name": "...", "shortName": "..."}
       }
@@ -81,13 +90,14 @@ Mapping: `id`→`Fund.id`, `code`→`Fund.code`, `name`→`Fund.name`,
 `nav`→`Fund.nav` (VND/unit), `owner.name` (fallback `owner.shortName`)→
 `Fund.manager`, `dataFundAssetType.code`→`Fund.asset_type`.
 
-### NAV history request body (IMPORTANT upstream quirks)
+### Historical NAV request shape (synthetic reference only)
 
 ```json
-{"isAllData": 1, "productId": 20, "fromDate": "2000-01-01", "toDate": "2026-06-18"}
+{"isAllData": 1, "productId": 999, "fromDate": "2000-01-01", "toDate": "2026-06-18"}
 ```
 
-Verified server behavior (live probes, 2026-06-18):
+Historical server observations (live probes, 2026-06-18; retained as provenance, not a current
+runtime guarantee):
 
 - **Both `fromDate` and `toDate` are mandatory.** A body with neither (e.g.
   `{"isAllData":1,"productId":20}`) returns **HTTP 400**.
@@ -106,13 +116,13 @@ history's newest `navDate` is strictly before the requested window start, in whi
 case it raises `StaleData` (an `EmptyData` subclass) naming the gap, so a stale or
 closed feed is distinguishable from a genuinely-empty / pre-inception result.
 
-### NAV history response shape
+### Historical NAV response shape (synthetic reference only)
 
 ```json
 {
   "status": 200,
   "data": [
-    {"id": 1, "createdAt": 1761537393929, "nav": 10000.0, "navDate": "2014-07-01", "productId": 20}
+  {"id": 1, "createdAt": 1761537393929, "nav": 10000.0, "navDate": "2014-07-01", "productId": 999}
   ]
 }
 ```
@@ -121,25 +131,25 @@ Mapping: `navDate` (`YYYY-MM-DD`)→`NavPoint.date`, `nav`→`NavPoint.nav`
 (VND/unit). `createdAt` (epoch ms, sometimes `null`) is ignored. Points are
 sorted ascending by date.
 
-### Holdings response shape
+### Historical holdings response shape (synthetic reference only)
 
 ```json
 {
   "status": 200,
   "data": {
-    "code": "VEOF",
-    "nav": 34942.66,
+    "code": "DEMO1",
+    "nav": 12345.67,
     "productTopHoldingList": [
-      {"stockCode": "MBB", "netAssetPercent": 7.99, "industry": "Ngân hàng", "price": 25.2, "type": "STOCK", "updateAt": 1700000000000}
+      {"stockCode": "DEMO", "netAssetPercent": 7.99, "industry": "Synthetic industry", "price": 25.2, "type": "STOCK", "updateAt": 1700000000000}
     ],
     "productTopHoldingBondList": [
-      {"stockCode": "BAF126003", "netAssetPercent": 11.59, "industry": "Trái phiếu", "price": null, "type": "BOND", "updateAt": 1700000000000}
+      {"stockCode": "SYNTHBOND", "netAssetPercent": 11.59, "industry": "Synthetic bond", "price": null, "type": "BOND", "updateAt": 1700000000000}
     ],
     "productAssetHoldingList": [
       {"assetType": {"code": "STOCK"}, "assetPercent": 97.44, "updateAt": 1700000000000}
     ],
     "productIndustriesHoldingList": [
-      {"industry": "Ngân hàng", "assetPercent": 33.36}
+      {"industry": "Synthetic industry", "assetPercent": 33.36}
     ]
   }
 }
@@ -150,7 +160,7 @@ The detail document carries **two** per-line-item holdings arrays with the **sam
 e.g. `BAF126003`, `price` is typically `null`, `type:"BOND"`). A pure-bond fund populates **only** the
 bond list. (There is no `productBondHoldingList` key — the bond array is `productTopHoldingBondList`.)
 
-`holdings(product_id)` mapping (equity rows first, then bond rows, merged into one tuple):
+`holdings(product_id)` historical mapping (equity rows first, then bond rows, merged into one tuple):
 
 | Provider field | Model field | Notes |
 |----------------|-------------|-------|
@@ -171,10 +181,12 @@ empty allocation (`classes == ()`, `as_of_utc is None`) with exactly one
 `no_asset_allocation_published` warning, while retaining any existing detail-coverage warning(s) and
 metadata from the same response. This is a known-empty disclosure, not proof of no assets. A present
 non-array list, `OTHER2`, malformed/duplicate class, or bad weight remains `InvalidData`.
-## Authentication
+## Authentication and permission boundary
 
-None. The endpoints are reachable anonymously with a normal browser
-`User-Agent`; no API key, cookie, or token was required during probing.
+Historical probes observed anonymous reachability with a browser-like `User-Agent`, but reachability
+is not permission. The current source is disabled pending written permission; no API key, cookie,
+token, session, or browser header may be added as a bypass. The production guard runs before any
+transport or cache path.
 
 ## Currency and units
 
@@ -182,7 +194,10 @@ All NAV values (`Fund.nav`, `NavPoint.nav`) are **VND per fund unit**. Holding
 weights are **percent of NAV (0–100)**. `NavPoint.date` is a plain
 `datetime.date` (NAV is a daily/business-day quantity; no intraday meaning).
 
-## Error mapping (failover-safe)
+## Historical parser error mapping (private synthetic-fixture contract)
+
+The mapping below is retained for parser/schema tests using fabricated payloads. It is not a promise
+that a current public operation can reach a provider response.
 
 | Condition | Exception |
 |-----------|-----------|
@@ -199,25 +214,26 @@ weights are **percent of NAV (0–100)**. `NavPoint.date` is a plain
 
 These reuse `vnfin.exceptions` so the adapter never leaks raw exceptions.
 
-## robots.txt / ToS observation
+## Historical robots.txt / terms observation
 
 `fmarket.vn/robots.txt` disallows only `/assets/params/` and certain
 `/blog|help-center/...` search pages. `api.fmarket.vn` has no `robots.txt`; it is
 the public read API powering the fund-browse UI. No explicit programmatic-access
 grant was published on these endpoints.
 
-## Rate-limit note
+## Historical rate-limit observation (not an authorization)
 
-No rate-limit headers or throttling were observed during light, sequential
-probing (a handful of requests over a few minutes). No documented quota is known.
-Keep request volume low, fetch sequentially, add backoff on errors. The adapter
-forces IPv4 and uses a 25s timeout via its default transport.
+No rate-limit headers or throttling were observed during the historical light, sequential probe.
+That observation is not a quota, reuse grant, or current runtime instruction. The disabled adapter
+does not fetch, retry, back off, or force a provider session.
 
 ## Compliance caveat
 
-- **Runtime fetch only.** This adapter fetches fund data at runtime on behalf of
-  the end user from the provider's own public server. It does **not** bundle,
-  cache to disk, or redistribute provider data.
+- **Current runtime:** no provider fetch occurs. Valid calls fail closed with
+  `SOURCE_UNAVAILABLE` reason `SOURCE_DISABLED_PENDING_PERMISSION` before cache/network.
+- **Historical runtime posture:** the pre-#221 adapter was designed as runtime fetch only and did
+  not bundle, cache to disk, or redistribute provider data. That historical design does not cure
+  the current permission gap.
 - **No published redistribution grant.** Treat the data as the provider's
   property; do not republish, resell, or redistribute. Personal/internal research
   use only.

@@ -113,6 +113,11 @@ When migrating an adapter onto the contracts:
 
 ## Phase-4 adapter migrations completed
 
+> **Current Fmarket boundary (#221):** the Phase-4 Fmarket rows below describe preserved
+> identifier/parser contracts only. `FmarketFundSource` is currently disabled pending permission;
+> valid public operations fail closed before cache or transport, and only fabricated private
+> fixtures exercise these parser contracts.
+
 All domain adapters were migrated onto the `_contracts` primitives in Phase 4 (committed
 and pushed as part of the full refactor):
 

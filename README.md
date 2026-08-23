@@ -7,6 +7,12 @@ Vietnam-related market data: stocks, fundamentals, mutual funds, indices, gold, 
 indicators, and major crypto. It is **no-key-first**, returns **typed objects with explicit
 units**, and uses source failover where a clean same-unit backup exists.
 
+> **Current fund-source status:** the Fmarket mutual-fund source is disabled pending permission.
+> `vnfin.funds.source()` and `vnfin.funds.client()` remain lazy, offline-compatible factories,
+> but every valid listing/NAV/holdings/allocation call raises
+> `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` before cache or network work.
+> No alternate or fallback fund source is silently substituted.
+
 ```bash
 pip install git+https://github.com/hungson175/vnfin.git
 ```
@@ -69,7 +75,8 @@ cd vnfin
 pip install -e ".[pandas]"
 ```
 
-Requires Python 3.10 or newer. The default path of every domain works without an API key.
+Requires Python 3.10 or newer. Enabled default paths work without an API key; the Fmarket funds
+path is currently disabled pending permission rather than being an available no-key feed.
 
 ## 3-minute quickstart
 
@@ -101,7 +108,7 @@ print(cpi.unit, cpi.latest())
 |--------------|------------|
 | Fetch daily stock prices and convert to pandas | [Tutorial: stock prices](docs/tutorials/stock-prices.md) |
 | Read financial statements and ratios | [Tutorial: fundamentals](docs/tutorials/fundamentals.md) |
-| List mutual funds, NAV, index levels, constituents | [Tutorial: funds and indices](docs/tutorials/funds-and-indices.md) |
+| Understand fund-source status, NAV models, index levels, constituents | [Tutorial: funds and indices](docs/tutorials/funds-and-indices.md) |
 | Fetch USD/VND, EUR/VND, GDP, CPI, inflation | [Tutorial: macro and FX](docs/tutorials/macro-and-fx.md) |
 | Fetch domestic/world gold or BTC/ETH OHLCV | [Tutorial: gold and crypto](docs/tutorials/gold-and-crypto.md) |
 | Understand VND vs thousand-VND vs points | [Units reference](docs/units.md) |
@@ -123,7 +130,7 @@ Most domains expose two factories:
 |--------|------------|------------------------|----------------|
 | Stocks | `vnfin.prices.history()` / `vnfin.prices.client()` | SSI → VNDirect → VPS → Pinetree | VND |
 | Fundamentals | `vnfin.fundamentals.get_financials()` | VNDirect → CafeF | raw VND; ratios per line |
-| Funds | `vnfin.funds.source()` | Fmarket | VND/unit |
+| Funds | `vnfin.funds.source()` / `.client()` | **Disabled pending permission (Fmarket retained as named source)** | VND/unit (model contract) |
 | Indices | `vnfin.indices.index_history()` | VPS → SSI → VNDirect | points |
 | FX | `vnfin.fx.get_rate()` / `vnfin.fx.client()` | open.er-api → Vietcombank | VND per 1 base |
 | Macro | `vnfin.macro.get_indicator()` | World Bank → IMF → DBnomics | per indicator |

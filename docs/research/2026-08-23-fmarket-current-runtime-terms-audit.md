@@ -4,7 +4,11 @@
 **Scope:** the existing no-key Fmarket mutual-fund runtime only: listing, NAV history,
 holdings, and asset allocation/detail.
 **Disposition:** **`DISABLE_PENDING_PERMISSION`**.
-**Status:** source/legal design only; no Fmarket API request or production change was made.
+**Status at design anchor:** source/legal design only; no Fmarket API request or production change
+was made in this artifact. **Current implementation status (#221):** the approved
+`DISABLE_PENDING_PERMISSION` transition is now implemented in the runtime; valid public calls fail
+closed before cache/network with `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")`. This
+report remains the source/legal evidence record, not a live-access instruction.
 
 This is conservative engineering compliance triage, not legal advice.  A reachable public
 response is not evidence of permission to automate, retain, return, or redistribute it.

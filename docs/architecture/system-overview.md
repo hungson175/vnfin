@@ -69,7 +69,7 @@ The same layering as an ASCII reference:
 │  PROVIDER ADAPTERS (source adapters — one per endpoint/provider)             │
 │  sources/: SSIiBoardSource, VNDirectSource, VPSSource, PinetreeSource, KIS  │
 │  fundamentals/: VNDirectFundamentalSource, CafeFFundamentalSource           │
-│  funds/: FmarketFundSource                                                   │
+│  funds/: FmarketFundSource (disabled pending permission; lazy compatibility)  │
 │  gold/: BTMCGoldSource, PNJGoldSource, GoldApiSource, CurrencyApiGoldSource │
 │           StooqGoldSource                                                    │
 │  indices/: VPSIndexSource, SSIIndexSource, VNDirectIndexSource,             │
@@ -133,8 +133,9 @@ Standard factory verbs (consistent across all standard domains):
 different unit families so `gold` exposes `vn(provider)` / `world(provider)` / `source(provider)`
 instead of a single `client()`. See `docs/api.md` for the rationale.
 
-`funds.client` is an alias of `funds.source` (accepted single-source in v0.2; no clean
-no-auth backup yet).
+`funds.client` is an alias of `funds.source` (compatibility surface). The named Fmarket source is
+currently disabled pending permission, so valid operations fail before cache/network and no clean
+fallback is attempted.
 
 Offline helper namespaces (`diagnostics`, `liquidity`) have their own API described in
 `docs/api.md` and `docs/architecture/data-domains.md`.

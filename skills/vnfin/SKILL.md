@@ -15,9 +15,15 @@ description: >-
 
 `vnfin` is a clean-room, **no-API-key**, open-source Python library for Vietnam financial data.
 Most domains fetch over a multi-source **failover** chain (where a clean same-unit backup exists;
-`funds` is single-source and `gold` ships separate VN/world adapters) and every result is a
+`funds` is a named single-source compatibility surface currently disabled pending permission, and
+`gold` ships separate VN/world adapters) and every result is a
 **typed** object with **explicit units**. Use it whenever a task needs VN stocks, fundamentals,
 funds, indices, gold, FX, crypto, or macro indicators.
+
+> **Fmarket fund boundary:** `vnfin.funds.source()` and `.client()` are lazy aliases and make no
+> network call at construction. Every valid fund operation raises
+> `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` before cache, transport, retry, or
+> fallback. Do not invent an alternate source or use cached/historical rows as current data.
 
 ## Install
 
@@ -26,13 +32,15 @@ pip install git+https://github.com/hungson175/vnfin.git          # core (httpx o
 pip install "vnfin[pandas] @ git+https://github.com/hungson175/vnfin.git"   # + .to_dataframe()
 ```
 
-Python ≥ 3.10. No key, no env var, no login for the default path of any domain.
+Python ≥ 3.10. Enabled default paths are no-key/no-login; the Fmarket funds path is currently
+policy-disabled and must not be treated as an available no-login feed.
 
 ## Five rules (apply to every domain)
 
-1. **No key needed.** The only optional BYOK knobs anywhere are `FRED_API_KEY` (macro, opt-in,
-   excluded from the default chain) and `VNFIN_BTMC_WIDGET_KEY` (gold, public-token override).
-   Never add authentication.
+1. **No key needed where a source is enabled.** The only optional BYOK knobs anywhere are
+   `FRED_API_KEY` (macro, opt-in, excluded from the default chain) and `VNFIN_BTMC_WIDGET_KEY`
+   (gold, public-token override). The Fmarket fund source is a separate policy-disabled boundary,
+   not a key/login opportunity. Never add authentication.
 2. **`client()` = failover, `source()` = single primary.** `gold` is the exception — no
    `client()` (two unit families); use `vn()` / `world()`.
 3. **Read the unit off the result; never assume.** Equities `VND`; **indices reuse the price
@@ -63,7 +71,7 @@ Python ≥ 3.10. No key, no env var, no login for the default path of any domain
 |------|------|---------------|
 | Stock OHLCV | `vnfin.prices.history(sym, start=, end=)` | `PriceHistory` · VND |
 | Financials | `vnfin.fundamentals.get_financials(sym, stmt, period)` | `tuple[FinancialReport]` · raw VND |
-| Fund NAV/holdings | `vnfin.funds.source().nav_history(fund_id, ...)` · `.holdings(fund_id)` (stocks+bonds) · `.asset_allocation(fund_id)` | `NavHistory` · `tuple[FundHolding]` · `AssetAllocation` |
+| Fund NAV/holdings | `vnfin.funds.source()` / `.client()` (lazy compatibility surface; valid calls disabled) | `NavHistory` · `tuple[FundHolding]` · `AssetAllocation` model contracts |
 | Index value | `vnfin.indices.index_history(idx, start, end)` | `PriceHistory` · **points** (bar `volume` = constituent **shares**, directional proxy only — not exact for liquidity) |
 | Index members | `vnfin.indices.index_constituents(idx)` | `IndexConstituents` (no weights) |
 | World index (8 symbols) | `vnfin.indices.world("SPY", start=, end=)` — `SPY`,`QQQ`,`^N225`,`^SSEC`,`^STI`,`^KS11`,`^CSI300`,`^HSI` | `PriceHistory` · all **USD** (US ETFs); caret Asian symbols are **USD ETF proxies** (`^N225`→EWJ, `^SSEC`→FXI, `^STI`→EWS, `^KS11`→EWY, `^CSI300`→ASHR, `^HSI`→EWH; `proxy_for` + `proxy_substitution`, embed FX, not faithful trackers/raw index points); series are **price-return, not total-return**. **Needs `ALPHAVANTAGE_API_KEY` on servers** — no key + walled fallback → `MissingKey` (names the env var); keyless Stooq `^SPX` fallback is residential-only |
@@ -167,19 +175,19 @@ complete caller-facing set (each with the issue that introduced it; `—` = pre-
 | `series_end_gap` | `macro.get_indicator` | Latest monthly observation lags the series' own cadence (possible staleness/discontinuation). | #179 |
 | `imf_weo` | `macro.get_indicator` | Years ≥ the projection year are WEO forecasts (excluded from `latest()`). | — |
 | `failover` | `macro.get_indicator` | Result required failover across sources (carries the per-source note). | — |
-| `nav_end_gap` | `funds.nav_history` | Latest fund NAV is older than the fund's own trailing cadence allows (stale / paused / dormant feed). | #172 |
-| `deduped_duplicate_nav_rows` | `funds.nav_history` | Identical-value duplicate `navDate` rows collapsed to one (kept once + warned); a *conflicting* same-date NAV is quarantined (see `quarantined_conflicting_navdates`). | #158 |
-| `quarantined_conflicting_navdates` | `funds.nav_history` | Same-date NAV conflict(s) quarantined — two different NAV values for one `navDate`; that date is **dropped** entirely (never picked, never averaged) and the rest of the series is served. Names the dropped dates. A systematically-conflicting feed (>10% of in-window dates, floor 3) still raises `InvalidData`. | #194 |
+| `nav_end_gap` | `funds.nav_history` (historical parser contract) | Legacy synthetic-parser token: latest fund NAV is older than the fund's own trailing cadence allows. The current public source is disabled before any result is returned. | #172 |
+| `deduped_duplicate_nav_rows` | `funds.nav_history` (historical parser contract) | Legacy synthetic-parser token: identical-value duplicate `navDate` rows collapsed to one; the current public source is disabled before any result is returned. | #158 |
+| `quarantined_conflicting_navdates` | `funds.nav_history` (historical parser contract) | Legacy synthetic-parser token: conflicting same-date NAV rows are dropped rather than selected; the current public source is disabled before any result is returned. | #194 |
 | `partial_universe_coverage` | `equities.universe` | **Always present** per board — the universe is index-basket-derived (~96% of the full SSC roster), not the complete listing. | #167 |
 | `listing_date_not_available` | `equities.universe` | **Always present** per board — the provider's `firstTradingDate` is `'0'` (unusable), so no listing date is exposed. | #167 |
 | `sector_not_available` | `equities.universe` | **Always present** per board on the plain `universe()` path — sector/industry is absent from this payload (not fabricated). Replaced by `sector_partial_coverage` when sector data is derived (`with_sector=True`). | #167 |
 | `sector_partial_coverage` | `equities.profile` / `by_sector` / `universe(with_sector)` | Derived GICS sector is HOSE-only (~74%); unmapped HOSE + all HNX/UPCoM → null, never fabricated; also flags any multi-basket symbol | #195 |
 | `cross_board_duplicate_symbol` | `equities.universe` | On an `exchange=None` merge, a symbol seen on more than one board is kept-first (board order HOSE, HNX, UPCOM) and the dropped copy is disclosed (never silent). | #167 |
 | `board_unavailable` | `equities.universe` | On an `exchange=None` merge, one board's fetch failed (`SourceUnavailable`/`EmptyData`/`InvalidData`); it is **skipped, not fatal** — the other boards still merge, and the skip is disclosed (`board_unavailable: {board} — fetch skipped ({ExcType}): {reason}`). If **all** boards fail the merge re-raises. A single-board `universe("HNX")` still raises (merge-only skip). | #189 |
-| `fund_nav_stale` | `funds.list_funds` | List-level: ≥1 listed fund's own `nav_as_of` is older than 7 calendar days (stale NAV feed); enumerates the stale codes@date, capped at 5 + `+M more`. Funds with unknown `nav_as_of` are never flagged. | #190 |
-| `fund_missing_fees` | `funds.list_funds` | List-level: ≥1 listed fund has **no disclosed management fee** (`management_fee_pct=None` — the provider lists `managementFee` on equity rows only), so an absent fee is never mistaken for a zero fee; enumerates the affected codes, capped at 5 + `+M more`. Suppressed when `include_metadata=False`. | #155 |
-| `fund_partial_holdings` | `funds.asset_allocation` | Detail-doc: the disclosed top holdings (equity + bond) sum to **less than 50% of NAV**, i.e. substantial portfolio exposure is undisclosed (top-N disclosure, not the full book). A bounded false-positive (a genuinely concentrated fund may trip it) is preferred over a false-negative that hides an opaque book. | #155 |
-| `no_asset_allocation_published` | `funds.asset_allocation` | Detail-doc: the provider's allocation field is absent, `null`, or `[]`; the successful typed result has `classes == ()` and this token, so an undisclosed allocation is never mistaken for no assets. Existing detail-coverage warnings are preserved. | #212 |
+| `fund_nav_stale` | `funds.list_funds` (historical parser contract) | Legacy synthetic-parser token for a stale listed-fund NAV; the current public source is disabled before any result is returned. | #190 |
+| `fund_missing_fees` | `funds.list_funds` (historical parser contract) | Legacy synthetic-parser token for an undisclosed management fee; the current public source is disabled before any result is returned. | #155 |
+| `fund_partial_holdings` | `funds.asset_allocation` (historical parser contract) | Legacy synthetic-parser token for partial disclosed holdings; the current public source is disabled before any result is returned. | #155 |
+| `no_asset_allocation_published` | `funds.asset_allocation` (historical parser contract) | Legacy synthetic-parser token for an absent/null/empty allocation; the current public source is disabled before any result is returned. | #212 |
 | `ex_date_unavailable` | `corp_actions.dividends` | **Always present** per event — v1 serves the VSDC depository spine, which publishes no ex-date (the VNDirect finfo enrichment leg is held for v2), so `ex_date` is always `None` and is never fabricated or derived. | #163 |
 | `corp_action_source_partial` | `corp_actions.dividends` | **Always present** per result (`DividendHistory`) — the result is from the VSDC depository spine ALONE; the ex-date enrichment leg is not active in v1 (in v2 it fires when the finfo leg is down). | #163 |
 | `vsdc_parse_degraded` | `corp_actions.dividends` | Per event: a page IS a cash dividend (title/reason) but the parse is not fully trustworthy — ≥1 **primary field** unparseable (the record date, or both `ratio_pct` AND `cash_per_share`); OR the cash↔ratio pairing could not be trusted so `ratio_pct` was left `None` rather than mis-paired. This covers an implausible `> 100%` ratio; a `Mệnh giá` cross-check that confirms **more than one** distinct candidate (ambiguous twins, e.g. a gross + a "sau điều chỉnh" adjusted rate); OR a ratio stated on a **different `<br />` line** than the cash anchor (v1 does not pair across lines, so the unpaired ratio is dropped, never silently). Ratio percentages are parsed **decimal-aware** (`8.5%`/`8,5%` → `8.5`, never `85`). OR the page listed **multiple cash tranches** — in EITHER phrasing (`…được nhận X đồng` or `…số tiền X đồng/cổ phiếu`) — and only the first is surfaced in v1. The affected fields are left `None`; the event is surfaced, never silently dropped or fabricated; an undated event is windowed by its `pay_date`. A **net-of-tax** ratio line is NOT this token — see `vsdc_ratio_tax_deferred`. | #163 |

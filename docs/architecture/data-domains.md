@@ -10,7 +10,7 @@
 |--------|-----------|------|-----------|---------------------------|-------------|
 | Prices | `vnfin.prices` | VND | Yes | SSI -> VNDirect -> VPS -> Pinetree | D1 (guaranteed); intraday capability-gated |
 | Fundamentals | `vnfin.fundamentals` | raw VND | Yes | VNDirect -> CafeF | ANNUAL / QUARTER |
-| Funds | `vnfin.funds` | VND/unit | No (single source) | Fmarket | NAV history + fund list |
+| Funds | `vnfin.funds` | VND/unit (model contract) | Disabled | Fmarket (named compatibility source) | No valid runtime calls pending permission |
 | Indices | `vnfin.indices` | points | Yes (value); No (constituents) | VPS/SSI/VNDirect (value); SSI iBoard (constituents) | D1 |
 | Equities | `vnfin.equities` | — (reference metadata) | No (single source) | SSI iBoard (`/stock/group/{board}`) | current universe snapshot per board (#167) |
 | Corp-actions | `vnfin.corp_actions` | VND/share (cash) | No (single source) | VSDC scrape (`vsd.vn/vi/ad/{id}`) | per-issuer cash-dividend history (#163) |
@@ -31,7 +31,7 @@ flowchart TD
     V --> BYOK["BYOK domains (caller key required)"]
     NET --> P["prices · VND"]
     NET --> FU["fundamentals · raw VND"]
-    NET --> FD["funds · VND/unit (single source)"]
+    NET --> FD["funds · disabled pending permission (Fmarket compatibility source)"]
     NET --> IX["indices · points (+ constituents, single source)"]
     NET --> GD["gold · VND/lượng (VN) | USD/oz (world)"]
     NET --> CR["crypto · USD"]
@@ -112,12 +112,14 @@ followed to completion (#198 — no silent single-page truncation). `is_bank=AUT
 
 **Module:** `vnfin/funds/`
 
-**Source:** Fmarket public no-auth API (`FmarketFundSource`). Single source; `client()` is
-an alias of `source()` (accepted single-source in v0.2 — no clean no-auth backup for fund
-NAV data currently exists).
+**Source:** Fmarket (`FmarketFundSource`) is retained as the named compatibility source, but is
+currently **disabled pending permission**. `client()` is an alias of `source()`; both constructors
+are lazy and every valid operation fails with `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")`
+before cache, transport, retry, or network. No clean alternate source is substituted.
 
-**Capabilities:** `list_funds(asset_type)`, `nav_history(fund_id)`, `holdings(fund_id)` (equities +
-bonds merged), `asset_allocation(fund_id)` (asset-class split).
+**Preserved model/parser capabilities:** `list_funds(asset_type)`, `nav_history(fund_id)`,
+`holdings(fund_id)` (equities + bonds merged), and `asset_allocation(fund_id)` (asset-class split)
+remain schema/test contracts only; the disabled public runtime returns no provider data.
 
 **Result containers:** `Fund`, `NavPoint`, `NavHistory`, `FundHolding` (with `instrument_type` +
 `as_of_utc`), `AssetAllocation`, `AssetClassWeight`.
@@ -130,7 +132,8 @@ bonds merged), `asset_allocation(fund_id)` (asset-class split).
 - `FundHolding.instrument_type` ∈ `{STOCK, BOND, UNLISTED_BOND, OTHER}`: an unknown-but-stringlike
   provider `type` → `OTHER` (honest, not fail-closed); a present-malformed `type` fails closed.
 - Present-null fund code fails closed.
-- NAV history broad-window fetch + client-side filter (issue #144).
+- Historical NAV broad-window fetch + client-side filter (issue #144) remains covered by fabricated
+  private fixtures; it is not a current provider-call claim.
 
 ## Indices domain
 
@@ -339,11 +342,10 @@ single-source legs for long-horizon allocation workflows.
 - `explain_fx_coverage(base, quote, start, end, *, frequency) -> RequestDiagnostic` — classifies an
   FX-history request as `ok` / `coverage_gap` / `unsupported_pair` / `unsupported_frequency` vs the
   World Bank `PA.NUS.FCRF` annual USD/VND leg (`coverage_start=1983`).
-- `explain_fund_coverage() -> RequestDiagnostic` (issue #155) — states VN open-ended fund metadata
-  coverage: a confirmed Fmarket core (`management_fee_pct`, `inception_date`, `description`,
-  `sector_weights`, asset allocation) vs the source-missing/deferred fields (`benchmark`,
-  `risk-category`, a flat sub/redemption fee — tiered `productFeeList[]` only, factsheet URL);
-  status `metadata_core_available` (`domain="funds"`, `source="fmarket"`).
+- `explain_fund_coverage() -> RequestDiagnostic` (issue #155/#221) — reports the disabled Fmarket
+  boundary offline: status `source_disabled_pending_permission`, notes
+  `("SOURCE_DISABLED_PENDING_PERMISSION; no provider call.",)`, no suggested actions, and one
+  named capability record with `limitations=("SOURCE_DISABLED_PENDING_PERMISSION",)`.
 
 **Not a live health monitor.** For live checks, use `scripts/healthcheck.py`.
 
@@ -368,11 +370,11 @@ warning is always attached. Not a provider-published turnover field.
 
 ## Single-source legs (known limitations)
 
-These domains currently have no clean no-auth failover backup:
+These domains currently have no active clean failover path (the first row is policy-disabled):
 
 | Domain/endpoint | Current source | Status |
 |----------------|----------------|--------|
-| Funds NAV | Fmarket only | Accepted single-source v0.2 |
+| Funds NAV | Fmarket only | **Disabled pending permission; no runtime call or fallback** |
 | Index constituents | SSI iBoard only | Single-source (#145 diagnostics available) |
 | News | Alpha Vantage | BYOK only; no no-key alternative |
 | VN gold spot | BTMC or PNJ (pick one at runtime; no client-level failover) | Two spot sources, no combined failover client |

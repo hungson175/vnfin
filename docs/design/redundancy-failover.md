@@ -4,6 +4,10 @@
 **Builds on:** generic `vnfin.failover.FailoverClient` + unit-homogeneity guard (P1.3),
 and `docs/design/macro-no-key-byok.md`.
 
+> **Current status:** this is historical failover architecture. The Fmarket funds adapter is now
+> disabled pending permission (#221): `client() == source()` remains a compatibility alias, but
+> valid operations fail before cache/network and no fund fallback is attempted.
+
 ## Goal
 
 Boss's redundancy requirement: no domain should depend on a single source where a
@@ -23,7 +27,7 @@ assert agreement (require `VNFIN_LIVE=1`).
 | **Gold (world)** | currency-api (`world()`) | `default_world_gold_client()` = **currency-api** ✅; **Stooq opt-in only** (server-IP anti-bot challenge — not a reliable default) | USD/oz |
 | **Gold (VN)** | BTMC / PNJ (`vn()`) | **n/a — NO runtime failover client.** BTMC and PNJ are **two separate spot adapters**; pick one explicitly. A live cross-source **parity test** checks they agree | VND/lượng |
 | **Macro** | World Bank | **World Bank → IMF DataMapper → DBnomics** (no-key) ✅ + **FRED BYOK** (excluded from no-key default chain) | per-indicator |
-| **Funds** | Fmarket | **single-source** (no clean no-auth backup exists — accepted single-source for v0.1; `client() == source()`) | VND/unit |
+| **Funds** | Fmarket (named compatibility source) | **disabled pending permission**; `client() == source()` remains lazy; no runtime fallback | VND/unit model contract |
 
 For the **standard domains**, `client()` returns the failover chain and `source()`
 returns just the primary adapter; they are **not** aliases except for the accepted
@@ -53,8 +57,9 @@ within tolerance). No real provider rows are committed.
 
 ## Resolved open questions
 
-- **Funds:** accepted single-source (Fmarket) for v0.1 (BETA). No fragile per-manager
-  NAV scraping.
+- **Funds (historical decision, superseded by #221):** the source was previously accepted as a
+  single-source Fmarket path. It is now disabled pending permission; no fragile per-manager NAV
+  scraping or alternate provider is introduced.
 - **Macro chain order:** no-key trio now (World Bank → IMF DataMapper → DBnomics);
   FRED wired as BYOK opt-in (official API only, never `fredgraph.csv`); BEA/BLS-v2
   deferred.

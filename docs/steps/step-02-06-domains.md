@@ -3,10 +3,16 @@
 **Date:** 2026-06-18  **Commits:** `c5abe12` (fundamentals), `262be85` (funds/indices/gold/crypto/macro)
 **Status:** all 6 domains unit-green; **264 tests pass, 2 skipped, 95% coverage**. Awaiting reviewer (parallel) + architecture review.
 
+> **Historical build note:** this page records the original domain build. The Fmarket fund
+> runtime described below was later disabled pending permission (#221). The public factories,
+> models, and synthetic parser contracts remain, but valid provider calls now fail closed with
+> `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` before cache/network.
+
 ## What shipped (public API per domain)
 
 - **`vnfin.fundamentals`** — `get_financials(symbol, statement, period, *, is_bank=False)` → `FinancialReport`s (VNDirect `api-finfo` `/v4/financial_statements` + `/v4/ratios`; long-row pivot; bank vs corporate modelType; raw VND).
-- **`vnfin.funds`** — `FmarketFundSource.list_funds() / nav_history(id) / holdings(id)` (Fmarket, no-auth; NAV in VND/unit, history to 2014).
+- **`vnfin.funds`** — historical `FmarketFundSource.list_funds() / nav_history(id) / holdings(id)`
+  model/parser surface (formerly no-auth; current runtime disabled pending permission).
 - **`vnfin.indices`** — `index_history(symbol, start, end)` → `PriceHistory` + `index_constituents(index)`. Uses **own POINT-scaled** index sources (see signal #2).
 - **`vnfin.gold`** — VN domestic spot (`BTMCGoldSource`, `PNJGoldSource`) + world XAU history (`CurrencyApiGoldSource`); `provides_history` flag distinguishes spot vs series.
 - **`vnfin.crypto`** — `BinanceCryptoSource.get_klines(symbol, interval, start, end)` → `CryptoHistory` (USD).

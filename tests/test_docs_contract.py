@@ -214,6 +214,31 @@ def test_diagnostics_docs_mention_window_too_wide_status():
         assert "window_too_wide" in _read(path), f"{path} missing window_too_wide status"
 
 
+def test_fmarket_public_guidance_is_fail_closed():
+    """Issue #221: current public guidance must not promise Fmarket availability."""
+    current_docs = (
+        "README.md",
+        "docs/index.md",
+        "docs/api.md",
+        "docs/ai-usage.md",
+        "docs/units.md",
+        "docs/tutorials/funds-and-indices.md",
+        "docs/how-to/source-diagnostics.md",
+        "docs/sources/funds-fmarket.md",
+        "skills/vnfin/SKILL.md",
+        "skills/vnfin/reference/domains.md",
+    )
+    for path in current_docs:
+        text = _read(path)
+        assert "SOURCE_DISABLED_PENDING_PERMISSION" in text, path
+    for path in (
+        "docs/api.md",
+        "docs/how-to/source-diagnostics.md",
+        "docs/architecture/data-domains.md",
+    ):
+        assert "metadata_core_available" not in _read(path), path
+
+
 # Issue #153 — gold tutorial must use GoldBar.price (GoldBar has no .close, unlike PriceBar).
 def test_gold_tutorial_uses_goldbar_price_not_close():
     import dataclasses

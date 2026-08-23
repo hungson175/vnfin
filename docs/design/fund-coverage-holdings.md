@@ -11,6 +11,11 @@ endpoints already used by `vnfin/funds/fmarket.py`. Default tests synthetic/offl
 **Preserve:** all existing #144 (wide-fetch + client-filter), #158 (dup-navDate), #21 (product-id/code)
 guards and existing equity-holdings behavior.
 
+> **Supersession notice (#221):** this page preserves the historical design and synthetic parser
+> decisions, but the Fmarket public runtime is now disabled pending permission. The current valid
+> call boundary is `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` before cache/network;
+> the shipped behaviors below are not current provider-availability claims.
+
 ---
 
 ## #172 — NAV history staleness vs silent `EmptyData`

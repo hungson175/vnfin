@@ -11,6 +11,12 @@
 data: stocks, fundamentals, mutual funds, indices, gold, FX, crypto, and macro indicators —
 each with multi-source **failover** and **typed** results carrying explicit units.
 
+> **Fund-source boundary:** the Fmarket mutual-fund source is currently disabled pending
+> permission. `vnfin.funds.source()` and `.client()` are lazy and make no network call at
+> construction; every valid fund operation raises `SourceUnavailable` with the exact message
+> `SOURCE_DISABLED_PENDING_PERMISSION` before cache or transport. Do not substitute a provider,
+> cached row, proxy, or fallback.
+
 ## 0. Install
 
 ```bash
@@ -18,7 +24,8 @@ pip install git+https://github.com/hungson175/vnfin.git          # core (httpx o
 pip install "vnfin[pandas] @ git+https://github.com/hungson175/vnfin.git"   # + .to_dataframe()
 ```
 
-Requires Python ≥ 3.10. No API key is needed for the default path of any domain.
+Requires Python ≥ 3.10. Enabled default paths need no API key; the Fmarket funds path is currently
+disabled pending permission rather than being an available no-key feed.
 
 ## 1. Five rules that apply to every domain
 
@@ -54,7 +61,7 @@ Requires Python ≥ 3.10. No API key is needed for the default path of any domai
 |--------|-------|---------|------|:------:|
 | `vnfin.prices` | `client()` / `source()` / `history()` | `PriceHistory` (OHLCV bars) | **VND** | ✅ |
 | `vnfin.fundamentals` | `client()` / `source()` / `get_financials()` | `tuple[FinancialReport]` | **raw VND** (ratios: dimensionless) | ✅ |
-| `vnfin.funds` | `source()` (single; `client` is an alias) | `FundList` / `NavHistory` / holdings | **VND/unit** | ✅ |
+| `vnfin.funds` | `source()` / `client()` (aliases; lazy) | Compatibility models only; valid calls are disabled | **VND/unit** model contract | ❌ pending permission |
 | `vnfin.indices` | `client()` / `index_history()` / `index_constituents()` / `world()` (S&P 500) | `PriceHistory` (+ `IndexConstituents`) | **points** (VN) · `USD/share` or `index points` (world) | ✅ |
 | `vnfin.gold` | `vn()` / `world()` / `source(provider)` (**no `client()`**) | `GoldQuote` / `GoldHistory` | **VND/lượng** or **USD/oz** | ✅ |
 | `vnfin.crypto` | `client()` / `source()` | `CryptoHistory` (OHLCV) | **USD** | ✅ |
@@ -158,40 +165,30 @@ print(reports[0].is_bank, reports[0].model_type)     # True 101  (bank BALANCE =
   (auto-detect). `StatementType.RATIOS` is **not money** (`value_unit='ratio'`, `currency=None`).
   Codes differ between corporate (model_type 1/2/3) and bank (101/102/103) templates.
 
-### 5.3 `vnfin.funds` — mutual-fund NAV (VND/unit)
+### 5.3 `vnfin.funds` — disabled mutual-fund source (model contract VND/unit)
 
-VN open-ended funds via Fmarket's public API. **Single-source** (`vnfin.funds.client` is an alias
-of `source`). The verbs live on the source object.
+Fmarket remains the named single source for compatibility, and `vnfin.funds.client` is an alias of
+`source`, but the source is **disabled pending permission**. This is a zero-network, fail-closed
+boundary; it is not a temporary transport retry state and it does not authorize a fallback.
 
 ```python
-from vnfin.funds import source
+import vnfin
+from vnfin.exceptions import SourceUnavailable
 
-src = source()                                   # FmarketFundSource
-funds = src.list_funds(asset_type="STOCK")        # FundList (iterable/indexable)
-print(len(funds), funds.source, funds.currency)   # ... 'fmarket' 'VND'
-f0 = funds[0]
-print(f0.code, f0.name, f0.id, f0.nav)            # nav = latest VND/unit
-
-hist = src.nav_history(f0.id, from_date="2024-01-01", to_date="2024-12-31")
-print(hist.value_unit, hist.currency)             # 'VND/unit' 'VND'
-
-holdings = src.holdings(f0.id)                     # tuple[FundHolding] — equities + bonds merged
-for h in holdings:
-    print(h.stock_code, h.weight_pct, h.instrument_type)  # STOCK/BOND/UNLISTED_BOND/OTHER; weight_pct = % of NAV (0–100)
-
-alloc = src.asset_allocation(f0.id)                # AssetAllocation — asset-class split
-for c in alloc:
-    print(c.asset_class, c.weight_pct)             # e.g. 'BOND' 88.0
+src = vnfin.funds.source()                 # lazy FmarketFundSource; no network
+assert src is vnfin.funds.client()
+try:
+    src.list_funds(asset_type="STOCK")
+except SourceUnavailable as exc:
+    assert str(exc) == "SOURCE_DISABLED_PENDING_PERMISSION"
 ```
 
-- **Gotchas:** `nav_history`/`holdings`/`asset_allocation` take the fund's **internal `Fund.id`
-  (int)**, not the ticker. `holdings()` merges equity + bond rows (a pure-bond fund returns its bond
-  positions, no longer `EmptyData`); each row has `instrument_type`
-  (`STOCK`/`BOND`/`UNLISTED_BOND`/`OTHER` — an unknown provider type → `OTHER`, never a hard fail) and
-  an optional `as_of_utc` (provider `updateAt`, or `None`). `stock_code` is a canonical ticker for
-  equities, but for bond/unlisted-bond/other rows it may be a non-canonical descriptive identifier.
-  `FundHolding.price_raw` is **opaque/unnormalized** (`price_unit='raw'/None`) — don't treat as money;
-  `weight_pct` is the safe numeric.
+- **Compatibility:** the preserved verbs are `list_funds()`, `nav_history(product_id)`,
+  `holdings(product_id)`, and `asset_allocation(product_id)`. Existing typed models retain the
+  VND/unit, `Fund.id`, holdings instrument-type, and `AssetAllocation` schema contracts. They are
+  not current availability claims; parser tests use fabricated private fixtures only.
+- **Fail-closed ordering:** valid calls raise before cache lookup, provider dispatch, retry, or
+  backoff. Invalid public arguments retain their existing validation precedence and exception types.
 
 ### 5.4 `vnfin.indices` — index value (points) + constituents
 

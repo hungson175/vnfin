@@ -4,6 +4,11 @@
 **Relates to:** #172 (shipped `vnfin.exceptions.StaleData` for the *failure* path). This is the *success*-path
 residual. **Follow-up:** `FundList.nav` per-fund as-of is filed as **#181** (out of scope here, §7).
 
+> **Supersession notice (#221):** this historical warning design remains in the parser/test record,
+> but the Fmarket public source is currently disabled pending permission. No current public call
+> reaches the NAV success path; valid calls fail closed before cache/network with
+> `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")`.
+
 ## 1. Problem
 
 `#172` added `StaleData` (subclass of `EmptyData`) raised by `FmarketFundSource.nav_history()`

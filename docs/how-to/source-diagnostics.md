@@ -79,21 +79,16 @@ same ISO-4217 contract as the live call, so a malformed code raises before any w
 import vnfin
 
 d = vnfin.diagnostics.explain_fund_coverage()
-print(d.status)             # "metadata_core_available"
-print(d.notes)              # what IS served vs the source-missing / deferred fields
-print(d.suggested_actions)
+print(d.status)             # "source_disabled_pending_permission"
+print(d.notes)              # ("SOURCE_DISABLED_PENDING_PERMISSION; no provider call.",)
+print(d.suggested_actions)  # ()
 ```
 
-VN open-ended fund metadata (`vnfin.funds`) v1 serves a confirmed Fmarket core:
-`management_fee_pct` off the `list_funds()` LIST row (free; equity rows only, `None` when
-absent — see the `fund_missing_fees` warning), plus `inception_date`, `description`,
-`sector_weights` and the asset-class allocation off the `asset_allocation(id)` DETAIL doc
-(see the `fund_partial_holdings` warning). `explain_fund_coverage` (offline) also states
-the **source-missing / deferred** fields so you never expect them: `benchmark` and
-`risk-category` are absent from the detail document; a flat subscription/redemption fee is
-not served (the provider exposes only a tiered `productFeeList[]` schedule — a flat mapping
-would be fabrication); and there is no unambiguous factsheet URL. None of these is
-fabricated.
+The Fmarket fund source is currently disabled pending permission. The diagnostic is deliberately
+fail-closed: it keeps one named `fmarket` capability record for provenance, makes no availability
+claim, suggests no source call, and makes no network request. `vnfin.funds.source()` and
+`vnfin.funds.client()` remain lazy compatibility factories; valid operations raise the exact
+`SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` token before cache or transport.
 
 > See also: [Handle errors and failover](errors.md), and the internal
 > [provider-contracts architecture](../architecture/provider-contracts.md).

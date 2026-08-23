@@ -2,44 +2,48 @@
 
 Use this guide for open-ended mutual funds, NAV, index levels, and constituents.
 
-## List funds
+> **Current fund-source status (issue #221):** Fmarket is disabled pending permission. The
+> factories and typed models remain public for compatibility, but construction is lazy and every
+> valid listing/NAV/holdings/allocation call raises
+> `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")` before cache or network work. No
+> alternate fund source is substituted. The index sections below remain active.
+
+## Fund API compatibility surface
 
 ```python
 import vnfin
+from vnfin.exceptions import SourceUnavailable
 
 fund_src = vnfin.funds.source()
-funds = fund_src.list_funds(asset_type="STOCK")
-
-for fund in funds.funds[:10]:
-    print(fund.id, fund.name, fund.short_name)
+assert fund_src is vnfin.funds.client()
+try:
+    fund_src.list_funds(asset_type="STOCK")
+except SourceUnavailable as exc:
+    assert str(exc) == "SOURCE_DISABLED_PENDING_PERMISSION"
 ```
 
-Funds are currently single-source via Fmarket. Values are VND per fund unit.
+`FmarketFundSource` remains the named single-source adapter and `client()` remains an alias of
+`source()`. The model contract remains VND per fund unit when a future qualified source is enabled;
+the current runtime returns no fund rows.
 
-## NAV history and holdings
+The four preserved operation names are `list_funds()`, `nav_history(product_id)`,
+`holdings(product_id)`, and `asset_allocation(product_id)`. Their result models and parser/schema
+fixtures remain part of the compatibility surface, but callers must handle the policy-disabled
+`SourceUnavailable` until permission is established. Do not use cached or historical rows as a
+current result.
 
-```python
-first = funds.funds[0]
-nav = fund_src.nav_history(first.id)
-holdings = fund_src.holdings(first.id)
+## Historical model notes
 
-print(nav.value_unit, nav.points[-1])
-# holdings merges equities and bonds; each row is tagged with instrument_type
-# (STOCK / BOND / UNLISTED_BOND / OTHER) and an optional as_of_utc freshness
-# stamp. A pure-bond fund returns its bond positions (it no longer raises
-# EmptyData). For bond rows stock_code may be a descriptive identifier, not a
-# canonical ticker.
-for h in holdings[:10]:
-    print(h.stock_code, h.weight_pct, h.instrument_type)  # FundHolding fields
+The preserved typed models use `Fund.id` for product identity, `NavHistory.value_unit="VND/unit"`,
+`FundHolding.instrument_type` in `STOCK`/`BOND`/`UNLISTED_BOND`/`OTHER`, and
+`AssetAllocation` classes `STOCK`/`BOND`/`CASH`/`OTHER`. These are schema notes, not a claim that
+the disabled source currently serves data. Synthetic fixtures cover parser and known-empty
+allocation behavior without contacting Fmarket.
 
-# The top-level asset-class split (equity/bond/cash/provider OTHER) is separate:
-alloc = fund_src.asset_allocation(first.id)   # AssetAllocation
-for c in alloc:
-    print(c.asset_class, c.weight_pct)        # STOCK/BOND/CASH/OTHER, provider-preserved
-print(alloc.as_of_utc)                        # freshest provider updateAt, or None
-# An absent/null/[] provider allocation returns classes==() with the exact
-# "no_asset_allocation_published" warning; it is not a no-assets claim.
-```
+For code written against fabricated model fixtures, the stable field names remain:
+`h.stock_code`, `h.weight_pct`, `h.instrument_type`, `c.asset_class`, `c.weight_pct`, and
+`members.members`. A current caller must still handle the disabled-source exception before it can
+obtain such objects from a provider.
 
 ## Index levels
 

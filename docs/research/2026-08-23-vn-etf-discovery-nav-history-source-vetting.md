@@ -13,6 +13,10 @@ This is a source and legal design artifact only. It does not add an ETF selector
 parser, source registration, runtime call, RED test, coverage claim, or NAV-discount capability.
 Discount, first difference, replay, strategy, and VN30F comparison remain caller-side.
 
+> **Post-#221 status:** the Fmarket mutual-fund runtime is now disabled pending permission. This
+> #218 artifact predates that implementation and does not authorize an Fmarket call; the current
+> mutual-fund compatibility surface fails closed before cache/network.
+
 ## 1. Executive decision
 
 No single owner route set currently proves all of the following at once:
@@ -68,17 +72,18 @@ of absence. `UNKNOWN` means the official evidence reviewed does not prove the fi
 
 ## 3. Current repository comparison and real compatibility seams
 
-The exact `v0.2.0` tree and current published tree were compared. They are **not identical**:
-the current tree contains additive mutual-fund metadata changes, while #218 changes none of them.
-The current funds runtime remains the Fmarket open-ended mutual-fund adapter; the #217 publication
-changed only research/design/backlog documentation.
+The exact `v0.2.0` tree and pre-#221 published tree were compared. They are **not identical**:
+the pre-#221 tree contains additive mutual-fund metadata changes, while #218 changes none of them.
+After #221, the current funds runtime remains the named Fmarket compatibility adapter but is
+disabled pending permission; the #218 publication changed only research/design/backlog
+documentation and does not reopen that source.
 
 | Public seam | `v0.2.0` boundary | Current published tree | #218 decision |
 | --- | --- | --- | --- |
-| `list_funds` | `list_funds(asset_type=None, search="", page_size=100)` | Adds `include_metadata=True`; validates inputs and surfaces existing metadata/warnings | Preserve both legacy inputs and current behavior; no ETF mapping |
+| `list_funds` | `list_funds(asset_type=None, search="", page_size=100)` | Preserved signature/model; current valid calls fail closed before transport | Preserve compatibility; no ETF mapping |
 | `Fund` | code/name/id/nav/manager/asset_type/currency | Adds optional `nav_as_of`, `management_fee_pct`, `inception_date`, and `description` | No model change |
 | `NavHistory` | Existing product-ID history, `value_unit="VND/unit"`, optional `code` | Same public shape with current diagnostics/window behavior | No ETF `code` provenance is inferred or changed |
-| `vnfin.funds.source()` | Returns the Fmarket source | Still returns the Fmarket source | Preserve |
+| `vnfin.funds.source()` | Returns the Fmarket source | Still returns the lazy named source; valid calls disabled pending permission | Preserve |
 | `list_funds.search` | Free-text search input | Still free text; it is not a code grammar or selector proof | Preserve; no local fuzzy matching |
 | `list_funds.asset_type` | Provider asset-class filter string | Forwarded as `fundAssetTypes`; no official `ETF` token/product-type proof | Do not map, broaden, or call it an ETF selector |
 | `nav_history(product_id, ...)` | Existing mutual-fund product-ID history | Broad provider request plus client-side date filtering | Preserve; no ETF call |

@@ -9,7 +9,7 @@ There is **one obvious entry per domain**, reachable as an attribute of ``vnfin`
     vnfin.prices        # equity OHLCV (VND)            -> .client() / .history()
     vnfin.equities      # VN equity universe (per board) -> .source()/.client() / universe()
     vnfin.fundamentals  # financial statements (VND)    -> .client()/.source() / get_financials()
-    vnfin.funds         # mutual fund NAV (VND/unit)     -> .client()/.source()
+    vnfin.funds         # mutual-fund models (VND/unit) -> lazy disabled .client()/.source()
     vnfin.indices       # index value (points) + members -> .client() / index_history()
     vnfin.gold          # gold spot/history              -> .vn() / .world() / .source()
     vnfin.metals        # annual silver/platinum (USD/oz) -> .history() / .source()

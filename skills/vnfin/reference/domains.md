@@ -72,16 +72,30 @@ cov = vnfin.fundamentals.explain_metric_coverage(
 )  # recoverable source failures become diagnostics
 ```
 
-## funds — mutual-fund NAV (VND/unit) — single-source
+## funds — mutual-fund source disabled pending permission
 
-- **Entry:** `vnfin.funds.source()` → `FmarketFundSource` (`vnfin.funds.client` is an alias). Verbs are **methods on the source**: `.list_funds(asset_type=None, search='', page_size=100)` → `FundList`; `.nav_history(product_id: int, from_date=None, to_date=None)` → `NavHistory`; `.holdings(product_id: int)` → `tuple[FundHolding]` (equities + bonds merged); `.asset_allocation(product_id: int)` → `AssetAllocation`. No module-level `list_funds`.
-- **Result fields:** `Fund(code, name, id, nav, manager, asset_type, currency='VND')`; `FundList(funds, source, currency, ...)` iterable/indexable; `NavHistory(product_id, points: tuple[NavPoint(date, nav)], value_unit='VND/unit', currency='VND', ...)`; `FundHolding(stock_code, weight_pct, industry, price_raw, price_unit, instrument_type='STOCK', as_of_utc=None)`; `AssetAllocation(product_id, classes: tuple[AssetClassWeight(asset_class, weight_pct)], source, currency='VND', code, as_of_utc, ...)` iterable/indexable.
-- **Gotchas:** `nav_history`/`holdings`/`asset_allocation` take the fund's internal **`Fund.id` (int)**, not the ticker. `holdings()` merges equity (`productTopHoldingList`) and bond (`productTopHoldingBondList`) rows — each tagged `instrument_type` (`'STOCK'`/`'BOND'`/`'UNLISTED_BOND'`/`'OTHER'` — an unknown provider type → `'OTHER'`, never a hard fail); a pure-bond fund returns its bond positions (no longer `EmptyData`). `stock_code` is a canonical ticker for equities, but for bond/unlisted-bond/other rows may be a non-canonical descriptive identifier (e.g. `'Trái phiếu chưa niêm yết'`). `FundHolding.price_raw` is opaque/unnormalized (`price_unit='raw'/None`) — not money; use `weight_pct` (0–100 % of NAV). `as_of_utc` is the provider `updateAt` or `None` (never fabricated). `asset_allocation()` preserves the closed class set `'STOCK'`/`'BOND'`/`'CASH'`/`'OTHER'`; weights need not sum to 100% (partial disclosure). Absent, `null`, or `[]` allocation returns `classes == ()`, `as_of_utc is None`, and exactly one `no_asset_allocation_published` token (plus any existing detail-coverage warning), not `EmptyData` or a no-assets claim. `OTHER2` and other unknown/malformed tags still fail closed. Inverted date window → `InvalidData`. A window after the provider's latest `navDate` (feed currently stale) → `StaleData` (an `EmptyData` subclass) naming the gap, not a silent empty. `list_funds()` adds a list-level `fund_nav_stale` warning (on `FundList.warnings`) when ≥1 listed fund's own `nav_as_of` is older than 7 calendar days — it enumerates the stale codes@date (capped at 5 + `+M more`); funds with unknown `nav_as_of` are never flagged.
+- **Entry:** `vnfin.funds.source()` → `FmarketFundSource`; `vnfin.funds.client()` is an alias.
+  Construction is lazy and offline. Valid `.list_funds()`, `.nav_history(product_id)`,
+  `.holdings(product_id)`, and `.asset_allocation(product_id)` calls raise the existing
+  `SourceUnavailable` with exact `str(exc) == "SOURCE_DISABLED_PENDING_PERMISSION"` before cache,
+  transport, retry, or fallback. No module-level `list_funds` exists.
+- **Compatibility fields:** `Fund`, `FundList`, `NavHistory`, `FundHolding`, and `AssetAllocation`
+  retain their published VND/unit and identity/model schemas. `Fund.id` is the historical internal
+  product-id shape; holdings instrument types remain `STOCK`/`BOND`/`UNLISTED_BOND`/`OTHER` and
+  allocation classes remain `STOCK`/`BOND`/`CASH`/`OTHER`. These are model contracts, not current
+  availability claims.
+- **Testing boundary:** parser/schema behavior is exercised only with fabricated private fixtures;
+  no provider response, cache entry, or alternate source is a public bypass.
 
 ```python
-from vnfin.funds import source
-src = source(); funds = src.list_funds(asset_type="STOCK")
-hist = src.nav_history(funds[0].id, from_date="2024-01-01", to_date="2024-12-31")
+import vnfin
+from vnfin.exceptions import SourceUnavailable
+
+src = vnfin.funds.source()
+try:
+    src.list_funds(asset_type="STOCK")
+except SourceUnavailable as exc:
+    assert str(exc) == "SOURCE_DISABLED_PENDING_PERMISSION"
 ```
 
 ## indices — index value (points) + constituents

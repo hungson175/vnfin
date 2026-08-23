@@ -11,7 +11,7 @@ import vnfin
 vnfin.prices        # equity OHLCV price history (VND)
 vnfin.equities      # VN equity universe per board (HOSE/HNX/UPCOM)
 vnfin.fundamentals  # financial statements (raw VND)
-vnfin.funds         # mutual-fund NAV (VND / fund unit)
+vnfin.funds         # mutual-fund models; runtime source disabled pending permission
 vnfin.indices       # index value (points) + constituents
 vnfin.gold          # gold spot / history (VN domestic + world XAU)
 vnfin.metals        # annual silver/platinum history (USD/oz, World Bank CMO)
@@ -31,12 +31,12 @@ offer the predictable **factory verbs**:
 | `source(...)` | The **primary single-source adapter** only — no failover. Use it to pin one provider explicitly. |
 | `history(...)` / `index_history(...)` / `get_financials(...)` | Domain-specific one-shot convenience functions (kept where they already existed). |
 
-> `client()` is **not** an alias of `source()`. `client()` returns the failover
-> chain; `source()` returns just the primary adapter. (The only standard domain
-> whose `client()` is currently still effectively single-source is `funds` — no
-> clean no-auth backup exists, accepted single-source for v0.1, so
-> `client() == source()`; see [units.md](units.md) and
-> [design/redundancy-failover.md](design/redundancy-failover.md).)
+> `client()` is **not** an alias of `source()` for normal failover domains. `funds` is
+> the deliberate single-source compatibility exception: `client() == source()` and both
+> factories are lazy, but the Fmarket source is currently disabled pending permission.
+> Valid fund operations raise the exact `SourceUnavailable("SOURCE_DISABLED_PENDING_PERMISSION")`
+> before cache lookup or network dispatch; no fallback is attempted. See [units.md](units.md)
+> and [design/redundancy-failover.md](design/redundancy-failover.md).
 
 ### `gold` is the deliberate exception
 
@@ -82,17 +82,14 @@ c       = vnfin.fundamentals.client()        # FailoverFundamentalClient (VNDire
 src     = vnfin.fundamentals.source()        # VNDirectFundamentalSource (primary only)
 reports = vnfin.fundamentals.get_financials("FAKECORP", "income", "annual")  # uses the failover chain
 
-# funds — mutual-fund NAV (VND/unit). No clean no-auth backup exists -> single-source (v0.1).
-src   = vnfin.funds.client()                 # FmarketFundSource (accepted single-source; client() == source())
-funds = src.list_funds()                     # FundList; each Fund has .management_fee_pct (equity rows,
-                                             # None when undisclosed); funds.warnings: fund_missing_fees /
-                                             # fund_nav_stale. include_metadata=False -> fee-agnostic list.
-holds = src.holdings(funds[0].id)            # tuple[FundHolding] — equities + bonds merged; each has
-                                             # .instrument_type (STOCK/BOND/UNLISTED_BOND/OTHER) + .as_of_utc
-alloc = src.asset_allocation(funds[0].id)    # AssetAllocation — STOCK/BOND/CASH/OTHER split + metadata
-                                             # .sector_weights/.inception_date/.description; weights may be partial
-                                             # alloc.warnings: fund_partial_holdings and, for absent/null/[] allocation,
-                                             # exactly one no_asset_allocation_published token
+# funds — mutual-fund model/API compatibility surface (VND/unit when served).
+# Construction is lazy and offline. The current Fmarket source is disabled pending permission;
+# every valid operation below raises SourceUnavailable with the exact token before cache/network.
+src   = vnfin.funds.client()                 # FmarketFundSource; client() == source()
+try:
+    src.list_funds()
+except vnfin.exceptions.SourceUnavailable as exc:
+    assert str(exc) == "SOURCE_DISABLED_PENDING_PERMISSION"
 
 # indices — index value (points) + members.
 ic   = vnfin.indices.client()                # IndexClient
@@ -351,13 +348,11 @@ never fabricated data:
   scrape), `ex_date` is **UNAVAILABLE** (depository publishes none; finfo enrichment leg
   held for v2 with a pre-2022 floor), and STOCK/RIGHTS/BONUS are deferred to v2 (status
   `ex_date_unavailable`).
-- `vnfin.diagnostics.explain_fund_coverage() -> RequestDiagnostic` (issue #155) — state the
-  VN open-ended fund metadata coverage: v1 serves a confirmed Fmarket core
-  (`management_fee_pct` on the LIST row, plus `inception_date` / `description` /
-  `sector_weights` / asset allocation off the DETAIL doc), while `benchmark`,
-  `risk-category`, a flat subscription/redemption fee (a tiered `productFeeList[]` schedule
-  only), and a factsheet URL are **source-missing / deferred** (status
-  `metadata_core_available`; never fabricated).
+- `vnfin.diagnostics.explain_fund_coverage() -> RequestDiagnostic` (issue #155/#221) — report
+  the offline policy boundary for the named Fmarket source. It returns exactly one
+  `SourceCapability` with `limitations=("SOURCE_DISABLED_PENDING_PERMISSION",)` and
+  `suggested_action=None`, status `source_disabled_pending_permission`, notes
+  `("SOURCE_DISABLED_PENDING_PERMISSION; no provider call.",)`, and no suggested actions.
 
 `SourceCapability` and `RequestDiagnostic` are frozen dataclasses. This is preflight
 metadata, not a live health monitor (use `scripts/healthcheck.py` for live checks). See

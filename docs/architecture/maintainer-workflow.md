@@ -161,7 +161,7 @@ GitHub issues for them without Boss direction.
 
 | Item | Note |
 |------|------|
-| Funds NAV: no clean no-auth backup | Single-source accepted in v0.2 |
+| Funds NAV | Fmarket source disabled pending permission; no fallback or runtime call until a new reviewed clearance |
 | Index constituents: no clean fallback | Single-source; `diagnostics.explain_index_constituents` covers the gap |
 | FX spot via `get_rate`/`FXRate`; annual USD/VND history via `history()`/`FXHistory` (#159) | Monthly + non-USD cross-quote history deferred to v2 |
 | Gold: VN domestic spot failover client | Two spot sources exist (BTMC, PNJ) but no combined failover client |

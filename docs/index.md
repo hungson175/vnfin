@@ -3,6 +3,10 @@
 Welcome. This documentation is organized for **end users first**: people installing `vnfin` and
 trying to fetch data correctly. Start broad, then drill down only when you need more detail.
 
+> **Fund-source status:** Fmarket is disabled pending permission. Valid fund operations fail
+> closed with `SOURCE_DISABLED_PENDING_PERMISSION`; the factories remain lazy and make no network
+> call at construction.
+
 ## Recommended path
 
 1. **[README](../README.md)** — install and three-minute quickstart.
@@ -18,7 +22,7 @@ Task-based guides with copy-paste examples:
 
 - **[Stock prices](tutorials/stock-prices.md)** — daily OHLCV, failover, pandas.
 - **[Fundamentals](tutorials/fundamentals.md)** — income/balance/cashflow/ratios, raw VND units.
-- **[Funds and indices](tutorials/funds-and-indices.md)** — Fmarket funds, NAV, VNINDEX, constituents.
+- **[Funds and indices](tutorials/funds-and-indices.md)** — disabled Fmarket fund contract, NAV models, VNINDEX, constituents.
 - **[Macro and FX](tutorials/macro-and-fx.md)** — GDP/CPI/inflation plus VND FX rates.
 - **[Historical FX](tutorials/fx-history.md)** — annual USD/VND time series (World Bank, no-key).
 - **[Gold and crypto](tutorials/gold-and-crypto.md)** — VN gold, world gold, BTC/ETH OHLCV.
