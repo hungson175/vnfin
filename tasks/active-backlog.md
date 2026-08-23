@@ -602,15 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#224 — DESIGN_BLOCK (2026-08-24, clean-base correction).** Actor `vnfin-oss`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `b8ee1e5` for
+- **#224 — DESIGN_REVIEW (2026-08-24, clean-line B1-B6 correction).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `b8ee1e5` for
   `tasks/224-daily-eurvnd-fx-history-spec.md`, public receipt `issuecomment-5387048240`.
-  Reviewed handoff `02beca7cfe15037d468d81d143af8202bf7af2ec` is blocked by
-  `reviews/review-202608240111-issue224-design-source-gate.md` at reviewer `a29a8ac`.
-  Rebuild directly from clean `origin/master=728bb99c26901dcc2397b895253f6cc94f59a65e`; local-only
-  #224 activation `82c0093e590d24d1544ac1c51ebf6d773f7eda1e` must not enter the corrected ancestry.
+  The BLOCK at the prior handoff is recorded in clean-line receipt `4c6b02f` and report
+  `reviews/review-202608240111-issue224-design-source-gate.md` at reviewer `a29a8ac`. Corrected
+  research/design anchor is `e2f61a6`, rebuilt from clean `origin/master=728bb99`; it separates
+  static-document transport from zero candidate dispatch, completes per-unit identity/legal axes
+  including `open.er-api` and deterministic Frankfurter-ECB, repairs coverage/nonpublication rules,
+  states current `rate_for_year()` truth, and makes future failure vocabulary explicitly provisional.
   Preserve SOURCE-GAP/empty daily chain, annual USD/VND, #225 queue, and no probe, RED, code, push,
-  or close.
+  or close before exact-SHA design PASS.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
