@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — CODE_REVIEW_CORRECTION_BLOCKED (2026-08-23), closure F2 correction.**
+- **#221 — CODE_REVIEW_CORRECTION_REVIEW_REQUESTED (2026-08-23), final compact F2 handoff.**
   Exact design PASS anchor `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11`; report
   `reviews/review-202608231920-issue221-final-design-approval.md`, reviewer `6d14c7d`, delivery
   `16a73066`; binding packet `tasks/221-fmarket-disable-implementation-spec.md`. Work is on clean
@@ -636,7 +636,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `reviews/review-202608232115-issue221-final-f1-f2-review.md` at reviewer `903d33b`: ordinary
   direct-parser, `produce`/`yield` `EmptyData`, and compound-negation variants still bypassed F1;
   the F2 known-form matrix sampled pattern indexes without exhaustively covering listed alternatives.
-  BLOCK was recorded before edits at this backlog commit. Apply one narrow exhaustive RED-first
+  BLOCK was recorded before edits at exact receipt `ed2accae8c80a3e3a5c8c5e5026f59a514213aab`. Apply one narrow exhaustive RED-first
   guard correction only; no runtime/probe/push/close/#219 activation.
   Final RED tests are at `83720c9656438a5df909483d2bb56c37bf157b95`; final test/docs correction
   content anchors are `9a09bf080491a1bf8d12d430cd6a0cda62b58bdd` and
@@ -660,6 +660,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   commit `ed2accae8c80a3e3a5c8c5e5026f59a514213aab`; apply one narrow F2 grammar/matrix plus
   lifecycle-anchor correction only. Preserve F1, `DISABLE_PENDING_PERMISSION`, no runtime/probe/
   push/resolution/close, no #219 activation, and queued #219/#220/#222.
+  Final compact-F2 RED matrix commit is `01f9dadfbf0e9e9d168dd9401e1be8be15e2aed7`: it pins
+  compact `id`/`product_id`/`product id`/`productid` forms for every accepted value and separator,
+  plus singular/plural fund-count forms. F1 and the exact 14-path clean corpus remain unchanged;
+  no runtime/probe/source capability changed. This lifecycle receipt is the exact final review
+  handoff. Actor is `vnfin-oss-reviewer`; next action `RETURN_FINAL_EXACT_SHA_VERDICT`.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
