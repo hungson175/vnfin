@@ -601,17 +601,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#221 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), B1-B4/I1 correction complete.** BLOCK
-  was recorded first at reviewed exact anchor `946a2b9d7dc7a9d552ea2b527caaea9884e23ca0` in
-  `5cfa103`; report `reviews/review-202608231850-issue221-source-legal-design-gate.md`, reviewer
-  `3be16c8`, delivery `c48362a9`. The correction commit containing this record is the exact
-  handoff anchor returned to the reviewer. Actor is `vnfin-oss`; next action
-  `RETURN_EXACT_SHA_DESIGN_REVIEW`. It closes the current cache/retry inventory and fail-before-
-  cache/network rule, exact `SourceUnavailable`/entrypoint contract, exact routes and
-  v0.2.0/current/diagnostics/release matrix, RED-first post-PASS lifecycle, and one-line T6 URL.
-  Preserve `DISABLE_PENDING_PERMISSION`, official evidence, no Fmarket API probe, no RED/code,
-  push, or close; #219/#220/#222 remain queued in that order. A design PASS cannot publish/close;
-  only a later exact-SHA RED/code approval can transition #221 to release and verified closure.
+- **#221 — DESIGN_CORRECTION_BLOCKED (2026-08-23), narrow R1-R5 correction.** BLOCK recorded
+  first at reviewed exact anchor `08df58bde52eed8629365a90f36f0035e0bf0499` in the prior
+  handoff; report `reviews/review-202608231907-issue221-corrected-design-rereview.md`, reviewer
+  `d7d7c99`, delivery `2b08c5e0`. Expected correction actor is `vnfin-oss`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Correct the owner-evidence versus authorized
+  disable-RED lifecycle, direct-constructor-only cache/retry cross-product with a named test-only
+  cache seam, frozen `source_capabilities()`/diagnostics output, exact approved remote
+  anchor/ancestry/path verification, and remaining units/failover/module/adapter/exception/public-
+  snapshot surfaces; renumber the design-note subsections. Preserve
+  `DISABLE_PENDING_PERMISSION`, official evidence, no Fmarket API probe, no RED/code/push/close,
+  and queued #219/#220/#222 in order.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
