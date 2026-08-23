@@ -602,15 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#222 — ACTIVE SOURCE_DESIGN (2026-08-23).** Actor `vnfin-oss`; next action
-  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor `001ad85` for
+- **#222 — SOURCE_DESIGN_REVIEW_REQUESTED (2026-08-23).** Actor `vnfin-oss-reviewer`; next
+  action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `001ad85` for
   `tasks/222-vn100-index-history-source-spec.md`, public receipt `issuecomment-5385778886`.
-  #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
-  `0d7977a21386acd754d3fa220b040fa1d89b03c7`; its clean resolution is
-  `issuecomment-5387072621`. Prepare fresh VN100-specific VPS/SSI/VNDirect source/design evidence
-  only; exact v0.2.0 predates the current registry guard. No proxy, basket, downstream observable,
-  probe, RED/code, push, or close before exact-SHA design PASS. #223, #224, and #225 remain queued
-  behind #222.
+  Stall reconciliation receipt `35565fa7` resumed the local activation at `fe46b578`; the exact
+  two-artifact source/design anchor is `05acc132584be11ce4ae3806d16eb6cbcba1afd1`:
+  `docs/research/2026-08-23-vn100-index-history-source-vetting.md` and
+  `tasks/222-design-note.md`. #220 is verified `CLOSED`/`COMPLETED` at exact remote anchor
+  `0d7977a21386acd754d3fa220b040fa1d89b03c7`; its clean resolution is `issuecomment-5387072621`.
+  Disposition is SOURCE-GAP CLOSURE; the new VN100 chain remains empty. Exact v0.2.0 predates the
+  current registry guard. No proxy, basket, downstream observable, probe, RED/code, push, or close
+  before exact-SHA design PASS. #223, #224, and #225 remain queued behind #222.
 
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
