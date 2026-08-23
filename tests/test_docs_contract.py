@@ -239,6 +239,52 @@ def test_fmarket_public_guidance_is_fail_closed():
         assert "metadata_core_available" not in _read(path), path
 
 
+def test_fmarket_disabled_surface_has_current_alias_docs_and_private_fixture_boundary():
+    from vnfin.funds import FmarketFundSource
+
+    for name in ("list_funds", "nav_history", "holdings", "asset_allocation"):
+        doc = inspect.getdoc(getattr(FmarketFundSource, name)) or ""
+        assert "SOURCE_DISABLED_PENDING_PERMISSION" in doc, name
+        assert "disabled pending permission" in doc.lower(), name
+
+    alias_docs = (
+        _read("docs/ai-usage.md"),
+        _read("docs/tutorials/funds-and-indices.md"),
+        _read("docs/api.md"),
+        _read("docs/design/redundancy-failover.md"),
+    )
+    for text in alias_docs:
+        assert "client() == source()" not in text
+        assert "src is vnfin.funds.client()" not in text
+    assert "vnfin.funds.client is vnfin.funds.source" in alias_docs[0]
+    assert "vnfin.funds.client is vnfin.funds.source" in alias_docs[1]
+
+    for path in ("docs/ai-usage.md", "docs/architecture/system-overview.md"):
+        assert "policy-disabled" in _read(path).lower(), path
+    source_doc = _read("docs/sources/funds-fmarket.md")
+    assert "SOURCE_UNAVAILABLE` reason" not in source_doc
+    assert source_doc.count("```") % 2 == 0
+
+
+def test_fmarket_private_fixture_docs_contain_no_known_real_rows_or_repros():
+    forbidden = (
+        "VEOF",
+        "ASBF",
+        "VFF",
+        "DCBF",
+        "BAF126003",
+        "Trái phiếu chưa niêm yết",
+        "15091.0",
+        "15120.0",
+        "15105.5",
+        "1729 rows",
+    )
+    for path in ("tests/test_funds.py", "docs/sources/funds-fmarket.md"):
+        text = _read(path)
+        for token in forbidden:
+            assert token not in text, f"{path} retains real-derived token {token!r}"
+
+
 # Issue #153 — gold tutorial must use GoldBar.price (GoldBar has no .close, unlike PriceBar).
 def test_gold_tutorial_uses_goldbar_price_not_close():
     import dataclasses

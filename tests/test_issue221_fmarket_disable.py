@@ -53,6 +53,37 @@ def test_disabled_valid_operation_fails_before_transport(operation):
     assert calls == []
 
 
+@pytest.mark.parametrize(
+    "invoke",
+    (
+        pytest.param(
+            lambda src: src._post(
+                "https://api.fmarket.vn/res/products/filter", {"page": 1}, who="filter"
+            ),
+            id="post",
+        ),
+        pytest.param(
+            lambda src: src._get(
+                "https://api.fmarket.vn/res/products/9001", who="detail"
+            ),
+            id="get",
+        ),
+        pytest.param(
+            lambda src: src._fetch_detail_data(9001, "holdings"),
+            id="detail-helper",
+        ),
+    ),
+)
+def test_disabled_transport_chokepoints_fail_before_injected_transport(invoke):
+    """Internal Fmarket dispatch paths must remain fail-closed, not just public verbs."""
+    calls = []
+    src = FmarketFundSource(http_get=_forbidden_http_get(calls))
+    with pytest.raises(SourceUnavailable) as exc_info:
+        invoke(src)
+    assert str(exc_info.value) == DISABLED
+    assert calls == []
+
+
 def test_disabled_construction_is_lazy_and_client_is_source_alias():
     calls = []
     for entrypoint, src in _constructors(_forbidden_http_get(calls)):
@@ -97,7 +128,7 @@ def test_direct_positive_cache_entry_is_not_returned_when_disabled():
         "searchField": "",
     }
     url = "https://api.fmarket.vn/res/products/filter"
-    key = HttpDataSource._cache_key(url, None, body, None)
+    key = HttpDataSource._cache_key(url, None, body, src._headers())
     src._cache[key] = (
         now + 60.0,
         json.dumps(
@@ -116,11 +147,60 @@ def test_direct_positive_cache_entry_is_not_returned_when_disabled():
             }
         ),
     )
+    assert key in src._cache
+    assert src._cache[key][0] > now
 
     with pytest.raises(SourceUnavailable) as exc_info:
         src.list_funds()
     assert str(exc_info.value) == DISABLED
     assert calls == []
+
+
+def test_matching_positive_post_cache_entry_is_not_returned_when_disabled():
+    calls = []
+    now = 1000.0
+    src = FmarketFundSource(
+        http_get=_forbidden_http_get(calls),
+        cache_ttl=60.0,
+        clock=lambda: now,
+    )
+    body = {"page": 1, "pageSize": 100}
+    url = "https://api.fmarket.vn/res/products/filter"
+    key = HttpDataSource._cache_key(url, None, body, src._headers())
+    src._cache[key] = (
+        now + 60.0,
+        json.dumps({"status": 200, "code": 200, "data": {"rows": []}}),
+    )
+    assert src._cache.get(key, (0.0, None))[0] > now
+
+    with pytest.raises(SourceUnavailable) as exc_info:
+        src._post(url, body, who="filter")
+    assert str(exc_info.value) == DISABLED
+    assert calls == []
+    assert key in src._cache
+
+
+def test_matching_positive_get_cache_entry_is_not_returned_when_disabled():
+    calls = []
+    now = 1000.0
+    src = FmarketFundSource(
+        http_get=_forbidden_http_get(calls),
+        cache_ttl=60.0,
+        clock=lambda: now,
+    )
+    url = "https://api.fmarket.vn/res/products/9001"
+    key = HttpDataSource._cache_key(url, None, None, src._headers())
+    src._cache[key] = (
+        now + 60.0,
+        json.dumps({"status": 200, "code": 200, "data": {"id": 9001}}),
+    )
+    assert src._cache.get(key, (0.0, None))[0] > now
+
+    with pytest.raises(SourceUnavailable) as exc_info:
+        src._get(url, who="detail")
+    assert str(exc_info.value) == DISABLED
+    assert calls == []
+    assert key in src._cache
 
 
 def test_direct_positive_retry_budget_is_not_attempted_when_disabled():
