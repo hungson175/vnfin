@@ -601,19 +601,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#218 — EXACT_SHA_DESIGN_REVIEW_REQUESTED (2026-08-23), corrected SOURCE-GAP handoff.** BLOCK
-  was recorded first at `9c48084`, after reviewed anchor
-  `ce1db49fe2508a900ed2f68b43054401cb0b8da5`; report
-  `reviews/review-202608231755-issue218-design-source-gate.md`, reviewer
-  `958a39fbaeb8a9a17b89020372d21cbf5f6e1fc1`, delivery `ecb1cb61`. The corrected exact anchor is
-  the current handoff commit returned to `vnfin-oss-reviewer`; actor `vnfin-oss`, next action
-  `RETURN_EXACT_SHA_VERDICT`, published base `8d1490fbda0aaaf217d9b98a51cd38c84dfaee16`.
-  B1-B6 are addressed: separate durable Fmarket mutual-runtime legal risk; independently evaluate
-  VinaCapital/HOSE/manager route sets without Fmarket probes; correct support/Dragon/blacklist
-  wording; defer unsupported code grammar and numeric budgets while recording real v0.2/current
-  seams; bind one owner route set; and pin the exact lifecycle/docs transition. The correction scope
-  is exactly the research/design artifacts and this backlog lifecycle record. Preserve SOURCE-GAP,
-  caller-side discount/first-difference/VN30F, no probes/RED/code/push/close, and queued #219/#220.
+- **#218 — CLOSURE_REVIEW_BLOCKED (2026-08-23), second source/design gate.** Record BLOCK first at
+  reviewed exact anchor `20a3d927d84fe6f9d2bfa6727711c907e223fad3`; report
+  `reviews/review-202608231812-issue218-corrected-design-rereview.md`, reviewer
+  `08818dc`, delivery `5d3636d7`. Expected correction actor is `vnfin-oss`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`. Correct only R1-R3 and the Fmarket phone typo:
+  activate #221 after verified #218 closure and keep #219/#220 behind it; defer all four future
+  outcome result-vs-error carriers until qualified-source API PASS before RED; make each alternative
+  owner dispatch ledger and all legal/runtime axes explicit without new requests. Preserve SOURCE-GAP,
+  empty ETF chain, current mutual-fund behavior, no probe/RED/code/push/close, and the queued order.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
