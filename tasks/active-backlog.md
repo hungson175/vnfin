@@ -602,17 +602,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#226 — DESIGN_BLOCK (2026-08-24, final lifecycle re-review).** Actor `vnfin-oss-reviewer`; next
-  action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
+- **#226 — DESIGN_REVIEW (2026-08-24, final exact-SHA design handoff).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
   `31d75d5687b18f64659a933d9ff3c829646d6abe`, public receipt `issuecomment-5390575929`.
-  Reviewed merged HEAD `7e1844eaf7f0618c916be1957de48526f75590eb`, prior correction content anchor
+  Prior reviewed merged HEAD `7e1844eaf7f0618c916be1957de48526f75590eb`, correction content anchor
   `c70065b3aa0cd24f4689b0f5006e0d8ff2d4e21f`, clean range `001cfd1..7e1844e`, and BLOCK-first
-  receipt commit `193aa0d28d7c8a9c16ed516ca31b5d430572b4ff` are retained. BLOCK delivery `#fcc6db04`;
+  receipt commit `0cc6fb13ad7fc8d38f419e8c115984c6717d3f39` are retained. BLOCK delivery `#fcc6db04`;
   report `reviews/review-202608241155-issue226-final-lifecycle-rereview.md` at reviewer `1c058b2`.
-  The lifecycle must state: API/model freezes the contract; separate RED authorization permits failing
-  tests only; reviewer verifies RED and authorizes implementation; implementation reaches GREEN; code
+  Final docs content anchor is `f69db1def78ca9c95c77c657710087d26819f27c`; clean base-to-content
+  range is `001cfd1..f69db1d`. The exact lifecycle is API/model contract freeze; separate RED permits
+  failing tests only; reviewer verifies RED and authorizes implementation; implementation GREEN; code
   review; publish. Preserve `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and
-  no probe, RED, code, push, or close; apply one wording-only docs/backlog correction.
+  no probe, RED, code, push, or close; return the exact final merged handoff SHA for re-review.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
