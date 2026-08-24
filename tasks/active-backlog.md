@@ -602,15 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#226 — DESIGN_REVIEW (2026-08-24, exact source/design handoff).** Actor `vnfin-oss-reviewer`;
-  next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
+- **#226 — DESIGN_BLOCK (2026-08-24, exact design gate).** Actor `vnfin-oss-reviewer`; next action
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
   `31d75d5687b18f64659a933d9ff3c829646d6abe`, public receipt `issuecomment-5390575929`.
-  Published base is `origin/master` `001cfd1cafc0d0554640c5b9672dc09029b388b2`; intake is
-  `7b70a5c`, and source/design content anchor is `8338fbcc07c10255d675570d314881d95b09a606`.
-  Artifacts are exactly `docs/research/2026-08-24-vn30f-daily-contract-history-source-vetting.md`
-  and `tasks/226-design-note.md`. Disposition is `SOURCE-GAP CLOSURE`: the new chain remains empty,
-  #202 tape scope stays separate, and no probe, RED, code, push, or close is allowed before exact-SHA
-  design PASS. #227 remains queued after verified #226 closure.
+  Reviewed merged HEAD `eb1c8cefe42556220507a242d0aa6de58c98e385`, content anchor
+  `8338fbcc07c10255d675570d314881d95b09a606`, and range `001cfd1..eb1c8ce` (including queue commit
+  `22d5412`). BLOCK delivery `#5112ed77`; report
+  `reviews/review-202608241126-issue226-design-source-gate.md` at reviewer `c57fc9d`.
+  B1-B5 require per-unit sanitized evidence, source/API lifecycle separation, sequential page-ledger
+  semantics, composite identity/null boundaries, and aligned inventory/lifecycle references. Preserve
+  `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and no probe, RED, code, push,
+  or close; apply one docs/backlog-only correction from clean `001cfd1` ancestry.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
