@@ -59,9 +59,9 @@ published behavior is the compatibility boundary:
 
 - `CurrencyApiGoldSource.get_history(start, end)` fetches one date-pinned document per calendar day,
   reads the provider's `usd.xau` cross, and inverts it to USD per troy ounce.
-- It rejects a range wider than `1,100` days and declares the known lower bound
+- It rejects a range wider than `1,100` days and applies the conservative local guard
   `COVERAGE_START = 2024-03-02` in `vnfin/gold/currency_api.py`. A request wholly before that
-  bound fails before network fan-out.
+  implementation guard fails before network fan-out; this is not a provider coverage assertion.
 - Its existing loop skips `SourceUnavailable` days and returns the existing `GoldHistory` shape:
   product `XAU`, unit/value unit `USD/oz`, currency `USD`, ordered `GoldBar` rows, source,
   UTC retrieval time, warnings, and source attempts.
@@ -71,10 +71,12 @@ published behavior is the compatibility boundary:
   separate. Annual data, futures, ETFs, domestic quotes, and USD crosses are not daily XAU/USD
   history substitutes.
 
-The requested window therefore has two independent current-boundary blockers: the known daily
-source does not reach 2018, and the existing per-call safety cap rejects the whole span. Removing
-the cap or splitting the request cannot create missing pre-coverage observations and is not
-authorized by this packet.
+The requested window cannot be served by the existing adapter under its current local guards:
+its `1,100`-day per-call cap rejects the whole span and its conservative `COVERAGE_START =
+2024-03-02` check rejects requests before that implementation boundary. These are facts about the
+current adapter, not proof that a provider/source lacks earlier dates. Removing the guard or splitting
+the request would not by itself establish provider coverage, and neither change is authorized by
+this packet.
 
 ## Evidence and unit accounting
 
@@ -83,11 +85,12 @@ Each **source qualification unit** is the tuple
 package manifest, package mirror, fallback host, API documentation page, and data operation are
 separate units. Static-document reading is not a candidate data dispatch.
 
-An **evidence unit** is separately identified as
-`(evidence_id, owner, canonical host/path, route/version, operation)`. The evidence identifier is
-stable within this report and never upgrades static text into response-backed data, permission, or
-coverage. In particular, the repository `package.json` and the generated npm package manifest are
-distinct evidence units; neither one grants rights to underlying rate data.
+An **evidence unit** is exactly one tuple
+`(evidence_id, owner, canonical host/path, route/version, operation)`. Each retained row below has
+one path, one route/version and one operation; no row bundles a repository landing page, a generator,
+a workflow, a manifest, or multiple provider routes. Static evidence never upgrades into
+response-backed data, permission, or coverage. The repository root `package.json` and the published
+npm package page are distinct units; neither grants rights to underlying rate data.
 
 For every candidate operation below, no candidate data request was dispatched. The exact candidate
 ledger is:
@@ -104,20 +107,31 @@ candidate data call or a fabricated `SourceAttempt`.
 
 ### Retained static evidence-unit ledger
 
-| Evidence ID | Official host/path and exact operation | Retained static fact | Static-read traffic | Candidate data dispatch |
-| --- | --- | --- | --- | --- |
-| `FZ-REPO-DOCS` | fawazahmed0 exchange-api repository, README, generator, workflow, and root `package.json` | Route pattern, publication mechanics, repository owner and repository licence only | `NOT_RETAINED` | `0` |
-| `FZ-NPM-MANIFEST` | npm package page for `@fawazahmed0/currency-api` and generated package metadata | Published package identity is distinct from root `package.json`; no underlying-data permission is inferred | `NOT_RETAINED` | `0` |
-| `FZ-JSDELIVR-USD-DATE` | jsDelivr date-pinned route pattern for a USD document and `currencies/{base}.json` | CDN delivery route lead only; no response or data-rights grant | `NOT_RETAINED` | `0` |
-| `FZ-CF-USD-DATE` | Cloudflare fallback date-pinned route pattern for the same document shape | Separate fallback host lead; it cannot inherit CDN coverage or rights | `NOT_RETAINED` | `0` |
-| `STQ-TERMS-ROBOTS` | Stooq operator page, terms, and robots policy | Operator identity, reuse restriction and generic-user-agent boundary | `NOT_RETAINED` | `0` |
-| `STQ-CSV-XAUUSD-DAILY` | Stooq daily-download path with fixed operation signature `s=xauusd`, `i=d` | Exact operation identity is recorded without retaining a query-bearing URL or response | `NOT_RETAINED` | `0` |
-| `PERTH-HIST-CSV-2016-2021` | Perth Mint historical-metal-prices page and its historical CSV operation | Historical-file publication lead, separate from the graph | `NOT_RETAINED` | `0` |
-| `PERTH-SPOT-GRAPH-2020-NOW` | Perth Mint historical-metal-prices page and its spot-graph/download operation | Graph publication lead, separate from the historical CSV | `NOT_RETAINED` | `0` |
-| `LBMA-IBA-BENCHMARK` | LBMA/IBA precious-metal price and gold-price information pages | Benchmark identity, auction schedule and licensing boundary | `NOT_RETAINED` | `0` |
-| `WGC-PRICE-DATA` | World Gold Council gold-price page, methodology and terms | Frequency/unit description and proprietary/reuse boundary | `NOT_RETAINED` | `0` |
-| `FRED-LBMA-API` | FRED API documentation, terms and daily-LBMA removal notice | API-key and third-party-owner boundary; no current candidate observation | `NOT_RETAINED` | `0` |
-| `WB-CMO-ANNUAL` | World Bank Commodity Markets monthly/annual CMO operation | Existing annual/monthly gold path only; not a daily operation | `NOT_RETAINED` | `0` |
+| Evidence ID | Owner | Canonical host/path | Route/version | Operation | Static-read traffic | Candidate data dispatch |
+| --- | --- | --- | --- | --- | --- | --- |
+| `FZ-REPO-README` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/README.md` | `main` | repository route/documentation description | `NOT_RETAINED` | `0` |
+| `FZ-REPO-GENERATOR` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/currscript.js` | `main` | generator source description | `NOT_RETAINED` | `0` |
+| `FZ-REPO-WORKFLOW` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/.github/workflows/run.yml` | `main` | publication workflow description | `NOT_RETAINED` | `0` |
+| `FZ-REPO-PACKAGE` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/package.json` | `main` | repository root package manifest | `NOT_RETAINED` | `0` |
+| `FZ-REPO-LICENSE` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/LICENSE` | `main` | repository licence document | `NOT_RETAINED` | `0` |
+| `FZ-NPM-PACKAGE` | fawazahmed0 | `npmjs.com/package/@fawazahmed0/currency-api` | published package page | package identity page only | `NOT_RETAINED` | `0` |
+| `FZ-JSDELIVR-USD-V1` | fawazahmed0/jsDelivr | `cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies/usd.json` | `GET; @{date}/v1` | date-pinned USD document; candidate field `usd.xau` | `NOT_RETAINED` | `0` |
+| `FZ-CF-USD-V1` | fawazahmed0/Cloudflare | `{date}.currency-api.pages.dev/v1/currencies/usd.json` | `GET; v1; date host` | date-pinned USD fallback document; candidate field `usd.xau` | `NOT_RETAINED` | `0` |
+| `STQ-OPERATOR` | Stooq | `stooq.pl/stooq/` | HTML page | operator identity page | `NOT_RETAINED` | `0` |
+| `STQ-TERMS` | Stooq | `stooq.pl/terms.html` | HTML page | terms page | `NOT_RETAINED` | `0` |
+| `STQ-ROBOTS` | Stooq | `stooq.com/robots.txt` | robots text | robots policy document | `NOT_RETAINED` | `0` |
+| `STQ-CSV-XAUUSD-DAILY` | Stooq | `stooq.com/q/d/l/` | `GET; daily CSV` | XAU/USD operation signature `s=xauusd`, `i=d` | `NOT_RETAINED` | `0` |
+| `PERTH-HIST-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | HTML page | historical-CSV link description | `NOT_RETAINED` | `0` |
+| `PERTH-GRAPH-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | HTML page | spot-graph link description | `NOT_RETAINED` | `0` |
+| `LBMA-PRICES` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-precious-metal-prices` | HTML page | benchmark price description | `NOT_RETAINED` | `0` |
+| `LBMA-FAQ` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-gold-price/lbma-gold-price` | HTML page | Gold Price identity/licensing FAQ | `NOT_RETAINED` | `0` |
+| `WGC-PRICE` | World Gold Council | `gold.org/goldhub/data/gold-prices` | HTML page | price-data description | `NOT_RETAINED` | `0` |
+| `WGC-METHODOLOGY` | World Gold Council | `gold.org/data/gold-price/methodology` | HTML page | methodology document | `NOT_RETAINED` | `0` |
+| `WGC-TERMS` | World Gold Council | `gold.org/terms-and-conditions` | HTML page | reuse terms document | `NOT_RETAINED` | `0` |
+| `FRED-API-DOCS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/fred/v2/` | HTML docs | API documentation | `NOT_RETAINED` | `0` |
+| `FRED-TERMS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/terms_of_use.html` | HTML terms | API terms document | `NOT_RETAINED` | `0` |
+| `FRED-REMOVAL` | Federal Reserve Bank of St. Louis | `news.research.stlouisfed.org/2022/01/ice-benchmark-administration-ltd-iba-data-to-be-removed-from-fred/` | HTML notice | daily-LBMA removal notice | `NOT_RETAINED` | `0` |
+| `WB-CMO` | World Bank | `worldbank.org/en/research/commodity-markets` | HTML page | CMO monthly/annual operation description | `NOT_RETAINED` | `0` |
 
 No `SourceAttempt`, retry, redirect, byte total, MIME value, truncation marker, live value, or
 provider exception prose is fabricated. Static reading may establish owner or product-description
@@ -131,8 +145,8 @@ matrix uses `COVERAGE_UNPROVEN` when no provider-declared bound or qualified res
 
 | Unit (owner; canonical operation) | Static evidence retained | Missing decisive axes | Total disposition |
 | --- | --- | --- | --- |
-| **Currency API CDN history** — fawazahmed0; date-pinned USD document with the official route pattern and `usd.xau` field operation | The official repository documents date selectors, GET JSON documents, daily publication mechanics, metals in its currency universe, a CC0 repository licence and a CDN route. A date tag is an alias rather than a cryptographic content pin and upstream data provenance is not established. Existing local runtime research identifies the current `usd.xau` inversion and lower implementation boundary `2024-03-02`; this round does not re-probe it. | No retained response-backed XAU/date/field identity; no provider-declared 2018 bound, correction/retention contract, package/CDN data-rights lineage, automation, caller return, cache, derivative or redistribution terms. The repository code licence does not itself clear underlying rate data. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
-| **Currency API Cloudflare fallback** — fawazahmed0; date-pinned USD document fallback operation | The official repository describes a fallback host for the same date/version shape. | No retained response identity, exact 2018 bound, WAF/redirect/byte semantics, rate/concurrency policy, or reuse/redistribution grant. It cannot inherit coverage or permission from jsDelivr. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `TRANSPORT_INCONCLUSIVE` |
+| **Currency API CDN history** — fawazahmed0; date-pinned USD document at `.../v1/currencies/usd.json` with `usd.xau` field operation | The official repository documents date selectors, GET JSON documents, daily publication mechanics, metals in its currency universe, a CC0 repository licence and a CDN route. A date tag is an alias rather than a cryptographic content pin and upstream data provenance is not established. Existing local runtime research identifies the current `usd.xau` inversion and lower implementation boundary `2024-03-02`; this round does not re-probe it. | No retained response-backed XAU/date/field identity; no provider-declared 2018 bound, correction/retention contract, package/CDN data-rights lineage, automation, caller return, cache, derivative or redistribution terms. The repository code licence does not itself clear underlying rate data. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `RATE_POLICY_GAP` |
+| **Currency API Cloudflare fallback** — fawazahmed0; date-pinned USD document at `{date}.currency-api.pages.dev/v1/currencies/usd.json` fallback operation | The official repository describes a fallback host for the same date/version shape. | No retained response identity, exact 2018 bound, WAF/redirect/byte semantics, rate/concurrency policy, or reuse/redistribution grant. It cannot inherit coverage or permission from jsDelivr. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `TRANSPORT_INCONCLUSIVE` |
 | **Stooq daily CSV** — Stooq; daily XAU/USD operation at the canonical path with fixed signature `s=xauusd`, `i=d` | Official operator/terms pages identify Stooq/Tomasz Kulawik; terms disclaim completeness/continuous availability and prohibit redistribution without consent; robots policy disallows generic user agents. | No retained XAU/USD instrument/unit/date/close response contract, 2018-current provider bound, correction/retention rule, no-login automation permission or finite rate policy. Existing opt-in support is only a technical lead. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `RATE_POLICY_GAP` + `TRANSPORT_INCONCLUSIVE` |
 | **Perth Mint historical CSV** — Perth Mint; historical CSV operation | Official page describes downloadable historical gold files, including a 2016–2021 publication description. | No exact stable automated route, response identity, continuous requested bound, current publication/revision semantics, finite machine-access policy, or OSS caller-return/redistribution grant. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `TRANSPORT_INCONCLUSIVE` |
 | **Perth Mint spot-price graph** — Perth Mint; graph/download operation described from June 2020 | Official page describes a separate daily graph publication from June 2020 onward and spot/trade-date concepts. | The graph is not a response-backed daily XAU/USD history unit for the requested range; exact route, revisions, transport, finite access policy and OSS reuse rights are not retained. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `TRANSPORT_INCONCLUSIVE` |
@@ -211,11 +225,13 @@ weekends/holidays is provider-backed. A weekday heuristic alone is not completen
 `QUALIFIED_PARTIAL` requires the same reconciliation plus provider-declared narrower bounds and
 exact served/unserved bounds/counts. It may not claim `2018-01-01..2026-08-21` coverage.
 
-Pre-coverage dates remain explicitly unserved. A documented provider 404 or no-publication response
-is an authoritative missing session only when the exact source contract proves that meaning. A
-timeout, WAF/challenge, rate limit, unexpected status or complete MIME, redirect failure, malformed
-document, unknown retention, identity mismatch, or budget exhaustion is unknown/fatal, never a
-skippable missing day and never an empty/zero result.
+Dates before a provider-declared bound may be described as explicitly unserved only when the
+qualified source contract proves that meaning. This report retains no such bound for the current
+candidates, so their earlier dates remain `COVERAGE_UNPROVEN`, not provider absence. A documented
+provider 404 or no-publication response is an authoritative missing session only when the exact
+source contract proves that meaning. A timeout, WAF/challenge, rate limit, unexpected status or
+complete MIME, redirect failure, malformed document, unknown retention, identity mismatch, or
+budget exhaustion is unknown/fatal, never a skippable missing day and never an empty/zero result.
 
 Same-source chunks, if later authorized, must be deterministic, non-overlapping except for a
 validated seam, independently identity-checked, and atomically reconciled. Any failed or unknown
@@ -323,7 +339,8 @@ review → exact approved publication**. This source-gap closure authorizes none
 - [fawazahmed0 exchange-api repository](https://github.com/fawazahmed0/exchange-api) — official route pattern, fallback host, README claims, and repository licence link.
 - [exchange-api generator](https://github.com/fawazahmed0/exchange-api/blob/main/currscript.js) and [publication workflow](https://github.com/fawazahmed0/exchange-api/blob/main/.github/workflows/run.yml) — daily publication/date-tag mechanics; not a coverage or source-data licence.
 - [exchange-api CC0 licence](https://github.com/fawazahmed0/exchange-api/blob/main/LICENSE) — repository Work licence; not assumed to clear underlying rate data.
-- [exchange-api package manifest](https://github.com/fawazahmed0/exchange-api/blob/main/package.json) — package metadata has no explicit `license` field in retained evidence.
+- [exchange-api root package manifest](https://github.com/fawazahmed0/exchange-api/blob/main/package.json) — root repository metadata; not the published package page.
+- [npm package page for `@fawazahmed0/currency-api`](https://www.npmjs.com/package/@fawazahmed0/currency-api) — published package identity only; no underlying data rights are inferred.
 - [jsDelivr terms](https://www.jsdelivr.com/terms/terms-of-use) — CDN use is subject to its own abuse/availability terms; not an unlimited crawl or data-rights grant.
 - [The Perth Mint historical metal prices](https://www.perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/) — official historical files, spot definitions, and disclaimer.
 - [Stooq official site](https://stooq.com/) and [official daily-download path](https://stooq.com/q/d/l/) — route lead only; no OSS data-rights grant was retained.
@@ -342,7 +359,7 @@ review → exact approved publication**. This source-gap closure authorizes none
 - Disposition: **`SOURCE-GAP CLOSURE`**; no new multi-year gold chain is admitted.
 - Current Currency API, Gold API, Stooq opt-in, failover, and annual World Bank behavior remain unchanged.
 - No candidate proves response identity, 2018-current daily coverage, finite runtime, and OSS rights together.
-- Currency API is bounded by known local coverage from 2024-03-02 and the existing 1,100-day cap; chunking cannot create 2018 data.
+- The current Currency API is constrained by its local `COVERAGE_START = 2024-03-02` guard and existing 1,100-day cap; this is not provider coverage or source absence, and chunking is not authorized.
 - Stooq, Perth Mint, LBMA/IBA, WGC, FRED, and CMO retain explicit coverage/legal/identity gaps; no candidate dispatch was made.
 - Future work requires conjunctive owner, identity, coverage, rights, transport, byte, and atomic-budget evidence.
 - No probe, RED, API/model freeze, code, push, or close is authorized by this packet.

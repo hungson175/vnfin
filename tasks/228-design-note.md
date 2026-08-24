@@ -28,9 +28,10 @@ The current gold surface remains unchanged:
 - `CurrencyApiGoldSource.get_history(start, end)` fetches one date-pinned document per calendar
   day, reads `usd.xau`, inverts it to USD/oz, skips its existing `SourceUnavailable` days, and
   returns the existing `GoldHistory`/`GoldBar` shape.
-- The current adapter rejects ranges wider than 1,100 days and has the known lower bound
-  `COVERAGE_START = 2024-03-02`; this is an existing implementation boundary, not a new source
-  claim. Splitting the request cannot supply pre-coverage rows.
+- The current adapter rejects ranges wider than 1,100 days and applies the conservative local
+  guard `COVERAGE_START = 2024-03-02`; these are implementation boundaries, not provider/source
+  coverage claims. Splitting the request does not alter the guards or establish earlier provider
+  coverage.
 - `default_world_gold_client()` remains Currency API only. Stooq remains explicit opt-in because
   its existing technical reachability is not a maintained default. Gold API remains spot-only.
 - The annual World Bank CMO/world-reference path remains annual and separate. No new daily chain,
@@ -47,8 +48,8 @@ new chain therefore stays empty and the correct disposition is `SOURCE-GAP CLOSU
 
 | Exact qualification unit | Evidence boundary | Blocking axes | Design disposition |
 | --- | --- | --- | --- |
-| fawazahmed0 date-pinned Currency API via jsDelivr | Official repository documents the route pattern, date selector, daily update and repository CC0; its generator/workflow describes publication but the date selector is not a cryptographic content pin and upstream data provenance is not established; local current code proves only the existing 2024-03-02 implementation boundary | No provider-declared 2018 bound, response-backed evidence in this round, correction/retention contract, or underlying data/package/CDN rights; no unlimited crawl grant | `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
-| fawazahmed0 date-pinned Cloudflare fallback | Official repository documents a separate fallback host | No independent response identity, provider bound, coverage, WAF/redirect/byte contract, rate policy, or reuse grant | `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| fawazahmed0 date-pinned Currency API via jsDelivr at `.../v1/currencies/usd.json` | Official repository documents the route pattern, date selector, daily update and repository CC0; its generator/workflow describes publication but the date selector is not a cryptographic content pin and upstream data provenance is not established; local current code proves only the existing 2024-03-02 implementation boundary | No provider-declared 2018 bound, response-backed evidence in this round, correction/retention contract, or underlying data/package/CDN rights; no unlimited crawl grant | `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| fawazahmed0 date-pinned Cloudflare fallback at `{date}.currency-api.pages.dev/v1/currencies/usd.json` | Official repository documents a separate fallback host | No independent response identity, provider bound, coverage, WAF/redirect/byte contract, rate policy, or reuse grant | `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | Stooq official XAU/USD daily CSV operation | Official operator/terms pages identify Stooq/Tomasz Kulawik, disclaim completeness/continuous availability, prohibit redistribution without consent, and robots disallow generic user agents; the fixed operation is path plus `s=xauusd`, `i=d` | No response-backed instrument/unit/date contract, provider bound, correction/revision contract, no-login automation permission, or finite rate policy; existing exported opt-in adapter is only a technical lead | `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | Perth Mint historical CSV operation | Official page describes downloadable daily files for 2016–2021 | No exact stable automated route, response-backed identity, continuous requested bound, revision/transport contract or OSS redistribution permission | `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | Perth Mint spot-graph operation | Official page describes a separate daily graph publication from June 2020 | No exact route, response-backed history identity, requested bound, revision/transport contract or OSS redistribution permission | `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
@@ -63,25 +64,37 @@ redistribution, or resale rights. No candidate is a fallback for this source-gap
 
 ## 2.1 Evidence units and zero-dispatch accounting
 
-The source gate distinguishes a candidate data operation from static evidence. Each evidence unit is
-`(evidence_id, owner, canonical host/path, route/version, operation)`; the repository root
-`package.json`, generated npm manifest, CDN delivery, fallback host, documentation page and data
-operation are not one merged unit. No candidate data operation was dispatched.
+The source gate distinguishes a candidate data operation from static evidence. Each evidence
+unit is exactly one tuple `(evidence_id, owner, canonical host/path, route/version, operation)`.
+Each retained row below has one path, one route/version and one operation; no row bundles multiple
+pages or routes. The repository root `package.json` and published npm package page are distinct
+units. No candidate data operation was dispatched.
 
-| Evidence ID | Exact unit retained | Static-read traffic | Candidate data dispatch |
-| --- | --- | --- | --- |
-| `FZ-REPO-DOCS` | fawazahmed0 repository README, generator, workflow, root `package.json` | `NOT_RETAINED` | `0` |
-| `FZ-NPM-MANIFEST` | npm `@fawazahmed0/currency-api` package identity and generated metadata | `NOT_RETAINED` | `0` |
-| `FZ-JSDELIVR-USD-DATE` | jsDelivr date-pinned USD document route pattern | `NOT_RETAINED` | `0` |
-| `FZ-CF-USD-DATE` | Cloudflare fallback date-pinned USD document route pattern | `NOT_RETAINED` | `0` |
-| `STQ-TERMS-ROBOTS` | Stooq operator, terms and robots pages | `NOT_RETAINED` | `0` |
-| `STQ-CSV-XAUUSD-DAILY` | Stooq daily path with fixed signature `s=xauusd`, `i=d` | `NOT_RETAINED` | `0` |
-| `PERTH-HIST-CSV-2016-2021` | Perth Mint historical CSV operation | `NOT_RETAINED` | `0` |
-| `PERTH-SPOT-GRAPH-2020-NOW` | Perth Mint spot-graph/download operation | `NOT_RETAINED` | `0` |
-| `LBMA-IBA-BENCHMARK` | LBMA/IBA benchmark information pages | `NOT_RETAINED` | `0` |
-| `WGC-PRICE-DATA` | WGC price page, methodology and terms | `NOT_RETAINED` | `0` |
-| `FRED-LBMA-API` | FRED API docs, terms and removal notice | `NOT_RETAINED` | `0` |
-| `WB-CMO-ANNUAL` | World Bank CMO monthly/annual operation | `NOT_RETAINED` | `0` |
+| Evidence ID | Owner | Canonical host/path | Route/version | Operation | Static-read traffic | Candidate data dispatch |
+| --- | --- | --- | --- | --- | --- | --- |
+| `FZ-REPO-README` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/README.md` | `main` | repository route/documentation description | `NOT_RETAINED` | `0` |
+| `FZ-REPO-GENERATOR` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/currscript.js` | `main` | generator source description | `NOT_RETAINED` | `0` |
+| `FZ-REPO-WORKFLOW` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/.github/workflows/run.yml` | `main` | publication workflow description | `NOT_RETAINED` | `0` |
+| `FZ-REPO-PACKAGE` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/package.json` | `main` | repository root package manifest | `NOT_RETAINED` | `0` |
+| `FZ-REPO-LICENSE` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/LICENSE` | `main` | repository licence document | `NOT_RETAINED` | `0` |
+| `FZ-NPM-PACKAGE` | fawazahmed0 | `npmjs.com/package/@fawazahmed0/currency-api` | published package page | package identity page only | `NOT_RETAINED` | `0` |
+| `FZ-JSDELIVR-USD-V1` | fawazahmed0/jsDelivr | `cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies/usd.json` | `GET; @{date}/v1` | date-pinned USD document; candidate field `usd.xau` | `NOT_RETAINED` | `0` |
+| `FZ-CF-USD-V1` | fawazahmed0/Cloudflare | `{date}.currency-api.pages.dev/v1/currencies/usd.json` | `GET; v1; date host` | date-pinned USD fallback document; candidate field `usd.xau` | `NOT_RETAINED` | `0` |
+| `STQ-OPERATOR` | Stooq | `stooq.pl/stooq/` | HTML page | operator identity page | `NOT_RETAINED` | `0` |
+| `STQ-TERMS` | Stooq | `stooq.pl/terms.html` | HTML page | terms page | `NOT_RETAINED` | `0` |
+| `STQ-ROBOTS` | Stooq | `stooq.com/robots.txt` | robots text | robots policy document | `NOT_RETAINED` | `0` |
+| `STQ-CSV-XAUUSD-DAILY` | Stooq | `stooq.com/q/d/l/` | `GET; daily CSV` | XAU/USD operation signature `s=xauusd`, `i=d` | `NOT_RETAINED` | `0` |
+| `PERTH-HIST-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | HTML page | historical-CSV link description | `NOT_RETAINED` | `0` |
+| `PERTH-GRAPH-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | HTML page | spot-graph link description | `NOT_RETAINED` | `0` |
+| `LBMA-PRICES` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-precious-metal-prices` | HTML page | benchmark price description | `NOT_RETAINED` | `0` |
+| `LBMA-FAQ` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-gold-price/lbma-gold-price` | HTML page | Gold Price identity/licensing FAQ | `NOT_RETAINED` | `0` |
+| `WGC-PRICE` | World Gold Council | `gold.org/goldhub/data/gold-prices` | HTML page | price-data description | `NOT_RETAINED` | `0` |
+| `WGC-METHODOLOGY` | World Gold Council | `gold.org/data/gold-price/methodology` | HTML page | methodology document | `NOT_RETAINED` | `0` |
+| `WGC-TERMS` | World Gold Council | `gold.org/terms-and-conditions` | HTML page | reuse terms document | `NOT_RETAINED` | `0` |
+| `FRED-API-DOCS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/fred/v2/` | HTML docs | API documentation | `NOT_RETAINED` | `0` |
+| `FRED-TERMS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/terms_of_use.html` | HTML terms | API terms document | `NOT_RETAINED` | `0` |
+| `FRED-REMOVAL` | Federal Reserve Bank of St. Louis | `news.research.stlouisfed.org/2022/01/ice-benchmark-administration-ltd-iba-data-to-be-removed-from-fred/` | HTML notice | daily-LBMA removal notice | `NOT_RETAINED` | `0` |
+| `WB-CMO` | World Bank | `worldbank.org/en/research/commodity-markets` | HTML page | CMO monthly/annual operation description | `NOT_RETAINED` | `0` |
 
 The aggregate candidate ledger is exactly
 `logical/physical/pages/retries/redirects/compressed/decompressed = 0/0/0/0/0/0/0`.
@@ -271,7 +284,9 @@ PASS.
 The complete source links and evidence ledger are in the companion research report. Key official
 references are:
 
-- [fawazahmed0 exchange-api](https://github.com/fawazahmed0/exchange-api), its [CC0 licence](https://github.com/fawazahmed0/exchange-api/blob/main/LICENSE), [generator](https://github.com/fawazahmed0/exchange-api/blob/main/currscript.js), [publication workflow](https://github.com/fawazahmed0/exchange-api/blob/main/.github/workflows/run.yml), and [package manifest](https://github.com/fawazahmed0/exchange-api/blob/main/package.json)
+- [fawazahmed0 exchange-api](https://github.com/fawazahmed0/exchange-api), its [CC0 licence](https://github.com/fawazahmed0/exchange-api/blob/main/LICENSE), [generator](https://github.com/fawazahmed0/exchange-api/blob/main/currscript.js), and [publication workflow](https://github.com/fawazahmed0/exchange-api/blob/main/.github/workflows/run.yml)
+- [exchange-api root package manifest](https://github.com/fawazahmed0/exchange-api/blob/main/package.json) — root repository metadata; not the published package page.
+- [npm package page for `@fawazahmed0/currency-api`](https://www.npmjs.com/package/@fawazahmed0/currency-api) — published package identity only; no underlying data rights are inferred.
 - [jsDelivr terms](https://www.jsdelivr.com/terms/terms-of-use) — CDN service constraints, not a data-rights grant.
 - [The Perth Mint historical metal prices](https://www.perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/)
 - [Stooq official site](https://stooq.com/), [operator](https://stooq.pl/stooq/), [terms](https://stooq.pl/terms.html), [robots policy](https://stooq.com/robots.txt), and [daily path](https://stooq.com/q/d/l/)
