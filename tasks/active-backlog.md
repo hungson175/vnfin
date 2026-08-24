@@ -617,6 +617,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   handoff returns its exact merged SHA separately. Preserve `SOURCE-GAP CLOSURE`, the empty history
   chain, present-state-only `index_constituents`, and no probe/RED/API-model/code/push/close. Local
   #230 queue receipt `d11f33a` remains outside #229 ancestry and unpushed; #228 is DONE/CLOSED below.
+  Latest closure BLOCK delivery `2212eb09` reviews exact head
+  `1f320ff6399f05800d9dae6afff2960690cf44bd`; report
+  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241500-issue229-closure-rereview.md`
+  is committed at reviewer `f8f16df76276b3ddce2b6cb4ab7e00848ad1cbb3`. Reviewer-owned next action is
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`: add explicit periodic-versus-extraordinary and
+  no-change synthetic cases to both deferred matrices, then return one exact SHA. Preserve
+  `SOURCE-GAP CLOSURE`, the empty history chain, present-state-only `index_constituents`, and no
+  probe/RED/API-model/code/push/close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
