@@ -66,9 +66,9 @@ recorded rather than inferred from a filename or crawl date.
 
 | ID | Exact unit and bounded observation | History qualification | Status |
 | --- | --- | --- | --- |
-| `U01` | [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf), Decision 747/QĐ-SGDHCM dated **30 December 2024**; the official July 2025 notice says effective from **March 2025** (day not stated). | Rules identify VN30, review cadence, disclosure/effective timing, amendments and rights posture; they are not an event archive. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
-| `U01b` | [HOSE-Index Ground Rules v3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f802f54c8cb39e6a10347ef2e4/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf), prior official rule version. | Version/calendar control only; it is not an event archive and does not reconcile historical announcements or reuse rights. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
-| `U02` | [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff751554244b186d5c0323a49fe/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf), URL/document date **16 April 2025**, source label `Kỳ 04/2025`. | Search-indexed official document exposes constituent and reserve-list sections; it is one period snapshot, not a before/after event pair. | `SNAPSHOT_LEAD` + `EVENT_TYPE_GAP` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| `U01` | [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf), Decision 747/QĐ-SGDHCM dated **30 December 2024**; the official July 2025 notice says effective from **March 2025** (day not stated). | Rules identify VN30, review cadence, disclosure/effective timing, amendments and rights posture; they are not an event archive. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| `U01b` | [HOSE-Index Ground Rules v3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f%3802f54c8%63b39e6a1%30347ef2e%34/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf), prior official rule version. | Version/calendar control only; it is not an event archive and does not reconcile historical announcements or reuse rights. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| `U02` | [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff%375155424%34b186d5c%30323a49f%65/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf), URL/document date **16 April 2025**, source label `Kỳ 04/2025`. | Search-indexed official document exposes constituent and reserve-list sections; it is one period snapshot, not a before/after event pair. | `SNAPSHOT_LEAD` + `EVENT_TYPE_GAP` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | `U03` | [HOSE July 2025 constituent-document URL lead](https://staticfile.hsx.vn/Uploads/UploadDocuments/2388633/20250716%20CBTT-Danh%20muc%20thanh%20phan%20HOSE-Index%20thang%207.2025.pdf), filename date **16 July 2025**, source label `tháng 7.2025`; direct static read timed out on **24 August 2026**. The bounded official July release context includes BVH-to-DGC. | The URL is retained only as an official-host lead; no response/document body, publication date, effective date, revision, or rows are retained. The bounded release is not a revision/supersession or no-change proof. | `UNVERIFIED_LEAD` + `TRANSPORT_INCONCLUSIVE` + `LEGAL_GAP` |
 | `U03b` | [HOSE July 2025 VN30-improvement release](https://staticfile.hsx.vn/Uploads/UploadDocuments/2391309/TCBC_%20Cai%20tien%20chi%20so%20VN30%20t7.2025.pdf), official two-page release context with the bounded `BVH → DGC` replacement statement. | Delta explanation only; no complete before/after basket, publication/effective binding, revision/supersession, archive bound, or no-change result is admitted. | `DELTA_ONLY` + `DATE_GAP` + `LEGAL_GAP` |
 | `U04` | [HOSE VN30 factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2374581/Form_Factsheet_MCIndices_VN_T05.2025.pdf), updated **29 April 2025**. | Present-state factsheet; it reports VN30 identity/count and summary material, not a complete review archive or complete before/after basket. | `CURRENT_SNAPSHOT_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
@@ -95,13 +95,13 @@ The current HOSE rules say HOSE manages the HOSE-Index series under VNX directio
 on the third Wednesdays of January and July, effectiveness from the first Mondays of February and
 August, and separate outstanding-share/free-float/capping updates on the third Wednesdays of
 January, April, July, and October. Non-periodic removal/replacement is to be announced at least five
-business days before its effective date. ([HOSE Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf))
+business days before its effective date. ([HOSE Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf))
 
 The same official rules state that they may be supplemented, amended, or withdrawn in whole or in
 part at any time, and that those changes may affect index construction or management. Their English
 reference section says the document is copyrighted and prohibits publishing, copying, or
 distribution; the document also says the Vietnamese version prevails. This is a direct restriction
-on the rules document, not an OSS licence for event attachments. ([HOSE Ground Rules v4.0, §2.4 and §12](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf))
+on the rules document, not an OSS licence for event attachments. ([HOSE Ground Rules v4.0, §2.4 and §12](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf))
 
 HOSE factsheets state that the HOSE-Index names are registered and exclusively owned by HOSE, and
 that HOSE approval is required before the index series is used to create index funds, derivatives,
@@ -253,17 +253,17 @@ TDD implementation → merged-tree tests/docs/build/blacklist/secret/scope gates
 
 Ask HOSE/VNX for a written licence or exact service terms naming the exact review-history operation
 and granting the legal/runtime axes above. Use first-party [HOSE contact](https://www1.hsx.vn/vi/lien-he)
-and [HOSE index contact listed in the rules](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf).
+and [HOSE index contact listed in the rules](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf).
 Do not probe or implement before the evidence is reviewed and the reviewer gives an exact design
 PASS.
 
 ## Sources
 
-- [HOSE Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
-- [HOSE-Index Ground Rules Version 3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f802f54c8cb39e6a10347ef2e4/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf)
+- [HOSE Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- [HOSE-Index Ground Rules Version 3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f%3802f54c8%63b39e6a1%30347ef2e%34/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf)
 - [HOSE index hub](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/)
 - [VNX information archive](https://vnx.vn/vi/thong-tin-tu-sgdck/VNX_QLHD)
-- [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff751554244b186d5c0323a49fe/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf)
+- [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff%375155424%34b186d5c%30323a49f%65/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf)
 - [HOSE July 2025 VN30-improvement release](https://staticfile.hsx.vn/Uploads/UploadDocuments/2391309/TCBC_%20Cai%20tien%20chi%20so%20VN30%20t7.2025.pdf)
 - [HOSE July 2025 constituent-document URL lead](https://staticfile.hsx.vn/Uploads/UploadDocuments/2388633/20250716%20CBTT-Danh%20muc%20thanh%20phan%20HOSE-Index%20thang%207.2025.pdf)
 - [HOSE factsheet dated 29 April 2025](https://staticfile.hsx.vn/Uploads/UploadDocuments/2374581/Form_Factsheet_MCIndices_VN_T05.2025.pdf)
