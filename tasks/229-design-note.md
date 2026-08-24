@@ -32,8 +32,8 @@ opened or retained. Static document reading is evidence review, not a candidate 
 This source-design round dispatched no candidate event-data operation. Its exact candidate ledger is:
 
 ```text
-logical_units / physical_dispatches / pages_or_documents / retries /
-redirects / compressed_bytes / decompressed_bytes = 0 / 0 / 0 / 0 / 0 / 0 / 0
+logical_units / physical_dispatches / archive_pages / documents / retries / redirects /
+compressed_bytes / decompressed_bytes = 0 / 0 / 0 / 0 / 0 / 0 / 0 / 0
 ```
 
 Static research traffic is not converted into candidate-call counts. No `SourceAttempt`, zero-row
@@ -67,6 +67,7 @@ recorded rather than inferred from a filename or crawl date.
 | ID | Exact unit and bounded observation | History qualification | Status |
 | --- | --- | --- | --- |
 | `U01` | [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf), Decision 747/QĐ-SGDHCM dated **30 December 2024**; the official July 2025 notice says effective from **March 2025** (day not stated). | Rules identify VN30, review cadence, disclosure/effective timing, amendments and rights posture; they are not an event archive. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| `U01b` | [HOSE-Index Ground Rules v3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f802f54c8cb39e6a10347ef2e4/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf), prior official rule version. | Version/calendar control only; it is not an event archive and does not reconcile historical announcements or reuse rights. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | `U02` | [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff751554244b186d5c0323a49fe/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf), URL/document date **16 April 2025**, source label `Kỳ 04/2025`. | Search-indexed official document exposes constituent and reserve-list sections; it is one period snapshot, not a before/after event pair. | `SNAPSHOT_LEAD` + `EVENT_TYPE_GAP` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | `U03` | [HOSE July 2025 constituent-document URL lead](https://staticfile.hsx.vn/Uploads/UploadDocuments/2388633/20250716%20CBTT-Danh%20muc%20thanh%20phan%20HOSE-Index%20thang%207.2025.pdf), filename date **16 July 2025**, source label `tháng 7.2025`; direct static read timed out on **24 August 2026**. The bounded official July release context includes BVH-to-DGC. | The URL is retained only as an official-host lead; no response/document body, publication date, effective date, revision, or rows are retained. The bounded release is not a revision/supersession or no-change proof. | `UNVERIFIED_LEAD` + `TRANSPORT_INCONCLUSIVE` + `LEGAL_GAP` |
 | `U03b` | [HOSE July 2025 VN30-improvement release](https://staticfile.hsx.vn/Uploads/UploadDocuments/2391309/TCBC_%20Cai%20tien%20chi%20so%20VN30%20t7.2025.pdf), official two-page release context with the bounded `BVH → DGC` replacement statement. | Delta explanation only; no complete before/after basket, publication/effective binding, revision/supersession, archive bound, or no-change result is admitted. | `DELTA_ONLY` + `DATE_GAP` + `LEGAL_GAP` |
@@ -80,6 +81,8 @@ recorded rather than inferred from a filename or crawl date.
 | `U11` | [VNX legal-document register](https://vnx.vn/vi/van-ban-phap-ly/6), read **24 August 2026**; Decision 67/QĐ-HĐTV is issued/effective **12 December 2025** and concerns construction, management, operation, and exploitation of VNX/subsidiary indices. | Governance control only. The final attachment was not used as a candidate operation after a static fetch timeout; no event rows or rights grant are retained. | `GOVERNANCE_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | `U12` | [VNX Member Conference 2025](https://vnx.vn/vi/ad/10003662), dated **14 March 2025**. | VNX states it trained members on HOSE-Index rules and discussed VN30 improvement; this is governance context, not an event archive. | `GOVERNANCE_ONLY` + `FIELD_GAP` + `LEGAL_GAP` |
 | `U13` | [Official VNX draft index regulation](https://stream.vnx.vn/VNX/Article/20250808092250149VNX_Du-thao-QC-chi-so-15.7.2025.pdf), explicitly marked `Dự thảo 07/2025`. | Non-operative draft describes contract-based index-use authorization and confidentiality; it is a legal lead only and cannot grant reuse. | `NON_OPERATIVE_LEAD` + `LEGAL_GAP` |
+| `U14` | [HOSE index hub](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/), official navigation/search surface. | JavaScript shell/navigation only; no VN30 event response, stable archive pagination, or historical bound is retained. | `NAVIGATION_ONLY` + `COVERAGE_UNPROVEN` + `TRANSPORT_INCONCLUSIVE` |
+| `U15` | [VNX information archive](https://vnx.vn/vi/thong-tin-tu-sgdck/VNX_QLHD), official paginated disclosure archive. | Generic VNX archive, not a VN30 event archive; its page/document totals cannot be charged as VN30 event coverage without exact classification and identity. | `ARCHIVE_HUB_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 
 The July 2025 URL lead and the VNX final attachment are deliberately not upgraded by URL shape,
 filename, search absence, or timeout. No search-result absence is treated as proof that a review or
@@ -120,6 +123,32 @@ useful for routing a written permission request, but they cannot be treated as f
 licence. The VNX register footer carries a site copyright notice; that is not a data-reuse grant.
 ([VNX legal register](https://vnx.vn/vi/van-ban-phap-ly/6), [official VNX draft](https://stream.vnx.vn/VNX/Article/20250808092250149VNX_Du-thao-QC-chi-so-15.7.2025.pdf))
 
+## 4a. Version-aware calendar and event classes
+### Bounded July 2025 document evidence
+
+The April and July 2025 official basket materials support only a bounded document-level comparison:
+the two main VN30 tables are 30-row snapshots with separate reserve-list sections, and the retained
+document evidence records one outgoing `BVH`, one incoming `DGC`, and a 29-member document-level
+intersection. This is `DOCUMENT_SNAPSHOT_ONLY`, not event-level `unchanged_members`, no-change, or a
+revision result. The July improvement release is a bounded delta explanation; its body must be bound
+to the exact landing/document identity, publication date, effective date, active revision, and any
+intervening change before an event field can be published. No such event-level binding is admitted
+in this round.
+
+
+The calendar is bound to the active rule version and its effective boundary; it is not applied
+backward from the current rules. The retained prior Version 3.1 uses a third-Monday January/July
+constituent-disclosure schedule, while Version 4.0 uses the third Wednesday and is stated to apply
+from March 2025 (exact effective day `NOT_RETAINED`). Holiday and first-subsequent-trading-day
+rules remain part of the source interpretation.
+
+January/July constituent reviews are separate event classes from quarterly outstanding-share,
+free-float, and capping updates in January/April/July/October. In particular, April/October
+parameter-update evidence is not promoted to a constituent review; non-periodic/extraordinary
+removals, replacements, corrections, postponements, and withdrawals are separate classes with their
+own dates and revision rules. A future archive reconciliation must count each class against the
+applicable version-aware calendar without mixing them.
+
 ## 5. Per-unit legal and runtime axis matrix
 
 The following is deliberately bounded. `Not observed` means no affirmative observation was made;
@@ -129,6 +158,7 @@ allowed. No HTTP data endpoint, hidden JSON route, or provider row operation was
 | Unit | Public access / login-session-UA-WAF observation | Automation | Caller return | Cache / storage / retention | Derivative / commercial | Attribution | Redistribution / resale | Amendment / revocation | Gate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `U01` rules v4.0 | Static PDF readable from official URL; no login/challenge observed in that static read; session, UA, WAF, redirect, rate, and MIME behavior not probed/retained | Not granted | Not granted | Not disclosed | HOSE permission gate for index products; other commercial use not cleared | No licence/attribution grant | Publishing/copying/distribution of the rules document expressly prohibited in §12; resale not granted | Rules may be amended/withdrawn at any time; no user revocation process stated | **Block** |
+| `U01b` rules v3.1 | Prior HOSE static rules version; no event response; calendar control only | Not granted | Not granted | Not disclosed | No derivative/commercial permission | No licence/attribution grant | No OSS reuse grant retained | Version/revision history and amendment terms for event documents `NOT_RETAINED` | **Block** |
 | `U02` Apr-2025 update PDF | Static official PDF was indexed/read; no login/challenge observation is limited to that static artifact; no automated route contract | Not granted | Not disclosed | Not disclosed | No derivative/commercial permission | Not disclosed | Not granted; no resale terms | No document revision/supersession contract stated; later corrections/revocation unknown | **Block** |
 | `U03` Jul-2025 URL lead | Static fetch timed out on 24 August 2026; no auth/session/UA/WAF conclusion can be drawn | Not established | Not established | Not established | Not established | Not established | Not established | Not established | **Block** |
 | `U04–U06` factsheets | Static official PDFs readable/indexed; no automated access policy, cookie/session, UA, WAF, or rate evidence | Not granted | Not granted | Not disclosed | Product use requires HOSE approval; analytical derivative/commercial rights otherwise unclear | Notice/contact is not a licence | Not granted; resale not addressed | Factsheet revision/withdrawal history not stated | **Block** |
@@ -138,6 +168,7 @@ allowed. No HTTP data endpoint, hidden JSON route, or provider row operation was
 | `U11` VNX final register/attachment | Register is public; final attachment fetch timed out; no data route | Not granted | Not granted | Not disclosed | Governance/contract posture only | Site copyright is not data attribution permission | Not granted | Final-rule amendment/revocation text not retained | **Block** |
 | `U12` VNX conference page | Public static article; no data operation | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Not applicable | Article does not set data rights | **Block** |
 | `U13` VNX draft | Public static draft; clearly non-operative; no data operation | No grant | No grant | Confidentiality/contract concepts are not OSS permission | Draft points toward written index-use contracts; no permission for this library | Not stated | Not granted | Draft may change; final rule controls | **Block** |
+| `U14–U15` hubs/archives | Navigation or generic paginated archive; no event response admitted | Not established | Not established | Not disclosed | Not established | Not established | Not established | Not established | **Block** |
 
 **Conclusion across all legal axes:** no unit has a published, exact, affirmative grant covering
 automation, caller-facing return, transient cache, durable storage/retention/deletion, attribution,
@@ -156,13 +187,17 @@ Before any API/model decision, one exact unit must prove:
 3. a provider-declared archive bound and reconciled event/document totals from 01 January 2018 to
    the current completed review, or a declared narrower complete bound;
 4. no-login or expressly permitted automation, auth/session/UA/WAF behavior, complete MIME, redirect
-   and pagination semantics, finite rate/concurrency/retry/document/byte budgets;
+   and pagination semantics; streamed attachment identity, complete MIME after the first colon,
+   redirect/status checks, archive-page/document budgets, finite rate/concurrency/retry/byte budgets,
+   and sanitized source/document diagnostics;
 5. written or exact published rights for automation, caller return, cache/storage/retention/deletion,
    attribution, commercial/derivative use, redistribution/resale, amendment, and revocation; and
 6. a deterministic revision/supersession rule for corrections, withdrawals, postponements, and
    conflicting documents.
 
-No current unit satisfies this predicate. A future API must atomically fail on unknown archive
+No current unit satisfies this predicate. No new transport seam is authorized in this
+source-gap packet; it remains deferred until the same source/legal/coverage gates pass. A future API
+must atomically fail on unknown archive
 intervals, WAF/challenge, timeout, malformed document, revision conflict, budget exhaustion, or
 rights uncertainty; it must never return partial/empty/zero-filled history or infer a no-change event.
 
@@ -184,6 +219,9 @@ PASS.
 ## Sources
 
 - [HOSE Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff11e799483abd11677ad0443887/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
+- [HOSE-Index Ground Rules Version 3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f802f54c8cb39e6a10347ef2e4/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf)
+- [HOSE index hub](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/)
+- [VNX information archive](https://vnx.vn/vi/thong-tin-tu-sgdck/VNX_QLHD)
 - [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff751554244b186d5c0323a49fe/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf)
 - [HOSE July 2025 VN30-improvement release](https://staticfile.hsx.vn/Uploads/UploadDocuments/2391309/TCBC_%20Cai%20tien%20chi%20so%20VN30%20t7.2025.pdf)
 - [HOSE July 2025 constituent-document URL lead](https://staticfile.hsx.vn/Uploads/UploadDocuments/2388633/20250716%20CBTT-Danh%20muc%20thanh%20phan%20HOSE-Index%20thang%207.2025.pdf)
