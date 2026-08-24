@@ -107,6 +107,8 @@ candidate data call or a fabricated `SourceAttempt`.
 
 ### Retained static evidence-unit ledger
 
+For a static document with no published route version, the route/version cell is explicitly `unversioned`; content type belongs in the operation cell, not the route/version cell.
+
 | Evidence ID | Owner | Canonical host/path | Route/version | Operation | Static-read traffic | Candidate data dispatch |
 | --- | --- | --- | --- | --- | --- | --- |
 | `FZ-REPO-README` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/README.md` | `main` | repository route/documentation description | `NOT_RETAINED` | `0` |
@@ -114,24 +116,25 @@ candidate data call or a fabricated `SourceAttempt`.
 | `FZ-REPO-WORKFLOW` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/.github/workflows/run.yml` | `main` | publication workflow description | `NOT_RETAINED` | `0` |
 | `FZ-REPO-PACKAGE` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/package.json` | `main` | repository root package manifest | `NOT_RETAINED` | `0` |
 | `FZ-REPO-LICENSE` | fawazahmed0 | `github.com/fawazahmed0/exchange-api/LICENSE` | `main` | repository licence document | `NOT_RETAINED` | `0` |
-| `FZ-NPM-PACKAGE` | fawazahmed0 | `npmjs.com/package/@fawazahmed0/currency-api` | published package page | package identity page only | `NOT_RETAINED` | `0` |
+| `FZ-NPM-PACKAGE` | fawazahmed0 | `npmjs.com/package/@fawazahmed0/currency-api` | `unversioned` | package identity page only | `NOT_RETAINED` | `0` |
 | `FZ-JSDELIVR-USD-V1` | fawazahmed0/jsDelivr | `cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies/usd.json` | `GET; @{date}/v1` | date-pinned USD document; candidate field `usd.xau` | `NOT_RETAINED` | `0` |
 | `FZ-CF-USD-V1` | fawazahmed0/Cloudflare | `{date}.currency-api.pages.dev/v1/currencies/usd.json` | `GET; v1; date host` | date-pinned USD fallback document; candidate field `usd.xau` | `NOT_RETAINED` | `0` |
-| `STQ-OPERATOR` | Stooq | `stooq.pl/stooq/` | HTML page | operator identity page | `NOT_RETAINED` | `0` |
-| `STQ-TERMS` | Stooq | `stooq.pl/terms.html` | HTML page | terms page | `NOT_RETAINED` | `0` |
-| `STQ-ROBOTS` | Stooq | `stooq.com/robots.txt` | robots text | robots policy document | `NOT_RETAINED` | `0` |
-| `STQ-CSV-XAUUSD-DAILY` | Stooq | `stooq.com/q/d/l/` | `GET; daily CSV` | XAU/USD operation signature `s=xauusd`, `i=d` | `NOT_RETAINED` | `0` |
-| `PERTH-HIST-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | HTML page | historical-CSV link description | `NOT_RETAINED` | `0` |
-| `PERTH-GRAPH-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | HTML page | spot-graph link description | `NOT_RETAINED` | `0` |
-| `LBMA-PRICES` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-precious-metal-prices` | HTML page | benchmark price description | `NOT_RETAINED` | `0` |
-| `LBMA-FAQ` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-gold-price/lbma-gold-price` | HTML page | Gold Price identity/licensing FAQ | `NOT_RETAINED` | `0` |
-| `WGC-PRICE` | World Gold Council | `gold.org/goldhub/data/gold-prices` | HTML page | price-data description | `NOT_RETAINED` | `0` |
-| `WGC-METHODOLOGY` | World Gold Council | `gold.org/data/gold-price/methodology` | HTML page | methodology document | `NOT_RETAINED` | `0` |
-| `WGC-TERMS` | World Gold Council | `gold.org/terms-and-conditions` | HTML page | reuse terms document | `NOT_RETAINED` | `0` |
-| `FRED-API-DOCS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/fred/v2/` | HTML docs | API documentation | `NOT_RETAINED` | `0` |
-| `FRED-TERMS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/terms_of_use.html` | HTML terms | API terms document | `NOT_RETAINED` | `0` |
-| `FRED-REMOVAL` | Federal Reserve Bank of St. Louis | `news.research.stlouisfed.org/2022/01/ice-benchmark-administration-ltd-iba-data-to-be-removed-from-fred/` | HTML notice | daily-LBMA removal notice | `NOT_RETAINED` | `0` |
-| `WB-CMO` | World Bank | `worldbank.org/en/research/commodity-markets` | HTML page | CMO monthly/annual operation description | `NOT_RETAINED` | `0` |
+| `JSDELIVR-TERMS` | jsDelivr | `www.jsdelivr.com/terms/terms-of-use` | `unversioned` | CDN service terms document | `NOT_RETAINED` | `0` |
+| `STQ-OPERATOR` | Stooq | `stooq.pl/stooq/` | `unversioned` | operator identity page | `NOT_RETAINED` | `0` |
+| `STQ-TERMS` | Stooq | `stooq.pl/terms.html` | `unversioned` | terms page | `NOT_RETAINED` | `0` |
+| `STQ-ROBOTS` | Stooq | `stooq.com/robots.txt` | `unversioned` | robots policy document | `NOT_RETAINED` | `0` |
+| `STQ-CSV-XAUUSD-DAILY` | Stooq | `stooq.com/q/d/l/` | `unversioned; GET` | daily CSV; XAU/USD operation signature `s=xauusd`, `i=d` | `NOT_RETAINED` | `0` |
+| `PERTH-HIST-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | `unversioned` | historical-CSV link description | `NOT_RETAINED` | `0` |
+| `PERTH-GRAPH-PAGE` | Perth Mint | `perthmint.com/invest/information-for-investors/metal-prices/historical-metal-prices/` | `unversioned` | spot-graph link description | `NOT_RETAINED` | `0` |
+| `LBMA-PRICES` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-precious-metal-prices` | `unversioned` | benchmark price description | `NOT_RETAINED` | `0` |
+| `LBMA-FAQ` | LBMA/IBA | `lbma.org.uk/prices-and-data/lbma-gold-price/lbma-gold-price` | `unversioned` | Gold Price identity/licensing FAQ | `NOT_RETAINED` | `0` |
+| `WGC-PRICE` | World Gold Council | `gold.org/goldhub/data/gold-prices` | `unversioned` | price-data description | `NOT_RETAINED` | `0` |
+| `WGC-METHODOLOGY` | World Gold Council | `gold.org/data/gold-price/methodology` | `unversioned` | methodology document | `NOT_RETAINED` | `0` |
+| `WGC-TERMS` | World Gold Council | `gold.org/terms-and-conditions` | `unversioned` | reuse terms document | `NOT_RETAINED` | `0` |
+| `FRED-API-DOCS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/fred/v2/` | `unversioned` | API documentation | `NOT_RETAINED` | `0` |
+| `FRED-TERMS` | Federal Reserve Bank of St. Louis | `fred.stlouisfed.org/docs/api/terms_of_use.html` | `unversioned` | API terms document | `NOT_RETAINED` | `0` |
+| `FRED-REMOVAL` | Federal Reserve Bank of St. Louis | `news.research.stlouisfed.org/2022/01/ice-benchmark-administration-ltd-iba-data-to-be-removed-from-fred/` | `unversioned` | daily-LBMA removal notice | `NOT_RETAINED` | `0` |
+| `WB-CMO` | World Bank | `worldbank.org/en/research/commodity-markets` | `unversioned` | CMO monthly/annual operation description | `NOT_RETAINED` | `0` |
 
 No `SourceAttempt`, retry, redirect, byte total, MIME value, truncation marker, live value, or
 provider exception prose is fabricated. Static reading may establish owner or product-description
@@ -155,7 +158,7 @@ matrix uses `COVERAGE_UNPROVEN` when no provider-declared bound or qualified res
 | **FRED LBMA series/API** — Federal Reserve Bank of St. Louis; official series/API operation | FRED API documentation supports historical observations; terms require a key and state that series may be third-party-owned; the official notice records removal of daily LBMA series in 2022. | Not no-login; no current exact requested-range operation with cleared series identity, downstream rights, provider bound or response contract is retained. | `COVERAGE_UNPROVEN` + `LEGAL_GAP` + `IDENTITY_GAP` + `RATE_POLICY_GAP` |
 | **World Bank CMO/Pink Sheet** — World Bank; official monthly/annual commodity-price operation | Official commodity-markets page exposes monthly and annual price files; the existing in-repo CMO adapter is an annual world-gold source. | Wrong cadence and field for daily history; it remains the existing annual path and is never a daily fallback. | `FIELD_GAP` |
 
-The repository root manifest, npm manifest, CDN delivery, fallback host and candidate data operation
+The repository root package manifest, published npm package page, CDN delivery, fallback host and candidate data operation
 remain distinct units even when they share an owner. No evidence-only unit is silently promoted to a
 candidate source.
 
