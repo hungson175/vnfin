@@ -602,17 +602,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#226 — DESIGN_BLOCK (2026-08-24, exact design gate).** Actor `vnfin-oss-reviewer`; next action
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
+- **#226 — DESIGN_REVIEW (2026-08-24, corrected exact-SHA design handoff).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
   `31d75d5687b18f64659a933d9ff3c829646d6abe`, public receipt `issuecomment-5390575929`.
-  Reviewed merged HEAD `eb1c8cefe42556220507a242d0aa6de58c98e385`, content anchor
+  Prior reviewed merged HEAD `eb1c8cefe42556220507a242d0aa6de58c98e385`, content anchor
   `8338fbcc07c10255d675570d314881d95b09a606`, and range `001cfd1..eb1c8ce` (including queue commit
-  `22d5412`). BLOCK delivery `#5112ed77`; report
+  `22d5412`) remain recorded. BLOCK delivery `#5112ed77`; report
   `reviews/review-202608241126-issue226-design-source-gate.md` at reviewer `c57fc9d`.
-  B1-B5 require per-unit sanitized evidence, source/API lifecycle separation, sequential page-ledger
-  semantics, composite identity/null boundaries, and aligned inventory/lifecycle references. Preserve
-  `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and no probe, RED, code, push,
-  or close; apply one docs/backlog-only correction from clean `001cfd1` ancestry.
+  Corrected docs content anchor is `41b52e6cac04a2c1304756022b29ad8a8961f5a6`; clean
+  base-to-correction range is `001cfd1..41b52e6`. B1-B5 are addressed with the per-unit sanitized
+  ledger, source/API lifecycle separation, sequential page-ledger semantics, composite identity/null
+  boundaries, and aligned inventory/lifecycle references. Preserve `SOURCE-GAP CLOSURE`, the empty
+  chain, #202 separation, #227 queue, and no probe, RED, code, push, or close; the exact final
+  merged handoff SHA is returned to the reviewer for re-review.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
