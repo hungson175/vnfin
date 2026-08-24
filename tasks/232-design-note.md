@@ -80,6 +80,43 @@ be treated as an OSS licence; and agreement between providers cannot establish r
 No candidate is `QUALIFIED FOR API/RED` or `QUALIFIED_PARTIAL`. The safe disposition is
 `SOURCE-GAP CLOSURE` and the raw chain stays empty.
 
+### 3.1 Named owner/operator binding
+
+The named publisher and route operator are separate fields. An official host name is not a legal
+ownership grant; `UNKNOWN` or `NOT_RETAINED` remains fail-closed until a primary source binds it.
+
+| Candidate family | Named owner or publisher | Route operator / host binding | Legal interpretation |
+| --- | --- | --- | --- |
+| CSI factsheet, methodology, landing, rules | CSI is named by the official material | CSI host is visible; exact host/operator legal binding `NOT_RETAINED` | identity/control evidence only; reuse `LEGAL_GAP` |
+| CSI CSIBridge UAT | CSI product context visible; no official cross-link to the UAT host retained | `csiweb.cloud` operator `UNKNOWN` | key and written-authorization controls; no no-login route |
+| SSE pages and rule | SSE is the named publisher | SSE official web property is the page operator; data-service contract operator terms `NOT_RETAINED` | product is licensed; `/repeal/` rule is historical/repealed, not current |
+| CIIS pages/manual | CIIS is the named product-site publisher | CIIS host visible; exact legal host/operator binding `NOT_RETAINED` | order/subscription only; no OSS grant |
+| SSI documentation/API schema | SSI is the named documentation publisher | SSI hosts visible; exact contract/operator binding `NOT_RETAINED` | account/key/bearer controls; no reuse grant |
+
+### 3.2 Static evidence operation ledger
+
+The research note and this design note reconcile exactly **12 static evidence operations**: eight
+official pages/landing reads and four PDF/document reads, one retained object per operation. Every
+row is static-only and separate from the zero candidate-data ledger.
+
+| ID | Operation and pinned version/date | Owner / operator | Transport ledger | Legal ledger |
+| --- | --- | --- | --- | --- |
+| `S1` | CSI factsheet, 31 Jul 2026 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 document; status/MIME/redirect/final identity/auth/session/UA/WAF/rate/bytes `NOT_RETAINED` | notice/trademark only; caller/cache/redistribution `LEGAL_GAP` |
+| `S2` | CSI methodology PDF, publication date `NOT_RETAINED`, accessed 2026-08-24 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 document; all transport fields `NOT_RETAINED` | methodology control only; reuse `LEGAL_GAP` |
+| `S3` | CSI index-detail/download landing, accessed 2026-08-24 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | navigation only; route rights `LEGAL_GAP` |
+| `S4` | CSI UAT developer portal, accessed 2026-08-24 | CSI context / `csiweb.cloud` operator `UNKNOWN` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | key and written authorization; `AUTH_REQUIRED` + `LEGAL_GAP` |
+| `S5` | CSI equity calculation-rules PDF, publication date `NOT_RETAINED`, accessed 2026-08-24 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 document; all transport fields `NOT_RETAINED` | calculation control only; reuse `LEGAL_GAP` |
+| `S6` | SSE historical-data products page, current read 2026-08-24 | SSE / SSE web operator | static `GET`, 1 page; all transport fields `NOT_RETAINED` | yearly subscription/licensed dissemination; `LEGAL_GAP` |
+| `S7` | SSE `/repeal/` ownership rule, effective/repeal dates `NOT_RETAINED`, historical/repealed | SSE / SSE web operator | static `GET`, 1 page; all transport fields `NOT_RETAINED` | historical control only; current restriction `UNKNOWN` |
+| `S8` | CIIS historical-data introduction, current read 2026-08-24 | CIIS / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | order/subscription; caller/redistribution `LEGAL_GAP` |
+| `S9` | CIIS product manual dated 2022, historical only; landing links 2026 manual | CIIS / host operator `NOT_RETAINED` | static `GET`, 1 document; all transport fields `NOT_RETAINED` | historical field aid, not current terms; `LEGAL_GAP` |
+| `S10` | SSI FastConnect overview, current read 2026-08-24 | SSI / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | account/approval posture; reuse `LEGAL_GAP` |
+| `S11` | SSI terms/environments, current read 2026-08-24 | SSI / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | key/secret/bearer controls; redistribution `LEGAL_GAP` |
+| `S12` | SSI DailyIndex schema, current read 2026-08-24 | SSI / `fc-data.ssi.com.vn` operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | generic authenticated schema; CSI300 reuse `IDENTITY_GAP` + `LEGAL_GAP` |
+
+The exact reconciliation is `12 operations = 8 pages + 4 documents`; no raw response, candidate
+page, retry, redirect, or byte counter was retained. This is not a claim that providers have no data.
+
 ## 4. Identity and semantic gates for a future source
 
 A future response must prove all fields below, not merely echo the requested token:
@@ -156,24 +193,31 @@ permission.
 
 Future numeric ceilings are deliberately `NOT_FROZEN` until the exact route's written/public rate
 policy is qualified. The future ledger shape is fixed and every ceiling must be a positive finite
-integer except retry/redirect ceilings, which may be zero:
+integer except retry/redirect/backoff-wait ceilings, which may be zero:
 
 ```text
 max_logical_units, max_physical_dispatches, max_pages, max_documents,
-max_retries, max_redirects, max_compressed_bytes, max_decompressed_bytes
+max_retries, max_redirects, max_compressed_bytes, max_decompressed_bytes,
+max_rate_window_ms, max_rate_tokens, max_concurrency_slots, max_backoff_wait_ms
 ```
 
-Reservations are one deterministic request-scoped ledger:
+Reservations are one deterministic request-scoped global ledger, even for a sequential scheduler:
 
 1. caller validation and capability checks occur before cache/network and consume no budget;
 2. reserve one logical unit before entering the selected source route set;
-3. reserve one physical dispatch immediately before every initial request, page, retry, or redirect;
-4. reserve page/document counters separately before the corresponding dispatch; a failed dispatched
-   request remains charged and is never refunded;
-5. charge compressed bytes as received and decompressed bytes as decoded, before materialization;
-6. run pages sequentially in provider-declared order with no reset per page, calendar segment,
-   source, field, or retry; and
-7. on any ceiling exhaustion, abort/discard private rows and return one bounded terminal token.
+3. reserve one provider rate token in the current declared rate window before every dispatch; the
+   window origin and token ledger never reset per page, source, or retry;
+4. reserve one concurrency slot before dispatch and release it exactly once at dispatch termination;
+   no network call starts if a slot reservation fails;
+5. reserve one physical dispatch immediately before every initial request, page, retry, or redirect;
+   a failed dispatched request remains charged and is never refunded;
+6. when no rate token is available, reserve deterministic backoff wait before waiting; charge it once,
+   bound it by `max_backoff_wait_ms`, and abort before the next dispatch if exhausted;
+7. reserve page/document counters separately before the corresponding dispatch;
+8. charge compressed bytes as received and decompressed bytes as decoded, before materialization;
+9. run pages in provider-declared order with no reset per page, calendar segment, source, field, or
+   retry; and
+10. on any ceiling exhaustion, abort/discard private rows and return one bounded terminal token.
 
 There is no per-source fallback budget, no hidden page scheduler, no unbounded decompression, no
 parallel fan-out, and no partial result after exhaustion. A future diagnostic can expose only a fixed
@@ -193,8 +237,9 @@ cookies, body, token, or arbitrary provider exception text.
 | Rate/retry/concurrency | route policy not retained | product policy not retained | rate headers documented; numeric route rights not retained | `RATE_POLICY_GAP` |
 | Amendment/revocation | exact contract not retained | subscription/licence terms not retained | account may be suspended; data rights not retained | `LEGAL_GAP` |
 
-The official SSE rules' ownership restriction and CSI/SSI notices are controls, not permission for
-this open-source library. Written permission would need to name the exact owner, route/version,
+The `/repeal/` SSE rule is historical ownership evidence only, not a current restriction. The official
+SSE controls and CSI/SSI notices are not permission for this open-source library. Written permission
+would need to name the exact owner, route/version,
 fields, bounds, caller return, storage, attribution, derivative/commercial, redistribution/resale,
 rate, amendment, and revocation rights.
 
@@ -211,6 +256,11 @@ offline matrix must include:
 | Area | Required cases | Current status |
 | --- | --- | --- |
 | Preflight | malformed/blank/bool/reversed dates, non-D1, unknown/ETF/future/return selectors, zero network | deferred |
+| Carriers | immutable row/history/provenance/coverage/attempt carriers; construction, equality, repr, serialization, DataFrame columns, and attrs | deferred; no model |
+| Ordering/filtering | deterministic ordering and inclusive `start`/`end` filtering with date-boundary negatives | deferred; no accessor |
+| Cache identity | exact cache key; cache hit zero network; validated-result-only writes; no write after late failure | deferred; no cache seam |
+| Source lifecycle | zero-source behavior, lazy construction, unsupported source-role preflight, and no dispatch before capability validation | deferred; no source registry |
+| Diagnostics | stable bounded warnings/errors, sanitized finite attempts, and exact attempt-truncation behavior | deferred; no public carrier |
 | Identity | correct/wrong/missing code/name/owner, request/response mismatch, raw-versus-return/ETF/future rejection | deferred |
 | Currency/unit | exact CNY and points, missing/contradictory scale, security-price confusion | deferred |
 | Session/time | provider China session date/timezone, retrieval UTC, publication separation, naive/UTC truncation negatives | deferred |
@@ -219,7 +269,7 @@ offline matrix must include:
 | Coverage | 2013 lower bound, FULL, declared PARTIAL, current lag, totals/pages/cursors, holidays, gaps, duplicates | deferred |
 | Revision | corrections, withdrawals, active revision, conflicting row/document, publication/effective/retrieval dates | deferred |
 | Transport | status, complete MIME after first colon, normalized MIME, redirects/final host, TLS/session/WAF, envelope | deferred |
-| Budget | logical/physical/page/document/retry/redirect/byte reservations, no reset, deterministic exhaustion | deferred |
+| Budget | logical/physical/page/document/retry/redirect/byte/rate-window/token/concurrency/backoff-wait reservations, no reset, deterministic exhaustion | deferred |
 | Atomicity | late page failure, identity mismatch, revision conflict, any exhaustion, no partial/zero/stitch | deferred |
 | Empty | provider-backed `NOT_SERVED`, reconciled authoritative empty, unknown empty and timeout negatives | deferred |
 | Compatibility | ASHR proxy warning/metadata, existing world/VN index paths, snapshots/docs/import/version | deferred |
@@ -238,8 +288,9 @@ Reopen requires one fresh primary-source packet binding all of these to one rout
    permission;
 3. provider-declared `2013-01-01..current-bound` FULL coverage or a declared complete narrower
    bound with totals/pages/cursors and no unexplained gaps;
-4. finite route-specific rate/retry/concurrency/page/redirect/byte ceilings with actual streaming
-   and deterministic global exhaustion; and
+4. finite route-specific rate-window/token, retry, concurrency-slot, page/document, redirect,
+   compressed/decompressed-byte, and deterministic backoff-wait ceilings with actual streaming and
+   global exhaustion; and
 5. written or exact published rights for automation, caller return, cache/storage/retention/
    deletion, attribution, commercial/derivative use, redistribution/resale, amendment, and
    revocation.
@@ -262,7 +313,7 @@ ancestry, exclusions, and paths; post a clean no-capability `SOURCE-GAP` resolut
 - [SSE historical data products](https://english.sse.com.cn/markets/dataservice/products/)
 - [SSE market-data ownership rule](https://www.sse.com.cn/lawandrules/sselawsrules/repeal/rules/c/c_20230418_5720138.shtml)
 - [CIIS historical-data introduction](https://www.ciis.com.hk/hongkong/en/historicaldata1/his_introduction/index.shtml)
-- [CIIS historical-data product manual](https://www.ciis.com.hk/hongkong/en/uploadfiles/202211/07/2022110710413533120137.pdf)
+- [CIIS historical-data product manual (2022; historical only)](https://www.ciis.com.hk/hongkong/en/uploadfiles/202211/07/2022110710413533120137.pdf)
 - [SSI FastConnect overview](https://developers.ssi.com.vn/docs/getting-started/overview)
 - [SSI FastConnect terms and environments](https://developers.ssi.com.vn/docs/getting-started/terms-and-environments)
 - [SSI DailyIndex schema](https://fc-data.ssi.com.vn/Help/Api/POST-api-Market-GetDailyIndex)
@@ -270,9 +321,11 @@ ancestry, exclusions, and paths; post a clean no-capability `SOURCE-GAP` resolut
 ## Bottom summary
 
 - #232 is `SOURCE_GAP_CLOSURE`; the raw CSI 300 CNY history chain remains empty.
+- Static evidence is reconciled as 12 independent operations: 8 pages and 4 documents; candidate dispatch remains zero.
 - CSI identity/points/CNY evidence passes only as owner control, not as a reusable history route.
-- SSE/CIIS are official subscription products; SSI is authenticated and generic; no keyless qualified unit exists.
+- SSE/CIIS are official subscription products and the SSE `/repeal/` rule is historical; SSI is authenticated and generic; no keyless qualified unit exists.
 - Identity, raw-versus-return semantics, OHLC/volume, coverage, budgets, and reuse rights remain conjunctive gaps.
+- Future RED/API seams include immutable carriers, ordering/filtering, cache identity, zero-source/lazy lifecycle, and bounded diagnostics.
 - Existing `^CSI300 -> ASHR` USD/share proxy behavior is preserved exactly.
 - No probe, live row, RED, API/model decision, source registration, code, push, or close is authorized.
 - Reopen requires one exact route set with response identity, 2013-current/declared coverage, finite budgets, and rights.
