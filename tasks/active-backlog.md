@@ -602,33 +602,28 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#231 — SOURCE_DESIGN / DOCS_ONLY_CORRECTION (2026-08-24).** Correction actor `vnfin-oss`;
-  review-handoff actor `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`. Clean
-  published base is `dbeea0e897e2c6688dd0b01b1cafbf4f04cd358c`; packet
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/231-ssi-tcx-annual-cashflow-net-income-spec.md`
-  at reviewer `5d499a050dfc7c57302d0abe8ab19953954551ad`; public receipt
-  `issuecomment-5392357567`. #230 was independently verified CLOSED/COMPLETED before this
-  handoff. Scope is SSI/TCX annual `operating_cash_flow` and `net_income`; preserve the 26-metric
-  API, #204 negative `89/90/91` and `NET_INCOME` boundaries, and the empty new source chain.
+- **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
+  `dbeea0e897e2c6688dd0b01b1cafbf4f04cd358c`, exact three approved paths, full/focused pytest,
+  version `0.2.0`, isolated `uv build`, diff/table/path/ancestry/exclusion/security gates pass.
+  Clean resolution is `issuecomment-5393553304`; GitHub re-read is `CLOSED`/`COMPLETED` at
+  `2026-08-24T09:54:07Z`. The SSI/TCX annual source chain remains empty; the 26-metric API,
+  #204 negative `89/90/91` and `NET_INCOME` boundaries remain unchanged. No provider runtime
+  capability, probe, RED, API/model change, production code, or coverage claim was added.
 
-  Prior design review `#100da570` was BLOCKED at `52323fb8d32b114f8f2688917a24a118d18e0758`;
-  report `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241617-issue231-design-source-gate.md`
-  is committed at reviewer `cad18d3`. The corrected handoff `#72aca96f` was BLOCKED at exact
-  `39d8815e8cb40749c7ddb28738ad0299887c91c1`; final correction handoff `#dd2658f0` was BLOCKED
-  at exact `f36dd0a984a7dc3b2989253f5be943492476d6ba`; report
-  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241646-issue231-final-correction-rereview.md`
-  is committed at reviewer `f4cdb343454c2b3caf035d64e13c2dd8122b070b`. BLOCK was recorded before
-  this wording-only correction: the release gate now names the two dependent formulas/guards, the
-  22 unrelated metrics, and statement isolation.
-
-  The first-round BLOCK record `f1d904dcb2228b220577293f5c45da66c9d78686`, prior BLOCK-first record
-  `06be27625142a3eb1e1111ff652e224385515955`, and this-round BLOCK-first record
-  `bd43ca476a83d7b8fb0b2a3370d399768fff9178` are local-only and excluded from clean publish
-  ancestry. The corrected research/design anchor is exact
-  `da4a07cb5ec44a3a15d6c6dbebdd3a78f63aaefd`; this backlog commit is the exact handoff. Preserve the durable #232 queue entry below; only local queue receipt
-  `a2ccd393f9f3283cc54eb33f4ec3e9d4804d243c` is excluded from the #231 publish ancestry. No probe,
-  RED, API-model, parser, provider registration, runtime capability, production code, push, close,
-  or #232 activation.
+- **#232 — SOURCE_DESIGN / DOCS_ONLY_HANDOFF (2026-08-24).** Actor `vnfin-oss`; next action
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; clean published base is exact
+  `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
+  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/232-csi300-raw-cny-history-spec.md` at reviewer
+  packet commit `c69e145`; public receipt `issuecomment-5392669032`; activation receipt
+  `023b23d2df3e04c208437ffe0260dc281854fb05` is local-only and excluded from this clean handoff
+  ancestry. The exact research/design artifacts are
+  `docs/research/2026-08-24-csi300-raw-cny-history-source-vetting.md` and
+  `tasks/232-design-note.md`; docs anchor is `00865898f4c98ece9c0181aa0dcd3d0cdfad7899` and
+  this backlog commit is the exact lifecycle handoff. Disposition is `SOURCE-GAP CLOSURE`; the
+  raw CNY chain remains empty. Preserve the current loud `^CSI300`-to-ASHR USD/share proxy and
+  no USD/raw-proxy substitution. No probe, live row, RED, API/model decision, source registration,
+  production code, push, or close is authorized before exact design PASS.
 
 - **#229 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `3dd3125281efdc6e89479306a64213dfc26a6987` to `origin/master`; base ancestry,
@@ -820,19 +815,6 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     prose `.warnings` would still ship green (same blind spot that caused #180). Durable fix = guard
     AST-extracts leading tokens from every `.warnings` site and asserts subset-of-documented. Tracked, not
     urgent; schedule after #167.
-
-## Next (source/design queue)
-
-- **#232 — QUEUED_AFTER_#231 (2026-08-24, durable intake only).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_#231_CLOSURE`; packet
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/232-csi300-raw-cny-history-spec.md` at reviewer
-  packet commit `c69e145`; public receipt `issuecomment-5392669032`. Scope is raw CSI 300 CNY
-  index points only. Preserve the current loud `^CSI300`-to-ASHR USD-proxy behavior until a
-  qualified source and separate API decision; no USD/raw-proxy substitution is claimed. This
-  durable queue entry is preserved in the #231 correction tree. Only local receipt
-  `a2ccd393f9f3283cc54eb33f4ec3e9d4804d243c` is outside the #231 publish ancestry. Do not
-  interrupt active #231; no #232 probe/RED/API-model/code/push/close before #231 is verified
-  CLOSED and #232 reaches its own exact design PASS.
 
 ## Next (code queue — after docs batch)
 
