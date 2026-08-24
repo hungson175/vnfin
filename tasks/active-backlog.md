@@ -602,15 +602,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#228 — DESIGN_BLOCKED (2026-08-24, corrected-design R1-R2 rereview).** Actor `vnfin-oss`;
-  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `967baf2`, public receipt
-  `issuecomment-5390970457`; reviewed corrected HEAD `c5661a356cfc06c9c4b711ea2982dfe341db70d8`,
-  corrected docs anchor `fd0054f8dbb4d5f2ab09ea097ac0cd69cac83148`, BLOCK report
+- **#228 — DESIGN_REVIEW (2026-08-24, corrected R1-R2 exact-SHA rereview).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `967baf2`,
+  public receipt `issuecomment-5390970457`; clean base `832945b8f411e17c50b0dca8a810540fcd45123a`.
+  Prior reviewed HEAD `c5661a356cfc06c9c4b711ea2982dfe341db70d8`, BLOCK report
   `reviews/review-202608241335-issue228-corrected-design-rereview.md` at reviewer `d3d2155`,
-  delivery `c93161fc`. The clean base remains `832945b8f411e17c50b0dca8a810540fcd45123a` and
-  `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` remains excluded. B3-B5 are closed; correct only
-  R1-R2, preserving `SOURCE-GAP CLOSURE`, current gold behavior, the empty new chain, and no
-  probe/RED/code/push/close. #227 is DONE/CLOSED below; #219/#220 remain separate.
+  delivery `c93161fc`, BLOCK record `c3b90fa`; corrected docs anchor
+  `4d312480d8124c69fbcdbd31625520685a6740e8`. B3-B5 remain closed; R1-R2 are corrected. The
+  prior activation `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` remains excluded from ancestry and is
+  not a publishable parent. Preserve `SOURCE-GAP CLOSURE`, current gold behavior, the empty new
+  chain, and no probe/RED/code/push/close. #227 is DONE/CLOSED below; #219/#220 remain separate.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
