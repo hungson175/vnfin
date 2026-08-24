@@ -611,28 +611,28 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   #204 negative `89/90/91` and `NET_INCOME` boundaries remain unchanged. No provider runtime
   capability, probe, RED, API/model change, production code, or coverage claim was added.
 
-- **#232 — DESIGN_BLOCK / DOCS_CORRECTION_IN_PROGRESS (2026-08-24 17:10 +07).** Actor
-  `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; reviewed head is exact
-  `d316925d2cbbf16d2d980f469fc17eb44a1139aa`; BLOCK delivery is `fed7df05`; report
+- **#232 — SOURCE_DESIGN_CORRECTION / REVIEW_REQUESTED (2026-08-24).** Actor `vnfin-oss`; next
+  action `RETURN_EXACT_SHA_DESIGN_VERDICT`; corrected docs anchor is exact
+  `946aff3283229a7f9d64859e902357484f25d411`; prior reviewed head was exact
+  `d316925d2cbbf16d2d980f469fc17eb44a1139aa`; prior BLOCK delivery was `fed7df05`; report
   `reviews/review-202608241710-issue232-design-source-gate.md` at reviewer commit
-  `3b3a52603721e3fc722de98a966f91f056d709a0`. B1 requires every static evidence operation to
-  have its own transport/legal ledger and current-versus-historical document labels; B2 requires
-  named owner/operator evidence and the SSE repeal rule to be historical only; B3 requires aligned
-  `max_documents`, rate-window/token, concurrency, and deterministic backoff/wait atomic budgets;
-  B4 requires the complete deferred carrier/order/cache/zero-source/lazy/diagnostic API-RED matrix.
-  The correction is docs/backlog-only; clean published base is exact
-  `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
+  `3b3a52603721e3fc722de98a966f91f056d709a0`. The docs-only correction enumerates 12 static
+  evidence operations with owner/operator, transport, version/date, and legal ledgers; labels the
+  SSE `/repeal/` rule historical; aligns `max_documents`, rate-window/token, concurrency, and
+  deterministic backoff/wait atomic budgets; and completes the deferred carrier/order/cache/
+  zero-source/lazy/diagnostic API-RED matrix. The final backlog commit is the exact lifecycle
+  handoff. Clean published base is exact `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/232-csi300-raw-cny-history-spec.md` at reviewer
   packet commit `c69e145`; public receipt `issuecomment-5392669032`; activation receipt
   `023b23d2df3e04c208437ffe0260dc281854fb05` is local-only and excluded from this clean handoff
   ancestry. The exact research/design artifacts are
   `docs/research/2026-08-24-csi300-raw-cny-history-source-vetting.md` and
-  `tasks/232-design-note.md`; docs anchor is `00865898f4c98ece9c0181aa0dcd3d0cdfad7899` and
+  `tasks/232-design-note.md`; docs anchor is `946aff3283229a7f9d64859e902357484f25d411` and
   this backlog commit is the exact lifecycle handoff. Disposition is `SOURCE-GAP CLOSURE`; the
   raw CNY chain remains empty. Preserve the current loud `^CSI300`-to-ASHR USD/share proxy and
   no USD/raw-proxy substitution. No probe, live row, RED, API/model decision, source registration,
   production code, push, or close is authorized before exact design PASS. Preserve the empty raw
-  chain and current `^CSI300`-to-ASHR USD/share proxy throughout correction.
+  chain and current `^CSI300`-to-ASHR USD/share proxy throughout re-review.
 
 - **#229 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `3dd3125281efdc6e89479306a64213dfc26a6987` to `origin/master`; base ancestry,
@@ -1051,9 +1051,9 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- **#232 — DESIGN_BLOCK** (`fed7df05`; reviewer report commit `3b3a526`, reviewed head
-  `d316925d`). Apply only the B1-B4 docs/backlog correction above, then rerun merged gates and
-  return one exact SHA. No probe, RED, API/model, production code, push, or close.
+- **#232 — DESIGN_REVIEW_REQUESTED** (corrected docs `946aff3`; prior BLOCK `fed7df05`). The
+  docs/backlog-only B1-B4 correction is committed; rerun merged gates and return one exact SHA for
+  review. No probe, RED, API/model, production code, push, or close.
 
 ## Poller triage (newly triaged)
 
