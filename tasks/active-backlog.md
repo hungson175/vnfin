@@ -611,21 +611,22 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   #204 negative `89/90/91` and `NET_INCOME` boundaries remain unchanged. No provider runtime
   capability, probe, RED, API/model change, production code, or coverage claim was added.
 
-- **#232 — DESIGN_BLOCK / DOCS_CORRECTION_IN_PROGRESS (2026-08-24 17:51 +07).** Actor
-  `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; reviewed head is exact
-  `dd425fde012b587061fe71a3855d3b70088b06bc`; BLOCK delivery is `b3b4a7f1`; report
+- **#232 — SOURCE_DESIGN_CORRECTION / REVIEW_REQUESTED (2026-08-24).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; corrected docs anchor is
+  exact `542af670185ce26b50c4001f2baf51174560e3b7`; prior reviewed head was exact
+  `dd425fde012b587061fe71a3855d3b70088b06bc`; prior BLOCK delivery was `b3b4a7f1`; report
   `reviews/review-202608241750-issue232-f1-f4-closure-rereview.md` at reviewer commit
-  `a5f97ae918db6f816943f8f1adf5a516bb407808`. F3/F4 and R2/B3/B4 remain closed. G1 requires
-  28-cell separator rows; G2 makes S8/S9 and S10-S12 legal attribution/commercial cells
-  operation-local; G3 describes an official corpus plus an unbound observed UAT lead and restores
-  S4 `IDENTITY_GAP`. This correction is docs/backlog-only. Clean published base is exact
-  `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
+  `a5f97ae918db6f816943f8f1adf5a516bb407808`. F3/F4 and R2/B3/B4 remain closed. G1 now has
+  28-cell separator rows; G2 binds S8/S9 and S10-S12 legal attribution/commercial/rate states
+  to each exact operation; G3 separates official primary material from the unbound UAT lead and
+  restores S4 `IDENTITY_GAP`. This correction is docs/backlog-only; this backlog commit is the
+  exact lifecycle handoff. Clean published base is exact `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/232-csi300-raw-cny-history-spec.md` at reviewer
   packet commit `c69e145`; public receipt `issuecomment-5392669032`; activation receipt
   `023b23d2df3e04c208437ffe0260dc281854fb05` is local-only and excluded from this clean handoff
   ancestry. The exact research/design artifacts are
   `docs/research/2026-08-24-csi300-raw-cny-history-source-vetting.md` and
-  `tasks/232-design-note.md`; docs anchor is `cfea0e1dfdc981750e49790217a1b0fd9d25d37f` and
+  `tasks/232-design-note.md`; docs anchor is `542af670185ce26b50c4001f2baf51174560e3b7` and
   this backlog commit is the exact lifecycle handoff. Disposition is `SOURCE-GAP CLOSURE`; the
   raw CNY chain remains empty. Preserve the current loud `^CSI300`-to-ASHR USD/share proxy and
   no USD/raw-proxy substitution. No probe, live row, RED, API/model decision, source registration,
@@ -1049,9 +1050,10 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- **#232 — DESIGN_BLOCK** (`b3b4a7f1`; reviewer report commit `a5f97ae`, reviewed head
-  `dd425fd`). Apply only the G1-G3 docs/backlog correction above, then rerun merged gates and
-  return one exact SHA. No probe, RED, API/model, production code, push, or close.
+- **#232 — DESIGN_REVIEW_REQUESTED** (corrected docs `542af67`; prior BLOCK `b3b4a7f1`; reviewer
+  report commit `a5f97ae`). The G1-G3 docs/backlog-only correction is committed; rerun merged
+  gates and return one exact SHA for closure review. No probe, RED, API/model, production code,
+  push, or close.
 
 ## Poller triage (newly triaged)
 
