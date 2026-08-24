@@ -34,14 +34,27 @@ is zero because this is documentation/search-only research.
 | --- | --- |
 | HOSE `tradingresult/{code}` | Historical `SAMPLED_ONLY`; symbol seen in #201, but session/date, scale, whole-board bounds, rate, revisions, and rights unresolved |
 | HOSE `foreign/{code}` | `IDENTITY_GAP`; no response-backed symbol; never a fallback |
-| HOSE public statistics/feed/service | Aggregate/product/account/tariff evidence only; no no-login route plus full response/legal contract |
+| HOSE stocks statistics UI | Aggregate-by-security evidence only; no per-symbol response/legal contract |
+| HOSE daily summary PDF | Aggregate/top-five evidence only; no full-board row/history contract |
+| HOSE annual report | Aggregate annual/monthly terminology only; no daily per-symbol route |
+| HOSE market-data feed page | Product/feed evidence only; no public no-login foreign-flow contract |
+| HOSE ECM login route | Account/password boundary; no no-login operation or reuse grant |
+| HOSE information-service tariff | Product/fee catalogue only; not automation, caller-return, or redistribution permission |
 | SSI FastConnect daily stock price | Foreign fields documented, but access-token flow and no full-HOSE/rights proof block this no-login gate |
 | Existing SSI iBoard universe | Current snapshot input only; partial/listing-date warnings and separate rights/source identity remain |
-| HNX/UPCoM/SSC/other provider leads | Wrong-board, aggregate-only, or no-login/legal/coverage gaps; no substitution |
+| FiinGroup HOSE Stock V2 | Foreign fields named, but no-login/full-HOSE/legal/revision proof is missing; not qualified |
+
+HNX/UPCoM/SSC material is a wrong-board or aggregate-only scope exclusion, not a candidate source
+unit and never a fallback. `NOT_SERVED` is reserved for a future provider response that explicitly
+declares unsupported, out-of-bound, or unlisted. The current source-table disposition
+`NOT_QUALIFIED` means that authentication, legal, coverage, or runtime gates are unproven; it never
+asserts provider absence.
 
 ## Qualification contract for a future source
 
-One exact owner + route/version + operation must pass every axis conjunctively:
+One exact provider-owned flow route/version/operation and one independently qualified universe
+route/version/operation must each pass their applicable axes conjunctively; their owners may differ,
+but the response-backed identifier binding must be explicit and no cross-owner flow stitch is allowed:
 
 - **Identity:** response-backed `exchange=HOSE`, canonical symbol, plain Vietnam trading-session
   date, and immutable current-snapshot provenance; no request-path identity or cross-owner join.
@@ -61,12 +74,20 @@ One exact owner + route/version + operation must pass every axis conjunctively:
 
 ## Snapshot and source separation
 
-If a source later qualifies, `symbols=None` obtains the existing current-HOSE universe exactly once
-at request start. Freeze its canonical symbol tuple, `board="HOSE"`, source, real
-`fetched_at_utc`, optional `as_of`, warnings, and count. Do not commit or hard-code a live cohort.
-An explicit symbol iterable or `EquityUniverse` uses the same validation/provenance/budget path.
-Malformed, empty, duplicate/conflicting, non-HOSE, legally blocked, or unbounded input fails before
-any flow dispatch, with exactly zero flow calls.
+If a source later qualifies, caller preflight validates and canonicalizes `exchange`, inclusive
+dates, and explicit symbols/universe **before** universe lookup, cache lookup, or any network
+operation. Malformed, empty, duplicate/conflicting, non-HOSE, legally blocked, or unbounded input
+fails with zero universe calls, zero flow calls, and an untouched cache. Only after that preflight
+does `symbols=None` obtain the existing current-HOSE universe exactly once at request start.
+Freeze its canonical symbol tuple, `board="HOSE"`, source, real `fetched_at_utc`, optional `as_of`,
+warnings, and count. Do not commit or hard-code a live cohort.
+
+An explicit symbol iterable or `EquityUniverse` is a requested cohort and uses the same
+validation/provenance/budget path; it is never evidence of a full-HOSE roster. The existing SSI
+index-basket/partial-roster snapshot likewise retains `UNIVERSE_GAP` and listing-date warnings.
+Those warnings must prevent a `FULL_HOSE` label even when every symbol in that requested cohort is
+served. A complete full-HOSE result requires an authoritative complete current-HOSE snapshot with
+response-backed board identity, declared count/bounds/as-of, and reconciliation before flow work.
 
 The existing universe's index-basket/partial-roster and unavailable-listing-date warnings are
 preserved. `fetched_at_utc` is not `as_of`; current membership is not historical membership. The
@@ -105,12 +126,15 @@ outcome. Use a finite vocabulary only after a separate API decision; the design 
 | `CALL_BUDGET_GAP` | Atomic budget prevents or terminates work | Not zero traffic or nonpublication |
 | `NOT_DISPATCHED` | Input/source gate prevented a flow call | Not provider response or absence |
 
-`FULL` later means every symbol in the frozen current snapshot and every provider-eligible session,
-with declared bounds, reconciled native totals/pages/cursors, no unexplained gap/conflict, and known
-listing/retention/nonpublication boundaries. It does **not** mean the statutory historical HOSE
-roster. `QUALIFIED_PARTIAL` later requires provider-declared narrower bounds plus complete
-served/unserved/unknown/budget accounting and no unknown/transport/pagination gap. Current evidence
-does not support either qualification.
+`REQUESTED_COHORT_COMPLETE` (a future internal coverage result, not a public enum) means every
+symbol in the explicitly requested or retained snapshot cohort and every provider-eligible session
+have declared bounds, reconciled native totals/pages/cursors, no unexplained gap/conflict, and known
+listing/retention/nonpublication boundaries. It is never `FULL_HOSE`. `FULL_HOSE` later requires an
+authoritative complete current-HOSE snapshot with declared count/bounds/as-of, then the same
+terminal outcome and reconciliation guarantees for every symbol/session; it does not mean the
+statutory historical HOSE roster. `QUALIFIED_PARTIAL` later requires provider-declared narrower
+bounds plus complete served/unserved/unknown/budget accounting and no unknown/transport/pagination
+gap. Current evidence supports neither qualification.
 
 ## Atomic global budget and transport
 
@@ -122,16 +146,22 @@ symbols, logical_units, physical_dispatches, pages_or_cursors,
 retries, redirects, compressed_bytes, decompressed_bytes
 ```
 
-Reserve the next logical/page/physical/retry/redirect unit atomically before dispatch. A failed
-reservation dispatches nothing. Each retry/redirect is a real physical operation. A malformed,
-identity-mismatched, unexpected-status, or MIME-invalid response consumes its attempted reservation
-and accepts no rows. Charge streamed compressed bytes before decompression and decompressed bytes
-after decoding; crossing either finite cap aborts and discards private rows. No numeric ceiling or
-retry timing is frozen until owner rate/pagination evidence exists.
+Every ledger dimension has atomic `reserved`, `charged`, `released`, and reconciled counters:
+`symbols`, `logical_units`, `physical_dispatches`, `pages_or_cursors`, `retries`, `redirects`,
+`compressed_bytes`, and `decompressed_bytes`. Explicit symbols reserve their count during
+preflight; a discovered snapshot reserves its validated count before the first flow dispatch. Each
+logical/page/physical/retry/redirect unit reserves before dispatch; a retry or redirect is a real
+physical operation. A failed reservation dispatches nothing, an uninvoked source adds no attempt,
+and `charged + released == reserved` must reconcile for every dimension without decrementing
+charged work. Streamed compressed bytes charge before decompression and decompressed bytes charge
+after decoding. A malformed, identity-mismatched, unexpected-status, MIME-invalid, or over-cap
+response consumes its real reservation and accepts no rows.
 
-After exhaustion, preserve prior sanitized **real** attempts and mark affected symbols with a
-budget outcome; never fabricate a `SourceAttempt` or `diagnostics_truncated` marker, and never
-return empty, zero, `NOT_SERVED`, or complete/partial coverage. Future transport evidence must
+Exhaustion of **any** dimension is globally fatal: discard every private row/accumulator and return
+no history, partial board, per-symbol budget result, empty, zero, or complete/partial coverage.
+Preserve only bounded sanitized **real** attempts/counters on a future deferred diagnostic/error
+carrier; never fabricate a `SourceAttempt` or `diagnostics_truncated` marker. No numeric ceiling or
+retry timing is frozen until owner rate/pagination evidence exists. Future transport evidence must
 record exact route/version, expected status class, complete MIME after the first colon, effective
 route, redirects, strict TLS, UA/session/WAF behavior, pagination, and byte semantics. Generic
 maintenance HTML or unexpected/colon-suffixed MIME fails even when HTTP status is 200. Public
@@ -140,8 +170,10 @@ token/secret/live value.
 
 ## Owner/legal reopen gate
 
-One exact provider-owned flow unit must positively evidence all of the following: named owner and
-dataset; automated no-login/no-paid access or exact license terms; caller return; raw/normalized
+One exact provider-owned flow unit and one independently qualified universe unit must positively
+evidence their respective owner/dataset, response-backed identity, and exact identifier binding.
+The owners may differ; no universe contract grants flow permission. The flow unit must evidence
+automated no-login/no-paid access or exact license terms; caller return; raw/normalized
 storage/cache/retention/deletion; attribution, commercial, derivative and downstream use;
 redistribution/resale; finite rate/retry/concurrency/page/redirect/byte limits; amendment/revocation;
 and response-backed code/board/session/field/unit/revision semantics. Public page visibility,
@@ -154,22 +186,26 @@ and [SSI iBoard terms](https://www.ssi.com.vn/khach-hang-ca-nhan/dieu-khoan-va-c
 for a future written request. Record the exact owner/team/channel, request date, written response or
 reference, and dataset covered; infer no individual contact or permission.
 
-## Future API boundary (not authorized)
+## Future deferred API/RED/release matrix (not authorized)
 
-Do not freeze a public signature, model, warning/error grammar, diagnostics carrier, or unit schema
-in this source-gap note. If a source later qualifies, the separate design must decide an immutable
-snapshot, row/history, provenance, coverage, per-symbol-outcome, and bounded-attempt contract with
-inclusive date bounds and deterministic `(session, code)` ordering. Then the lifecycle is:
+This matrix is a retained release contract for a future qualified-source decision. It is explicitly
+`DEFERRED/NOT_AUTHORIZED`: it freezes no current public signature, model, warning/error grammar,
+diagnostics carrier, source registration, live probe, RED test, or runtime capability.
 
-1. API/model freezes the public contract.
-2. Separate RED authorization permits failing tests only.
-3. Reviewer verifies RED and authorizes implementation.
-4. Implementation reaches GREEN.
-5. Code review.
-6. Publish.
+| Deferred gate | Required future contract or offline evidence | Current status |
+| --- | --- | --- |
+| API/model contract | Immutable universe-snapshot, per-symbol-outcome, row/history, coverage, provenance, and bounded-attempt carriers; inclusive date bounds; exact `exchange="HOSE"`; deterministic symbol ordering; DataFrame attrs; serialization/repr/equality; stable sanitized errors; caller preflight before universe/cache/network | `NOT_AUTHORIZED` |
+| RED-1 universe/preflight | Current-universe acquisition/provenance; explicit-universe/symbol equivalence; invalid/empty/duplicate/conflicting/non-HOSE inputs; for each malformed input assert zero universe calls, zero flow calls, and untouched cache; exactly one snapshot fetch | `NOT_AUTHORIZED` |
+| RED-2 values/identity | Board/symbol/session identity; main/put-through scope; VND scale; gross/net arithmetic; zero versus missing; ordering; duplicate/conflict; revision and publication-lag cases | `NOT_AUTHORIZED` |
+| RED-3 coverage | Full-HOSE versus requested-cohort and declared-partial/unknown coverage; listing/retention boundaries; delisted/current symbols; terminal outcomes; native totals/pages/cursors; current lag; authoritative versus unknown empty; no silent drop | `NOT_AUTHORIZED` |
+| RED-4 transport/budget | Malformed MIME/status/redirect/WAF/envelope; response/request identity mismatch; pagination truncation; retry/byte/global-budget failures across every ledger dimension; atomic no-partial behavior; no stitch/fill/OHLCV reconstruction | `NOT_AUTHORIZED` |
+| RED-5 diagnostics/source separation | Snapshot/flow source separation; retrieval times; bounded sanitized diagnostics; no URL/query/provider/live-value leakage; public snapshots; current-universe survivorship warnings | `NOT_AUTHORIZED` |
+| RED/release-6 compatibility | Existing equities universe/profile/sector compatibility; docs/API/units/tutorial/architecture/skill/CHANGELOG; full offline suite; import/version; blacklist/secret/diff/path/object/clean-tree gates; isolated wheel/sdist; exact remote anchor/ancestry/path verification | `NOT_AUTHORIZED` |
 
-No RED, production code, source registration, live probe, or coverage claim is authorized by this
-note.
+The lifecycle is immutable: **API/model freezes the contract → separate RED authorization permits
+failing tests only → reviewer verifies RED and authorizes implementation → implementation reaches
+GREEN → code review → publish**. No RED, production code, source registration, live probe, or
+coverage claim is authorized by this source-gap packet.
 
 ## Lifecycle handoff
 
