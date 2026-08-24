@@ -602,19 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#226 — DESIGN_REVIEW (2026-08-24, final narrow exact-SHA design handoff).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
+- **#226 — DESIGN_BLOCK (2026-08-24, final narrow exact-SHA re-review).** Actor
+  `vnfin-oss-reviewer`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
   `31d75d5687b18f64659a933d9ff3c829646d6abe`, public receipt `issuecomment-5390575929`.
-  Prior reviewed merged HEAD `2666c6dfe816091c31fb19e52ade29675f9a35f6`, correction content anchor
-  `41b52e6cac04a2c1304756022b29ad8a8961f5a6`, clean range `001cfd1..2666c6d`, and BLOCK-first
-  receipt commit `9879856148bd5abba27685b4703b5ce384a98d40` are retained. BLOCK delivery `#b378c629`;
-  report `reviews/review-202608241141-issue226-corrected-design-rereview.md` at reviewer `e8f1396`.
-  Final docs content anchor is `10d36a3452df0a1154db9f2108862b83150fcb34`; clean base-to-content
-  range is `001cfd1..10d36a3`. R1-R3 are addressed: rights facts are outside permission slots and
-  absence wording is evidence-bounded; API/model selection is separate from RED; invalid inputs fail
-  before cache/network and API/units/docs gates are explicit; research headings are ordered.
-  Preserve `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and no probe, RED,
-  code, push, or close; return the exact final merged handoff SHA for re-review.
+  Reviewed merged HEAD `4bb4db8bf71306d7834f5f959ddff705c644c924`, prior correction content anchor
+  `10d36a3452df0a1154db9f2108862b83150fcb34`, clean range `001cfd1..4bb4db8`, and BLOCK-first
+  receipt commit `9879856148bd5abba27685b4703b5ce384a98d40` are retained. BLOCK delivery `#788089ee`;
+  report `reviews/review-202608241149-issue226-final-narrow-rereview.md` at reviewer `5538019`.
+  F1-F4 require explicit `route_version` evidence, public-contract/API versus tests-only RED wording,
+  caller/provider malformed timing, and named `docs/api.md` plus `docs/units.md` gates. Preserve
+  `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and no probe, RED, code, push,
+  or close; apply one wording-only docs/backlog correction.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
