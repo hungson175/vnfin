@@ -602,8 +602,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#227 — DESIGN_BLOCK (2026-08-24, F1 provenance wording gate).** Actor
-  `vnfin-oss-reviewer`; next action `DOCS_ONLY_F1_PROVENANCE_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
+- **#227 — DESIGN_REVIEW (2026-08-24, corrected F1 provenance handoff).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
   `29206690269215dba1a35bb13ee7c621055e7fca`, public receipt `issuecomment-5390664225`;
   original source/design content anchor `b82cbaad6b5a080a688ef8b758726f62cc8bbd10`; corrected
   source/design content anchor `d57a7aa46255b26bebcef3d1ea54736cc74fa809` (correction range
@@ -623,6 +623,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   directly to the ECM login route, and describe the feed page, login route, and tariff as separate
   official leads without unretained cross-route binding. Preserve all closed B1-B5 contracts,
   `SOURCE-GAP CLOSURE`, empty chain, #228 queue, and no probe/RED/code/push/close.
+  F1 wording-only correction content anchor is `4a6976f8bf5b692cf4e4fdf291246533a61b3507`
+  (correction range `866ab912..4a6976f`); correction actor `vnfin-oss`; handoff is returned to
+  `vnfin-oss-reviewer` for narrow re-review. All prior B1-B5 contracts remain unchanged.
   #226 is published at exact `483ff56522e713ae8495dc515e4e4f5915655bd7` with remote verification,
   clean base ancestry, and exactly the three approved research/design/backlog paths; its clean
   resolution is `issuecomment-5390970872` and GitHub re-read is `CLOSED`/`COMPLETED` at
