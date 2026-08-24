@@ -60,7 +60,7 @@ not silently promoted to an API or joined to another owner's data.
 | **HOSE market-data feed page**
   [`Data feed`](https://www.hsx.vn/vi/data-feed) | HOSE advertises a Market Data Feed/Webservice delivered through an HOSE API. | No public no-login route/version, foreign-flow package/schema, pagination/history/retention, rate/retry/concurrency, caller-return, storage/cache, attribution, or redistribution/OSS permission. | `LEGAL_GAP`, `RATE_POLICY_GAP`, `TRANSPORT_INCONCLUSIVE`, `NOT_PROBED` |
 | **HOSE ECM login route**
-  [`ECM login`](https://ecm.hsx.vn/hoseecm/login) | The public feed entry presents an account/password login boundary. | An authentication gate is not a no-login route or reuse grant; no foreign-flow package/schema, history, pagination, rate, caller-return, storage, or redistribution terms are retained. | `AUTH_REQUIRED`, `LEGAL_GAP`, `NOT_PROBED` |
+  [`ECM login`](https://ecm.hsx.vn/hoseecm/login) | This route presents an account/password login boundary. | An authentication gate is not a no-login route or reuse grant; no foreign-flow package/schema, history, pagination, rate, caller-return, storage, or redistribution terms are retained. | `AUTH_REQUIRED`, `LEGAL_GAP`, `NOT_PROBED` |
 | **HOSE information-service tariff document**
   [official tariff](https://staticfile.hsx.vn/Uploads/UploadDocuments/2406142/Bieu%20gia%20dich%20vu%20cung%20cap%20tin.pdf) | The tariff distinguishes display/non-display and online, delayed, and end-of-day products. | A fee/product catalogue does not grant OSS automation, caller return, storage/cache, or redistribution; no route/schema/history/revision/rate contract is retained. | `LEGAL_GAP`, `NOT_PROBED` |
 | **HOSE current-listing/universe lead**
@@ -251,7 +251,9 @@ packet freezes no public model, warning grammar, exception, source registration,
 ## Bottom summary
 
 - Decision: **`SOURCE-GAP CLOSURE`**; no current full-HOSE daily foreign-flow source qualifies.
-- HOSE public statistics are aggregate/top-five; the richer feed is account/tariff-oriented.
+- HOSE public statistics are aggregate/top-five; the separate market-data feed page, ECM login route,
+  and information-service tariff are individual official leads whose retained evidence does not
+  qualify a public no-login foreign-flow operation or bind those routes/documents to one another.
 - Prior HOSE `tradingresult` evidence is sampled only; `foreign/{code}` fails response identity.
 - SSI documents daily foreign fields but requires an access-token flow and lacks rights/coverage proof.
 - Existing SSI universe is current/partial and remains separate from flow identity and legal scope; it can never establish `FULL_HOSE`.

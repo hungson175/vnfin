@@ -22,10 +22,12 @@ It records only first-party exchange/provider/regulator evidence and no live row
 ## Source decision
 
 The public HOSE foreign-investor statistics UI and daily PDFs establish aggregate/top-five
-presentation, not a full-board daily-history operation. HOSE's richer Market Data Feed/Webservice
-is account/tariff-oriented, and the reviewed official material does not grant the no-login
-automation, caller-return, storage, or redistribution rights required here. No source is
-`QUALIFIED` or `QUALIFIED_PARTIAL`.
+presentation, not a full-board daily-history operation. The separate HOSE market-data feed page
+advertises a feed/Webservice but does not retain a public no-login foreign-flow contract. The
+separate ECM login route records an account/password boundary, while the separate tariff document
+records product/fee categories; neither is evidence that binds those units to the feed or grants
+automation, caller-return, storage, or redistribution rights. No source is `QUALIFIED` or
+`QUALIFIED_PARTIAL`.
 
 Missing evidence is not source absence, zero flow, zero traffic, or permission. Candidate dispatch
 is zero because this is documentation/search-only research.
