@@ -602,17 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#228 — DESIGN_REVIEW (2026-08-24, final narrow R1-R2 closure rereview).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `967baf2`,
-  public receipt `issuecomment-5390970457`; clean base `832945b8f411e17c50b0dca8a810540fcd45123a`.
-  Prior reviewed HEAD `b1d6a5592cbb0a22d69e9df90e3f6b7a40a8cc20`, BLOCK report
-  `reviews/review-202608241349-issue228-r1-r2-closure-rereview.md` at reviewer `2dcf82e`,
-  delivery `fe653e6`, BLOCK record `e45fc97`; corrected docs anchor
-  `776c2799c8f0b3f2337da19bcfb74f66f033266e`. F1 stale wording, F2 jsDelivr terms evidence,
-  and static route/version cells are corrected; B3-B5 remain closed. The prior activation
-  `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` remains excluded from ancestry and is not a
-  publishable parent. Preserve `SOURCE-GAP CLOSURE`, current gold behavior, the empty new chain,
-  and no probe/RED/code/push/close. #227 is DONE/CLOSED below; #219/#220 remain separate.
+- **#228 — DESIGN_BLOCKED (2026-08-24, final closure lifecycle review).** Actor `vnfin-oss`;
+  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `967baf2`, public receipt
+  `issuecomment-5390970457`; reviewed HEAD `8036f6e14b64c567dd9ddcb455323635435989fe`, docs
+  anchor `776c2799c8f0b3f2337da19bcfb74f66f033266e`, BLOCK report
+  `reviews/review-202608241356-issue228-final-closure.md` at reviewer `28cf6ce`, delivery
+  `59f93e3e`. The sole lifecycle correction is to replace the earlier truncated BLOCK delivery
+  `fe653e6` with the verified delivery `250f4e17`; preserve F1-F2/source/design/R1/B3-B5 gates,
+  clean exclusions, `SOURCE-GAP CLOSURE`, current gold behavior, the empty new chain, and no
+  probe/RED/code/push/close. The prior activation `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` remains
+  excluded from ancestry and is not a publishable parent. #227 is DONE/CLOSED below; #219/#220
+  remain separate.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
