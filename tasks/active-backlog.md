@@ -602,18 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#229 — DESIGN_REVIEW (2026-08-24, exact source/design handoff prepared).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `5b8d2f8`,
-  public receipt `issuecomment-5391811465`; clean base `d9bcf0478336aa1fb906e88d9d72f7a370911da5`;
-  docs content anchor `5979aa2`. Exact artifacts are the official VN30 review/rebalance source
-  vetting report and design note plus this backlog. Three findings-only reviews are active after
-  intake ACK `684ec38a`; no approval is presumed. Disposition is `SOURCE-GAP CLOSURE`; current
-  `index_constituents` is present-state only, and Apr/Jul 2025 plus BVH-to-DGC remain bounded
-  document-level evidence only (30-row one-out/one-in/intersection-29), not 2018-current coverage,
-  revision proof, or event-level unchanged/no-change proof. Require qualified
-  complete official before/after baskets for unchanged members; keep foreign-flow/VN30F caller-side.
-  No probe/RED/API-model/code/push/close before exact design PASS. #228 is DONE/CLOSED below;
-  #229 remains separate from #202 and any downstream strategy.
+- **#229 — DESIGN_BLOCKED (2026-08-24, exact handoff `ba1b0a62`).** Actor
+  `vnfin-oss-reviewer`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
+  `5b8d2f8`, public receipt `issuecomment-5391811465`; clean base
+  `d9bcf0478336aa1fb906e88d9d72f7a370911da5`; submitted docs anchor `5979aa2`; reviewed head
+  `ba1b0a62e85893f2dd8b6e53cdbdf18c60dc7103`. Reviewer report
+  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241432-issue229-design-source-gate.md`
+  is committed at `5471b44ad882452c03f63eff750b4dd5f9e00594`; verified delivery receipt is
+  `f0c10bce`. BLOCK records scanner-dependent citations, July evidence contradiction, incomplete
+  legal/transport/RED contracts, and stale lifecycle wording. Preserve `SOURCE-GAP CLOSURE`, the
+  empty history chain, present-state-only `index_constituents`, and no probe/RED/API-model/code/
+  push/close. #228 is DONE/CLOSED below; #229 remains separate from #202 and downstream strategy.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
