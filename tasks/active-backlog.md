@@ -627,7 +627,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `023b23d2df3e04c208437ffe0260dc281854fb05` is local-only and excluded from this clean handoff
   ancestry. The exact research/design artifacts are
   `docs/research/2026-08-24-csi300-raw-cny-history-source-vetting.md` and
-  `tasks/232-design-note.md`; docs anchor is `946aff3283229a7f9d64859e902357484f25d411` and
+  `tasks/232-design-note.md`; docs anchor is `384780da2dc4a23c6d9801d0ca2df5b4d85d9ae5` and
   this backlog commit is the exact lifecycle handoff. Disposition is `SOURCE-GAP CLOSURE`; the
   raw CNY chain remains empty. Preserve the current loud `^CSI300`-to-ASHR USD/share proxy and
   no USD/raw-proxy substitution. No probe, live row, RED, API/model decision, source registration,
