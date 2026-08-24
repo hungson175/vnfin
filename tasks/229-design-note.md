@@ -201,14 +201,55 @@ must atomically fail on unknown archive
 intervals, WAF/challenge, timeout, malformed document, revision conflict, budget exhaustion, or
 rights uncertainty; it must never return partial/empty/zero-filled history or infer a no-change event.
 
-## 7. Deferred implementation and release gates
+## 7. Atomic global archive budget
+
+No numeric ceiling is frozen in this source-gap note. If a future owner route is legally and
+technically qualified, one deterministic sequential ledger must cover the entire archive traversal:
+
+```text
+logical_units, physical_dispatches, archive_pages, documents, retries,
+redirects, compressed_bytes, decompressed_bytes
+```
+
+Archive-page and document reservations are separate. The future scheduler uses `max_concurrency = 1`
+and reserves every dimension before dispatch. Each retry and followed redirect is a new physical
+operation. Compressed bytes are charged while streaming; decompressed bytes are charged after decode.
+Caller-malformed inputs fail before cache/network. A malformed attachment fails after the real
+dispatch but before cache/return. Reconcile each dimension as `reserved = charged + released` without
+decrementing charged work. Exhaustion of any dimension is globally fatal: discard private rows and
+return no empty, partial, zero-filled, or false-complete history. Diagnostics contain only real
+bounded attempts/counters; no fabricated retry, redirect, byte total, or truncation marker.
+
+## 8. Deferred API/model/RED/release matrix
+
+All rows remain `DEFERRED / NOT_AUTHORIZED`. The lifecycle is exact:
+
+```text
+source qualification -> API/model contract freeze -> separate RED authorization
+-> reviewer verifies RED and authorizes implementation -> GREEN -> code review -> publication
+```
+
+| Future gate | Required proof | Status now |
+| --- | --- | --- |
+| Current snapshot | Existing current constituent API/model, cache, warnings, diagnostics, DataFrame, docs, and exports unchanged | Not authorized |
+| API/model | Separate event-history facade; immutable event/history/coverage/provenance; publication/effective filters; exact optionality for unavailable unchanged members | Not authorized |
+| Identity/revision | Exact VN30/document/revision; unique/disjoint deltas; complete-basket versus delta-only; correction/withdrawal/postponement/conflict cases | Not authorized |
+| Coverage | 2018-current reconciliation; provider-declared partial; missing middle event/document; no-false-FULL/no-false-absence | Not authorized |
+| Streaming transport | Attachment identity, complete post-first-colon MIME, status/redirect/WAF/TLS/UA/session, archive pagination, split page/document budgets, malformed/truncated/oversized inputs | Not authorized |
+| Cache/diagnostics | Cache only after a valid complete result; UTC-aware retrieval time; finite real attempts; sanitized source/document diagnostics with no URL/query/raw body/header/cookie/local-path/provider-exception leakage | Not authorized |
+| Release | Full offline suite, imports/version, docs/public snapshots, blacklist/secret/diff/path/object/clean-tree, wheel/sdist, exact remote anchor/ancestry/three paths | Not authorized |
+
+No public name, enum, model, source registration, RED test, implementation, live integration test,
+coverage claim, or runtime capability is authorized here.
+
+## 9. Deferred implementation and release gates
 
 All implementation, RED, source registration, API/model, and public-schema work is
 `DEFERRED / NOT_AUTHORIZED`. If written rights and a reconciled archive later arrive, the sequence
 is: source-design PASS → API/model freeze → separate RED authorization → reviewer RED verification →
 TDD implementation → merged-tree tests/docs/build/blacklist/secret/scope gates → reviewer approval.
 
-## 8. Reopen request
+## 10. Reopen request
 
 Ask HOSE/VNX for a written licence or exact service terms naming the exact review-history operation
 and granting the legal/runtime axes above. Use first-party [HOSE contact](https://www1.hsx.vn/vi/lien-he)

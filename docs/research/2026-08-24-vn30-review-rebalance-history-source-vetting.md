@@ -187,7 +187,7 @@ Before any API/model decision, one exact unit must prove:
    the current completed review, or a declared narrower complete bound;
 4. no-login or expressly permitted automation, auth/session/UA/WAF behavior, complete MIME, redirect
    and pagination semantics; streamed attachment identity, complete MIME after the first colon,
-   redirect/status checks, archive-page/document budgets, finite rate/concurrency/retry/byte budgets,
+   redirect/status checks, split page/document budgets, finite rate/concurrency/retry/byte budgets,
    and sanitized source/document diagnostics;
 5. written or exact published rights for automation, caller return, cache/storage/retention/deletion,
    attribution, commercial/derivative use, redistribution/resale, amendment, and revocation; and
@@ -243,8 +243,7 @@ exhaustion is unknown/fatal. There is no silent missing event, zero fill, false 
 
 No numeric ceiling is frozen by this source-gap note. After a future owner route is legally and
 technically qualified, one deterministic sequential ledger must cover all archive traversal and
-documents. Archive
-page reservations and document reservations are separate dimensions:
+documents. Archive-page and document reservations are separate dimensions:
 
 ```text
 logical_units, physical_dispatches, archive_pages, documents, retries,
