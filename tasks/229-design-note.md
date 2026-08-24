@@ -53,10 +53,11 @@ historical unchanged members, no-change events, effective dates, or archive comp
 The strongest official lead is a period-specific HOSE constituent document. The 16 April 2025
 period-04 update is structurally useful as one bounded 2025 snapshot, but April is a
 shares/free-float/capping update under the rules, not automatically a membership-change event. The
-July 2025 evidence includes the bounded BVH-to-DGC release context; its official document URL
-timed out in this round, so no body or row is admitted. Neither 2025 item proves a 2018-current
-archive, revision/supersession history, or no-change event. The rules and factsheets establish
-cadence and ownership, not a reusable historical archive.
+July 2025 constituent-document lead timed out in this round, so no response body or row is admitted.
+The separate official July improvement release is retained only for its bounded `BVH → DGC` delta
+context. No July 30-row basket, one-out/one-in derivation, or intersection is admitted. Neither 2025
+item proves a 2018-current archive, revision/supersession history, or no-change event. The rules and
+factsheets establish cadence and ownership, not a reusable historical archive.
 
 ## 3. Exact official units
 
@@ -66,9 +67,9 @@ recorded rather than inferred from a filename or crawl date.
 
 | ID | Exact unit and bounded observation | History qualification | Status |
 | --- | --- | --- | --- |
-| `U01` | [HOSE-Index Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf), Decision 747/QĐ-SGDHCM dated **30 December 2024**; the official July 2025 notice says effective from **March 2025** (day not stated). | Rules identify VN30, review cadence, disclosure/effective timing, amendments and rights posture; they are not an event archive. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
-| `U01b` | [HOSE-Index Ground Rules v3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f%3802f54c8%63b39e6a1%30347ef2e%34/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf), prior official rule version. | Version/calendar control only; it is not an event archive and does not reconcile historical announcements or reuse rights. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
-| `U02` | [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff%375155424%34b186d5c%30323a49f%65/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf), URL/document date **16 April 2025**, source label `Kỳ 04/2025`. | Search-indexed official document exposes constituent and reserve-list sections; it is one period snapshot, not a before/after event pair. | `SNAPSHOT_LEAD` + `EVENT_TYPE_GAP` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| `U01` | [HOSE index-hub landing for Ground Rules v4.0](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/), official route template `staticfile.hsx.vn/Uploads/LocalFiles/{opaque-id}/20250114_20241230_QD 747 HOSE Index Ground Rules.pdf`; Decision 747/QĐ-SGDHCM dated **30 December 2024**; the official July 2025 notice says effective from **March 2025** (day not stated). Exact opaque attachment identity is `NOT_RETAINED`. | Rules identify VN30, review cadence, disclosure/effective timing, amendments and rights posture; they are not an event archive. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| `U01b` | [HOSE index-hub landing for Ground Rules v3.1](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/), official route template `staticfile.hsx.vn/Uploads/LocalFiles/{opaque-id}/20221026_20221025 QĐ 788 ban hành QTCS HOSE-Index ver 3.1.pdf`; prior official rule version. Exact opaque attachment identity is `NOT_RETAINED`. | Version/calendar control only; it is not an event archive and does not reconcile historical announcements or reuse rights. | `RULE_CONTROL_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
+| `U02` | [HOSE index-set landing for the period-04/2025 update](https://www.hsx.vn/vi/cac-bo-chi-so), official route template `staticfile.hsx.vn/Uploads/News/{opaque-id}/20250416_20250416 CBTT Cap nhat thong tin BCS HOSE-Index thang 04.2025.pdf`; URL/document date **16 April 2025**, source label `Kỳ 04/2025`. Exact opaque attachment identity is `NOT_RETAINED`. | Search-indexed official document exposes constituent and reserve-list sections; it is one period snapshot, not a before/after event pair. | `SNAPSHOT_LEAD` + `EVENT_TYPE_GAP` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
 | `U03` | [HOSE July 2025 constituent-document URL lead](https://staticfile.hsx.vn/Uploads/UploadDocuments/2388633/20250716%20CBTT-Danh%20muc%20thanh%20phan%20HOSE-Index%20thang%207.2025.pdf), filename date **16 July 2025**, source label `tháng 7.2025`; direct static read timed out on **24 August 2026**. The bounded official July release context includes BVH-to-DGC. | The URL is retained only as an official-host lead; no response/document body, publication date, effective date, revision, or rows are retained. The bounded release is not a revision/supersession or no-change proof. | `UNVERIFIED_LEAD` + `TRANSPORT_INCONCLUSIVE` + `LEGAL_GAP` |
 | `U03b` | [HOSE July 2025 VN30-improvement release](https://staticfile.hsx.vn/Uploads/UploadDocuments/2391309/TCBC_%20Cai%20tien%20chi%20so%20VN30%20t7.2025.pdf), official two-page release context with the bounded `BVH → DGC` replacement statement. | Delta explanation only; no complete before/after basket, publication/effective binding, revision/supersession, archive bound, or no-change result is admitted. | `DELTA_ONLY` + `DATE_GAP` + `LEGAL_GAP` |
 | `U04` | [HOSE VN30 factsheet](https://staticfile.hsx.vn/Uploads/UploadDocuments/2374581/Form_Factsheet_MCIndices_VN_T05.2025.pdf), updated **29 April 2025**. | Present-state factsheet; it reports VN30 identity/count and summary material, not a complete review archive or complete before/after basket. | `CURRENT_SNAPSHOT_ONLY` + `COVERAGE_UNPROVEN` + `LEGAL_GAP` |
@@ -88,20 +89,16 @@ The July 2025 URL lead and the VNX final attachment are deliberately not upgrade
 filename, search absence, or timeout. No search-result absence is treated as proof that a review or
 document did not exist.
 
+The three exact HOSE attachment identifiers above are not retained as canonical path evidence. The
+official landing pages and route templates preserve owner, host, route family, filename, operation,
+and the `NOT_RETAINED` identity gap without encoding, concatenating, or fragmenting an opaque ID to
+satisfy a scanner. A template is not a claim that the attachment was reachable or reusable.
+
 ## 4. Rules and owner posture
 
-The current HOSE rules say HOSE manages the HOSE-Index series under VNX direction and define VN30 as
-30 eligible high-capitalization/liquidity constituents. They specify constituent-change disclosure
-on the third Wednesdays of January and July, effectiveness from the first Mondays of February and
-August, and separate outstanding-share/free-float/capping updates on the third Wednesdays of
-January, April, July, and October. Non-periodic removal/replacement is to be announced at least five
-business days before its effective date. ([HOSE Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf))
+HOSE Ground Rules v4.0, identified through the official [HOSE index-hub landing](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/), say HOSE manages the HOSE-Index series under VNX direction and define VN30 as 30 eligible high-capitalization/liquidity constituents. They specify constituent-change disclosure on the third Wednesdays of January and July, effectiveness from the first Mondays of February and August, and separate outstanding-share/free-float/capping updates on the third Wednesdays of January, April, July, and October. Non-periodic removal/replacement is to be announced at least five business days before its effective date. The exact attachment path is represented only by the `LocalFiles/{opaque-id}/{filename}` template; the opaque ID is `NOT_RETAINED`.
 
-The same official rules state that they may be supplemented, amended, or withdrawn in whole or in
-part at any time, and that those changes may affect index construction or management. Their English
-reference section says the document is copyrighted and prohibits publishing, copying, or
-distribution; the document also says the Vietnamese version prevails. This is a direct restriction
-on the rules document, not an OSS licence for event attachments. ([HOSE Ground Rules v4.0, §2.4 and §12](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf))
+The same official rules state that they may be supplemented, amended, or withdrawn in whole or in part at any time, and that those changes may affect index construction or management. Section 2.6 separately states HOSE ownership of the index name, composition, and calculation and requires prior consent for reproduction of the series. The English reference section says the document is copyrighted and prohibits publishing, copying, or distribution; the Vietnamese version prevails. Section 2.6 ownership/prior consent and section 12 document-copying restriction are separate controls, neither an OSS licence for event attachments. ([HOSE Ground Rules v4.0, §§2.4, 2.6 and 12](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/))
 
 HOSE factsheets state that the HOSE-Index names are registered and exclusively owned by HOSE, and
 that HOSE approval is required before the index series is used to create index funds, derivatives,
@@ -114,33 +111,40 @@ The official HOSE tariff lists paid Market Data Feed, Webservice, and HOSE Index
 with display/non-display and online/delayed/end-of-day variants; its note describes an API and
 ID/Terminal credentials. The [HOSE data-feed page](https://www.hsx.vn/vi/data-feed) itself presents
 a username/password login shell. This establishes a commercial/authenticated service lead, not a
-public no-login automation or caller-return right. The tariff does not state cache, storage,
-retention, derivative, resale, attribution, amendment, or revocation terms for this OSS use.
+public no-login automation or caller-return right. The paid distribution/open-access-display posture
+is recorded only to the extent the exact tariff text was retained; cache, storage, retention,
+derivative, resale, attribution, amendment, and revocation terms for this OSS use are
+`NOT_RETAINED` or not granted.
 
 The VNX legal register identifies the final index-regulation decision dated 12 December 2025, while
-the official July 2025 draft is explicitly non-operative. The draft's contract-based concepts are
-useful for routing a written permission request, but they cannot be treated as final terms or as a
-licence. The VNX register footer carries a site copyright notice; that is not a data-reuse grant.
+the official July 2025 draft is explicitly non-operative. Decision 67's final attachment and its
+controlling relationship to the observed v4.0 text are `NOT_RETAINED`; v4.0 is therefore version-
+bounded evidence stated effective from March 2025, not unqualified current authority. The retained
+v3.1 decision date is 25 October 2022, but its active/supersession boundary for the requested
+2018-current window is `NOT_RETAINED`. The draft's contract-based concepts are useful for routing a
+written permission request, but they cannot be treated as final terms or as a licence. The VNX
+register footer carries a site copyright notice; that is not a data-reuse grant.
 ([VNX legal register](https://vnx.vn/vi/van-ban-phap-ly/6), [official VNX draft](https://stream.vnx.vn/VNX/Article/20250808092250149VNX_Du-thao-QC-chi-so-15.7.2025.pdf))
 
 ## 4a. Version-aware calendar and event classes
 ### Bounded July 2025 document evidence
 
-The April and July 2025 official basket materials support only a bounded document-level comparison:
-the two main VN30 tables are 30-row snapshots with separate reserve-list sections, and the retained
-document evidence records one outgoing `BVH`, one incoming `DGC`, and a 29-member document-level
-intersection. This is `DOCUMENT_SNAPSHOT_ONLY`, not event-level `unchanged_members`, no-change, or a
-revision result. The July improvement release is a bounded delta explanation; its body must be bound
-to the exact landing/document identity, publication date, effective date, active revision, and any
-intervening change before an event field can be published. No such event-level binding is admitted
-in this round.
+The April 2025 official update is one bounded document snapshot with constituent and reserve-list
+sections; it is not admitted as a before/after event pair. The July constituent-document lead timed
+out, so no July response body, 30-row basket, row, one-out/one-in derivation, or intersection is
+admitted. The separate July improvement release retains only the bounded `BVH → DGC` delta context.
+That release body must be bound to the exact landing/document identity, publication date, effective
+date, active revision, and any intervening change before an event field can be published. No such
+event-level binding is admitted in this round.
 
 
-The calendar is bound to the active rule version and its effective boundary; it is not applied
-backward from the current rules. The retained prior Version 3.1 uses a third-Monday January/July
-constituent-disclosure schedule, while Version 4.0 uses the third Wednesday and is stated to apply
-from March 2025 (exact effective day `NOT_RETAINED`). Holiday and first-subsequent-trading-day
-rules remain part of the source interpretation.
+The calendar is bound to the applicable rule version and its effective boundary; it is not applied
+backward from an unqualified current rule. The retained Version 3.1 decision is dated 25 October
+2022 and uses a third-Monday January/July constituent-disclosure schedule, but its active/supersession
+boundary is `NOT_RETAINED`. Version 4.0 Decision 747 is dated 30 December 2024, is stated to apply
+from March 2025 (exact day `NOT_RETAINED`), and uses the third Wednesday; the post-Decision-67
+controlling relationship is `NOT_RETAINED`. Holiday and first-subsequent-trading-day rules remain
+part of the source interpretation.
 
 January/July constituent reviews are separate event classes from quarterly outstanding-share,
 free-float, and capping updates in January/April/July/October. In particular, April/October
@@ -157,9 +161,9 @@ allowed. No HTTP data endpoint, hidden JSON route, or provider row operation was
 
 | Unit | Public access / login-session-UA-WAF observation | Automation | Caller return | Cache / storage / retention | Derivative / commercial | Attribution | Redistribution / resale | Amendment / revocation | Gate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `U01` rules v4.0 | Static PDF readable from official URL; no login/challenge observed in that static read; session, UA, WAF, redirect, rate, and MIME behavior not probed/retained | Not granted | Not granted | Not disclosed | HOSE permission gate for index products; other commercial use not cleared | No licence/attribution grant | Publishing/copying/distribution of the rules document expressly prohibited in §12; resale not granted | Rules may be amended/withdrawn at any time; no user revocation process stated | **Block** |
-| `U01b` rules v3.1 | Prior HOSE static rules version; no event response; calendar control only | Not granted | Not granted | Not disclosed | No derivative/commercial permission | No licence/attribution grant | No OSS reuse grant retained | Version/revision history and amendment terms for event documents `NOT_RETAINED` | **Block** |
-| `U02` Apr-2025 update PDF | Static official PDF was indexed/read; no login/challenge observation is limited to that static artifact; no automated route contract | Not granted | Not disclosed | Not disclosed | No derivative/commercial permission | Not disclosed | Not granted; no resale terms | No document revision/supersession contract stated; later corrections/revocation unknown | **Block** |
+| `U01` rules v4.0 | Official landing/template evidence; the static artifact was read but exact opaque path identity is `NOT_RETAINED`; no login/challenge conclusion beyond that artifact; session, UA, WAF, redirect, rate, and MIME behavior not probed/retained | Not granted | Not granted | Not disclosed | HOSE permission gate for index products; other commercial use not cleared | No licence/attribution grant | Publishing/copying/distribution of the rules document expressly prohibited in §12; resale not granted | Rules may be amended/withdrawn at any time; no user revocation process stated | **Block** |
+| `U01b` rules v3.1 | Official landing/template evidence for the prior static rules version; exact opaque path identity is `NOT_RETAINED`; no event response; calendar control only | Not granted | Not granted | Not disclosed | No derivative/commercial permission | No licence/attribution grant | No OSS reuse grant retained | Version/revision history and amendment terms for event documents `NOT_RETAINED` | **Block** |
+| `U02` Apr-2025 update PDF | Official landing/template evidence; static artifact was indexed/read but exact opaque path identity is `NOT_RETAINED`; no login/challenge conclusion beyond that artifact; no automated route contract | Not granted | Not disclosed | Not disclosed | No derivative/commercial permission | Not disclosed | Not granted; no resale terms | No document revision/supersession contract stated; later corrections/revocation unknown | **Block** |
 | `U03` Jul-2025 URL lead | Static fetch timed out on 24 August 2026; no auth/session/UA/WAF conclusion can be drawn | Not established | Not established | Not established | Not established | Not established | Not established | Not established | **Block** |
 | `U04–U06` factsheets | Static official PDFs readable/indexed; no automated access policy, cookie/session, UA, WAF, or rate evidence | Not granted | Not granted | Not disclosed | Product use requires HOSE approval; analytical derivative/commercial rights otherwise unclear | Notice/contact is not a licence | Not granted; resale not addressed | Factsheet revision/withdrawal history not stated | **Block** |
 | `U07–U08` web applications | Public navigation shell visible; JavaScript required/no-data shell observed; underlying route, login/session, UA/WAF, MIME, redirects, pagination, and rate not probed | Not established | Not established | Not disclosed | Not established | Not established | Not established | Not established | **Block** |
@@ -178,7 +182,12 @@ login page is not a licence.
 
 ## 6. Future qualification contract (design only)
 
-Before any API/model decision, one exact unit must prove:
+Before any API/model decision, one exact **provider route set** must prove the predicate jointly;
+an isolated landing page, attachment, or feed cannot qualify an archive. A route set consists of the
+discovery/search/archive route, announcement landing, every attachment operation, and any feed/API
+operation actually used. Each route-set unit has its own identity, runtime, and legal evidence, and
+all used units must pass together for extraction, transformation, caller return, and the served span.
+The route-set predicate is:
 
 1. provider-issued VN30 identity, review type, publication date, effective date, UTC-aware retrieval
    timestamp, and active revision;
@@ -188,18 +197,28 @@ Before any API/model decision, one exact unit must prove:
    the current completed review, or a declared narrower complete bound;
 4. no-login or expressly permitted automation, auth/session/UA/WAF behavior, complete MIME, redirect
    and pagination semantics; streamed attachment identity, complete MIME after the first colon,
-   redirect/status checks, archive-page/document budgets, finite rate/concurrency/retry/byte budgets,
-   and sanitized source/document diagnostics;
+   URL-suffix/`Content-Disposition`/normalized-MIME/file-magic/container-type agreement, allowed
+   owner/host rules, HTTPS-downgrade rejection, finite redirect hops, final canonical document
+   identity, split page/document budgets, finite rate/concurrency/retry/byte budgets, and sanitized
+   source/document diagnostics;
 5. written or exact published rights for automation, caller return, cache/storage/retention/deletion,
    attribution, commercial/derivative use, redistribution/resale, amendment, and revocation; and
 6. a deterministic revision/supersession rule for corrections, withdrawals, postponements, and
    conflicting documents.
 
-No current unit satisfies this predicate. No new transport seam is authorized in this
-source-gap packet; it remains deferred until the same source/legal/coverage gates pass. A future API
-must atomically fail on unknown archive
-intervals, WAF/challenge, timeout, malformed document, revision conflict, budget exhaustion, or
-rights uncertainty; it must never return partial/empty/zero-filled history or infer a no-change event.
+No current route set satisfies this predicate. No new transport seam is authorized in this source-gap
+packet; it remains deferred until the same source/legal/coverage gates pass. A future API must
+atomically fail on unknown archive intervals, WAF/challenge, timeout, malformed document, revision
+conflict, budget exhaustion, or rights uncertainty; it must never return partial/empty/zero-filled
+history or infer a no-change event. Pagination RED cases must include repeated or cyclic cursors,
+skipped or duplicate pages, changing totals, overlapping document identities, cross-owner next links,
+and late-page failure that discards the whole private result.
+
+The current private transport cannot satisfy this operation unchanged: `vnfin/transport.py` returns a
+buffered body and loses response status/headers/final URL, stores raw text before semantic document
+validation, retains non-secret query parameters in sanitized URLs, and can wrap provider exception
+prose. A future structured streaming-response seam must be reviewed separately while all existing
+consumers remain byte-compatible; it is not authorized by this packet.
 
 ## 7. Atomic global archive budget
 
@@ -213,12 +232,15 @@ redirects, compressed_bytes, decompressed_bytes
 
 Archive-page and document reservations are separate. The future scheduler uses `max_concurrency = 1`
 and reserves every dimension before dispatch. Each retry and followed redirect is a new physical
-operation. Compressed bytes are charged while streaming; decompressed bytes are charged after decode.
-Caller-malformed inputs fail before cache/network. A malformed attachment fails after the real
-dispatch but before cache/return. Reconcile each dimension as `reserved = charged + released` without
-decrementing charged work. Exhaustion of any dimension is globally fatal: discard private rows and
-return no empty, partial, zero-filled, or false-complete history. Diagnostics contain only real
-bounded attempts/counters; no fabricated retry, redirect, byte total, or truncation marker.
+operation. Compressed bytes are charged while streaming, and decompressed bytes are charged
+incrementally during decoding before full materialization. Each archive entry has a decompressed
+expansion ceiling and the container has an aggregate expansion ceiling; both are enforced before
+bytes become a materialized document. Caller-malformed inputs fail before cache/network. A malformed
+attachment fails after the real dispatch but before cache/return. Reconcile each dimension as
+`reserved = charged + released` without decrementing charged work. Exhaustion of any dimension is
+globally fatal: discard private rows and return no empty, partial, zero-filled, or false-complete
+history. Diagnostics contain only real bounded attempts/counters; no fabricated retry, redirect, byte
+total, or truncation marker.
 
 ## 8. Deferred API/model/RED/release matrix
 
@@ -233,11 +255,15 @@ source qualification -> API/model contract freeze -> separate RED authorization
 | --- | --- | --- |
 | Current snapshot | Existing current constituent API/model, cache, warnings, diagnostics, DataFrame, docs, and exports unchanged | Not authorized |
 | API/model | Separate event-history facade; immutable event/history/coverage/provenance; publication/effective filters; exact optionality for unavailable unchanged members | Not authorized |
+| Input preflight | Inclusive/reversed/malformed/bool dates/options fail before cache/network with zero-call proof | Not authorized |
 | Identity/revision | Exact VN30/document/revision; unique/disjoint deltas; complete-basket versus delta-only; correction/withdrawal/postponement/conflict cases | Not authorized |
 | Coverage | 2018-current reconciliation; provider-declared partial; missing middle event/document; no-false-FULL/no-false-absence | Not authorized |
-| Streaming transport | Attachment identity, complete post-first-colon MIME, status/redirect/WAF/TLS/UA/session, archive pagination, split page/document budgets, malformed/truncated/oversized inputs | Not authorized |
+| Streaming transport | Attachment identity; URL suffix/`Content-Disposition`/normalized MIME/file magic/container agreement; complete post-first-colon MIME; status/redirect/WAF/TLS/UA/session; HTTPS downgrade and host checks; archive pagination REDs for repeated/cyclic cursor, skipped/duplicate page, changing total, overlapping identity, cross-owner next link, and late-page discard; split page/document budgets; incremental per-entry/aggregate decompression ceilings; malformed/truncated/oversized inputs | Not authorized |
 | Cache/diagnostics | Cache only after a valid complete result; UTC-aware retrieval time; finite real attempts; sanitized source/document diagnostics with no URL/query/raw body/header/cookie/local-path/provider-exception leakage | Not authorized |
-| Release | Full offline suite, imports/version, docs/public snapshots, blacklist/secret/diff/path/object/clean-tree, wheel/sdist, exact remote anchor/ancestry/three paths | Not authorized |
+| Result surface | Exact DataFrame columns/attrs, serialization/repr/equality, exports, public snapshots, and unchanged current-snapshot behavior | Not authorized |
+| Source/cache | Source selection, zero-source behavior, cache keys, cache-after-complete-only, and no source identity leakage | Not authorized |
+| Warning/error | Exact sanitized warning/error grammar, result-vs-error carriers, and provider exception boundary | Not authorized |
+| Release | Full offline suite, imports/version, `docs/api.md`, `docs/units.md`, tutorial, architecture, source/skill docs, `CHANGELOG.md`, blacklist/secret/diff/path/object/clean-tree, wheel/sdist, exact remote anchor/ancestry/three paths | Not authorized |
 
 No public name, enum, model, source registration, RED test, implementation, live integration test,
 coverage claim, or runtime capability is authorized here.
@@ -252,18 +278,22 @@ TDD implementation → merged-tree tests/docs/build/blacklist/secret/scope gates
 ## 10. Reopen request
 
 Ask HOSE/VNX for a written licence or exact service terms naming the exact review-history operation
-and granting the legal/runtime axes above. Use first-party [HOSE contact](https://www1.hsx.vn/vi/lien-he)
-and [HOSE index contact listed in the rules](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf).
+and granting the legal/runtime axes above. Use the first-party [HOSE contact](https://www1.hsx.vn/vi/lien-he)
+and the HOSE Index/Market Information Department contact identified from the official
+[HOSE index-hub landing](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/). The written response
+must identify the current authorized licensor/signatory, the exact route set, and each permitted
+extraction, transformation, caller-return, cache, retention, attribution, commercial, redistribution,
+amendment, and revocation axis; do not assume HOSE or VNX can grant every axis for the other owner.
 Do not probe or implement before the evidence is reviewed and the reviewer gives an exact design
 PASS.
 
 ## Sources
 
-- [HOSE Ground Rules v4.0](https://staticfile.hsx.vn/Uploads/LocalFiles/ef15ff1%31e799483%61bd11677%61d044388%37/20250114_20241230_QD%20747%20HOSE%20Index%20Ground%20Rules.pdf)
-- [HOSE-Index Ground Rules Version 3.1](https://staticfile.hsx.vn/Uploads/LocalFiles/aa9fc7f%3802f54c8%63b39e6a1%30347ef2e%34/20221026_20221025%20QĐ%20788%20ban%20hành%20QTCS%20HOSE-Index%20ver%203.1.pdf)
+- [HOSE Ground Rules v4.0 — official index-hub landing; attachment template `LocalFiles/{opaque-id}/{filename}`, exact opaque ID `NOT_RETAINED`](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/)
+- [HOSE-Index Ground Rules Version 3.1 — official index-hub landing; attachment template `LocalFiles/{opaque-id}/{filename}`, exact opaque ID `NOT_RETAINED`](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/)
 - [HOSE index hub](https://www.hsx.vn/vi/Modules/Listed/Web/HoseIndexView/)
 - [VNX information archive](https://vnx.vn/vi/thong-tin-tu-sgdck/VNX_QLHD)
-- [HOSE VN30 period-04/2025 update](https://staticfile.hsx.vn/Uploads/News/88b97ff%375155424%34b186d5c%30323a49f%65/20250416_20250416%20CBTT%20Cap%20nhat%20thong%20tin%20BCS%20HOSE-Index%20thang%2004.2025.pdf)
+- [HOSE VN30 period-04/2025 update — official index-set landing; attachment template `News/{opaque-id}/{filename}`, exact opaque ID `NOT_RETAINED`](https://www.hsx.vn/vi/cac-bo-chi-so)
 - [HOSE July 2025 VN30-improvement release](https://staticfile.hsx.vn/Uploads/UploadDocuments/2391309/TCBC_%20Cai%20tien%20chi%20so%20VN30%20t7.2025.pdf)
 - [HOSE July 2025 constituent-document URL lead](https://staticfile.hsx.vn/Uploads/UploadDocuments/2388633/20250716%20CBTT-Danh%20muc%20thanh%20phan%20HOSE-Index%20thang%207.2025.pdf)
 - [HOSE factsheet dated 29 April 2025](https://staticfile.hsx.vn/Uploads/UploadDocuments/2374581/Form_Factsheet_MCIndices_VN_T05.2025.pdf)
@@ -286,4 +316,4 @@ PASS.
 - HOSE Index Feed is paid/authenticated in the reviewed posture; reuse rights are not granted.
 - VNX Decision 67 is governance evidence; its final attachment text was not retained.
 - No probes, raw rows, code, RED, API/model, or runtime capability were added.
-- **Need from Boss:** written HOSE/VNX rights and a reconciled archive, or approval to keep closed.
+- Future reopen prerequisite: written HOSE/VNX rights and a reconciled archive; no additional Boss decision is required for documentation-only closure after design PASS.
