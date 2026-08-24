@@ -56,15 +56,35 @@ HTTP dispatch; all candidate discovery/history dispatch counts are `0 / 0` logic
 | --- | --- | --- | --- |
 | HNX product page — [`/vi-vn/phai-sinh/san-pham.html`](https://www.hnx.vn/vi-vn/phai-sinh/san-pham.html) | Official stock-index futures product/navigation control | No per-session rows, complete fields, bounds, revisions, or reuse rights | `FIELD_GAP` |
 | HNX current result — [`/vi-vn/phai-sinh/ket-qua-giao-dich.html`](https://www.hnx.vn/vi-vn/phai-sinh/ket-qua-giao-dich.html) | Date-filtered official table labels product/expiry, OHLC, volume concepts, OI and settlement | A selected-day table does not prove bulk historical retention, complete contract/session totals, page/revision semantics, or OSS rights | `COVERAGE_GAP` |
+| HNX derivatives landing — [`/vi-vn/phai-sinh.html`](https://hnx.vn/vi-vn/phai-sinh.html) | Official derivatives navigation | No exact history operation, envelope, bounds, pages or reuse terms | `NOT_PROBED` |
 | HNX publication index — [`portal.hnx.vn/vi-vn/phai-sinh/thong-tin-cong-bo.html`](https://portal.hnx.vn/vi-vn/phai-sinh/thong-tin-cong-bo.html) | Official disclosure/document navigation | Documents are not a reconciled all-contract D1 response and do not grant machine reuse | `COVERAGE_GAP` |
 | HNX data-service catalogue — [`/vi-vn/dich-vu-cctt/du-lieu-cung-cap-der.html`](https://hnx.vn/vi-vn/dich-vu-cctt/du-lieu-cung-cap-der.html) | Official derivatives package catalogue; the reviewed EOD package evidence names per-contract OHLC/settlement/OI/volume/status concepts and Excel/InfoFile delivery | Historical retention, exact VN30F universe, revision, rate, automation and reuse are not public | `COVERAGE_GAP` |
 | HNX information-service guide — [`/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html`](https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html) | Official market-data service family lead | Exact no-login route, entitlement, schema, history, rate and reuse rights are not proven | `LEGAL_GAP` |
 | HNX registration guide — [`/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-shdk.html`](https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-shdk.html) | Official request/fee/contract-signing flow | No OSS entitlement, historical span, rate, retention or redistribution right | `LEGAL_GAP` |
+| HNX service overview — [`/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-sgtc.html`](https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-sgtc.html) | Official fee/package information-service posture | Exact history route, retention, automation, storage and redistribution remain unresolved | `LEGAL_GAP` |
 | HNX 2026 package/price document — [official PDF](https://owa.hnx.vn/ftp/PORTALNEW/FileContent/HNX_Danh%20muc%20goi%20tin%20va%20bang%20gia%20dich%20vu%20CCTT%2820260105_145538_848%29.pdf) | Official derivatives field/package and commercial-service evidence | No free library license or exact historical route/coverage contract | `LEGAL_GAP` |
 | HNX current board — [`banggia.hnx.vn`](https://banggia.hnx.vn/) | Official current market-board control | Not historical D1, no requested bounds/revisions/reuse contract | `COVERAGE_GAP` |
 | VSDC product page — [`/en/thong-tin-san-pham`](https://www.vsd.vn/en/thong-tin-san-pham) | VN30 futures identity, multiplier, delivery/settlement concepts, DSP/FSP navigation | No same-owner OHLC/volume/OI history or library-use grant | `FIELD_GAP` |
 | VSDC contract-list notice — [`/en/ad/141951`](https://vsd.vn/en/ad/141951) | Official code/ISIN/first-last-final-payment metadata for a dated list | Metadata list is not per-session OHLC/volume/OI/settlement history | `FIELD_GAP` |
 | VSDC DSP/FSP UI action — [`/gia-thanh-toan/search`](https://www.vsd.vn/gia-thanh-toan/search) | Undocumented official UI action lead for a payment-date-filtered DSP/FSP table; not called as an API | Identifier join to derivatives code/ISIN, payment-date versus trading-session, OHLC/volume/OI, bounds and rights are gaps | `TRANSPORT_INCONCLUSIVE` |
+| VSDC maturity UI action — [`/lich-dao-han-thanh-toan/changepage`](https://www.vsd.vn/lich-dao-han-thanh-toan/changepage) | Undocumented official UI action lead for paginated maturity/final-payment metadata | Metadata schedule is not per-session D1 history; page contract, field identity, coverage, transport and reuse are unproved | `FIELD_GAP` |
+
+The matching sanitized evidence ledger is research §3.2 and is normative for every row in this
+inventory. For each exact unit, candidate dispatch is `NOT_PROBED` with
+`logical/physical/pages/retries/redirects/compressed_bytes/decompressed_bytes = 0/0/0/0/0/0/0`;
+method, status class, complete MIME, effective route, redirect, auth/session/UA/WAF/rate, and
+unproven rights axes remain explicit `NOT_RETAINED` rather than positive evidence. The design note
+does not promote an uncalled UI action or static document into a data response.
+
+The later API gate must use `(session, contract_code)` as the unique composite row key and order
+validated rows by `session ASC, contract_code ASC`, using the exact canonical contract-code string.
+Identical or conflicting repeated keys fail atomically. A qualification unit must structurally serve
+`session`, `contract_code`, `product`, `expiry`, all OHLC fields, `volume`, `open_interest`, and
+`settlement`; a structurally absent field is `FIELD_GAP`, not a globally not-applicable nullable
+field. A null is allowed only for an individual row with a provider-documented finite
+nonpublication/not-applicable state for that field, never parser loss, unknown identity, truncation,
+budget exhaustion, or an omitted schema field.
+
 The HNX current table is a promising research lead, not a qualification. The HNX EOD package is the
 best full-field candidate but is contract-controlled and lacks a public historical/reuse contract.
 VSDC contract and DSP/FSP metadata is not a complete bar source. No candidate is `QUALIFIED` or
@@ -119,20 +139,24 @@ UA/WAF behavior, page/cursor behavior, compressed/decompressed byte totals, revi
 rate/retry evidence. Query strings, raw bodies/headers, cookies, provider prose, secrets and live
 rows are excluded.
 
-One request owns one atomic ledger with distinct counters:
+One request owns one sequential (`max_concurrency = 1`, single-flight) atomic ledger with distinct counters:
 
 ```text
 logical_units, physical_dispatches, discovery_pages, history_pages,
 retries, redirects, compressed_bytes, decompressed_bytes
 ```
 
-Reserve every logical/physical/page/retry/redirect unit before dispatch under one request lock.
-Charge compressed bytes before decompression and decompressed bytes after decoding; crossing either
-finite stream cap aborts and discards all private rows. Every redirect/retry is a real physical
-operation and is counted separately. A failed reservation dispatches nothing. The later
-source-specific design PASS must pin finite numeric ceilings tied to the owner's rate/terms; this
-source-gap packet freezes no unsupported number or retry timing. Exhaustion preserves only real,
-bounded sanitized attempts and never fabricates an attempt or returns authoritative empty.
+Reserve each logical page/cursor before its request is sent, and reserve every applicable
+logical/physical/page/retry/redirect unit atomically under one request lock. After dispatch, the
+returned page/cursor identity must match the reservation before any row is accepted. A malformed or
+mismatched response still consumes the attempted page and physical dispatch and accepts no rows.
+Every redirect/retry is a real physical operation and is counted separately. Only streamed bytes
+charge after dispatch: compressed bytes charge before decompression and decompressed bytes after
+decoding. Crossing either finite stream cap aborts and discards all private rows. A failed
+reservation dispatches nothing. The later source-specific design PASS must pin finite numeric
+ceilings tied to the owner's rate/terms; this source-gap packet freezes no unsupported number or
+retry timing. Exhaustion preserves only real, bounded sanitized attempts and never fabricates an
+attempt or returns authoritative empty.
 
 The exact legal gate covers automation, rate/retry/concurrency, transient/cache/storage/retention/
 delete, attribution, commercial use, derivative use, caller return, redistribution/resale,
@@ -142,32 +166,48 @@ license.
 ## 6. Conjunctive reopen gate and future implementation gate
 
 Reopen only when one exact owner/route/version/operation proves every identity/field/unit/coverage/
-revision/transport/budget/legal axis above, with sanitized fixtures and an explicit no-false-absence
-contract. The complete evidence must include exact requested/full or declared-partial bounds,
-reconciled pages/totals, authoritative versus inconclusive empty, redirect/MIME/status/byte behavior,
-and an atomic global-budget ledger.
+revision/transport/budget/legal axis above, with a source-only sanitized evidence packet and an
+explicit no-false-absence contract. The complete evidence must include exact requested/full or
+declared-partial bounds, reconciled pages/totals, authoritative versus inconclusive empty,
+redirect/MIME/status/byte behavior, an atomic global-budget ledger, and owner rights evidence. No
+RED test, public model, API snapshot, or release artifact is a source reopen prerequisite.
 
 After that source-specific design PASS, request a new API decision. Only a subsequent RED-first
 implementation review may freeze public row/result types, coverage carriers, warnings/exceptions,
 exports, DataFrame attrs, serialization, cache behavior, compatibility docs, tests and CHANGELOG.
-This note authorizes none of them.
+The complete future API/RED/release matrix is §7 below; it is not authorized now.
 
-## 7. Lifecycle handoff
+## 7. Future API/RED/release matrix (not authorized)
+
+This is a later gate copied into the design boundary so source reopening cannot be confused with API
+or TDD authorization. No RED test, fixture, parser, mapping, model, source registration, or runtime
+capability is created by this correction.
+
+| Future gate | Required cases after source qualification and separate API decision |
+| --- | --- |
+| All-contract/exact-contract success | All-contract and exact-contract success; inclusive date bounds; lazy construction; invalid bounds/product/contract paths make zero network calls; exact `VN30F` identity and optional contract validation. |
+| Identity/fields | Response-backed product, code, expiry, Vietnam session/calendar, source, units/scale/precision, OHLC finite/non-bool invariants, non-negative integral contract volume/OI, settlement/DSP/FSP meaning, ordering, `(session, contract_code)` identity, identical/conflicting duplicates, structural required-field absence, per-row nullability and revisions. |
+| Coverage/no-false-absence | `FULL`, provider-declared `QUALIFIED_PARTIAL`, expired-contract retention, current-date lag, nonpublication, authoritative empty, unknown/inconclusive empty, totals/pages/cursors, page identity mismatch, gaps, duplicate/conflict, boundaries and revisions. |
+| Wrong/malformed negatives | Wrong/mixed product or contract, cash index, continuous/rolled/front-month, tape/intraday, inferred expiry/session, malformed envelope/MIME/status/redirect/WAF, missing identity, invalid dates/expiry, bool/non-finite/broken OHLC, negative/non-integral counts, unit mismatch, structurally absent required field and invalid per-row null. |
+| Atomic runtime/diagnostics | Sequential `max_concurrency=1`; logical/physical/page/retry/redirect reservation and charge; compressed/decompressed byte caps; global-budget exhaustion; malformed/mismatched page consumption; atomic no-partial behavior; one-source-win/no-stitch; bounded sanitized attempts/warnings; retrieval timestamp; no raw URL/query/body/header/cookie/provider prose/secret. |
+| Model/API/compatibility/release | Later immutable row/result and coverage decision; DataFrame attrs/provenance; serialization/repr/equality; model/export/error/API snapshots; existing-domain compatibility; docs/tutorial/architecture/skill/CHANGELOG/release artifacts; focused/full offline tests; import/version; isolated wheel/sdist; blacklist/secret/diff/path/object/clean-tree and exact remote scope/ancestry gates. |
+
+Source qualification comes first. A new API decision then authorizes RED; only after RED/GREEN and
+code review may these cases become executable tests. No public model, warning, exception, export or
+release claim is frozen here.
+
+## 8. Lifecycle handoff
 
 Intake is durably recorded in `7b70a5c79cc6d730e86c518d304df24f67ecfcc5` from published
-`origin/master` `001cfd1cafc0d0554640c5b9672dc09029b388b2`. The intake row records:
+`origin/master` `001cfd1cafc0d0554640c5b9672dc09029b388b2`. The prior design BLOCK was recorded first
+in backlog commit `09f7aea`, for reviewed merged HEAD `eb1c8cefe42556220507a242d0aa6de58c98e385`,
+report `reviews/review-202608241126-issue226-design-source-gate.md`, reviewer `c57fc9d`, and
+delivery `#5112ed77`. This correction must return one exact merged SHA whose lifecycle binds that
+prior HEAD, the clean `001cfd1` base, and the exact base-to-correction range. #227 remains queued
+after verified #226 closure.
 
-- phase `SOURCE_DESIGN`;
-- actor `vnfin-oss`;
-- next action `PREPARE_EXACT_SHA_SOURCE_DESIGN`;
-- packet anchor `31d75d5687b18f64659a933d9ff3c829646d6abe`;
-- public triage receipt `issuecomment-5390575929`; and
-- #202 separation, empty chain, and no probe/RED/code/push/close before design PASS.
-
-After the research and this note are committed and merged-tree gates pass, the backlog will record
-one reviewer-owned `DESIGN_REVIEW` handoff with the exact content SHA, actor `vnfin-oss-reviewer`,
-next `RETURN_EXACT_SHA_DESIGN_VERDICT`, clean base/range, and no push/close. No public runtime
-capability is implied.
+The disposition remains `SOURCE-GAP CLOSURE`: #202 is separate, the chain remains empty, and no
+probe, RED, code, push or close is authorized by this correction.
 
 ## Sources
 
@@ -178,8 +218,10 @@ capability is implied.
 - [HNX derivatives information-service catalogue](https://hnx.vn/vi-vn/dich-vu-cctt/du-lieu-cung-cap-der.html)
 - [HNX information-service technical guide](https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html)
 - [HNX information-service registration guide](https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-shdk.html)
+- [HNX information-service overview](https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-sgtc.html)
 - [HNX 2026 information-service package and price document](https://owa.hnx.vn/ftp/PORTALNEW/FileContent/HNX_Danh%20muc%20goi%20tin%20va%20bang%20gia%20dich%20vu%20CCTT%2820260105_145538_848%29.pdf)
 - [HNX official market board](https://banggia.hnx.vn/)
 - [VSDC product information](https://www.vsd.vn/en/thong-tin-san-pham)
 - [VSDC historical VN30 futures contract-list notice](https://vsd.vn/en/ad/141951)
 - [VSDC DSP/FSP UI action route](https://www.vsd.vn/gia-thanh-toan/search)
+- [VSDC maturity/final-payment UI action route](https://www.vsd.vn/lich-dao-han-thanh-toan/changepage)

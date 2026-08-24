@@ -20,8 +20,8 @@ contract and settlement metadata. Neither surface is a single qualified D1 histo
 metadata cannot be joined to another owner's bars under this packet.
 
 The honest result is `SOURCE-GAP CLOSURE`: publish only this research/design/backlog range after
-reviewer approval, retain an empty new source chain, and reopen only on the conjunctive evidence in
-§12. This is not a claim that no data exists. It is a claim that no source unit in this bounded
+reviewer approval, retain an empty new source chain, and reopen only on the source-only conjunctive
+evidence in §9. This is not a claim that no data exists. It is a claim that no source unit in this bounded
 clean-room review is qualified for a public capability.
 
 The issue is separate from closed #202. #202 concerns matched trades, sub-minute data, and
@@ -94,6 +94,43 @@ provider's private or commercial services.
 | VSDC — [`/gia-thanh-toan/search`](https://www.vsd.vn/gia-thanh-toan/search) | Undocumented UI action route associated with the official DSP/FSP table; its visible table uses a product identifier and a payment-date filter. It is retained only as an uncalled route lead, not as an API contract. | No documented history API, identity join to derivatives code/ISIN, proof that payment date is trading session, OHLC/volume/OI, bounds, rate or reuse rights | `TRANSPORT_INCONCLUSIVE` |
 | VSDC — [`/lich-dao-han-thanh-toan/changepage`](https://www.vsd.vn/lich-dao-han-thanh-toan/changepage) | Undocumented UI action route for paginated maturity/final-payment metadata. | Metadata schedule is not per-session D1 history; page contract, field identity, coverage, transport and reuse rights are unproved | `FIELD_GAP` |
 
+### 3.2 Per-unit sanitized evidence ledger
+
+The matrix above is also the exact retained-unit inventory. This ledger makes the packet's
+per-unit evidence axes explicit instead of relying on one global `NOT_RETAINED` row. `NR` means
+`NOT_RETAINED`; `NP` means `NOT_PROBED`. Static page/document facts are retained only in the
+`identity/field/coverage` cell. No unretained transport, access, rate, or rights axis is used as a
+positive qualification claim.
+
+The research channel did not dispatch any candidate data/history operation. Therefore every unit
+has the same candidate-dispatch ledger
+`logical/physical/pages/retries/redirects/compressed_bytes/decompressed_bytes = 0/0/0/0/0/0/0`.
+The zero is a count of unmade candidate dispatches, not a claim of zero source rows or zero traffic
+on the official website used for static reading.
+
+| Unit ID; owner; exact route/operation | Candidate transport: method/status/complete MIME/effective route/redirect | Candidate ledger: L/P/pages/retries/redirects/cbytes/dbytes | Access: auth/session/UA/WAF/rate | Response-backed static identity/fields/coverage facts | Rights axes: automation/caller-return/storage/retention/attribution/commercial/derivative/redistribution/amendment/revocation | Total |
+| --- | --- | --- | --- | --- | --- | --- |
+| `HNX-PRODUCT-HTML`; HNX; `https://www.hnx.vn/vi-vn/phai-sinh/san-pham.html` / product navigation | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static product/navigation facts retained; no D1 rows, contract/session totals, or history bounds | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+| `HNX-RESULT-HTML`; HNX; `https://www.hnx.vn/vi-vn/phai-sinh/ket-qua-giao-dich.html` / date-filtered result table | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static table headings retain product/expiry/OHLC/volume/OI/settlement concepts; selected-day surface, no bulk bounds/revision contract | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `HNX-LANDING-HTML`; HNX; `https://hnx.vn/vi-vn/phai-sinh.html` / derivatives navigation | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static navigation only; no exact history operation or response schema | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `NOT_PROBED` |
+| `HNX-PUBLICATION-HTML`; HNX; `https://portal.hnx.vn/vi-vn/phai-sinh/thong-tin-cong-bo.html` / publication index | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static disclosure/document navigation; no reconciled D1 row operation | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `HNX-CATALOGUE-DER-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/du-lieu-cung-cap-der.html` / derivatives service catalogue | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static catalogue/package categories retained; historical retention/backfill and exact VN30F universe not bound | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `HNX-TECH-YCKT-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html` / technical guide | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static service-family/InfoGate/InfoFile lead retained; no route schema or history response | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-REG-SHDK-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-shdk.html` / registration flow | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static request/fee/contract-signing flow retained; no entitlement for this library | `NR/NR/NR/NR/NR/RETAINED:fee-contract/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-OVERVIEW-SGTC-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-sgtc.html` / service overview | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static fee/package service posture retained; no exact history route or retention | `NR/NR/NR/NR/NR/RETAINED:fee-service/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-PACKAGE-2026-PDF`; HNX; `https://owa.hnx.vn/ftp/PORTALNEW/FileContent/HNX_Danh%20muc%20goi%20tin%20va%20bang%20gia%20dich%20vu%20CCTT%2820260105_145538_848%29.pdf` / derivatives EOD package description | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static package field concepts retained; historical span, revisions and exact entitlement unretained | `NR/NR/NR/NR/NR/RETAINED:commercial-package/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-BOARD-HTML`; HNX; `https://banggia.hnx.vn/` / current market board | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static current-board identity/price control; no historical D1 bounds/revisions | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `VSD-PRODUCT-HTML`; VSDC; `https://www.vsd.vn/en/thong-tin-san-pham` / product and DSP/FSP page | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static VN30 futures contract/maturity/settlement concepts retained; no OHLC/volume/OI history | `RETAINED:copyright/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+| `VSD-CONTRACT-LIST`; VSDC; `https://vsd.vn/en/ad/141951` / historical contract-list notice | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static product/code/ISIN/first-last-final-payment column concepts retained; metadata only | `RETAINED:copyright/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+| `VSD-DSP-FSP-UI`; VSDC; `https://www.vsd.vn/gia-thanh-toan/search` / undocumented UI action | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static UI route lead only; payment-date/product identifier do not prove trading-session/code join | `RETAINED:copyright/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `TRANSPORT_INCONCLUSIVE` |
+| `VSD-MATURITY-UI`; VSDC; `https://www.vsd.vn/lich-dao-han-thanh-toan/changepage` / maturity schedule UI action | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static UI route lead only; maturity/payment metadata, not per-session D1 | `RETAINED:copyright/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+
+The per-unit ledger intentionally does not claim that the static page read was an authorized data
+dispatch. No `SourceAttempt`, page, retry, redirect, byte total, MIME, effective-route, or rate
+value is fabricated for a route that was not called. The positive static facts above are product,
+navigation, package, or document facts only; they cannot satisfy the missing history, transport, or
+rights axes.
+
 ### 3.1 What the official evidence does and does not prove
 
 - HNX's date-filtered current-result surface is the strongest same-owner public lead because its official table labels
@@ -137,6 +174,20 @@ gap rather than degrading the row.
 | `source` | Canonical producer/route identity from the accepted unit, not a caller label, URL token, or another provider's name. | No unit qualifies. `IDENTITY_GAP`. |
 | `fetched_at_utc` | Retrieval instant for the accepted response, timezone-aware UTC; never the session/publication date. | No data dispatch was made. `NOT_APPLICABLE`. |
 | warnings/attempts | Bounded, sanitized diagnostics. Attempts, if later needed, must be real dispatches only; no raw URL query, body, header, cookie, provider prose, secret, or synthetic attempt. | No dispatch was made. `NOT_APPLICABLE`. |
+
+The later API gate must treat `(session, contract_code)` as the unique composite row identity. After
+identity validation, output ordering is deterministic `session ASC, contract_code ASC` using the
+provider's exact canonical contract-code string; no code parsing or case-folding changes the key.
+Repeated keys are rejected atomically. Identical duplicates and conflicting duplicates are both
+terminal duplicate/conflict failures, not deduplicated or last-write-wins rows.
+
+Every qualification unit must structurally serve all required research fields: `session`,
+`contract_code`, `product`, `expiry`, all four OHLC values, `volume`, `open_interest`, and
+`settlement`. A response/schema that omits a required field for the operation is `FIELD_GAP` even if
+the owner could describe that field as not applicable elsewhere. A null is permitted only for an
+individual row when the owner documents a finite nonpublication/not-applicable state for that exact
+field; it cannot stand in for a structurally absent field, parser loss, unknown identity, truncated
+transport, or budget exhaustion.
 
 Nullable required fields are permitted only when the owner explicitly defines a finite
 nonpublication/not-applicable state for that exact field. Parser loss, unknown identity, transport
@@ -191,17 +242,23 @@ this deterministic contract before RED approval:
   `discovery_pages`, `history_pages`, `retries`, `redirects`, `compressed_bytes`, and
   `decompressed_bytes`. The counters are distinct; a logical route operation is not silently equal
   to a page, a retry, or a byte stream.
-- A logical unit is one exact owner/route/version/operation reservation. Every network dispatch,
-  including a followed redirect or retry, reserves a physical dispatch before sending. A page or
-  cursor response charges one page only after its page identity is known. A retry reserves a retry
-  and a new physical dispatch; a redirect follow-up reserves a redirect and a new physical dispatch.
+- `max_concurrency = 1`: the scheduler is sequential and single-flight. A logical unit is one exact
+  owner/route/version/operation reservation. A logical page/cursor is reserved before its request is
+  sent. Every network dispatch, including a followed redirect or retry, reserves a physical dispatch
+  before sending. A page/cursor reservation, its physical dispatch, the applicable retry/redirect
+  counters, and any applicable logical-unit reservation are checked and committed atomically.
+- After dispatch, the returned page/cursor identity must match the reservation before any row is
+  accepted. A malformed envelope, unexpected page/cursor, identity mismatch, or failed validation
+  still consumes the attempted page reservation and physical dispatch; it yields no accepted rows.
+  A retry reserves a retry and a new physical dispatch; a redirect follow-up reserves a redirect
+  and a new physical dispatch.
 - The reservation is atomic: under one request lock, check every applicable finite ceiling and apply
   the complete reservation or none. A failed reservation dispatches nothing. No counter may be
   incremented by a later cleanup path after a failed reservation.
-- Compressed bytes are charged from bytes received before decompression; decompressed bytes are
-  charged after decoding. Each stream has a hard finite cap; crossing either cap aborts the request,
-  discards private rows, and cannot yield a partial public result. No `Content-Length` is trusted as
-  the only byte guard.
+- Only streamed bytes charge after dispatch: compressed bytes are charged as received before
+  decompression, and decompressed bytes are charged after decoding. Each stream has a hard finite
+  cap; crossing either cap aborts the request, discards private rows, and cannot yield a partial
+  public result. No `Content-Length` is trusted as the only byte guard.
 - The source-specific design PASS must pin finite numeric ceilings for all applicable counters and
   show their relation to the provider's rate/terms. This source-gap packet deliberately does not
   freeze numbers or promise a `250ms/25s` retry policy for an unqualified route.
@@ -246,17 +303,39 @@ following in one reviewable evidence packet:
 4. explicit owner permission for automation, rate/retry/concurrency, transient/cache/storage/
    retention/deletion, attribution, commercial use, derivative use, caller return,
    redistribution/resale, amendment and revocation; and
-5. deterministic sanitized fixtures and RED cases covering identity, field types/units, full versus
-   declared partial, authoritative versus inconclusive empty, pagination/counts, revisions, byte and
-   global-budget exhaustion, atomic no-partial behavior, source identity, public diagnostics and
-   blacklist/secret/query/path/object/clean-tree/build gates.
+5. a source-only sanitized evidence packet: provider response/schema evidence for every required
+   field, declared bounds/totals/cursors, revision/nonpublication semantics, exact route/MIME/status/
+   redirect/byte observations, finite route budget and rate terms, and the owner's rights text or
+   written confirmation. No RED test, public model, API snapshot, or release artifact is a source
+   reopen prerequisite.
 
 All five groups are conjunctive. A VSDC metadata success cannot repair an HNX row failure; a current
 HNX table cannot repair missing history; and a legal or budget gap keeps the runtime chain empty.
-After a qualified unit, request a fresh design/API decision and then a separate RED-first
-implementation review. This packet does not authorize either.
+Source qualification is followed by a fresh API decision, then a separate RED-first implementation
+review. The full future API/RED/release matrix is §10; it is not an evidence prerequisite and is not
+authorized by this packet.
 
-## 10. Future API boundary
+## 10. Future API/RED/release matrix (not authorized)
+
+This matrix is preserved from the packet as a later gate. It is intentionally documentation-only in
+this correction: no RED test, fixture, parser, mapping, model, source registration, or runtime
+capability is created now.
+
+| Future gate | Required synthetic/offline cases after source qualification and a separate API decision |
+| --- | --- |
+| All-contract and exact-contract success | All-contract history and exact `contract` filter success; inclusive date bounds; lazy construction; invalid bounds/product/contract paths make zero network calls; exact `VN30F` product validation and no caller-label identity. |
+| Identity and field semantics | Response-backed product, contract code, expiry, Vietnam session/calendar, source, quote unit/scale/precision, OHLC finite/non-bool invariants, non-negative integral contract volume and OI, settlement/DSP/FSP meaning, ordering, `(session, contract_code)` uniqueness, identical/conflicting duplicates, structural required-field absence, per-row finite nullability, and revision/correction cases. |
+| Coverage and no-false-absence | Requested `FULL`, provider-declared `QUALIFIED_PARTIAL`, expired-contract retention, current-date lag, nonpublication, authoritative empty, unknown/inconclusive empty, provider totals/pages/cursors, page identity mismatch, gaps, duplicate/conflict, date boundaries, and revision behavior. |
+| Wrong and malformed inputs | Wrong/mixed product or contract, cash index, continuous/rolled/front-month, tape/intraday, inferred expiry/session, malformed envelope/MIME/status/redirect/WAF, missing identity, invalid date/expiry, bool/non-finite/broken OHLC, negative/non-integral counts, unit mismatch, structurally absent required field, invalid per-row null, and provider/schema mismatch. |
+| Atomic runtime and diagnostics | Sequential `max_concurrency=1`; logical/physical/page/retry/redirect reservation and charge; compressed/decompressed byte caps; global-budget exhaustion; malformed/mismatched page consumption; atomic no-partial behavior; one-source-win/no-stitch; bounded sanitized attempts/warnings; retrieval timestamp; no raw URL/query/body/header/cookie/provider prose/secret; composite-key ordering and duplicate rejection. |
+| Model/API/release compatibility | Later immutable row/result and coverage decision; DataFrame attrs and provenance; serialization/repr/equality; public model/export/error/API snapshots; existing-domain compatibility; docs/tutorial/architecture/skill/CHANGELOG/release artifacts; focused/full offline tests; import/version; isolated wheel/sdist; blacklist/secret/diff/path/object/clean-tree and exact remote-anchor/ancestry/scope gates. |
+
+The source-only reopen in §9 does not require this matrix to pass. Once one source qualifies, a
+fresh API/model decision must select the public carriers and authorize RED first; only then may these
+cases become executable tests. No public API name, model, warning, exception, export, or release
+claim is frozen by this matrix.
+
+## 11. Future API boundary
 
 The packet's illustrative spelling is not a public API commitment:
 
@@ -275,18 +354,18 @@ A later qualified design must decide immutable row/result types, inclusive date 
 contract validation, coverage bounds, provenance, DataFrame attrs, serialization/repr/equality,
 public snapshots, and sanitized errors before any implementation.
 
-## 11. Lifecycle and publication gate
+## 12. Lifecycle and publication gate
 
 The intake lifecycle was recorded in local commit `7b70a5c79cc6d730e86c518d304df24f67ecfcc5` from
-published base `001cfd1`. It records `#226` as `SOURCE_DESIGN`, actor `vnfin-oss`, next
-`PREPARE_EXACT_SHA_SOURCE_DESIGN`, packet anchor `31d75d5687b18f64659a933d9ff3c829646d6abe`, and
-public receipt `issuecomment-5390575929`.
+published base `001cfd1`. The prior design BLOCK was recorded first in backlog commit `09f7aea`,
+for reviewed merged HEAD `eb1c8cefe42556220507a242d0aa6de58c98e385`, report
+`reviews/review-202608241126-issue226-design-source-gate.md`, reviewer `c57fc9d`, and delivery
+`#5112ed77`. This correction must return one exact merged SHA whose lifecycle binds that prior
+HEAD, clean base `001cfd1`, and the exact base-to-correction range. `#227` remains queued.
 
-The two artifact files in this handoff are the only source/design files for #226. The matching
-backlog lifecycle must be updated only after these docs are committed and gates pass, with the exact
-content SHA/range, reviewer-owned `DESIGN_REVIEW` phase, actor `vnfin-oss-reviewer`, next
-`RETURN_EXACT_SHA_DESIGN_VERDICT`, and the clean `origin/master` base recorded. No push or issue
-close occurs before exact-SHA design approval.
+The disposition remains `SOURCE-GAP CLOSURE`: #202 is separate, the new chain stays empty, and no
+probe, RED test, production code, push, or issue close is authorized before exact-SHA design
+approval. The two artifact files in this handoff are the only source/design files for #226.
 
 ## Sources
 
@@ -306,3 +385,4 @@ query parameters; current rows and response bodies are not retained.
 - [VSDC product information](https://www.vsd.vn/en/thong-tin-san-pham)
 - [VSDC historical VN30 futures contract-list notice](https://vsd.vn/en/ad/141951)
 - [VSDC DSP/FSP UI action route](https://www.vsd.vn/gia-thanh-toan/search)
+- [VSDC maturity/final-payment UI action route](https://www.vsd.vn/lich-dao-han-thanh-toan/changepage)
