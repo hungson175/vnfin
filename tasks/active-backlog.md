@@ -602,18 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#228 — DESIGN_BLOCKED (2026-08-24, narrow R1-R2 closure rereview).** Actor `vnfin-oss`;
-  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `967baf2`, public receipt
-  `issuecomment-5390970457`; reviewed HEAD `b1d6a5592cbb0a22d69e9df90e3f6b7a40a8cc20`, docs
-  anchor `4d312480d8124c69fbcdbd31625520685a6740e8`, BLOCK report
+- **#228 — DESIGN_REVIEW (2026-08-24, final narrow R1-R2 closure rereview).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `967baf2`,
+  public receipt `issuecomment-5390970457`; clean base `832945b8f411e17c50b0dca8a810540fcd45123a`.
+  Prior reviewed HEAD `b1d6a5592cbb0a22d69e9df90e3f6b7a40a8cc20`, BLOCK report
   `reviews/review-202608241349-issue228-r1-r2-closure-rereview.md` at reviewer `2dcf82e`,
-  delivery `fe653e6`. Clean base remains `832945b8f411e17c50b0dca8a810540fcd45123a`; prior
-  BLOCK record is `c3b90fa`. R1 and the main R2 tuple/USD-v1 fixes pass; correct only stale npm
-  wording, add exact jsDelivr-terms evidence, and clarify static route/version cells. Preserve
-  B3-B5, `SOURCE-GAP CLOSURE`, current gold behavior, the empty new chain, and no
-  probe/RED/code/push/close. The prior activation `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` is
-  excluded from ancestry and is not a publishable parent. #227 is DONE/CLOSED below; #219/#220
-  remain separate.
+  delivery `fe653e6`, BLOCK record `e45fc97`; corrected docs anchor
+  `776c2799c8f0b3f2337da19bcfb74f66f033266e`. F1 stale wording, F2 jsDelivr terms evidence,
+  and static route/version cells are corrected; B3-B5 remain closed. The prior activation
+  `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` remains excluded from ancestry and is not a
+  publishable parent. Preserve `SOURCE-GAP CLOSURE`, current gold behavior, the empty new chain,
+  and no probe/RED/code/push/close. #227 is DONE/CLOSED below; #219/#220 remain separate.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
