@@ -602,16 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#228 — DESIGN_REVIEW (2026-08-24, final lifecycle-only exact-SHA rereview).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `967baf2`,
-  public receipt `issuecomment-5390970457`; reviewed HEAD `8036f6e14b64c567dd9ddcb455323635435989fe`,
-  docs anchor `776c2799c8f0b3f2337da19bcfb74f66f033266e`, BLOCK report
-  `reviews/review-202608241356-issue228-final-closure.md` at reviewer `28cf6ce`, delivery
-  `250f4e17`, BLOCK record `b143d75`. The earlier truncated delivery `fe653e6` is superseded;
-  preserve F1-F2/source/design/R1/B3-B5 gates, clean exclusions, `SOURCE-GAP CLOSURE`, current
-  gold behavior, the empty new chain, and no probe/RED/code/push/close. The prior activation
-  `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` remains excluded from ancestry and is not a
-  publishable parent. #227 is DONE/CLOSED below; #219/#220 remain separate.
+- **#229 — SOURCE_DESIGN (2026-08-24, activated after verified #228 closure).** Actor `vnfin-oss`;
+  next action `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor `5b8d2f8`, public receipt
+  `issuecomment-5391811465`; clean base `d9bcf0478336aa1fb906e88d9d72f7a370911da5`. Prepare only
+  the official VN30 review/rebalance event source-vetting report, design note, and this backlog.
+  Preserve the current `index_constituents` snapshot as present-state only; never infer history,
+  unchanged members, or no-change events from it. Require qualified complete official before/after
+  baskets for unchanged members; keep foreign-flow/VN30F strategy caller-side. No probe/RED/API-
+  model/code/push/close before exact design PASS. #228 is DONE/CLOSED below; #229 remains separate
+  from #202 and any downstream strategy.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1071,6 +1070,14 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#228 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `d9bcf0478336aa1fb906e88d9d72f7a370911da5` to `origin/master`; remote HEAD,
+  base ancestry, exclusions, and exactly the three approved research/design/backlog paths pass.
+  Clean SOURCE-GAP resolution is `issuecomment-5391799087`; GitHub re-read is `CLOSED`/
+  `COMPLETED` at `2026-08-24T07:01:27Z`. Research/design bytes are unchanged from the approved
+  handoff; current gold behavior and the new chain remain empty. No provider probe, RED test,
+  production code, API/model, runtime capability, or coverage claim was added.
 
 - **#227 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `832945b8f411e17c50b0dca8a810540fcd45123a` to `origin/master`; remote HEAD is
