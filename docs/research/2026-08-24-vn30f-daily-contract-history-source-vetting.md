@@ -320,8 +320,9 @@ All five groups are conjunctive. A VSDC metadata success cannot repair an HNX ro
 HNX table cannot repair missing history; and a legal or budget gap keeps the runtime chain empty.
 Source qualification does not freeze a public API/model contract or authorize tests/code. A separate
 API/model decision freezes only that public contract—row/result carriers, signatures, coverage and
-diagnostics, units, and docs—and does not authorize tests or code. A separate RED-first approval
-authorizes tests only; implementation/code remains gated on green results and code review. The full
+diagnostics, units, and docs—and does not authorize tests or code. A separate RED authorization
+permits failing tests only. The reviewer must verify RED and explicitly authorize implementation;
+implementation must reach GREEN before code review, and publication follows code review. The full
 future API/RED/release matrix is §10; it is not an evidence prerequisite and is not authorized by
 this packet.
 
@@ -343,9 +344,10 @@ capability is created now.
 
 The source-only reopen in §9 does not require this matrix to pass. Once one source qualifies, a
 fresh API/model decision must select and freeze the public carriers and their units/docs contract;
-that decision is separate from RED authorization. Only a later RED-first approval may authorize the
-executable tests; implementation/code still requires green results and code review. No public API
-name, model, warning, exception, export, or release claim is frozen by this matrix.
+that decision is separate from RED authorization. Only a later RED authorization may permit failing
+tests; the reviewer verifies RED and authorizes implementation, implementation reaches GREEN, then
+code review precedes publication. No public API name, model, warning, exception, export, or release
+claim is frozen by this matrix.
 
 ## 11. Future API boundary
 
@@ -381,6 +383,11 @@ HEAD, clean base `001cfd1`, and the exact base-to-correction range. `#227` remai
 The disposition remains `SOURCE-GAP CLOSURE`: #202 is separate, the new chain stays empty, and no
 probe, RED test, production code, push, or issue close is authorized before exact-SHA design
 approval. The two artifact files in this handoff are the only source/design files for #226.
+
+For clarity, any later capability lifecycle is exactly: (1) API/model freezes the public contract;
+(2) separate RED authorization permits failing tests only; (3) the reviewer verifies RED and
+authorizes implementation; (4) implementation reaches GREEN; (5) code review; (6) publish. This
+source-gap packet stops before RED and implementation.
 
 ## Sources
 

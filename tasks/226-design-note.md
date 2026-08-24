@@ -177,9 +177,10 @@ RED test, public model, API snapshot, or release artifact is a source reopen pre
 
 After that source-specific design PASS, hold a separate API/model decision that freezes only the
 public contract; it does not authorize tests or code. The public contract includes row/result types,
-signatures, coverage/diagnostics, units, and docs. Only a subsequent, separately approved RED-first
-review authorizes tests only; implementation/code still requires green results and code review. The
-complete future API/RED/release matrix is §7 below; it is not authorized now.
+signatures, coverage/diagnostics, units, and docs. Separate RED authorization permits failing tests
+only; the reviewer verifies RED and explicitly authorizes implementation. Implementation must reach
+GREEN before code review, and publication follows code review. The complete future API/RED/release
+matrix is §7 below; it is not authorized now.
 
 ## 7. Future API/RED/release matrix (not authorized)
 
@@ -198,9 +199,10 @@ capability is created by this correction.
 | Model/API/compatibility/release | Later immutable row/result and coverage decision; DataFrame attrs/provenance; serialization/repr/equality; model/export/error snapshots; existing-domain compatibility; release artifacts; focused/full offline tests; import/version; isolated wheel/sdist; blacklist/secret/diff/path/object/clean-tree and exact remote scope/ancestry gates. |
 
 Source qualification comes first. A new API/model decision then specifies and freezes the public
-carriers and units/docs contract; it is separate from RED authorization. Only a later RED-first
-approval authorizes tests only; after RED/GREEN and code review, implementation may proceed. No public
-model, warning, exception, export or release claim is frozen here.
+carriers and units/docs contract; it is separate from RED authorization. Separate RED authorization
+permits failing tests only; the reviewer verifies RED and authorizes implementation, implementation
+reaches GREEN, and code review precedes publication. No public model, warning, exception, export or
+release claim is frozen here.
 
 ## 8. Lifecycle handoff
 
@@ -214,6 +216,11 @@ after verified #226 closure.
 
 The disposition remains `SOURCE-GAP CLOSURE`: #202 is separate, the chain remains empty, and no
 probe, RED, code, push or close is authorized by this correction.
+
+The later capability lifecycle is exact: (1) API/model freezes the public contract; (2) separate RED
+authorization permits failing tests only; (3) the reviewer verifies RED and authorizes implementation;
+(4) implementation reaches GREEN; (5) code review; (6) publish. This design note stops before RED,
+implementation, and publication.
 
 ## Sources
 
