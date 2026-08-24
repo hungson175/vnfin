@@ -793,6 +793,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     AST-extracts leading tokens from every `.warnings` site and asserts subset-of-documented. Tracked, not
     urgent; schedule after #167.
 
+## Next (source/design queue)
+
+- **#227 — QUEUED_AFTER_#226 (2026-08-24, accepted/spec-sent).** Actor `vnfin-oss`; next action
+  `ACTIVATE_AFTER_#226_CLOSURE`; packet anchor
+  `29206690269215dba1a35bb13ee7c621055e7fca`, public receipt `issuecomment-5390664225`.
+  Scope is one exact current-HOSE universe snapshot with per-symbol terminal coverage, daily value
+  identity/units, legal rights, and finite whole-board budgets; #201's closed source-gap and empty
+  runtime chain remain separate. Do not probe, write RED/tests, add code, push, or close #227 before
+  #226 is verified closed and #227 receives exact design PASS.
+
 ## Next (code queue — after docs batch)
 
 - **#167 — VN equity universe / symbol discovery** — **ACCEPTED, NEXT CODE ITEM** (reviewer 07:35,
