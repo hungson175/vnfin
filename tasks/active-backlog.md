@@ -602,19 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#226 — DESIGN_REVIEW (2026-08-24, final narrow exact-SHA design handoff).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
+- **#226 — DESIGN_BLOCK (2026-08-24, final lifecycle re-review).** Actor `vnfin-oss-reviewer`; next
+  action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
   `31d75d5687b18f64659a933d9ff3c829646d6abe`, public receipt `issuecomment-5390575929`.
-  Prior reviewed merged HEAD `4bb4db8bf71306d7834f5f959ddff705c644c924`, correction content anchor
-  `10d36a3452df0a1154db9f2108862b83150fcb34`, clean range `001cfd1..4bb4db8`, and BLOCK-first
-  receipt commit `193aa0d28d7c8a9c16ed516ca31b5d430572b4ff` are retained. BLOCK delivery `#788089ee`;
-  report `reviews/review-202608241149-issue226-final-narrow-rereview.md` at reviewer `5538019`.
-  Final docs content anchor is `c70065b3aa0cd24f4689b0f5006e0d8ff2d4e21f`; clean base-to-content
-  range is `001cfd1..c70065b`. F1-F4 are addressed: `route_version` is explicit `NOT_RETAINED`,
-  API/model freezes only the public contract while separate RED authorizes tests only, caller/provider
-  malformed timing is explicit, and `docs/api.md` plus `docs/units.md` are named gates. Preserve
-  `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and no probe, RED, code, push,
-  or close; return the exact final merged handoff SHA for re-review.
+  Reviewed merged HEAD `7e1844eaf7f0618c916be1957de48526f75590eb`, prior correction content anchor
+  `c70065b3aa0cd24f4689b0f5006e0d8ff2d4e21f`, clean range `001cfd1..7e1844e`, and BLOCK-first
+  receipt commit `193aa0d28d7c8a9c16ed516ca31b5d430572b4ff` are retained. BLOCK delivery `#fcc6db04`;
+  report `reviews/review-202608241155-issue226-final-lifecycle-rereview.md` at reviewer `1c058b2`.
+  The lifecycle must state: API/model freezes the contract; separate RED authorization permits failing
+  tests only; reviewer verifies RED and authorizes implementation; implementation reaches GREEN; code
+  review; publish. Preserve `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and
+  no probe, RED, code, push, or close; apply one wording-only docs/backlog correction.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
