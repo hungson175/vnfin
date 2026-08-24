@@ -611,22 +611,23 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   #204 negative `89/90/91` and `NET_INCOME` boundaries remain unchanged. No provider runtime
   capability, probe, RED, API/model change, production code, or coverage claim was added.
 
-- **#232 — DESIGN_BLOCK / DOCS_CORRECTION_IN_PROGRESS (2026-08-24 17:40 +07).** Actor
-  `vnfin-oss`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; reviewed head is exact
-  `6c1f8d679744e802cb4f5e3a3688348f7d528bcd`; BLOCK delivery is `f4dc897f`; report
+- **#232 — SOURCE_DESIGN_CORRECTION / REVIEW_REQUESTED (2026-08-24).** Actor
+  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; corrected docs anchor is
+  exact `cfea0e1dfdc981750e49790217a1b0fd9d25d37f`; prior reviewed head was exact `6c1f8d679744e802cb4f5e3a3688348f7d528bcd`; prior
+  BLOCK delivery was `f4dc897f`; report
   `reviews/review-202608241737-issue232-provenance-correction-rereview.md` at reviewer commit
-  `e8e6ea7fe3353399658ba5df4cadcc8419285937`. R2 and B3/B4 remain closed. F1 requires each
-  S1-S12 unit to keep facts local, expose legal-owner and version states, and use source-backed
-  legal tokens; F2 removes umbrella official attribution from unknown-operated S4; F3 adds
-  documents plus explicit compressed/decompressed byte labels to candidate ledgers; F4 repairs
-  reviewer-owned handoff provenance. The correction is docs/backlog-only. Clean published base is
-  exact `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
+  `e8e6ea7fe3353399658ba5df4cadcc8419285937`. R2 and B3/B4 remain closed. F1 now keeps S8/S9
+  and S10/S11/S12 facts local and exposes legal-owner/version states with source-backed tokens;
+  F2 uses neutral evidence wording for unknown-operated S4; F3 explicitly counts candidate
+  documents and compressed/decompressed bytes; F4 is a reviewer-owned exact-SHA handoff. This
+  correction is docs/backlog-only; this backlog commit is the exact lifecycle handoff. Clean
+  published base is exact `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
   `/home/hungson175/tools/vnfin-oss-reviewer/tasks/232-csi300-raw-cny-history-spec.md` at reviewer
   packet commit `c69e145`; public receipt `issuecomment-5392669032`; activation receipt
   `023b23d2df3e04c208437ffe0260dc281854fb05` is local-only and excluded from this clean handoff
   ancestry. The exact research/design artifacts are
   `docs/research/2026-08-24-csi300-raw-cny-history-source-vetting.md` and
-  `tasks/232-design-note.md`; docs anchor is `384780da2dc4a23c6d9801d0ca2df5b4d85d9ae5` and
+  `tasks/232-design-note.md`; docs anchor is `cfea0e1dfdc981750e49790217a1b0fd9d25d37f` and
   this backlog commit is the exact lifecycle handoff. Disposition is `SOURCE-GAP CLOSURE`; the
   raw CNY chain remains empty. Preserve the current loud `^CSI300`-to-ASHR USD/share proxy and
   no USD/raw-proxy substitution. No probe, live row, RED, API/model decision, source registration,
@@ -1050,9 +1051,10 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- **#232 — DESIGN_BLOCK** (`f4dc897f`; reviewer report commit `e8e6ea7`, reviewed head
-  `6c1f8d6`). Apply only the F1-F4 docs/backlog correction above, then rerun merged gates and
-  return one exact SHA. No probe, RED, API/model, production code, push, or close.
+- **#232 — DESIGN_REVIEW_REQUESTED** (corrected docs `cfea0e1`; prior BLOCK `f4dc897f`; reviewer
+  report commit `e8e6ea7`). The F1-F4 docs/backlog-only correction is committed; rerun merged
+  gates and return one exact SHA for closure review. No probe, RED, API/model, production code,
+  push, or close.
 
 ## Poller triage (newly triaged)
 
