@@ -66,15 +66,16 @@ owner + route operator + exact host/path/version/operation
 + written or exact published reuse rights
 ```
 
-Every member must pass in one route set. An owner factsheet cannot repair an API identity gap; a
+The decision table contains five independent candidate route families. Every member must pass in one route set. An owner factsheet cannot repair an API identity gap; a
 generic API schema cannot repair a CNY/points or raw-versus-return gap; a commercial product cannot
 be treated as an OSS licence; and agreement between providers cannot establish response identity.
 
 | Candidate | Established evidence | Blocking axes | Design result |
 | --- | --- | --- | --- |
 | CSI owner/factsheet/methodology | CSI official code `000300`, CNY/RMB metadata, point semantics, price-versus-return distinction, publication controls | no no-login history response, field schema, bounds/pages/revisions, or reuse grant | `SOURCE-GAP` |
-| SSE/CIIS historical product | official CSI-index/SHSE-SZSE 300 historical-data product lead, daily CSV/yearly subscription, official historical bound statement | subscription/licence, exact 000300 response identity, OHLC/volume/revision schema, caller-return rights | `SOURCE-GAP` |
-| CSI CSIBridge portal | official API discovery and subscription-key documentation | no exact CSI 300 product route retained; key required; autonomous-agent written authorization required | `SOURCE-GAP` |
+| SSE historical product | SSE historical-data product lead, daily CSV/yearly subscription, broad historical bound statement | subscription/licence, exact 000300 response identity, OHLC/volume/revision schema, caller-return rights | `SOURCE-GAP` |
+| CIIS historical product | CIIS product lead, order/subscription path, 2022 manual is historical and current landing links 2026 manual | subscription/licence, exact 000300 response identity, OHLC/volume/revision schema, caller-return rights | `SOURCE-GAP` |
+| Observed CSI CSIBridge UAT page | page states API discovery/dashboard, subscription key, and autonomous-agent written authorization; page/host owner unknown | no exact CSI 300 product route retained; no owner/operator binding; `AUTH_REQUIRED` + `IDENTITY_GAP` + `LEGAL_GAP` | `SOURCE-GAP` |
 | SSI FastConnect DailyIndex | official generic index/date/page schema and authenticated market-data documentation | account/key/approval, generic not CSI300-specific, no raw/OHLC/CNY/coverage/reuse proof | `SOURCE-GAP` |
 
 No candidate is `QUALIFIED FOR API/RED` or `QUALIFIED_PARTIAL`. The safe disposition is
@@ -88,34 +89,86 @@ ownership grant; `UNKNOWN` or `NOT_RETAINED` remains fail-closed until a primary
 | Candidate family | Named owner or publisher | Route operator / host binding | Legal interpretation |
 | --- | --- | --- | --- |
 | CSI factsheet, methodology, landing, rules | CSI is named by the official material | CSI host is visible; exact host/operator legal binding `NOT_RETAINED` | identity/control evidence only; reuse `LEGAL_GAP` |
-| CSI CSIBridge UAT | CSI product context visible; no official cross-link to the UAT host retained | `csiweb.cloud` operator `UNKNOWN` | key and written-authorization controls; no no-login route |
+| Observed CSIBridge UAT page | page exposes API-product/dashboard context but does not name a legal owner | `csiweb.cloud` operator `UNKNOWN` | observed key and written-authorization statements only; no no-login route |
 | SSE pages and rule | SSE is the named publisher | SSE official web property is the page operator; data-service contract operator terms `NOT_RETAINED` | product is licensed; `/repeal/` rule is historical/repealed, not current |
 | CIIS pages/manual | CIIS is the named product-site publisher | CIIS host visible; exact legal host/operator binding `NOT_RETAINED` | order/subscription only; no OSS grant |
 | SSI documentation/API schema | SSI is the named documentation publisher | SSI hosts visible; exact contract/operator binding `NOT_RETAINED` | account/key/bearer controls; no reuse grant |
 
 ### 3.2 Static evidence operation ledger
 
-The research note and this design note reconcile exactly **12 static evidence operations**: eight
-official pages/landing reads and four PDF/document reads, one retained object per operation. Every
-row is static-only and separate from the zero candidate-data ledger.
+The bounded review retains exactly **12 independent static evidence operations**: eight official
+pages/landing operations and four PDF/document operations. Each S1-S12 row has explicit values for
+the full packet axes. `NOT_RETAINED`, `UNKNOWN`, and `NOT_APPLICABLE` are evidence states, never
+inferred success. Static traffic is separate from the zero candidate-data ledger.
 
-| ID | Operation and pinned version/date | Owner / operator | Transport ledger | Legal ledger |
-| --- | --- | --- | --- | --- |
-| `S1` | CSI factsheet, 31 Jul 2026 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 document; status/MIME/redirect/final identity/auth/session/UA/WAF/rate/bytes `NOT_RETAINED` | notice/trademark only; caller/cache/redistribution `LEGAL_GAP` |
-| `S2` | CSI methodology PDF, publication date `NOT_RETAINED`, accessed 2026-08-24 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 document; all transport fields `NOT_RETAINED` | methodology control only; reuse `LEGAL_GAP` |
-| `S3` | CSI index-detail/download landing, accessed 2026-08-24 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | navigation only; route rights `LEGAL_GAP` |
-| `S4` | CSI UAT developer portal, accessed 2026-08-24 | CSI context / `csiweb.cloud` operator `UNKNOWN` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | key and written authorization; `AUTH_REQUIRED` + `LEGAL_GAP` |
-| `S5` | CSI equity calculation-rules PDF, publication date `NOT_RETAINED`, accessed 2026-08-24 | CSI / host operator `NOT_RETAINED` | static `GET`, 1 document; all transport fields `NOT_RETAINED` | calculation control only; reuse `LEGAL_GAP` |
-| `S6` | SSE historical-data products page, current read 2026-08-24 | SSE / SSE web operator | static `GET`, 1 page; all transport fields `NOT_RETAINED` | yearly subscription/licensed dissemination; `LEGAL_GAP` |
-| `S7` | SSE `/repeal/` ownership rule, effective/repeal dates `NOT_RETAINED`, historical/repealed | SSE / SSE web operator | static `GET`, 1 page; all transport fields `NOT_RETAINED` | historical control only; current restriction `UNKNOWN` |
-| `S8` | CIIS historical-data introduction, current read 2026-08-24 | CIIS / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | order/subscription; caller/redistribution `LEGAL_GAP` |
-| `S9` | CIIS product manual dated 2022, historical only; landing links 2026 manual | CIIS / host operator `NOT_RETAINED` | static `GET`, 1 document; all transport fields `NOT_RETAINED` | historical field aid, not current terms; `LEGAL_GAP` |
-| `S10` | SSI FastConnect overview, current read 2026-08-24 | SSI / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | account/approval posture; reuse `LEGAL_GAP` |
-| `S11` | SSI terms/environments, current read 2026-08-24 | SSI / host operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | key/secret/bearer controls; redistribution `LEGAL_GAP` |
-| `S12` | SSI DailyIndex schema, current read 2026-08-24 | SSI / `fc-data.ssi.com.vn` operator `NOT_RETAINED` | static `GET`, 1 page; all transport fields `NOT_RETAINED` | generic authenticated schema; CSI300 reuse `IDENTITY_GAP` + `LEGAL_GAP` |
+#### 3.2.1 Source, route, transport, and traffic ledger
 
-The exact reconciliation is `12 operations = 8 pages + 4 documents`; no raw response, candidate
-page, retry, redirect, or byte counter was retained. This is not a claim that providers have no data.
+| ID | Named owner | Index owner/calculation agent | Route operator | Canonical host/path template | Route/version/operation | Method | Auth posture | Session posture | UA posture | WAF posture | Status class | Complete MIME | Normalized MIME | Redirect/final identity | Static logical | Static physical | Static pages | Static documents | Static retries | Static redirects | Compressed bytes | Decompressed bytes | Rate policy | Concurrency policy | Native range/page/session |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S1 | CSI stated in document | CSI stated | NOT_RETAINED | oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000300factsheet.pdf | factsheet PDF / factsheet | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 0 | 1 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE: static factsheet |
+| S2 | CSI stated in document | CSI stated | NOT_RETAINED | oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000300_Index_Methodology_cn.pdf | methodology PDF / methodology | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 0 | 1 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE: static methodology |
+| S3 | NOT_RETAINED: landing does not bind owner | NOT_RETAINED | NOT_RETAINED | www.csindex.com.cn/en/indices/index-detail-download/000300 | HTML/JS landing / index-detail-download | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: underlying route behavior |
+| S4 | UNKNOWN: UAT page does not bind owner | NOT_RETAINED | UNKNOWN: csiweb.cloud host | uat-apim-developer.csiweb.cloud/GettingStarted | UAT HTML / API product discovery | GET (static read) | page states subscription key and written authorization for autonomous access | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: no data range/page/session |
+| S5 | CSI stated in document | CSI stated | NOT_RETAINED | oss-ch.csindex.com.cn/contract/cms_add/20240726155157-Calculation%20Rules%20for%20Equity%20Indices%20of%20China%20Securities%20Index%20Company%20Limited.pdf | calculation-rules PDF / equity-index rules | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 0 | 1 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE: static rules |
+| S6 | SSE stated in page | NOT_RETAINED: broad CSI product only | SSE web property observed | english.sse.com.cn/markets/dataservice/products/ | HTML / historical-data products | GET (static read) | subscription/yearly order stated | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: native range/page/session |
+| S7 | SSE stated in historical rule | NOT_RETAINED | SSE web property observed | www.sse.com.cn/lawandrules/sselawsrules/repeal/rules/c/c_20230418_5720138.shtml | HTML / historical repealed ownership clause | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE: legal page |
+| S8 | CIIS stated in page | CSI referenced; exact agent NOT_RETAINED | NOT_RETAINED | www.ciis.com.hk/hongkong/en/historicaldata1/his_introduction/index.shtml | HTML / historical-data introduction | GET (static read) | order/subscription workflow stated | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: native range/page/session |
+| S9 | CIIS stated in document | CSI referenced; exact agent NOT_RETAINED | NOT_RETAINED | www.ciis.com.hk/hongkong/en/uploadfiles/202211/07/2022110710413533120137.pdf | historical PDF / product manual 2022 | GET (static read) | order/subscription workflow stated | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 0 | 1 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE: static manual |
+| S10 | SSI stated in documentation | NOT_RETAINED | NOT_RETAINED | developers.ssi.com.vn/docs/getting-started/overview | HTML / FastConnect overview | GET (static read) | account/registration/approval posture stated | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: native range/page/session |
+| S11 | SSI stated in documentation | NOT_RETAINED | NOT_RETAINED | developers.ssi.com.vn/docs/getting-started/terms-and-environments | HTML / FastConnect terms | GET (static read) | API key/secret and bearer/account controls stated | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: native range/page/session |
+| S12 | SSI stated in documentation | NOT_RETAINED | NOT_RETAINED | fc-data.ssi.com.vn/Help/Api/POST-api-Market-GetDailyIndex | HTML / DailyIndex schema | GET (static read) | API key/secret and bearer/account controls stated | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | page field described; native range/session NOT_RETAINED |
+
+#### 3.2.2 Identity, semantic, coverage, and range ledger
+
+| ID | Requested identity | Provider code | Provider name | Raw/ETF/return identity | Currency | Unit | Adjustment/price-return semantics | Session date/timezone | Publication/retrieval timestamps | OHLC meanings | Optional volume meaning/unit | Type/precision/nullability | Correction/revision identity | Calendar/holiday behavior | Start/end bounds | Totals/pages/cursors | Gaps/duplicates/conflicts | Suspensions/non-trading | Current-bound lag | Inclusive filtering |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S1 | NOT_APPLICABLE: static evidence only | 000300 stated | CSI 300 stated | price/return labels stated; no response | RMB/CNY stated | index points stated | price-versus-return labels; exact adjustment NOT_RETAINED | NOT_RETAINED | factsheet date 31 Jul 2026; retrieval NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | launch date stated; history bounds NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S2 | NOT_APPLICABLE: static evidence only | 000300 stated | CSI 300 stated | price versus total/net-return semantics stated; no response | NOT_RETAINED | index points stated | methodology formula; response adjustment NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S3 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | landing title/navigation only | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S4 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | NOT_RETAINED: UAT page does not bind requested index | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S5 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | NOT_RETAINED | price-index calculation controls; response identity NOT_RETAINED | NOT_RETAINED | points semantics; response unit NOT_RETAINED | calculation rules; response adjustment NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S6 | NOT_APPLICABLE: static evidence only | NOT_RETAINED: broad SHSE-SZSE 300/CSI product | broad CSI/SHSE-SZSE 300 stated | raw-versus-return NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | earliest date 19 Dec 1990 stated; exact 000300 bound NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED: product page only |
+| S7 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | legal page only | NOT_APPLICABLE: legal page | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S8 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | CSI historical product referenced; exact requested response NOT_RETAINED | NOT_RETAINED | RMB coding aid in 2022 manual; exact response CNY NOT_RETAINED | field aid; exact response unit NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | product bounds NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S9 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | CSI historical product referenced; exact requested response NOT_RETAINED | NOT_RETAINED | RMB coding aid in 2022 manual; exact response CNY NOT_RETAINED | field aid; exact response unit NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | product bounds NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S10 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | generic market-data docs only | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S11 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | terms page only | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+| S12 | NOT_APPLICABLE: static evidence only | NOT_RETAINED | generic DailyIndex schema; CSI300 name NOT_RETAINED | generic index operation; raw/return identity NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | TradingDate/Time fields described; provider timezone NOT_RETAINED | NOT_RETAINED | schema fields not retained as CSI300 OHLC proof | NOT_APPLICABLE | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | schema request dates/page; provider bounds NOT_RETAINED | page/aggregate fields described; exact totals NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE | NOT_APPLICABLE |
+
+#### 3.2.3 Independent legal-axis ledger
+
+| ID | Automation | Caller return | Cache/storage/retention/deletion | Attribution | Commercial/derivative use | Redistribution/resale | Rate/retry/concurrency | Amendment | Revocation |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| S1 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | CSI notice/trademark only | NOT_GRANTED | NOT_GRANTED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S2 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | methodology control only | NOT_GRANTED | NOT_GRANTED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S3 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | navigation visibility only | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S4 | observed page states subscription key and written authorization for autonomous access | NOT_RETAINED | NOT_RETAINED | UNKNOWN: host/page owner not bound | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S5 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | calculation control only | NOT_GRANTED | NOT_GRANTED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S6 | subscription/yearly order stated | NOT_RETAINED | NOT_RETAINED | SSE ownership/product notice stated | licensed product scope NOT_RETAINED | licensed dissemination; exact reuse NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S7 | NOT_RETAINED: historical rule only | NOT_RETAINED | NOT_RETAINED | historical SSE ownership statement | UNKNOWN: historical/repealed evidence | UNKNOWN: historical/repealed evidence | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S8 | order/subscription stated | NOT_RETAINED | NOT_RETAINED | CIIS product-site/document notice | subscription scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S9 | order/subscription stated | NOT_RETAINED | NOT_RETAINED | CIIS product-site/document notice | subscription scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S10 | account/approval/key/secret/bearer posture stated | NOT_RETAINED | NOT_RETAINED | SSI documentation/schema notice | terms scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S11 | account/approval/key/secret/bearer posture stated | NOT_RETAINED | NOT_RETAINED | SSI documentation/schema notice | terms scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S12 | account/approval/key/secret/bearer posture stated | NOT_RETAINED | NOT_RETAINED | SSI documentation/schema notice | terms scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+
+The three same-shaped ledgers reconcile as `12 operations = 8 pages + 4 documents`; each row has
+one static logical operation and one retained object, while physical dispatch, retry, redirect, and
+byte states remain explicitly `NOT_RETAINED`. These static counts must never be read as candidate
+data calls or candidate bytes. Candidate route-family accounting starts separately below.
+
+### 3.3 Candidate route-family ledger
+
+Five candidate route families remain independent. The zeros below are candidate-data dispatches, not
+the static-operation counts in the S1-S12 ledgers.
+
+| Candidate route family | Static operation IDs / count | Candidate data logical / physical | Pages / retries / redirects | Bytes | Response identity | Disposition |
+| --- | --- | ---: | --- | --- | --- | --- |
+| CSI owner factsheet/methodology/landing/rules | `S1,S2,S3,S5` / 4 | `0 / 0` | `0 / 0 / 0` | `0 / 0` | no response retained | `IDENTITY_EVIDENCE_ONLY` |
+| Observed CSI CSIBridge UAT page | `S4` / 1 | `0 / 0` | `0 / 0 / 0` | `0 / 0` | no response retained | `AUTH_REQUIRED` + `IDENTITY_GAP` + `LEGAL_GAP` |
+| SSE historical products and legal evidence | `S6,S7` / 2 | `0 / 0` | `0 / 0 / 0` | `0 / 0` | no response retained | `COMMERCIAL_LEAD` + `SEMANTICS_GAP` |
+| CIIS historical products | `S8,S9` / 2 | `0 / 0` | `0 / 0 / 0` | `0 / 0` | no response retained | `COMMERCIAL_LEAD` + `SEMANTICS_GAP` |
+| SSI DailyIndex | `S10,S11,S12` / 3 | `0 / 0` | `0 / 0 / 0` | `0 / 0` | no response retained | `AUTH_REQUIRED` + `IDENTITY_GAP` |
 
 ## 4. Identity and semantic gates for a future source
 
@@ -159,8 +212,9 @@ bound lag.
 and unserved/unknown bounds. The caller cannot turn a recent-only product into `2013-current` by
 assuming earlier data or concatenating another source.
 
-One source wins the whole request. A strict request never combines CSI and SSE/CIIS/SSI dates, uses
-one source's OHLC with another's close, or fills a missing page from ASHR or a basket. Any identity
+One candidate route family wins the whole request. SSE and CIIS are independent families and neither
+repairs the other unless one primary source binds an exact joint route set. A strict request never
+combines CSI, SSE, CIIS, or SSI dates, uses one source's OHLC with another's close, or fills a missing page from ASHR or a basket. Any identity
 mismatch, late-page failure, conflicting date, unknown bound, revision conflict, or budget
 exhaustion discards all private rows and returns no partial/false-complete/zero-filled result.
 
@@ -226,16 +280,16 @@ cookies, body, token, or arbitrary provider exception text.
 
 ## 7. Legal and runtime posture
 
-| Axis | CSI owner | SSE/CIIS product | SSI FastConnect | Status |
-| --- | --- | --- | --- | --- |
-| Automation | key-controlled CSI portal; AI/autonomous use requires written authorization | subscription/order and controlled dissemination | account, approval, API key/secret and bearer token | `AUTH_REQUIRED` + `LEGAL_GAP` |
-| Caller return | no OSS grant in factsheet/methodology | no public grant; licensed product posture | no OSS caller-return grant | `LEGAL_GAP` |
-| Cache/storage/retention/deletion | not granted | contract required | contract required | `LEGAL_GAP` |
-| Attribution/trademark | notice/trademark only | ownership notice only | provider terms | not a reuse grant |
-| Commercial/derivative | not granted | licence scope not retained | not granted | `LEGAL_GAP` |
-| Redistribution/resale | not granted | licensed-vendor/subscription model | not granted | `LEGAL_GAP` |
-| Rate/retry/concurrency | route policy not retained | product policy not retained | rate headers documented; numeric route rights not retained | `RATE_POLICY_GAP` |
-| Amendment/revocation | exact contract not retained | subscription/licence terms not retained | account may be suspended; data rights not retained | `LEGAL_GAP` |
+| Axis | CSI materials / observed UAT page | SSE data service | CIIS data service | SSI FastConnect | Status |
+| --- | --- | --- | --- | --- | --- |
+| Automation | observed UAT page states key and written authorization; page/host owner unknown | subscription/order and controlled dissemination | order/subscription workflow; exact terms `NOT_RETAINED` | account, approval, API key/secret and bearer token | `AUTH_REQUIRED` + `LEGAL_GAP` |
+| Caller return | no OSS grant in factsheet/methodology; UAT page has no grant | no public grant; licensed service posture | no public grant; order terms required | no OSS caller-return grant | `LEGAL_GAP` |
+| Cache/storage/retention/deletion | not granted; UAT page terms `NOT_RETAINED` | contract required | contract required | contract required | `LEGAL_GAP` |
+| Attribution/trademark | CSI notice/trademark only; UAT page owner `UNKNOWN` | SSE ownership notice only | CIIS product-site notice only | provider terms | not a reuse grant |
+| Commercial/derivative | not granted; UAT page scope `NOT_RETAINED` | licence scope not retained | subscription scope not retained | not granted | `LEGAL_GAP` |
+| Redistribution/resale | not granted; UAT page scope `NOT_RETAINED` | licensed-vendor/subscription model | order/subscription rights not granted | not granted | `LEGAL_GAP` |
+| Rate/retry/concurrency | key/product policy not retained; UAT page policy only observed | product policy not retained | service/order policy not retained | rate headers documented; numeric route rights not retained | `RATE_POLICY_GAP` |
+| Amendment/revocation | exact contracts not retained; UAT page policy owner `UNKNOWN` | subscription/licence terms not retained | subscription/order terms not retained | account may be suspended; data rights not retained | `LEGAL_GAP` |
 
 The `/repeal/` SSE rule is historical ownership evidence only, not a current restriction. The official
 SSE controls and CSI/SSI notices are not permission for this open-source library. Written permission
@@ -308,7 +362,7 @@ ancestry, exclusions, and paths; post a clean no-capability `SOURCE-GAP` resolut
 - [CSI 300 official factsheet](https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000300factsheet.pdf)
 - [CSI 300 methodology](https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000300_Index_Methodology_cn.pdf)
 - [CSI index-detail/download landing](https://www.csindex.com.cn/en/indices/index-detail-download/000300)
-- [CSI developer portal](https://uat-apim-developer.csiweb.cloud/GettingStarted)
+- [Observed UAT developer page; host/operator unknown](https://uat-apim-developer.csiweb.cloud/GettingStarted)
 - [CSI equity-index calculation rules](https://oss-ch.csindex.com.cn/contract/cms_add/20240726155157-Calculation%20Rules%20for%20Equity%20Indices%20of%20China%20Securities%20Index%20Company%20Limited.pdf)
 - [SSE historical data products](https://english.sse.com.cn/markets/dataservice/products/)
 - [SSE market-data ownership rule](https://www.sse.com.cn/lawandrules/sselawsrules/repeal/rules/c/c_20230418_5720138.shtml)
@@ -323,7 +377,7 @@ ancestry, exclusions, and paths; post a clean no-capability `SOURCE-GAP` resolut
 - #232 is `SOURCE_GAP_CLOSURE`; the raw CSI 300 CNY history chain remains empty.
 - Static evidence is reconciled as 12 independent operations: 8 pages and 4 documents; candidate dispatch remains zero.
 - CSI identity/points/CNY evidence passes only as owner control, not as a reusable history route.
-- SSE/CIIS are official subscription products and the SSE `/repeal/` rule is historical; SSI is authenticated and generic; no keyless qualified unit exists.
+- SSE and CIIS are independent subscription/order candidates and the SSE `/repeal/` rule is historical; SSI is authenticated and generic; no keyless qualified unit exists.
 - Identity, raw-versus-return semantics, OHLC/volume, coverage, budgets, and reuse rights remain conjunctive gaps.
 - Future RED/API seams include immutable carriers, ordering/filtering, cache identity, zero-source/lazy lifecycle, and bounded diagnostics.
 - Existing `^CSI300 -> ASHR` USD/share proxy behavior is preserved exactly.
