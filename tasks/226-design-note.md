@@ -74,8 +74,9 @@ claim that the provider has no private, commercial, or separately licensed data.
 The matching sanitized evidence ledger is research §3.2 and is normative for every row in this
 inventory. For each exact unit, candidate dispatch is `NOT_PROBED` with
 `logical/physical/pages/retries/redirects/compressed_bytes/decompressed_bytes = 0/0/0/0/0/0/0`;
-method, status class, complete MIME, effective route, redirect, auth/session/UA/WAF/rate, and
-unproven rights axes remain explicit `NOT_RETAINED` rather than positive evidence. The design note
+the first candidate route/transport slot `route_version` is `NOT_RETAINED`, as are method, status
+class, complete MIME, effective route, redirect, auth/session/UA/WAF/rate, and unproven rights axes;
+they remain explicit `NOT_RETAINED` rather than positive evidence. The design note
 does not promote an uncalled UI action or static document into a data response.
 
 The later API gate must use `(session, contract_code)` as the unique composite row key and order
@@ -174,11 +175,11 @@ declared-partial bounds, reconciled pages/totals, authoritative versus inconclus
 redirect/MIME/status/byte behavior, an atomic global-budget ledger, and owner rights evidence. No
 RED test, public model, API snapshot, or release artifact is a source reopen prerequisite.
 
-After that source-specific design PASS, hold a separate API/model decision; it does not authorize
-tests or code. Only a subsequent, separately approved RED-first implementation review may freeze
-public row/result types, coverage carriers, warnings/exceptions, exports, DataFrame attrs,
-serialization, cache behavior, compatibility docs, tests and CHANGELOG. The complete future
-API/RED/release matrix is §7 below; it is not authorized now.
+After that source-specific design PASS, hold a separate API/model decision that freezes only the
+public contract; it does not authorize tests or code. The public contract includes row/result types,
+signatures, coverage/diagnostics, units, and docs. Only a subsequent, separately approved RED-first
+review authorizes tests; implementation/code still requires green results and code review. The
+complete future API/RED/release matrix is §7 below; it is not authorized now.
 
 ## 7. Future API/RED/release matrix (not authorized)
 
@@ -188,18 +189,18 @@ capability is created by this correction.
 
 | Future gate | Required cases after source qualification and separate API decision |
 | --- | --- |
-| All-contract/exact-contract success | All-contract and exact-contract success; inclusive date bounds; lazy construction; invalid bounds/product/contract paths fail before cache lookup and network, with the later RED asserting an untouched cache; exact `VN30F` identity and optional contract validation. |
+| All-contract/exact-contract success | All-contract and exact-contract success; inclusive date bounds; caller-malformed bounds/product/contract/date inputs fail before cache lookup and network, with the later RED asserting an untouched cache; malformed provider responses are evaluated only after dispatch and fail before cache insertion or public return; exact `VN30F` identity and optional contract validation. |
 | Identity/fields | Response-backed product, code, expiry, Vietnam session/calendar, source, units/scale/precision, OHLC finite/non-bool invariants, non-negative integral contract volume/OI, settlement/DSP/FSP meaning, ordering, `(session, contract_code)` identity, identical/conflicting duplicates, structural required-field absence, per-row nullability and revisions. |
 | Coverage/no-false-absence | `FULL`, provider-declared `QUALIFIED_PARTIAL`, expired-contract retention, current-date lag, nonpublication, authoritative empty, unknown/inconclusive empty, totals/pages/cursors, page identity mismatch, gaps, duplicate/conflict, boundaries and revisions. |
 | Wrong/malformed negatives | Wrong/mixed product or contract, cash index, continuous/rolled/front-month, tape/intraday, inferred expiry/session, malformed envelope/MIME/status/redirect/WAF, missing identity, invalid dates/expiry, bool/non-finite/broken OHLC, negative/non-integral counts, unit mismatch, structurally absent required field and invalid per-row null. |
 | Atomic runtime/diagnostics | Sequential `max_concurrency=1`; logical/physical/page/retry/redirect reservation and charge; compressed/decompressed byte caps; global-budget exhaustion; malformed/mismatched page consumption; atomic no-partial behavior; one-source-win/no-stitch; bounded sanitized attempts/warnings; retrieval timestamp; no raw URL/query/body/header/cookie/provider prose/secret. |
-| API/units/docs gate | Later public signatures and API snapshots; exact session/date-input semantics; price/volume/OI/settlement units, scales, precision, and nullability; source/provenance and sanitized error/warning carriers; docs/examples/tutorial/architecture/skill/CHANGELOG consistency; no undocumented public token. |
+| API/units/docs gate | Later public signatures and API snapshots; exact session/date-input semantics; price/volume/OI/settlement units, scales, precision, and nullability; source/provenance and sanitized error/warning carriers; explicit `docs/api.md` and `docs/units.md` contracts plus examples/tutorial/architecture/skill/CHANGELOG consistency; no undocumented public token. |
 | Model/API/compatibility/release | Later immutable row/result and coverage decision; DataFrame attrs/provenance; serialization/repr/equality; model/export/error snapshots; existing-domain compatibility; release artifacts; focused/full offline tests; import/version; isolated wheel/sdist; blacklist/secret/diff/path/object/clean-tree and exact remote scope/ancestry gates. |
 
-Source qualification comes first. A new API/model decision then specifies the public carriers and
-units/docs contract; it is separate from RED authorization. Only after a later RED-first approval,
-RED/GREEN, and code review may these cases become executable tests. No public model, warning,
-exception, export or release claim is frozen here.
+Source qualification comes first. A new API/model decision then specifies and freezes the public
+carriers and units/docs contract; it is separate from RED authorization. Only a later RED-first
+approval authorizes tests; after RED/GREEN and code review, implementation may proceed. No public
+model, warning, exception, export or release claim is frozen here.
 
 ## 8. Lifecycle handoff
 

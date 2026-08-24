@@ -125,7 +125,8 @@ The matrix above is also the exact retained-unit inventory. This ledger makes th
 per-unit evidence axes explicit instead of relying on one global `NOT_RETAINED` row. `NR` means
 `NOT_RETAINED`; `NP` means `NOT_PROBED`. Static page/document facts are retained only in the
 `identity/field/coverage` cell. No unretained transport, access, rate, or rights axis is used as a
-positive qualification claim.
+positive qualification claim. `route_version` is the first candidate route/transport slot and is
+`NOT_RETAINED` for every unit.
 
 The research channel did not dispatch any candidate data/history operation. Therefore every unit
 has the same candidate-dispatch ledger
@@ -133,22 +134,22 @@ has the same candidate-dispatch ledger
 The zero is a count of unmade candidate dispatches, not a claim of zero source rows or zero traffic
 on the official website used for static reading.
 
-| Unit ID; owner; exact route/operation | Candidate transport: method/status/complete MIME/effective route/redirect | Candidate ledger: L/P/pages/retries/redirects/cbytes/dbytes | Access: auth/session/UA/WAF/rate | Response-backed static identity/fields/coverage facts | Observed non-permission owner facts | Rights axes: automation/caller-return/storage/retention/attribution/commercial/derivative/redistribution/amendment/revocation | Total |
+| Unit ID; owner; exact route/operation | Candidate route/transport: route_version/method/status/complete MIME/effective route/redirect | Candidate ledger: L/P/pages/retries/redirects/cbytes/dbytes | Access: auth/session/UA/WAF/rate | Response-backed static identity/fields/coverage facts | Observed non-permission owner facts | Rights axes: automation/caller-return/storage/retention/attribution/commercial/derivative/redistribution/amendment/revocation | Total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `HNX-PRODUCT-HTML`; HNX; `https://www.hnx.vn/vi-vn/phai-sinh/san-pham.html` / product navigation | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static product/navigation facts retained; no D1 rows, contract/session totals, or history bounds | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
-| `HNX-RESULT-HTML`; HNX; `https://www.hnx.vn/vi-vn/phai-sinh/ket-qua-giao-dich.html` / date-filtered result table | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static table headings retain product/expiry/OHLC/volume/OI/settlement concepts; selected-day surface, no bulk bounds/revision contract | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
-| `HNX-LANDING-HTML`; HNX; `https://hnx.vn/vi-vn/phai-sinh.html` / derivatives navigation | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static navigation only; no exact history operation or response schema | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `NOT_PROBED` |
-| `HNX-PUBLICATION-HTML`; HNX; `https://portal.hnx.vn/vi-vn/phai-sinh/thong-tin-cong-bo.html` / publication index | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static disclosure/document navigation; no reconciled D1 row operation | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
-| `HNX-CATALOGUE-DER-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/du-lieu-cung-cap-der.html` / derivatives service catalogue | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static catalogue/package categories retained; historical retention/backfill and exact VN30F universe not bound | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
-| `HNX-TECH-YCKT-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html` / technical guide | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static service-family/InfoGate/InfoFile lead retained; no route schema or history response | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
-| `HNX-REG-SHDK-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-shdk.html` / registration flow | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static request/fee/contract-signing flow retained; no entitlement for this library | Observed fee/contract flow; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
-| `HNX-OVERVIEW-SGTC-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-sgtc.html` / service overview | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static fee/package service posture retained; no exact history route or retention | Observed fee/package service posture; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
-| `HNX-PACKAGE-2026-PDF`; HNX; `https://owa.hnx.vn/ftp/PORTALNEW/FileContent/HNX_Danh%20muc%20goi%20tin%20va%20bang%20gia%20dich%20vu%20CCTT%2820260105_145538_848%29.pdf` / derivatives EOD package description | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static package field concepts retained; historical span, revisions and exact entitlement unretained | Observed commercial package/field pricing; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
-| `HNX-BOARD-HTML`; HNX; `https://banggia.hnx.vn/` / current market board | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static current-board identity/price control; no historical D1 bounds/revisions | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
-| `VSD-PRODUCT-HTML`; VSDC; `https://www.vsd.vn/en/thong-tin-san-pham` / product and DSP/FSP page | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static VN30 futures contract/maturity/settlement concepts retained; no OHLC/volume/OI history | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
-| `VSD-CONTRACT-LIST`; VSDC; `https://vsd.vn/en/ad/141951` / historical contract-list notice | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static product/code/ISIN/first-last-final-payment column concepts retained; metadata only | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
-| `VSD-DSP-FSP-UI`; VSDC; `https://www.vsd.vn/gia-thanh-toan/search` / undocumented UI action | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static UI route lead only; payment-date/product identifier do not prove trading-session/code join | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `TRANSPORT_INCONCLUSIVE` |
-| `VSD-MATURITY-UI`; VSDC; `https://www.vsd.vn/lich-dao-han-thanh-toan/changepage` / maturity schedule UI action | `NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static UI route lead only; maturity/payment metadata, not per-session D1 | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+| `HNX-PRODUCT-HTML`; HNX; `https://www.hnx.vn/vi-vn/phai-sinh/san-pham.html` / product navigation | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static product/navigation facts retained; no D1 rows, contract/session totals, or history bounds | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+| `HNX-RESULT-HTML`; HNX; `https://www.hnx.vn/vi-vn/phai-sinh/ket-qua-giao-dich.html` / date-filtered result table | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static table headings retain product/expiry/OHLC/volume/OI/settlement concepts; selected-day surface, no bulk bounds/revision contract | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `HNX-LANDING-HTML`; HNX; `https://hnx.vn/vi-vn/phai-sinh.html` / derivatives navigation | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static navigation only; no exact history operation or response schema | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `NOT_PROBED` |
+| `HNX-PUBLICATION-HTML`; HNX; `https://portal.hnx.vn/vi-vn/phai-sinh/thong-tin-cong-bo.html` / publication index | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static disclosure/document navigation; no reconciled D1 row operation | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `HNX-CATALOGUE-DER-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/du-lieu-cung-cap-der.html` / derivatives service catalogue | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static catalogue/package categories retained; historical retention/backfill and exact VN30F universe not bound | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `HNX-TECH-YCKT-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-YCKT.html` / technical guide | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static service-family/InfoGate/InfoFile lead retained; no route schema or history response | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-REG-SHDK-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-shdk.html` / registration flow | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static request/fee/contract-signing flow retained; no entitlement for this library | Observed fee/contract flow; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-OVERVIEW-SGTC-HTML`; HNX; `https://hnx.vn/vi-vn/dich-vu-cctt/huong-dan-yeu-cau-ky-thuat-sgtc.html` / service overview | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static fee/package service posture retained; no exact history route or retention | Observed fee/package service posture; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-PACKAGE-2026-PDF`; HNX; `https://owa.hnx.vn/ftp/PORTALNEW/FileContent/HNX_Danh%20muc%20goi%20tin%20va%20bang%20gia%20dich%20vu%20CCTT%2820260105_145538_848%29.pdf` / derivatives EOD package description | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static package field concepts retained; historical span, revisions and exact entitlement unretained | Observed commercial package/field pricing; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `LEGAL_GAP` |
+| `HNX-BOARD-HTML`; HNX; `https://banggia.hnx.vn/` / current market board | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static current-board identity/price control; no historical D1 bounds/revisions | NR | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `COVERAGE_GAP` |
+| `VSD-PRODUCT-HTML`; VSDC; `https://www.vsd.vn/en/thong-tin-san-pham` / product and DSP/FSP page | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static VN30 futures contract/maturity/settlement concepts retained; no OHLC/volume/OI history | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+| `VSD-CONTRACT-LIST`; VSDC; `https://vsd.vn/en/ad/141951` / historical contract-list notice | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static product/code/ISIN/first-last-final-payment column concepts retained; metadata only | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
+| `VSD-DSP-FSP-UI`; VSDC; `https://www.vsd.vn/gia-thanh-toan/search` / undocumented UI action | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static UI route lead only; payment-date/product identifier do not prove trading-session/code join | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `TRANSPORT_INCONCLUSIVE` |
+| `VSD-MATURITY-UI`; VSDC; `https://www.vsd.vn/lich-dao-han-thanh-toan/changepage` / maturity schedule UI action | `NR/NR/NR/NR/NR/NR`; `NP` | `0/0/0/0/0/0/0` | `NR/NR/NR/NR/NR` | Static UI route lead only; maturity/payment metadata, not per-session D1 | Observed copyright notice; not permission | `NR/NR/NR/NR/NR/NR/NR/NR/NR/NR` | `FIELD_GAP` |
 
 The observed non-permission facts column is not one of the rights axes. A fee, package/pricing
 description, or copyright notice is evidence to resolve with the owner; it is neither a
@@ -317,10 +318,12 @@ following in one reviewable evidence packet:
 
 All five groups are conjunctive. A VSDC metadata success cannot repair an HNX row failure; a current
 HNX table cannot repair missing history; and a legal or budget gap keeps the runtime chain empty.
-Source qualification does not authorize API/model selection or RED. It is followed by a separate
-API/model decision; that decision does not authorize tests or code. Only a later, separately approved
-RED-first implementation review may authorize them. The full future API/RED/release matrix is §10;
-it is not an evidence prerequisite and is not authorized by this packet.
+Source qualification does not freeze a public API/model contract or authorize tests/code. A separate
+API/model decision freezes only that public contract—row/result carriers, signatures, coverage and
+diagnostics, units, and docs—and does not authorize tests or code. A separate RED-first approval
+authorizes tests only; implementation/code remains gated on green results and code review. The full
+future API/RED/release matrix is §10; it is not an evidence prerequisite and is not authorized by
+this packet.
 
 ## 10. Future API/RED/release matrix (not authorized)
 
@@ -330,19 +333,19 @@ capability is created now.
 
 | Future gate | Required synthetic/offline cases after source qualification and a separate API decision |
 | --- | --- |
-| All-contract and exact-contract success | All-contract history and exact `contract` filter success; inclusive date bounds; lazy construction; invalid bounds/product/contract paths fail before cache lookup and network, with the later RED asserting an untouched cache; exact `VN30F` product validation and no caller-label identity. |
+| All-contract and exact-contract success | All-contract history and exact `contract` filter success; inclusive date bounds; caller-malformed bounds/product/contract/date inputs fail before cache lookup and network, with the later RED asserting an untouched cache; malformed provider responses are evaluated only after dispatch and fail before cache insertion or public return; exact `VN30F` product validation and no caller-label identity. |
 | Identity and field semantics | Response-backed product, contract code, expiry, Vietnam session/calendar, source, quote unit/scale/precision, OHLC finite/non-bool invariants, non-negative integral contract volume and OI, settlement/DSP/FSP meaning, ordering, `(session, contract_code)` uniqueness, identical/conflicting duplicates, structural required-field absence, per-row finite nullability, and revision/correction cases. |
 | Coverage and no-false-absence | Requested `FULL`, provider-declared `QUALIFIED_PARTIAL`, expired-contract retention, current-date lag, nonpublication, authoritative empty, unknown/inconclusive empty, provider totals/pages/cursors, page identity mismatch, gaps, duplicate/conflict, date boundaries, and revision behavior. |
 | Wrong and malformed inputs | Wrong/mixed product or contract, cash index, continuous/rolled/front-month, tape/intraday, inferred expiry/session, malformed envelope/MIME/status/redirect/WAF, missing identity, invalid date/expiry, bool/non-finite/broken OHLC, negative/non-integral counts, unit mismatch, structurally absent required field, invalid per-row null, and provider/schema mismatch. |
 | Atomic runtime and diagnostics | Sequential `max_concurrency=1`; logical/physical/page/retry/redirect reservation and charge; compressed/decompressed byte caps; global-budget exhaustion; malformed/mismatched page consumption; atomic no-partial behavior; one-source-win/no-stitch; bounded sanitized attempts/warnings; retrieval timestamp; no raw URL/query/body/header/cookie/provider prose/secret; composite-key ordering and duplicate rejection. |
-| API/units/docs gate | Later public signatures and API snapshots; exact session/date-input semantics; price/volume/OI/settlement units, scales, precision, and nullability; source/provenance and sanitized error/warning carriers; docs/examples/tutorial/architecture/skill/CHANGELOG consistency; no undocumented public token. |
+| API/units/docs gate | Later public signatures and API snapshots; exact session/date-input semantics; price/volume/OI/settlement units, scales, precision, and nullability; source/provenance and sanitized error/warning carriers; explicit `docs/api.md` and `docs/units.md` contracts plus examples/tutorial/architecture/skill/CHANGELOG consistency; no undocumented public token. |
 | Model/API/release compatibility | Later immutable row/result and coverage decision; DataFrame attrs and provenance; serialization/repr/equality; public model/export/error snapshots; existing-domain compatibility; release artifacts; focused/full offline tests; import/version; isolated wheel/sdist; blacklist/secret/diff/path/object/clean-tree and exact remote-anchor/ancestry/scope gates. |
 
 The source-only reopen in §9 does not require this matrix to pass. Once one source qualifies, a
-fresh API/model decision must select the public carriers and their units/docs contract; that decision
-is separate from RED authorization. Only a later RED-first approval may make these cases executable
-tests. No public API name, model, warning, exception, export, or release claim is frozen by this
-matrix.
+fresh API/model decision must select and freeze the public carriers and their units/docs contract;
+that decision is separate from RED authorization. Only a later RED-first approval may authorize the
+executable tests; implementation/code still requires green results and code review. No public API
+name, model, warning, exception, export, or release claim is frozen by this matrix.
 
 ## 11. Future API boundary
 
@@ -362,8 +365,9 @@ schema, warning token, cache, live route, RED test, coverage claim, or runtime c
 A later qualified design must decide immutable row/result types, inclusive date semantics, optional
 contract validation, coverage bounds, provenance, DataFrame attrs, serialization/repr/equality,
 public snapshots, sanitized errors, exact units/scales/precision, and the API/docs contract before
-any implementation. Invalid product/contract/date/bounds calls must fail before cache lookup and
-network; that is a later RED/API gate, not a capability added here.
+any implementation. Caller-malformed product/contract/date/bounds calls must fail before cache lookup
+and network. A malformed provider response can only fail after a real dispatch and must fail before
+cache insertion or public return. Both are later API/RED gates, not capabilities added here.
 
 ## 12. Lifecycle and publication gate
 
