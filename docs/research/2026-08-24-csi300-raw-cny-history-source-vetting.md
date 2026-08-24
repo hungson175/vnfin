@@ -24,8 +24,9 @@ web search was:
 ```
 
 No blacklisted or derivative result was opened, cited, compared, installed, imported, or used. The
-research uses only official CSI, SSE, CIIS, SSI, and exchange/regulator-owned material. Search
-results that were not official primary evidence were discarded. A missing licence, route, field,
+corpus is split between official primary CSI, SSE, CIIS, SSI, and exchange/regulator material and
+one observed UAT lead whose owner/operator is `UNKNOWN`. The UAT lead is not official evidence or a
+provider qualification; other results that were not named primary evidence were discarded. A missing licence, route, field,
 or response identity is recorded as a gap, never inferred from a chart, factsheet, filename, or
 provider name.
 
@@ -164,7 +165,7 @@ inferred success. Static traffic is separate from the zero candidate-data ledger
 #### 4.2.1 Source, route, transport, and traffic ledger
 
 | ID | Named publisher | Legal owner | Index owner/calculation agent | Route operator | Canonical host/path template | Route/operation | Version state | Method | Auth posture | Session posture | UA posture | WAF posture | Status class | Complete MIME | Normalized MIME | Redirect/final identity | Static logical | Static physical | Static pages | Static documents | Static retries | Static redirects | Compressed bytes | Decompressed bytes | Rate policy | Concurrency policy | Native range/page/session |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S1 | CSI stated in document | NOT_RETAINED: publisher named; legal owner not stated | CSI stated | NOT_RETAINED | oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000300factsheet.pdf | factsheet PDF / factsheet | NOT_RETAINED: document version not stated | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 0 | 1 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE: static factsheet |
 | S2 | CSI stated in document | NOT_RETAINED: publisher named; legal owner not stated | CSI stated | NOT_RETAINED | oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000300_Index_Methodology_cn.pdf | methodology PDF / methodology | NOT_RETAINED: methodology version not stated | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 0 | 1 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_APPLICABLE: static methodology |
 | S3 | NOT_RETAINED: landing does not bind owner | NOT_RETAINED: landing does not state legal owner | NOT_RETAINED | NOT_RETAINED | www.csindex.com.cn/en/indices/index-detail-download/000300 | HTML/JS landing / index-detail-download | NOT_RETAINED: landing version not stated | GET (static read) | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | 1 | NOT_RETAINED | 1 | 0 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: underlying route behavior |
@@ -206,11 +207,11 @@ inferred success. Static traffic is separate from the zero candidate-data ledger
 | S5 | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | calculation control only | NOT_RETAINED: no permission statement retained | NOT_RETAINED: no permission statement retained | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
 | S6 | subscription/yearly order stated | NOT_RETAINED | NOT_RETAINED | SSE ownership/product notice stated | licensed product scope NOT_RETAINED | licensed dissemination; exact reuse NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
 | S7 | NOT_RETAINED: historical rule only | NOT_RETAINED | NOT_RETAINED | historical SSE ownership statement | UNKNOWN: historical/repealed evidence | UNKNOWN: historical/repealed evidence | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
-| S8 | order/subscription stated | NOT_RETAINED | NOT_RETAINED | CIIS product-site/document notice | subscription scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
-| S9 | order/subscription stated | NOT_RETAINED | NOT_RETAINED | CIIS product-site/document notice | subscription scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
-| S10 | account/registration/approval posture stated; key/secret/bearer NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | SSI documentation/schema notice | terms scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
-| S11 | terms page states API key/secret and bearer/account controls | NOT_RETAINED | NOT_RETAINED | SSI documentation/schema notice | terms scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
-| S12 | schema page states API key/secret and bearer/account controls | NOT_RETAINED | NOT_RETAINED | SSI documentation/schema notice | terms scope NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S8 | introduction page states order/subscription workflow | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: introduction page does not state attribution/owner | NOT_RETAINED: commercial scope not stated on introduction page | NOT_RETAINED | introduction page rate/retry/concurrency NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S9 | manual states order/subscription workflow | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: manual does not state attribution/owner | NOT_RETAINED: commercial scope not stated in manual | NOT_RETAINED | manual rate/retry/concurrency NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S10 | overview states account/registration/approval; key/secret/bearer NOT_RETAINED | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: overview does not state attribution/owner | NOT_RETAINED: commercial scope not stated on overview | NOT_RETAINED | overview rate/retry/concurrency NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S11 | terms page states API key/secret and bearer/account controls | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: terms page does not state attribution/owner | NOT_RETAINED: commercial scope not stated on terms page | NOT_RETAINED | terms page rate/retry/concurrency NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
+| S12 | schema page states API key/secret and bearer/account controls | NOT_RETAINED | NOT_RETAINED | NOT_RETAINED: schema page does not state attribution/owner | NOT_RETAINED: commercial scope not stated on schema page | NOT_RETAINED | schema page rate/retry/concurrency NOT_RETAINED | NOT_RETAINED | NOT_RETAINED |
 
 The three same-shaped ledgers reconcile as `12 operations = 8 pages + 4 documents`; each row has
 one static logical operation and one retained object, while physical dispatch, retry, redirect, and
@@ -274,7 +275,7 @@ raw bodies, headers, cookies, query-bearing URLs, tokens, or arbitrary provider 
 | Candidate route family | Static operation IDs / count | Candidate data logical / physical | Candidate pages / documents / retries / redirects | Candidate compressed / decompressed bytes | Response identity | Disposition |
 | --- | --- | ---: | --- | --- | --- | --- |
 | CSI owner factsheet/methodology/landing/rules | `S1,S2,S3,S5` / 4 | `0 / 0` | `0 / 0 / 0 / 0` | `0 / 0` | no response retained | `IDENTITY_EVIDENCE_ONLY` |
-| Observed UAT page (operator unknown) | `S4` / 1 | `0 / 0` | `0 / 0 / 0 / 0` | `0 / 0` | no response retained | `AUTH_REQUIRED` + `LEGAL_GAP` |
+| Observed UAT page (operator unknown) | `S4` / 1 | `0 / 0` | `0 / 0 / 0 / 0` | `0 / 0` | no response retained | `AUTH_REQUIRED` + `IDENTITY_GAP` + `LEGAL_GAP` |
 | SSE historical products and legal evidence | `S6,S7` / 2 | `0 / 0` | `0 / 0 / 0 / 0` | `0 / 0` | no response retained | `COMMERCIAL_LEAD` + `SEMANTICS_GAP` |
 | CIIS historical products | `S8,S9` / 2 | `0 / 0` | `0 / 0 / 0 / 0` | `0 / 0` | no response retained | `COMMERCIAL_LEAD` + `SEMANTICS_GAP` |
 | SSI DailyIndex | `S10,S11,S12` / 3 | `0 / 0` | `0 / 0 / 0 / 0` | `0 / 0` | no response retained | `AUTH_REQUIRED` + `IDENTITY_GAP` |
