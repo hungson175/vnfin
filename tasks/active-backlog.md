@@ -609,8 +609,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `10d36a3452df0a1154db9f2108862b83150fcb34`, clean range `001cfd1..4bb4db8`, and BLOCK-first
   receipt commit `193aa0d28d7c8a9c16ed516ca31b5d430572b4ff` are retained. BLOCK delivery `#788089ee`;
   report `reviews/review-202608241149-issue226-final-narrow-rereview.md` at reviewer `5538019`.
-  Final docs content anchor is `157148b8b0d92a111a30e023bec70e9c05ccfae8`; clean base-to-content
-  range is `001cfd1..157148b`. F1-F4 are addressed: `route_version` is explicit `NOT_RETAINED`,
+  Final docs content anchor is `c70065b3aa0cd24f4689b0f5006e0d8ff2d4e21f`; clean base-to-content
+  range is `001cfd1..c70065b`. F1-F4 are addressed: `route_version` is explicit `NOT_RETAINED`,
   API/model freezes only the public contract while separate RED authorizes tests only, caller/provider
   malformed timing is explicit, and `docs/api.md` plus `docs/units.md` are named gates. Preserve
   `SOURCE-GAP CLOSURE`, the empty chain, #202 separation, #227 queue, and no probe, RED, code, push,
