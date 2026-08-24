@@ -602,16 +602,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#229 — DESIGN_BLOCKED (2026-08-24, exact handoff `ba1b0a62`).** Actor
-  `vnfin-oss-reviewer`; next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
-  `5b8d2f8`, public receipt `issuecomment-5391811465`; clean base
-  `d9bcf0478336aa1fb906e88d9d72f7a370911da5`; submitted docs anchor `5979aa2`; reviewed head
-  `ba1b0a62e85893f2dd8b6e53cdbdf18c60dc7103`. Reviewer report
-  `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241432-issue229-design-source-gate.md`
-  is committed at `5471b44ad882452c03f63eff750b4dd5f9e00594`; verified delivery receipt is
-  `f0c10bce`. BLOCK records scanner-dependent citations, July evidence contradiction, incomplete
-  legal/transport/RED contracts, and stale lifecycle wording. Preserve `SOURCE-GAP CLOSURE`, the
-  empty history chain, present-state-only `index_constituents`, and no probe/RED/API-model/code/
+- **#229 — DESIGN_CORRECTION (2026-08-24, corrected docs anchor `99c09d2b`).** Correction actor
+  `vnfin-oss`; review-handoff actor `vnfin-oss-reviewer`; next action
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `5b8d2f8`, public receipt
+  `issuecomment-5391811465`; clean base `d9bcf0478336aa1fb906e88d9d72f7a370911da5`; prior
+  reviewed head `ba1b0a62e85893f2dd8b6e53cdbdf18c60dc7103`; substantive corrected docs content anchor
+  `99c09d2b9d31c25359d07ebabc9f0962dddc3e55`. BLOCK record is `8595cea`; verified BLOCK delivery
+  is `9ac6f1b9`; absolute-report-path correction is `cd2b882d`; review-start ACK is `f0c10bce`.
+  Report `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241432-issue229-design-source-gate.md`
+  is committed at reviewer `5471b44ad882452c03f63eff750b4dd5f9e00594`. The corrected handoff
+  returns its exact merged SHA separately. B1-B5 correction removes scanner-dependent IDs, removes
+  unverified July basket/intersection claims, adds version-bounded conjunctive route-set rights and
+  transport/RED/docs gates, and removes stale Boss-approval wording. Preserve `SOURCE-GAP CLOSURE`,
+  the empty history chain, present-state-only `index_constituents`, and no probe/RED/API-model/code/
   push/close. #228 is DONE/CLOSED below; #229 remains separate from #202 and downstream strategy.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
