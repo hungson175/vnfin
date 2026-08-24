@@ -602,16 +602,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#229 — DESIGN_BLOCKED (2026-08-24, exact reviewed head `5df04ae0`).** Actor `vnfin-oss-reviewer`;
-  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `5b8d2f8`, public receipt
-  `issuecomment-5391811465`; clean base `d9bcf0478336aa1fb906e88d9d72f7a370911da5`; substantive
-  docs anchor `99c09d2b9d31c25359d07ebabc9f0962dddc3e55`. BLOCK record is the next local backlog
-  commit; verified BLOCK delivery is `1e2bab9f`; report
+- **#229 — DESIGN_CORRECTION (2026-08-24, corrected docs anchor `7b18d8df`).** Correction actor
+  `vnfin-oss`; review-handoff actor `vnfin-oss-reviewer`; next action
+  `RETURN_EXACT_SHA_CLOSURE_VERDICT`; packet anchor `5b8d2f8`, public receipt
+  `issuecomment-5391811465`; clean base `d9bcf0478336aa1fb906e88d9d72f7a370911da5`; prior
+  reviewed head `5df04ae031831cf403e5c15d9431937507966fe8`; substantive corrected docs content
+  anchor `7b18d8dfbb209d068c68aebfe2695c38654443bf`. Prior BLOCK record is `215fa3f`; verified
+  BLOCK delivery is `1e2bab9f`; report
   `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241450-issue229-corrected-design-rereview.md`
-  is committed at reviewer `25834dd6e8e1c0f89c309d5dea7eb01728b642ab`. Residual R1-R3 are the
-  exact Disclaimer paragraph-3 citation, packet-complete deferred history/bounds/revision/order and
-  redirect/final-identity/sanitized-filename RED cases, and explicit separation of the timed-out July
-  basket lead from the bounded `BVH → DGC` release. Preserve `SOURCE-GAP CLOSURE`, the empty history
+  is committed at reviewer `25834dd6e8e1c0f89c309d5dea7eb01728b642ab`. R1-R3 are corrected: the
+  English-translation Disclaimer paragraph 3 following section 12 is cited precisely; deferred
+  history/bounds/revision/order and redirect/final-identity/sanitized-filename RED cases are explicit;
+  and the timed-out July basket lead is distinct from the bounded `BVH → DGC` release. The corrected
+  handoff returns its exact merged SHA separately. Preserve `SOURCE-GAP CLOSURE`, the empty history
   chain, present-state-only `index_constituents`, and no probe/RED/API-model/code/push/close. Local
   #230 queue receipt `d11f33a` remains outside #229 ancestry and unpushed; #228 is DONE/CLOSED below.
 
