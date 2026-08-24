@@ -602,13 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#226 — SOURCE_DESIGN (2026-08-24, accepted/spec-sent).** Actor `vnfin-oss`; next action
-  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor
+- **#226 — DESIGN_REVIEW (2026-08-24, exact source/design handoff).** Actor `vnfin-oss-reviewer`;
+  next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
   `31d75d5687b18f64659a933d9ff3c829646d6abe`, public receipt `issuecomment-5390575929`.
-  Builder starts from published `origin/master` `001cfd1cafc0d0554640c5b9672dc09029b388b2`.
-  Scope is source/legal design for exact per-contract VN30F D1 history only; #202 tape scope stays
-  separate, the new chain remains empty, and no probe beyond bounded design, RED, code, push, or
-  close is allowed before exact-SHA design PASS.
+  Published base is `origin/master` `001cfd1cafc0d0554640c5b9672dc09029b388b2`; intake is
+  `7b70a5c`, and source/design content anchor is `8338fbcc07c10255d675570d314881d95b09a606`.
+  Artifacts are exactly `docs/research/2026-08-24-vn30f-daily-contract-history-source-vetting.md`
+  and `tasks/226-design-note.md`. Disposition is `SOURCE-GAP CLOSURE`: the new chain remains empty,
+  #202 tape scope stays separate, and no probe, RED, code, push, or close is allowed before exact-SHA
+  design PASS. #227 remains queued after verified #226 closure.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
