@@ -602,12 +602,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#229 — DESIGN_CORRECTION (2026-08-24, corrected docs anchor `7b18d8df`).** Correction actor
+- **#229 — DESIGN_CORRECTION (2026-08-24, corrected docs anchor `e53d69dd`).** Correction actor
   `vnfin-oss`; review-handoff actor `vnfin-oss-reviewer`; next action
   `RETURN_EXACT_SHA_CLOSURE_VERDICT`; packet anchor `5b8d2f8`, public receipt
   `issuecomment-5391811465`; clean base `d9bcf0478336aa1fb906e88d9d72f7a370911da5`; prior
   reviewed head `5df04ae031831cf403e5c15d9431937507966fe8`; substantive corrected docs content
-  anchor `7b18d8dfbb209d068c68aebfe2695c38654443bf`. Prior BLOCK record is `215fa3f`; verified
+  anchor `e53d69dd64f3c924c31bb53beb6add1cb6cc05b3`. Prior BLOCK record is `6bf9536`; verified
   BLOCK delivery is `1e2bab9f`; report
   `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241450-issue229-corrected-design-rereview.md`
   is committed at reviewer `25834dd6e8e1c0f89c309d5dea7eb01728b642ab`. R1-R3 are corrected: the
