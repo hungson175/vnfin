@@ -602,15 +602,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#225 — DESIGN_REVIEW (2026-08-24, lifecycle-only correction).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor `7b7fe0b`;
-  public receipt `issuecomment-5387048240`. Corrected handoff `22dcbfd3031712a6c9c07deb10c062542aaebaf0`
-  is BLOCKED only on lifecycle in `reviews/review-202608240208-issue225-corrected-design-rereview.md`
-  at reviewer `ab90607`; B1-B5 and source/legal/API/budget contracts remain approved. Research/design
-  content and merged-review anchor remain `35fd9ceb871ba3e7aab0a87f3924d37342652420`; this
-  backlog-only correction is rebuilt from published `bdfe06bba330bdf36fec0cf7c18bb79e96e5c28e`,
-  excludes `ae8087d`, and leaves this as the sole #225 row. Preserve `SOURCE-GAP`/empty new chain,
-  Fmarket `DISABLE_PENDING_PERMISSION`/unprobed, and no RED, code, push, or close.
+- **#226 — SOURCE_DESIGN (2026-08-24, accepted/spec-sent).** Actor `vnfin-oss`; next action
+  `PREPARE_EXACT_SHA_SOURCE_DESIGN`; packet anchor
+  `31d75d5687b18f64659a933d9ff3c829646d6abe`, public receipt `issuecomment-5390575929`.
+  Builder starts from published `origin/master` `001cfd1cafc0d0554640c5b9672dc09029b388b2`.
+  Scope is source/legal design for exact per-contract VN30F D1 history only; #202 tape scope stays
+  separate, the new chain remains empty, and no probe beyond bounded design, RED, code, push, or
+  close is allowed before exact-SHA design PASS.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -1069,13 +1067,20 @@ _None._
 
 ## Done today (trim periodically)
 
+- **#225 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `001cfd1cafc0d0554640c5b9672dc09029b388b2` to `origin/master`; approved ancestry,
+  excluded objects, and exactly the three approved research/design/backlog paths were verified.
+  Resolution `issuecomment-5387957265`; GitHub re-read `CLOSED`/`COMPLETED` at
+  `2026-08-23T19:13:53Z`, and the open set is empty. The equity-fund/NAV source chain remains
+  empty; no provider probe, RED, production code, runtime capability, or coverage claim was added.
+
 - **#224 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `bdfe06bba330bdf36fec0cf7c18bb79e96e5c28e` to `origin/master`; clean base ancestry,
   excluded local receipt checks, and exactly the three approved research/design/backlog paths were
   verified. Resolution `issuecomment-5387750119`; GitHub re-read `CLOSED`/`COMPLETED` at
   `2026-08-23T18:32:14Z`. The daily EUR/VND source chain remains empty, annual USD/VND behavior is
   unchanged, and no probe, RED, production code, source registration, or runtime capability was
-  added. #225 is the sole active reviewer-owned source/design handoff above.
+  added. #226 is the active reviewer-owned source/design handoff above.
 
 - **#223 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `728bb99c26901dcc2397b895253f6cc94f59a65e` to `origin/master` from clean base
@@ -1084,7 +1089,7 @@ _None._
   `issuecomment-5387538803`; GitHub re-read `CLOSED`/`COMPLETED` at `2026-08-23T17:46:59Z`.
   The VNCOND source chain remains empty and no provider probe, RED test, production code, source
   registration, proxy/basket, downstream signal, or runtime capability was added. #224 was subsequently
-  verified `DONE/CLOSED` at exact `bdfe06b`; #225 is the active reviewer-owned source/design handoff above.
+  verified `DONE/CLOSED` at exact `bdfe06b`; #226 is the active reviewer-owned source/design handoff above.
 
 - **#222 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `c3921a1a7a31c5de8b21f838173fd1c288b0e698` to `origin/master`; the approved three
@@ -1092,7 +1097,7 @@ _None._
   `issuecomment-5387257982`; GitHub re-read `CLOSED`/`COMPLETED` at `2026-08-23T17:11:38Z`.
   The VN100 source chain remains empty; no provider route, probe, RED, production code, source
   registration, proxy/basket, downstream observable, or runtime capability was added. #223 and
-  #224 were subsequently verified `DONE/CLOSED`; #225 is the active reviewer-owned source/design
+  #224 were subsequently verified `DONE/CLOSED`; #226 is the active reviewer-owned source/design
   handoff above.
 
 - **#220 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
@@ -1106,7 +1111,7 @@ _None._
   empty, current `Period.UNKNOWN` and the 26-metric zero-ratio behavior are unchanged, and no RED,
   production code, source registration, runtime capability, derivation, substitution, or coverage
   claim was added. #222 and #223 were later verified `DONE/CLOSED`; #224 was verified `DONE/CLOSED`
-  at exact `bdfe06b`; #225 is the active reviewer-owned source/design handoff above.
+  at exact `bdfe06b`; #226 is the active reviewer-owned source/design handoff above.
 
 - **#219 — DONE/CLOSED (2026-08-23), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `e478f4ff0e6ad846e31dbf6a5412c16e8382a768` to `origin/master`; remote HEAD,
@@ -1117,8 +1122,8 @@ _None._
   monthly IIP YoY provider; the new source chain remains empty, current runtime is unchanged,
   and no enum, API, data capability, RED test, or downstream signal was added. #220 was activated
   above for independent annual-ROE source/design only and is now `DONE/CLOSED`; #222 and #223 were
-  later verified `DONE/CLOSED`; #224 was verified `DONE/CLOSED` at exact `bdfe06b`; #225 is active
-  above for the authorized equity-fund source/design correction.
+  later verified `DONE/CLOSED`; #224 was verified `DONE/CLOSED` at exact `bdfe06b`; #226 is active
+  above for the VN30F contract-history source/design correction.
 
 - **#221 — DONE/CLOSED (2026-08-23), approved Fmarket runtime disable.** Published exact approved
   anchor `a69f3c5901f97e95f1c183c64792f933a82cf7a6` to `origin/master`; remote HEAD is exact,
