@@ -178,7 +178,7 @@ RED test, public model, API snapshot, or release artifact is a source reopen pre
 After that source-specific design PASS, hold a separate API/model decision that freezes only the
 public contract; it does not authorize tests or code. The public contract includes row/result types,
 signatures, coverage/diagnostics, units, and docs. Only a subsequent, separately approved RED-first
-review authorizes tests; implementation/code still requires green results and code review. The
+review authorizes tests only; implementation/code still requires green results and code review. The
 complete future API/RED/release matrix is §7 below; it is not authorized now.
 
 ## 7. Future API/RED/release matrix (not authorized)
@@ -199,7 +199,7 @@ capability is created by this correction.
 
 Source qualification comes first. A new API/model decision then specifies and freezes the public
 carriers and units/docs contract; it is separate from RED authorization. Only a later RED-first
-approval authorizes tests; after RED/GREEN and code review, implementation may proceed. No public
+approval authorizes tests only; after RED/GREEN and code review, implementation may proceed. No public
 model, warning, exception, export or release claim is frozen here.
 
 ## 8. Lifecycle handoff
