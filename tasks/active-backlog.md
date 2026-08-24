@@ -602,12 +602,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#227 — DESIGN_REVIEW (2026-08-24, exact source/design handoff).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
+- **#227 — DESIGN_BLOCK (2026-08-24, exact design/source gate).** Actor
+  `vnfin-oss-reviewer`; next action `DOCS_ONLY_B1_B5_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor
   `29206690269215dba1a35bb13ee7c621055e7fca`, public receipt `issuecomment-5390664225`;
   source/design content anchor `b82cbaad6b5a080a688ef8b758726f62cc8bbd10`; docs content range
   is `483ff56522e713ae8495dc515e4e4f5915655bd7..b82cbaa`; the final handoff adds only this lifecycle row. Local activation receipt `9bea16a` and
   #228 queue receipt `174a1cb` remain local-only lifecycle context.
+  BLOCK reviewed HEAD is `4089acfa3249406840f8e5094583f19492b5feb0`; report
+  `reviews/review-202608241234-issue227-design-source-gate.md` at reviewer `77d6739`; delivery
+  `#b57a60a7`. Required B1-B5 correction is docs/backlog-only: split exact source units and
+  absence semantics, separate partial cohorts from full-HOSE, preflight before cache/network,
+  make every budget dimension atomically fatal, and restore the complete deferred API/RED/release
+  matrix. Preserve `SOURCE-GAP CLOSURE`, empty chain, #201 separation, #228 queue, and no
+  probe/RED/code/push/close.
   #226 is published at exact `483ff56522e713ae8495dc515e4e4f5915655bd7` with remote verification,
   clean base ancestry, and exactly the three approved research/design/backlog paths; its clean
   resolution is `issuecomment-5390970872` and GitHub re-read is `CLOSED`/`COMPLETED` at
