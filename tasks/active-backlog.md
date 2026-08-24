@@ -12,7 +12,7 @@ Flow per item: design → discuss+converge with reviewer → TDD red-first → g
 public-API + docs-contract + cov ≥85%) → commit → reviewer code review → push to master →
 close issue → advance watermark → mark Done here.
 
-_Last synced: 2026-08-23 +07_
+_Last synced: 2026-08-24 +07_
 
 > **✅ DONE 2026-07-22: #198 corporate fundamentals P0 — inverted routing + broken catalog + pagination — PUSHED + CLOSED.**
 > Reviewer-routed external issue (VIC missing net_income/equity). Root cause widened to a systemic repair: corporate
@@ -602,40 +602,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#227 — DESIGN_REVIEW (2026-08-24, corrected F1 provenance handoff).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; packet anchor
-  `29206690269215dba1a35bb13ee7c621055e7fca`, public receipt `issuecomment-5390664225`;
-  original source/design content anchor `b82cbaad6b5a080a688ef8b758726f62cc8bbd10`; corrected
-  source/design content anchor `d57a7aa46255b26bebcef3d1ea54736cc74fa809` (correction range
-  `4089acfa..d57a7aa`). The correction actor was `vnfin-oss`; the handoff is now returned to the
-  reviewer. Local activation receipt `9bea16a` and
-  #228 queue receipt `174a1cb` remain local-only lifecycle context.
-  BLOCK reviewed HEAD is `4089acfa3249406840f8e5094583f19492b5feb0`; report
-  `reviews/review-202608241234-issue227-design-source-gate.md` at reviewer `77d6739`; delivery
-  `#b57a60a7`; block receipt commit `6788380cc1eb293e1c26296afe408760d1d54829`. The single
-  docs/backlog-only correction split exact source units and absence semantics, separated partial
-  cohorts from full-HOSE, enforced preflight before cache/network, made every budget dimension
-  atomically fatal, and restored the complete deferred API/RED/release matrix. Preserve
-  `SOURCE-GAP CLOSURE`, empty chain, #201 separation, #228 queue, and no probe/RED/code/push/close.
-  F1 BLOCK reviewed HEAD is `866ab9124e212ded19ad4f3b9d8bffbd9c6cb3f7`; report
-  `reviews/review-202608241245-issue227-corrected-design-rereview.md` at reviewer `4f6255d`;
-  delivery `#6573980a`. Required correction is wording-only: attribute the account/password fact
-  directly to the ECM login route, and describe the feed page, login route, and tariff as separate
-  official leads without unretained cross-route binding. Preserve all closed B1-B5 contracts,
-  `SOURCE-GAP CLOSURE`, empty chain, #228 queue, and no probe/RED/code/push/close.
-  F1 wording-only correction content anchor is `4a6976f8bf5b692cf4e4fdf291246533a61b3507`
-  (correction range `866ab912..4a6976f`); correction actor `vnfin-oss`; handoff is returned to
-  `vnfin-oss-reviewer` for narrow re-review. All prior B1-B5 contracts remain unchanged.
-  #226 is published at exact `483ff56522e713ae8495dc515e4e4f5915655bd7` with remote verification,
-  clean base ancestry, and exactly the three approved research/design/backlog paths; its clean
-  resolution is `issuecomment-5390970872` and GitHub re-read is `CLOSED`/`COMPLETED` at
-  `2026-08-24T05:06:59Z`. Scope is one exact current-HOSE universe snapshot with per-symbol terminal
-  coverage, daily value identity/units, legal rights, and finite whole-board budgets; the official
-  HOSE/HSX review is `SOURCE-GAP CLOSURE`, with the new chain empty and no `QUALIFIED_PARTIAL` claim;
-  #201's closed source-gap and empty runtime chain remain separate. Research artifact is
-  `docs/research/2026-08-24-full-hose-daily-foreign-flow-source-vetting.md`; design artifact is
-  `tasks/227-design-note.md`. Do not probe, write RED/tests, add code, push, or close #227 before
-  exact design PASS. #228 remains queued after #227.
+- **#228 — DESIGN_BLOCKED (2026-08-24, exact-SHA source/design review).** Actor `vnfin-oss`;
+  next action `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`; packet anchor `967baf2`, public receipt
+  `issuecomment-5390970457`; reviewed merged HEAD `d78cd339bb74168c93347143c8b23368d8a2c828`,
+  prior docs anchor `94de84117ef8924310fec74581896b4e0e56150a`, BLOCK report
+  `reviews/review-202608241321-issue228-design-source-gate.md` at reviewer `498fdb8`, delivery
+  `cc4b9005`. The prior activation receipt `fbea1f1e9f78c506c34db7fd36ad2a51a1c324b1` is an
+  ancestor of the reviewed HEAD; its `local-only` label is superseded, and the corrected handoff
+  must rebuild cleanly from `832945b8` while excluding that receipt. Preserve `SOURCE-GAP CLOSURE`,
+  current gold behavior, the empty new chain, and no probe/RED/code/push/close. #227 is DONE/CLOSED
+  below; #219/#220 remain separate.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
   `0b2e719`, exact approved anchor `45107d5ee18aa7dedc6c3edb0aa67a0505f9e528`, approved range
@@ -821,11 +797,6 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
     urgent; schedule after #167.
 
 ## Next (source/design queue)
-
-- **#228 — QUEUED_AFTER_#227 (2026-08-24, accepted).** Actor `vnfin-oss`; next action
-  `ACTIVATE_AFTER_#227_CLOSURE`; packet anchor `967baf2`, public receipt
-  `issuecomment-5390970457`. Scope is the stitched World Gold daily-history source/design batch;
-  do not probe, write RED/tests, add code, push, or close #228 before its turn and exact design PASS.
 
 ## Next (code queue — after docs batch)
 
@@ -1100,6 +1071,15 @@ _None._
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#227 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  approved anchor `832945b8f411e17c50b0dca8a810540fcd45123a` to `origin/master`; remote HEAD is
+  exact, base `483ff56522e713ae8495dc515e4e4f5915655bd7` is an ancestor, and exactly the three
+  approved research/design/backlog paths were verified. Clean SOURCE-GAP resolution is
+  `issuecomment-5391256653`; close comment is `issuecomment-5391257254`; GitHub re-read is
+  `CLOSED`/`COMPLETED` at `2026-08-24T05:53:25Z`. The full-HOSE foreign-flow chain remains empty;
+  no provider probe, RED test, production code, source registration, runtime capability, or
+  coverage claim was added. #228 is activated locally for source/design only.
 
 - **#226 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `483ff56522e713ae8495dc515e4e4f5915655bd7` to `origin/master`; remote HEAD is
