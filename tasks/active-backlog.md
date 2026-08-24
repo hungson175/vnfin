@@ -602,12 +602,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#229 — DESIGN_CORRECTION (2026-08-24, corrected docs anchor `e53d69dd`).** Correction actor
+- **#229 — DESIGN_CORRECTION (2026-08-24, corrected docs anchor `4ec381e`).** Correction actor
   `vnfin-oss`; review-handoff actor `vnfin-oss-reviewer`; next action
   `RETURN_EXACT_SHA_CLOSURE_VERDICT`; packet anchor `5b8d2f8`, public receipt
   `issuecomment-5391811465`; clean base `d9bcf0478336aa1fb906e88d9d72f7a370911da5`; prior
   reviewed head `5df04ae031831cf403e5c15d9431937507966fe8`; substantive corrected docs content
-  anchor `e53d69dd64f3c924c31bb53beb6add1cb6cc05b3`. Prior BLOCK record is `6bf9536`; verified
+  anchor `4ec381efd0b41828acce9228e20eec62b4c30781`. Prior BLOCK record is `6bf9536`; verified
   BLOCK delivery is `1e2bab9f`; report
   `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241450-issue229-corrected-design-rereview.md`
   is committed at reviewer `25834dd6e8e1c0f89c309d5dea7eb01728b642ab`. R1-R3 are corrected: the
@@ -617,13 +617,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   handoff returns its exact merged SHA separately. Preserve `SOURCE-GAP CLOSURE`, the empty history
   chain, present-state-only `index_constituents`, and no probe/RED/API-model/code/push/close. Local
   #230 queue receipt `d11f33a` remains outside #229 ancestry and unpushed; #228 is DONE/CLOSED below.
-  Latest closure BLOCK delivery `2212eb09` reviews exact head
+  Latest closure BLOCK was recorded first at clean commit `b2c2117`; delivery `2212eb09` reviewed exact head
   `1f320ff6399f05800d9dae6afff2960690cf44bd`; report
   `/home/hungson175/tools/vnfin-oss-reviewer/reviews/review-202608241500-issue229-closure-rereview.md`
-  is committed at reviewer `f8f16df76276b3ddce2b6cb4ab7e00848ad1cbb3`. Reviewer-owned next action is
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`: add explicit periodic-versus-extraordinary and
-  no-change synthetic cases to both deferred matrices, then return one exact SHA. Preserve
-  `SOURCE-GAP CLOSURE`, the empty history chain, present-state-only `index_constituents`, and no
+  is committed at reviewer `f8f16df76276b3ddce2b6cb4ab7e00848ad1cbb3`. The residual F1 is closed
+  in substantive docs anchor `4ec381efd0b41828acce9228e20eec62b4c30781`: both deferred matrices now
+  name periodic-versus-extraordinary and no-change synthetic cases. Review-handoff actor is
+  `vnfin-oss-reviewer`; next action is `RETURN_EXACT_SHA_CLOSURE_VERDICT`. Preserve `SOURCE-GAP
+  CLOSURE`, the empty history chain, present-state-only `index_constituents`, and no
   probe/RED/API-model/code/push/close.
 
 - **#203 — DONE/CLOSED 2026-08-22 (docs/source-gap closure only).** Final design PASS at reviewer
