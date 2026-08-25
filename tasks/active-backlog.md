@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, final-design correction handoff).**
+- **#233 — SOURCE_DESIGN / BLOCKED (2026-08-26, narrow closure correction).**
   The prior correction handoff was exact `c90598a372950ddefc0d0d0bf7eae9dfd2ab87a2`, with report
   blob `fe473b174560ab0aa381ebfcbb9ecc2e207bf92e` and design-note blob
   `260db7baf6993f09f4ccf340f382d0d7c0f1b80d`. The immutable historical BLOCK commit
@@ -628,6 +628,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `f426e85322d565f85efd25b00b39807c628124f7`; public triage receipt is `issuecomment-5415312502`.
   Exact changed paths are this backlog, the research report, and `tasks/233-design-note.md`; no
   probe, RED, API/model, code, source, push, public issue, or close before exact design PASS.
+  The latest closure BLOCK was recorded before editing: exact target
+  `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report
+  `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer commit `13556c6`.
+  Expected correction actor is `vnfin-oss`, next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`; G1 is the
+  stale S01-ETF #218 legal reference/restriction, and G2 is unsupported listing NAV/currency/unit
+  context. Preserve source-gap, empty chain, Fmarket disablement, and every no-early-work gate.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
