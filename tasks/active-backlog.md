@@ -602,6 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#233 — SOURCE_DESIGN_BLOCKED (2026-08-26, reviewer BLOCK).** Record BLOCK first before the
+  clean-base correction. Reviewer delivery `0193ec5f` targets exact
+  `6a97eb735ef10e96bc35e1868b2a75f377a0aaea`; report
+  `reviews/review-202608260220-issue233-design-source-gate.md` is at reviewer commit
+  `93b368d0628917c81903b30d0c7334f85db5a38b`. B1 inherited/current evidence plus stale 2018;
+  B2 `asset_type` semantics; B3 exact per-unit ledgers; B4 all four Fmarket operations plus
+  pagination/date/RED compatibility; B5 lifecycle/#232/post-PASS publication. Actor
+  `vnfin-oss-reviewer`; next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`. Preserve
+  `SOURCE_GAP_CLOSURE`, empty chain, Fmarket disabled/unprobed, NAV-only semantics, and no
+  probe, RED, API/model, code, source, push, public issue, or close.
+
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
   `dbeea0e897e2c6688dd0b01b1cafbf4f04cd358c`, exact three approved paths, full/focused pytest,
