@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, final correction after reviewer BLOCK).**
+- **#233 — SOURCE_DESIGN / BLOCKED (2026-08-26, final-design re-review).**
   The latest BLOCK was recorded first in backlog commit `f5192cf772a7434b7f077133537097d9e02d0ab4`
   for exact target `d94049c6c7697a865b2593769bf729843297b328`, delivery `f72e3483`, report
   `reviews/review-202608260237-issue233-corrected-design-rereview.md`, and reviewer commit
@@ -623,6 +623,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `issuecomment-5415312502`. Exact changed paths are this backlog, the research report, and
   `tasks/233-design-note.md`; no probe, RED, API/model, code, source, push, public issue, or close
   before exact design PASS.
+  Latest reviewer BLOCK is exact `e19367336a6b4c7ea7921502d1a87bf73431b26c`, delivery `1f053a16`,
+  report `reviews/review-202608260254-issue233-final-design-review.md`, reviewer commit
+  `2e6a252`. It was recorded before correction; expected correction actor is `vnfin-oss`, next
+  `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`. Required F1-F4 are complete named axes with normalized
+  MIME and no unnamed tuple token, corrected SSIAM/VLGF attribution/product form, retained NAV/unit/
+  currency and VCBF crosswalk gaps, and narrow Eastspring/Manulife consent restrictions. Preserve
+  SOURCE_GAP_CLOSURE, empty chain, and every no-early-work gate.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
