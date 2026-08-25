@@ -163,16 +163,19 @@ The BLOCK was recorded first in clean-base backlog commit
 to the builder, so the expected actor for `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE` was `vnfin-oss`.
 The immutable commit cannot be rewritten; this explicit correction keeps recovery reconstructable.
 The packet anchor is `f426e85322d565f85efd25b00b39807c628124f7` and public triage is
-`issuecomment-5415312502`. The latest BLOCK target is
-`f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report
-`reviews/review-202608260306-issue233-f1-f4-closure-review.md` at `03:06 +07`, reviewer commit
-`13556c6`, and BLOCK-first backlog commit
-`a30bb5126ae89f60382f70e16feebb52f19cf651`. The required F1-F4 correction is exact listing
-provenance, named normalized-MIME/legal-axis grammar, corrected SSIAM/VLGF attribution/product
-form, conservative manager NAV identity and VCBF crosswalks, and narrow Eastspring/Manulife
-consent restrictions. The current correction actor is `vnfin-oss`; after this correction the
-final handoff actor/next is `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`, with clean
-base `ed55c048...`.
+`issuecomment-5415312502`. The current K1 lifecycle BLOCK target is
+`fd3bedd2f4018fbbab2c91f8f170a707e60f0839`, delivery `3a141d4f`, report
+`reviews/review-202608260322-issue233-h1-lifecycle-closure-review.md` at `03:22 +07`, reviewer
+commit `fbe4ad3`, and BLOCK-first backlog commit
+`660824185382c8b4e36aa9e8095a1cc1acb75a96`. The preceding H1 BLOCK-first receipt is
+`8bd994afdfa4cee1933daec5af8a89951d23cf8a`, binding reviewed `ef7f367b5ecd227e4da1cc54f93f8af0670f39ec`,
+delivery `480b99be`, report `reviews/review-202608260315-issue233-g1-g2-closure-review.md` at
+`03:15 +07`, and reviewer commit `232ae40`. That supersedes the preceding G1-G2 BLOCK-first
+receipt `a30bb5126ae89f60382f70e16feebb52f19cf651`, which bound reviewed `f0601d89c96c30396dfc1c4068655c9181136da3`,
+delivery `27c94a31`, report `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and
+reviewer `13556c6`. The current correction actor is `vnfin-oss`; after this correction the final
+handoff actor/next is `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`, with clean base
+`ed55c048...`. Source/legal content and G1-G2 listing controls are unchanged.
 
 Before exact design PASS, preserve the empty chain, current API, four-operation Fmarket disablement,
 NAV-only semantics, and no probe/RED/API-model/code/source/push/close gate. The backlog correction
