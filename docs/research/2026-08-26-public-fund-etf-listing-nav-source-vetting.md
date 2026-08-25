@@ -149,6 +149,20 @@ to upgrade them.
 | R01 | VSDC service pages, registry/context | Official depository/fund-service context | No selected NAV owner route, crosswalk, coverage, or redistribution; `REGISTRY_NOT_NAV_OWNER` |
 | R02 | SSC disclosure pages, context | Official regulatory/disclosure context | No library data route or NAV-owner permission; `DISCLOSURE_CONTEXT_ONLY` |
 
+The inherited primary URL identities are: Fmarket legal/catalogue `https://fmarket.vn/legal` and
+`https://fmarket.vn/funds`; SSIAM products, SSI-SCA, and VLGF
+`https://ssiam.com.vn/en/products`, `https://ssiam.com.vn/en/fund-information-ssi-sca`, and
+`https://ssiam.com.vn/en/ssiam/fund-information-vlgf`; VinaCapital VN100 ETF and disclosure
+`https://wm.vinacapital.com/investment-solutions/onshore-funds/vinacapital-vn100-etf/` and
+`https://wm.vinacapital.com/information-disclosure/`; VEOF, VESAF, and VDEF
+`https://vinacapital.com/investment-solutions/onshore-funds/veof/`,
+`https://vinacapital.com/investment-solutions/onshore-funds/vesaf/`, and
+`https://vinacapital.com/investment-solutions/onshore-funds/vdef/`; VCBF MGF, BCF, AIF, and NAV
+reports from their official `vcbf.com` pages; Eastspring EVESG detail/archive; Manulife MAFEQI;
+Dragon DCDS/DCDE and its official ETF-list article; HOSE's E1VFVN30 disclosure PDF; VSDC
+`https://vsd.vn/en/`; and SSC `https://ssc.gov.vn/`. These are immutable inherited references,
+not a new current reachability or legal review.
+
 The primary URLs are inherited from the immutable #218/#225 artifacts. No new provider/API traffic
 was made. A positive product page is not a positive history route; a PDF is not a pagination
 contract; and a registry code is not a cross-owner NAV key.
