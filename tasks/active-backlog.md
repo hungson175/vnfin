@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#233 — SOURCE_DESIGN / BLOCKED (2026-08-26, narrow closure correction).**
+- **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, narrow closure re-review handoff).**
   The prior correction handoff was exact `c90598a372950ddefc0d0d0bf7eae9dfd2ab87a2`, with report
   blob `fe473b174560ab0aa381ebfcbb9ecc2e207bf92e` and design-note blob
   `260db7baf6993f09f4ccf340f382d0d7c0f1b80d`. The immutable historical BLOCK commit
@@ -634,6 +634,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   Expected correction actor is `vnfin-oss`, next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`; G1 is the
   stale S01-ETF #218 legal reference/restriction, and G2 is unsupported listing NAV/currency/unit
   context. Preserve source-gap, empty chain, Fmarket disablement, and every no-early-work gate.
+  The G1-G2 correction anchor is exact `f75b49456a6ac08e61b5adc7ebeac5198f89cfda`; report blob
+  `b9ba25ea75ea2ec4a951b4475055dea516b538ce`; design-note blob
+  `6a89a5c99d0ddf811702e0b28a8bcfda265f4b20`. Actor `vnfin-oss-reviewer`; next
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`. S01-ETF now binds its legal reference/restriction to the exact
+  #225 FUESS control, and affected listing rows no longer promote unretained NAV/currency/unit
+  context; S02 and H01 retain their exact inherited context.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
