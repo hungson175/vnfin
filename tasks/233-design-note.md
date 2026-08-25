@@ -119,8 +119,12 @@ retains `CONSENT_REQUIRED` only for copying/circulation/distribution while unrel
 while unrelated axes remain `LEGAL_GAP` or `NOT_RETAINED`; Dragon DCDS/DCDE retain the
 independent-NAV-owner gap; and #221 Fmarket rows bind `F221` to each exact operation's
 `DISABLE_PENDING_PERMISSION` terms. Manager NAV rows retain the exact currency/value-kind/value-unit
-keys as `NOT_RETAINED` unless precisely proven. C01-NAV/C02-NAV/C03-NAV use exact per-fund VCBF
-detail paths with `crosswalk=NOT_RETAINED`, not an invented shared-index mapping. `NOT_RECHECKED`
+keys as `NOT_RETAINED` unless precisely proven. Listing rows use `value_kind=NOT_APPLICABLE`,
+`value_unit=NOT_APPLICABLE`, and `currency=NOT_RETAINED` unless an exact inherited unit proves a
+context; S02 SSI-SCA and H01's certificate document are the retained exceptions. VinaCapital's
+NAV-per-share wording remains documentary context only, not a normalized VND/unit listing value.
+C01-NAV/C02-NAV/C03-NAV use exact per-fund VCBF detail paths with `crosswalk=NOT_RETAINED`, not
+an invented shared-index mapping. `NOT_RECHECKED`
 does not erase any of those negative route-local facts.
 
 ## Runtime, legal, and future RED gates
