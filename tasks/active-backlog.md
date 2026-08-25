@@ -631,6 +631,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   The latest closure BLOCK was recorded before editing: exact target
   `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report
   `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer commit `13556c6`.
+  This BLOCK was recorded first in separate backlog commit
+  `a30bb5126ae89f60382f70e16feebb52f19cf651`, binding the reviewed target, delivery, report, and
+  reviewer commit above; expected correction actor is `vnfin-oss`, next
+  `DOCS_ONLY_LIFECYCLE_CORRECTION_FROM_CLEAN_BASE`.
   Expected correction actor is `vnfin-oss`, next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`; G1 is the
   stale S01-ETF #218 legal reference/restriction, and G2 is unsupported listing NAV/currency/unit
   context. Preserve source-gap, empty chain, Fmarket disablement, and every no-early-work gate.
