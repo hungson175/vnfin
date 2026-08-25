@@ -602,30 +602,27 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#233 — SOURCE_DESIGN / BLOCKED (2026-08-26, corrected design re-review).** The
-  BLOCK was recorded first in clean-base commit `e6b777671eedc531d23aed6eff64113864c1b269` for
-  target `6a97eb735ef10e96bc35e1868b2a75f377a0aaea`, delivery `0193ec5f`, report commit
-  `93b368d0628917c81903b30d0c7334f85db5a38b`. Corrected docs/source-design anchor is exact
-  `8574c5361b157acd0f30f0ce201f67e15f2cb083`; report blob
-  `d70203273f2aafc5556b2de51ac83b4ea93e7682`; design-note blob
-  `6b632584a9e383c867e13f1dc17f6c6a1a786583`. Actor `vnfin-oss-reviewer`; next
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`. The correction is docs/backlog-only from clean published
-  base and preserves `SOURCE_GAP_CLOSURE`, empty chain, four-operation Fmarket
-  `DISABLE_PENDING_PERMISSION`, NAV-only/missing-stays-missing semantics, explicit independent
-  ledgers, full deferred API/RED compatibility, and the exact post-PASS publication sequence.
+- **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, final correction after reviewer BLOCK).**
+  The latest BLOCK was recorded first in backlog commit `f5192cf772a7434b7f077133537097d9e02d0ab4`
+  for exact target `d94049c6c7697a865b2593769bf729843297b328`, delivery `f72e3483`, report
+  `reviews/review-202608260237-issue233-corrected-design-rereview.md`, and reviewer commit
+  `029e330988ee3b68656c251f81fb527f25f0d70c`. The corrected docs/source-design anchor is exact
+  `c90598a372950ddefc0d0d0bf7eae9dfd2ab87a2`; report blob
+  `fe473b174560ab0aa381ebfcbb9ecc2e207bf92e`; design-note blob
+  `260db7baf6993f09f4ccf340f382d0d7c0f1b80d`. Actor `vnfin-oss-reviewer`; next
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  The immutable historical BLOCK commit `e6b777671eedc531d23aed6eff64113864c1b269` carries an
+  erroneous actor field `vnfin-oss-reviewer`; its expected correction actor was `vnfin-oss` because
+  a BLOCK continues to the builder. The current correction actor was `vnfin-oss`; this handoff is
+  reviewer-owned. The correction is docs/backlog-only from clean published base and preserves
+  `SOURCE_GAP_CLOSURE`, empty chain, four-operation Fmarket `DISABLE_PENDING_PERMISSION`,
+  NAV-only/missing-stays-missing semantics, exact independent ledgers, retained legal restrictions,
+  complete deferred API/RED compatibility, and the exact post-PASS publication sequence.
   Packet `tasks/233-public-fund-etf-listing-nav-spec.md` is at reviewer commit
   `f426e85322d565f85efd25b00b39807c628124f7`; public triage receipt is
   `issuecomment-5415312502`. Exact changed paths are this backlog, the research report, and
   `tasks/233-design-note.md`; no probe, RED, API/model, code, source, push, public issue, or close
   before exact design PASS.
-  Latest reviewer BLOCK is exact `d94049c6c7697a865b2593769bf729843297b328`, delivery `f72e3483`,
-  report `reviews/review-202608260237-issue233-corrected-design-rereview.md`, reviewer commit
-  `029e330988ee3b68656c251f81fb527f25f0d70c`. It was recorded before correction; the expected
-  correction actor is `vnfin-oss`, next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`. Required R1-R4
-  are exact per-unit route/version/identity/coverage/budget/legal ledgers, #218/#225 attribution
-  plus retained legal restrictions, current date-input and malformed-envelope/rate/global-budget
-  deferred RED cases, and historical BLOCK actor correction. Preserve the empty chain and all
-  no-early-work gates.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
