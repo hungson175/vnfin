@@ -407,10 +407,13 @@ the expected actor for `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE` was `vnfin-oss`. T
 cannot be rewritten; this explicit correction keeps recovery reconstructable. It records reviewer
 delivery `0193ec5f`, target `6a97eb7`, report commit `93b368d0628917c81903b30d0c7334f85db5a38b`, and
 the packet anchor `f426e85322d565f85efd25b00b39807c628124f7`; public triage is
-`issuecomment-5415312502`. The latest BLOCK target is `e19367336a6b4c7ea7921502d1a87bf73431b26c`, delivery `1f053a16`,
-report `reviews/review-202608260254-issue233-final-design-review.md`, and reviewer commit
-`2e6a252`. Its F1-F4 scope is named normalized-MIME/legal-axis parsing, SSIAM/VLGF attribution,
-conservative NAV identity and VCBF crosswalks, and narrow Eastspring/Manulife consent restrictions.
+`issuecomment-5415312502`. The latest BLOCK target is `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`,
+review report at `03:06 +07` is
+`reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer commit is
+`13556c6`. This BLOCK was recorded first in backlog commit
+`a30bb5126ae89f60382f70e16feebb52f19cf651`. Its F1-F4 scope is exact listing provenance,
+normalized-MIME/legal-axis parsing, SSIAM/VLGF attribution, conservative NAV identity and VCBF
+crosswalks, and narrow Eastspring/Manulife consent restrictions.
 The current correction actor is
 `vnfin-oss`; after this correction the final handoff actor/next is
 `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`.

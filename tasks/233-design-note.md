@@ -164,13 +164,15 @@ to the builder, so the expected actor for `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`
 The immutable commit cannot be rewritten; this explicit correction keeps recovery reconstructable.
 The packet anchor is `f426e85322d565f85efd25b00b39807c628124f7` and public triage is
 `issuecomment-5415312502`. The latest BLOCK target is
-`e19367336a6b4c7ea7921502d1a87bf73431b26c`, delivery `1f053a16`, report
-`reviews/review-202608260254-issue233-final-design-review.md`, reviewer commit `2e6a252`. The
-required F1-F4 correction is the named normalized-MIME/legal-axis grammar, corrected SSIAM/VLGF
-attribution/product form, conservative manager NAV identity and VCBF crosswalks, and narrow
-Eastspring/Manulife consent restrictions. The current correction actor is `vnfin-oss`; after this
-correction the final handoff actor/next is `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`,
-with clean base `ed55c048...`.
+`f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report
+`reviews/review-202608260306-issue233-f1-f4-closure-review.md` at `03:06 +07`, reviewer commit
+`13556c6`, and BLOCK-first backlog commit
+`a30bb5126ae89f60382f70e16feebb52f19cf651`. The required F1-F4 correction is exact listing
+provenance, named normalized-MIME/legal-axis grammar, corrected SSIAM/VLGF attribution/product
+form, conservative manager NAV identity and VCBF crosswalks, and narrow Eastspring/Manulife
+consent restrictions. The current correction actor is `vnfin-oss`; after this correction the
+final handoff actor/next is `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`, with clean
+base `ed55c048...`.
 
 Before exact design PASS, preserve the empty chain, current API, four-operation Fmarket disablement,
 NAV-only semantics, and no probe/RED/API-model/code/source/push/close gate. The backlog correction
