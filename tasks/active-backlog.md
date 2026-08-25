@@ -631,24 +631,21 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   The current K1 lifecycle BLOCK was recorded first in this backlog-only correction commit: reviewed
   target `fd3bedd2f4018fbbab2c91f8f170a707e60f0839`, delivery `3a141d4f`, report at `03:22 +07`
   `reviews/review-202608260322-issue233-h1-lifecycle-closure-review.md`, and reviewer commit
-  `fbe4ad3`; expected correction actor is `vnfin-oss`, next
-  `DOCS_ONLY_LIFECYCLE_CORRECTION_FROM_CLEAN_BASE`.
-  The latest H1 closure BLOCK was recorded before editing: exact target
-  `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report at `03:06 +07`
-  `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer commit `13556c6`.
-  This BLOCK was recorded first in separate backlog commit
-  `a30bb5126ae89f60382f70e16feebb52f19cf651`, binding the reviewed target, delivery, report, and
-  reviewer commit above. The lifecycle-only correction actor was `vnfin-oss`; its corrected
-  research/design content anchor is exact `716d663f43814d58108e810a0e1289c067914bca`, with
-  research blob `90e1f856521e1f44b4667bdbd0932501c8b1d269` and design-note blob
-  `29c61081d9932fb39c52c08d88b37d5626ee12de`. The current handoff actor/next is
-  `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`.
-  The preceding G1-G2 correction remains exact `f75b49456a6ac08e61b5adc7ebeac5198f89cfda`; report
-  blob `b9ba25ea75ea2ec4a951b4475055dea516b538ce`; design-note blob
-  `6a89a5c99d0ddf811702e0b28a8bcfda265f4b20`. S01-ETF now binds its legal reference/restriction
-  to the exact #225 FUESS control, and affected listing rows no longer promote unretained
-  NAV/currency/unit context; S02 and H01 retain their exact inherited context. Preserve source-gap,
-  empty chain, Fmarket disablement, and every no-early-work gate.
+  `fbe4ad3`; BLOCK-first commit is `660824185382c8b4e36aa9e8095a1cc1acb75a96`, expected correction
+  actor is `vnfin-oss`, next `DOCS_ONLY_LIFECYCLE_CORRECTION_FROM_CLEAN_BASE`.
+  The corrected H1 chronology content anchor is exact `47ce6e92d30f1d01976c3a16cb48ee868170fab0`,
+  with research blob `dd41ff26ba121357125e05e9eef0dae88aac6466` and design-note blob
+  `2a3665c6e893f56daaff2dee6b4605108e081d0c`. It retains the newer H1 BLOCK-first receipt
+  `8bd994afdfa4cee1933daec5af8a89951d23cf8a`, binding reviewed `ef7f367b5ecd227e4da1cc54f93f8af0670f39ec`,
+  delivery `480b99be`, report at `03:15 +07`
+  `reviews/review-202608260315-issue233-g1-g2-closure-review.md`, and reviewer commit `232ae40`.
+  That receipt supersedes the preceding G1-G2 BLOCK-first `a30bb5126ae89f60382f70e16feebb52f19cf651`,
+  binding reviewed `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report
+  `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer `13556c6`. The
+  current handoff actor/next is `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`. S01-ETF
+  remains bound to the exact #225 FUESS control, and affected listing rows do not promote
+  unretained NAV/currency/unit context; S02 and H01 retain their exact inherited context. Preserve
+  source-gap, empty chain, Fmarket disablement, and every no-early-work gate.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
