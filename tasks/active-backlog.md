@@ -628,6 +628,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `f426e85322d565f85efd25b00b39807c628124f7`; public triage receipt is `issuecomment-5415312502`.
   Exact changed paths are this backlog, the research report, and `tasks/233-design-note.md`; no
   probe, RED, API/model, code, source, push, public issue, or close before exact design PASS.
+  The current K1 lifecycle BLOCK was recorded first in this backlog-only correction commit: reviewed
+  target `fd3bedd2f4018fbbab2c91f8f170a707e60f0839`, delivery `3a141d4f`, report at `03:22 +07`
+  `reviews/review-202608260322-issue233-h1-lifecycle-closure-review.md`, and reviewer commit
+  `fbe4ad3`; expected correction actor is `vnfin-oss`, next
+  `DOCS_ONLY_LIFECYCLE_CORRECTION_FROM_CLEAN_BASE`.
   The latest H1 closure BLOCK was recorded before editing: exact target
   `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report at `03:06 +07`
   `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer commit `13556c6`.
