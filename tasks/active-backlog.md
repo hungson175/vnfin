@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, corrected after reviewer BLOCK).** The
+- **#233 — SOURCE_DESIGN / BLOCKED (2026-08-26, corrected design re-review).** The
   BLOCK was recorded first in clean-base commit `e6b777671eedc531d23aed6eff64113864c1b269` for
   target `6a97eb735ef10e96bc35e1868b2a75f377a0aaea`, delivery `0193ec5f`, report commit
   `93b368d0628917c81903b30d0c7334f85db5a38b`. Corrected docs/source-design anchor is exact
@@ -618,6 +618,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `issuecomment-5415312502`. Exact changed paths are this backlog, the research report, and
   `tasks/233-design-note.md`; no probe, RED, API/model, code, source, push, public issue, or close
   before exact design PASS.
+  Latest reviewer BLOCK is exact `d94049c6c7697a865b2593769bf729843297b328`, delivery `f72e3483`,
+  report `reviews/review-202608260237-issue233-corrected-design-rereview.md`, reviewer commit
+  `029e330988ee3b68656c251f81fb527f25f0d70c`. It was recorded before correction; the expected
+  correction actor is `vnfin-oss`, next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`. Required R1-R4
+  are exact per-unit route/version/identity/coverage/budget/legal ledgers, #218/#225 attribution
+  plus retained legal restrictions, current date-input and malformed-envelope/rate/global-budget
+  deferred RED cases, and historical BLOCK actor correction. Preserve the empty chain and all
+  no-early-work gates.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
