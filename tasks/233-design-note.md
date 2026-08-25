@@ -25,15 +25,16 @@ fixture, model, API carrier, RED test, or runtime capability.
 
 | Baseline | Immutable anchors | Last-retained disposition | #233 status |
 |---|---|---|---|
-| #218 ETF discovery/NAV | `e78ddf7201fbadad7a24090e29ef63aa4868b980`; `412ada80705ecf08b2da4e27d882dbf3bc256327` | `SOURCE_GAP_CLOSURE` | `NOT_RECHECKED`; VinaCapital ETF and SSIAM open-ended evidence remain independent |
+| #218 ETF discovery/NAV | `e78ddf7201fbadad7a24090e29ef63aa4868b980`; `412ada80705ecf08b2da4e27d882dbf3bc256327` | `SOURCE_GAP_CLOSURE` | `NOT_RECHECKED`; VinaCapital VN100 ETF and ETF-context units only; SSIAM open-ended units bind to #225 |
 | #221 Fmarket terms/runtime | `6949a53ecd46dc61197afb9eee8dd245109ef95c`; `eaace3d6e3049b3546b82c5da6a2dfdcb31e9b11` | `DISABLE_PENDING_PERMISSION` for four operations | Runtime boundary preserved; legal terms `NOT_RECHECKED` |
-| #225 equity-fund listing/NAV | `35fd9ceb871ba3e7aab0a87f3924d37342652420` | `SOURCE_GAP_CLOSURE` | `NOT_RECHECKED`; no cross-source fund/ETF join |
+| #225 equity-fund listing/NAV | `35fd9ceb871ba3e7aab0a87f3924d37342652420` | `SOURCE_GAP_CLOSURE` | `NOT_RECHECKED`; SSIAM open-ended, VinaCapital open-ended, VCBF, Eastspring, Manulife, Dragon DCDS/DCDE, VSDC, and SSC units; retain route-local restrictions |
 | #233 combined primitive | This note and the companion report | New source design | `SOURCE_GAP_CLOSURE`; empty chain |
 
 No provider/API route was called. “Last retained” is not a current-term assertion. The packet
 imposes no historical interval; the declared inception context of an inherited candidate is not
-promoted into a #233 coverage failure. SSIAM is not moved into the ETF baseline, and VLGF product
-form stays `NOT_RETAINED`.
+promoted into a #233 coverage failure. VinaCapital ETF evidence remains #218; SSIAM open-ended
+evidence and VLGF remain #225. SSIAM is not moved into the ETF baseline, and VLGF product form
+stays `NOT_RETAINED`.
 
 ## Product and compatibility boundary
 
@@ -56,9 +57,11 @@ vnfin.funds.client  # alias of source with the same signatures
 product form. A caller filter is not response evidence. A future typed `product_type` (or equivalent)
 requires a fresh API/model decision and is not frozen here.
 
-Current date inputs remain `datetime.date` or ISO `YYYY-MM-DD`, inclusive, and validate before
-cache/network. `page_size` never authorizes an unreconciled first page; a qualified adapter drains
-and reconciles pagination under one finite atomic budget or returns no partial result.
+Current date inputs remain backward-compatible: `datetime.date` is accepted; `datetime.datetime`
+is converted with `.date()`; and a string is stripped with `.strip()` before the strict zero-padded
+`YYYY-MM-DD` check. These inclusive bounds validate before cache/network; a breaking change needs a
+separate API review. `page_size` never authorizes an unreconciled first page; a qualified adapter
+drains and reconciles pagination under one finite atomic budget or returns no partial result.
 
 ## Four-operation Fmarket boundary
 
@@ -79,8 +82,11 @@ use, redistribution, rate/retry/WAF/session, version, amendment, revocation, and
 
 ## Independent ledger and qualification contract
 
-The companion report has one row for every owner/path/version/operation/product-class unit. No row
-inherits another row's evidence. Its ordered fields are binding:
+The companion report has 36 rows, one for every exact owner/operator, canonical path, route-version,
+operation, and product-class unit. The ETF and open-ended SSIAM classes are separate; VEOF, VESAF,
+and VDEF each have listing and NAV units; DCDS and DCDE each have listing and NAV units. No row
+inherits another row's evidence. The table's semicolon-delimited named fields are independently
+parseable and binding:
 
 - transport: observation/method, status, complete `Content-Type`, redirect/effective identity,
   auth/session/UA/WAF;
@@ -88,16 +94,27 @@ inherits another row's evidence. Its ordered fields are binding:
   kind/unit, NAV date, publication date, revision date, retrieval timestamp;
 - coverage: provider/observed bounds, cadence/non-publication, points/funds, totals, pages/cursors,
   gaps, duplicates/conflicts, truncation, and outcome;
-- budget: logical, physical, documents, pages, retries, redirects, compressed bytes, decompressed
-  bytes, concurrency, rate window, backoff, and atomic global reservation; and
-- legal: automation, cache/storage/retention/deletion, caller return, attribution, commercial,
-  derivative, redistribution/resale, amendment, revocation, and correction.
+- budget: static-read markers, logical, physical, documents, pages, retries, redirects, compressed
+  bytes, decompressed bytes, concurrency, rate window, backoff, per-unit atomic reservation, and
+  total/global reservation; and
+- legal: automation, transient use, cache/storage/retention/deletion, caller return, attribution,
+  commercial, derivative, redistribution/resale, rate/retry/concurrency, amendment, revocation,
+  correction, retained restriction, and exact inherited legal reference.
 
 The #233 candidate dispatch tuple is genuinely zero because no route was called. Static-read
 telemetry is independently `NOT_RETAINED`/`NOT_MEASURED`; it is never represented as zero runtime
 attempts. `FULL` needs provider-declared bounds plus complete reconciliation; `PARTIAL` needs a
 provider-declared narrower boundary plus reconciliation; `EMPTY` needs an authoritative,
 identity-matched, supported empty response; otherwise the result is `UNKNOWN`/failure, not absence.
+
+The exact table preserves route-local inherited legal restrictions: #218's VinaCapital ETF and
+HOSE/Dragon ETF-context units retain `LEGAL_GAP` rather than a reuse grant; #225's SSIAM units retain
+the no-public-API/caller-return/cache/retention/redistribution gap; VinaCapital retains its
+copyright-only/no-OSS-grant gap; VCBF retains all-rights-reserved/no-public-licence; Eastspring
+retains consent-required copying/circulation/distribution; Manulife retains consent-required reuse;
+Dragon DCDS/DCDE retain the independent-NAV-owner gap; and #221 Fmarket rows bind `F221` to each
+exact operation's `DISABLE_PENDING_PERMISSION` terms. `NOT_RECHECKED` does not erase any of those
+negative route-local facts.
 
 ## Runtime, legal, and future RED gates
 
@@ -112,23 +129,34 @@ Public reachability, PDF availability, exchange disclosure, registry context, ro
 browser request is not reuse permission. The legal route gate remains conjunctive and route-local.
 
 After a qualified-source design PASS only, a fresh RED/API review must cover: lazy construction;
-invalid filter/product/date/page inputs before cache/network; product-form positives and
-unknown/missing/contradictory negatives; same-owner binding and cross-owner rejection; NAV versus
-close/iNAV; bool/non-finite/non-positive/malformed values; date/order/duplicate/revision cases;
-`FULL`/`PARTIAL`/`EMPTY`/`UNKNOWN`; pages/totals/cursors; complete MIME parsing after the first
-colon; status/redirect/WAF/timeout/connection; retry/rate/backoff and compressed/decompressed byte
-exhaustion; atomic no-partial results; sanitized source/attempt/error/warning/coverage carriers;
-UTC-aware retrieval metadata, DataFrame attrs, `repr`, equality, serialization; all four disabled
-Fmarket operations through direct/factory/alias paths; and full docs/build/security/snapshot gates.
+invalid filter/product/date/page inputs before cache/network; preserve `datetime.date`,
+`datetime.datetime` to `.date()`, and surrounding whitespace around strict zero-padded ISO while
+rejecting malformed forms; product-form positives and unknown/missing/contradictory negatives;
+same-owner binding and cross-owner rejection; NAV versus close/iNAV; bool/non-finite/non-positive/
+malformed values; malformed top-level/provider envelopes separately from malformed numeric values;
+date/order/duplicate/revision cases; `FULL`/`PARTIAL`/`EMPTY`/`UNKNOWN`; pages/totals/cursors;
+complete MIME parsing after the first colon; status/redirect/WAF/timeout/connection; retry/backoff;
+rate-window exhaustion; logical, physical, document/page, compressed/decompressed-byte, and
+total/global atomic-budget exhaustion; atomic no-partial results; sanitized source/attempt/error/
+warning/coverage carriers; UTC-aware retrieval metadata, DataFrame attrs, `repr`, equality,
+serialization; all four disabled Fmarket operations through direct/factory/alias paths; and full
+docs/build/security/snapshot gates.
 These are deferred tests only; no RED, API/model freeze, or code is authorized now.
 
 ## Lifecycle and post-PASS transition
 
 The BLOCK was recorded first in clean-base backlog commit
 `e6b777671eedc531d23aed6eff64113864c1b269`, targeting reviewed `6a97eb7` with report commit
-`93b368d0628917c81903b30d0c7334f85db5a38b`. The packet anchor is
-`f426e85322d565f85efd25b00b39807c628124f7` and public triage is `issuecomment-5415312502`.
-That intake is historical. The final three-path handoff state is actor `vnfin-oss-reviewer`, next
+`93b368d0628917c81903b30d0c7334f85db5a38b`. Its immutable actor field says
+`vnfin-oss-reviewer`, but that historical expected correction actor is erroneous: a BLOCK continues
+to the builder, so the expected actor for `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE` was `vnfin-oss`.
+The immutable commit cannot be rewritten; this explicit correction keeps recovery reconstructable.
+The packet anchor is `f426e85322d565f85efd25b00b39807c628124f7` and public triage is
+`issuecomment-5415312502`. The latest BLOCK target is
+`d94049c6c7697a865b2593769bf729843297b328`, delivery `f72e3483`, report
+`reviews/review-202608260237-issue233-corrected-design-rereview.md`, reviewer commit
+`029e330988ee3b68656c251f81fb527f25f0d70c`. The current correction actor is `vnfin-oss`; after
+this correction the final handoff actor/next is `vnfin-oss-reviewer` /
 `RETURN_EXACT_SHA_DESIGN_VERDICT`, with clean base `ed55c048...`.
 
 Before exact design PASS, preserve the empty chain, current API, four-operation Fmarket disablement,
@@ -145,7 +173,7 @@ runtime capability, or coverage claims.
 ### Bottom summary
 
 - #233 remains `SOURCE_GAP_CLOSURE` with an empty listing/NAV chain.
-- Inherited #218/#221/#225 facts are last-retained and `NOT_RECHECKED`, not current claims.
+- Inherited #218/#221/#225 facts are last-retained and `NOT_RECHECKED`, with VinaCapital ETF bound to #218 and SSIAM open-ended evidence bound to #225.
 - `asset_type` is an asset-class code, not an ETF/open-ended product discriminator.
 - All four Fmarket operations remain disabled and unprobed with the exact zero-call boundary.
 - Per-unit transport, identity, coverage, budget, and legal axes are explicit and independent.
