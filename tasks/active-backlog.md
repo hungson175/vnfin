@@ -628,22 +628,22 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `f426e85322d565f85efd25b00b39807c628124f7`; public triage receipt is `issuecomment-5415312502`.
   Exact changed paths are this backlog, the research report, and `tasks/233-design-note.md`; no
   probe, RED, API/model, code, source, push, public issue, or close before exact design PASS.
-  The latest closure BLOCK was recorded before editing: exact target
-  `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report
+  The latest H1 closure BLOCK was recorded before editing: exact target
+  `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report at `03:06 +07`
   `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer commit `13556c6`.
   This BLOCK was recorded first in separate backlog commit
   `a30bb5126ae89f60382f70e16feebb52f19cf651`, binding the reviewed target, delivery, report, and
-  reviewer commit above; expected correction actor is `vnfin-oss`, next
-  `DOCS_ONLY_LIFECYCLE_CORRECTION_FROM_CLEAN_BASE`.
-  Expected correction actor is `vnfin-oss`, next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`; G1 is the
-  stale S01-ETF #218 legal reference/restriction, and G2 is unsupported listing NAV/currency/unit
-  context. Preserve source-gap, empty chain, Fmarket disablement, and every no-early-work gate.
-  The G1-G2 correction anchor is exact `f75b49456a6ac08e61b5adc7ebeac5198f89cfda`; report blob
-  `b9ba25ea75ea2ec4a951b4475055dea516b538ce`; design-note blob
-  `6a89a5c99d0ddf811702e0b28a8bcfda265f4b20`. Actor `vnfin-oss-reviewer`; next
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`. S01-ETF now binds its legal reference/restriction to the exact
-  #225 FUESS control, and affected listing rows no longer promote unretained NAV/currency/unit
-  context; S02 and H01 retain their exact inherited context.
+  reviewer commit above. The lifecycle-only correction actor was `vnfin-oss`; its corrected
+  research/design content anchor is exact `716d663f43814d58108e810a0e1289c067914bca`, with
+  research blob `90e1f856521e1f44b4667bdbd0932501c8b1d269` and design-note blob
+  `29c61081d9932fb39c52c08d88b37d5626ee12de`. The current handoff actor/next is
+  `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  The preceding G1-G2 correction remains exact `f75b49456a6ac08e61b5adc7ebeac5198f89cfda`; report
+  blob `b9ba25ea75ea2ec4a951b4475055dea516b538ce`; design-note blob
+  `6a89a5c99d0ddf811702e0b28a8bcfda265f4b20`. S01-ETF now binds its legal reference/restriction
+  to the exact #225 FUESS control, and affected listing rows no longer promote unretained
+  NAV/currency/unit context; S02 and H01 retain their exact inherited context. Preserve source-gap,
+  empty chain, Fmarket disablement, and every no-early-work gate.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
