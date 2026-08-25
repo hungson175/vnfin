@@ -606,7 +606,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   BLOCK was recorded first in clean-base commit `e6b777671eedc531d23aed6eff64113864c1b269` for
   target `6a97eb735ef10e96bc35e1868b2a75f377a0aaea`, delivery `0193ec5f`, report commit
   `93b368d0628917c81903b30d0c7334f85db5a38b`. Corrected docs/source-design anchor is exact
-  `8574c5361b157acd0f30f0ce201f67e15f2cb0832`; report blob
+  `8574c5361b157acd0f30f0ce201f67e15f2cb083`; report blob
   `d70203273f2aafc5556b2de51ac83b4ea93e7682`; design-note blob
   `6b632584a9e383c867e13f1dc17f6c6a1a786583`. Actor `vnfin-oss-reviewer`; next
   `RETURN_EXACT_SHA_DESIGN_VERDICT`. The correction is docs/backlog-only from clean published
