@@ -602,16 +602,22 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#233 — SOURCE_DESIGN_BLOCKED (2026-08-26, reviewer BLOCK).** Record BLOCK first before the
-  clean-base correction. Reviewer delivery `0193ec5f` targets exact
-  `6a97eb735ef10e96bc35e1868b2a75f377a0aaea`; report
-  `reviews/review-202608260220-issue233-design-source-gate.md` is at reviewer commit
-  `93b368d0628917c81903b30d0c7334f85db5a38b`. B1 inherited/current evidence plus stale 2018;
-  B2 `asset_type` semantics; B3 exact per-unit ledgers; B4 all four Fmarket operations plus
-  pagination/date/RED compatibility; B5 lifecycle/#232/post-PASS publication. Actor
-  `vnfin-oss-reviewer`; next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`. Preserve
-  `SOURCE_GAP_CLOSURE`, empty chain, Fmarket disabled/unprobed, NAV-only semantics, and no
-  probe, RED, API/model, code, source, push, public issue, or close.
+- **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, corrected after reviewer BLOCK).** The
+  BLOCK was recorded first in clean-base commit `e6b777671eedc531d23aed6eff64113864c1b269` for
+  target `6a97eb735ef10e96bc35e1868b2a75f377a0aaea`, delivery `0193ec5f`, report commit
+  `93b368d0628917c81903b30d0c7334f85db5a38b`. Corrected docs/source-design anchor is exact
+  `19a2cba42fbdfc9665c2f8c9becf0dfd22699f24`; report blob
+  `bcb569ad8bca1fdd04eca3d658c7587e5a5d43e4`; design-note blob
+  `6b632584a9e383c867e13f1dc17f6c6a1a786583`. Actor `vnfin-oss-reviewer`; next
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`. The correction is docs/backlog-only from clean published
+  base and preserves `SOURCE_GAP_CLOSURE`, empty chain, four-operation Fmarket
+  `DISABLE_PENDING_PERMISSION`, NAV-only/missing-stays-missing semantics, explicit independent
+  ledgers, full deferred API/RED compatibility, and the exact post-PASS publication sequence.
+  Packet `tasks/233-public-fund-etf-listing-nav-spec.md` is at reviewer commit
+  `f426e85322d565f85efd25b00b39807c628124f7`; public triage receipt is
+  `issuecomment-5415312502`. Exact changed paths are this backlog, the research report, and
+  `tasks/233-design-note.md`; no probe, RED, API/model, code, source, push, public issue, or close
+  before exact design PASS.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
@@ -622,27 +628,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   #204 negative `89/90/91` and `NET_INCOME` boundaries remain unchanged. No provider runtime
   capability, probe, RED, API/model change, production code, or coverage claim was added.
 
-- **#232 — SOURCE_DESIGN_CORRECTION / REVIEW_REQUESTED (2026-08-24).** Actor
-  `vnfin-oss-reviewer`; next action `RETURN_EXACT_SHA_DESIGN_VERDICT`; corrected docs anchor is
-  exact `542af670185ce26b50c4001f2baf51174560e3b7`; prior reviewed head was exact
-  `dd425fde012b587061fe71a3855d3b70088b06bc`; prior BLOCK delivery was `b3b4a7f1`; report
-  `reviews/review-202608241750-issue232-f1-f4-closure-rereview.md` at reviewer commit
-  `a5f97ae918db6f816943f8f1adf5a516bb407808`. F3/F4 and R2/B3/B4 remain closed. G1 now has
-  28-cell separator rows; G2 binds S8/S9 and S10-S12 legal attribution/commercial/rate states
-  to each exact operation; G3 separates official primary material from the unbound UAT lead and
-  restores S4 `IDENTITY_GAP`. This correction is docs/backlog-only; this backlog commit is the
-  exact lifecycle handoff. Clean published base is exact `d76bd6b6388855cb06a0febf575646a9b960556e`; packet
-  `/home/hungson175/tools/vnfin-oss-reviewer/tasks/232-csi300-raw-cny-history-spec.md` at reviewer
-  packet commit `c69e145`; public receipt `issuecomment-5392669032`; activation receipt
-  `023b23d2df3e04c208437ffe0260dc281854fb05` is local-only and excluded from this clean handoff
-  ancestry. The exact research/design artifacts are
-  `docs/research/2026-08-24-csi300-raw-cny-history-source-vetting.md` and
-  `tasks/232-design-note.md`; docs anchor is `542af670185ce26b50c4001f2baf51174560e3b7` and
-  this backlog commit is the exact lifecycle handoff. Disposition is `SOURCE-GAP CLOSURE`; the
-  raw CNY chain remains empty. Preserve the current loud `^CSI300`-to-ASHR USD/share proxy and
-  no USD/raw-proxy substitution. No probe, live row, RED, API/model decision, source registration,
-  production code, push, or close is authorized before exact design PASS. Preserve the empty raw
-  chain and current `^CSI300`-to-ASHR USD/share proxy throughout re-review.
+- **#232 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
+  `ed55c0487745b2611bcef9a7d94e259907ec06b0` is the verified final base; clean resolution is
+  `issuecomment-5394260283`; GitHub re-read is `CLOSED`/`COMPLETED` at
+  `2026-08-24T10:58:34Z` (public comment cleanup updated `2026-08-24T11:01:51Z`). The raw CNY
+  chain remains empty and the current loud `^CSI300`-to-ASHR USD/share proxy is unchanged. No
+  provider probe, RED, API/model decision, source registration, production code, or capability
+  claim was added. This replaces the stale correction/WIP mirror; #232 is not an active blocker.
 
 - **#229 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `3dd3125281efdc6e89479306a64213dfc26a6987` to `origin/master`; base ancestry,
@@ -1061,10 +1053,8 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-- **#232 — DESIGN_REVIEW_REQUESTED** (corrected docs `542af67`; prior BLOCK `b3b4a7f1`; reviewer
-  report commit `a5f97ae`). The G1-G3 docs/backlog-only correction is committed; rerun merged
-  gates and return one exact SHA for closure review. No probe, RED, API/model, production code,
-  push, or close.
+No separate review blocker is active here; #232 is reconciled as `DONE/CLOSED` above. #233 is the
+current `SOURCE_DESIGN / REVIEW_REQUESTED` item in `Now (WIP)`.
 
 ## Poller triage (newly triaged)
 
