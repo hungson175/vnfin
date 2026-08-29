@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#234 — DESIGN_BLOCKED / DOCS_ONLY_CORRECTION (2026-08-30, provider-native fundamentals availability metadata).**
+- **#234 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-30, provider-native fundamentals availability metadata).**
   Packet `tasks/234-fundamentals-report-availability-source-spec.md` is at reviewer commit
   `f801d44`; public receipt is `issuecomment-5465144377`; clean published base is
   `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; prior source/design
@@ -628,7 +628,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `a3b8ddcd1b9a2437eb7af43ad284de70314818a6`: VNDirect uses equals query assignments with a
   static colon-assignment rejection gate; every static label is `NOT_RETAINED` without an exact
   retained locator; and all twelve units carry explicit `terms_version=NOT_RETAINED` and
-  `terms_effective_date=NOT_RETAINED`. #233 is one DONE/CLOSED record below, while #234 is the
+  `terms_effective_date=NOT_RETAINED`. #233 is one DONE/CLOSED record in Done today below, while #234 is the
   sole current WIP. Current actor is `vnfin-oss-reviewer`; next
   `RETURN_EXACT_SHA_DESIGN_VERDICT`.
   The corrected-design BLOCK was received for exact reviewed HEAD
@@ -1072,8 +1072,9 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-No separate review blocker is active here; #232 and #233 are reconciled as `DONE/CLOSED` above. #234 is the
-sole current `SOURCE_DESIGN / DOCS_ONLY_CORRECTION` item in `Now (WIP)`.
+No separate review blocker is active here; #232 is reconciled as `DONE/CLOSED` above and #233 is
+recorded in `Done today` below. #234 is the sole current `SOURCE_DESIGN / REVIEW_REQUESTED` item in
+`Now (WIP)`.
 
 ## Poller triage (newly triaged)
 
