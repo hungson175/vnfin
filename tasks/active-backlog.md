@@ -602,15 +602,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#234 — SOURCE_DESIGN / ACTIVE (2026-08-30, provider-native fundamentals availability metadata).**
+- **#234 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-30, provider-native fundamentals availability metadata).**
   Packet `tasks/234-fundamentals-report-availability-source-spec.md` is at reviewer commit
   `f801d44`; public receipt is `issuecomment-5465144377`; clean published base is
-  `10028e0334aa52987942250f92d5593749f3d77c`. Actor is `vnfin-oss`, next
-  `PREPARE_EXACT_SHA_SOURCE_DESIGN`. Qualify VNDirect and CafeF provider-native report-availability
-  semantics, identity, coverage, and rights independently; fiscal/retrieval/generic update times
-  never substitute, session mapping stays caller-side, and the new capability remains empty on a
-  source gap. No provider probe without a separately reviewed finite plan; no RED, API/model, code,
-  source change, push, or close before exact-SHA design PASS.
+  `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; source/design
+  artifacts are exact handoff commit `a0993dd` with report blob
+  `12dd28496f9be93f1327951ebee8a03c95ec0f94` and design-note blob
+  `4107361869dc5e6fcafd4157c0af3f47822f2378`. Actor is `vnfin-oss-reviewer`, next
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`. The disposition is `SOURCE_GAP_CLOSURE`: VNDirect and CafeF
+  availability semantics, identity, coverage, transport, and route-local rights remain independent
+  gaps; fiscal/retrieval/generic update times never substitute, session mapping stays caller-side,
+  current values/API/failover remain unchanged, and the new chain is empty. No provider probe without
+  a separately reviewed finite plan; no RED, API/model, code, source change, push, or close before
+  exact-SHA design PASS.
 
 - **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, narrow closure re-review handoff).**
   The prior correction handoff was exact `c90598a372950ddefc0d0d0bf7eae9dfd2ab87a2`, with report
