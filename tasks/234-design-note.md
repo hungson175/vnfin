@@ -56,8 +56,13 @@ The following are binding:
 Retained route family:
 
 ~~~text
-GET https://api-finfo.vndirect.com.vn/v4/financial_statements?q=code:{SYMBOL}~reportType:{ANNUAL|QUARTER}~modelType:{MODEL}&sort=fiscalDate:desc&size:{SIZE}&page:{PAGE}
+GET https://api-finfo.vndirect.com.vn/v4/financial_statements?q=code:{SYMBOL}~reportType:{ANNUAL|QUARTER}~modelType:{MODEL}&sort=fiscalDate:desc&size={SIZE}&page={PAGE}
 ~~~
+
+The documentation-only route grammar gate accepts the equals assignments `&size={SIZE}` and
+`&page={PAGE}` in both #234 artifacts and rejects any colon assignment immediately after `size` or
+`page` (for example, `&size:<value>` or `&page:<value>`). This is a static evidence check only; it
+authorizes no provider dispatch, parser, RED test, or API change.
 
 Corporate model identities remain income=2, balance=1, cashflow=3; bank identities remain
 income=102, balance=101, cashflow=103. These are existing route identity facts, not a new
@@ -71,7 +76,10 @@ re-established in this round. Provider publication semantics are SEMANTICS_GAP.
 The official [VNDirect terms](https://www.vndirect.com.vn/dieu-khoan-su-dung/) and
 [investor-relations page](https://www.vndirect.com.vn/lien-he/) do not publish a route-specific
 public automation, retention, caching, caller-return, rate, or public-OSS redistribution grant.
-This remains LEGAL_GAP; retained no-login/browser compatibility is not permission.
+This remains LEGAL_GAP; retained no-login/browser compatibility is not permission. Candidate
+VNDirect archive/navigation labels (posting date/time, Full-Year, Quarter 1-4, period-count, and VND)
+are each `NOT_RETAINED` at exact URL plus retained snapshot/blob plus locator granularity, so none is
+transferred into the API contract.
 
 ### CafeF
 
@@ -89,12 +97,18 @@ label; EndDate is the request anchor. Symbol is not retained as an echoed respon
 No provider-defined publication/availability field is qualified. CafeF static labels such as
 Thời gian gửi, Thời gian cập nhật, article date/time, Cập nhật, and Ngày phát hành remain page or
 document metadata with undocumented report binding; Năm, Quý, and Lũy kế 6 tháng remain fiscal or
-cadence labels. They cannot be copied into the API contract.
+cadence labels; Định dạng and Tải về remain access affordances. Each candidate label is
+`NOT_RETAINED` at exact URL plus retained snapshot/blob plus locator granularity, and none can be
+copied into the API contract.
 
 The official [CafeF data-tool guide](https://cafef.vn/du-lieu/ScreenerHelper.aspx) describes
 historical lookup, sharing, and export for site users. [CafeF robots](https://cafef.vn/robots.txt)
 is crawl guidance only. Neither establishes programmatic automation, retention, caching, caller
 return, rate, or public-OSS redistribution. Legal outcome remains LEGAL_GAP.
+
+All six VNDirect and six CafeF route units explicitly carry
+`terms_version=NOT_RETAINED` and `terms_effective_date=NOT_RETAINED`; no provider-wide term fact is
+transferred across a route, statement, or cadence unit.
 
 ## Qualification and coverage
 
@@ -206,6 +220,9 @@ registration, push, or close.
 - VNDirect createdDate/modifiedDate are SEMANTICS_GAP; fiscalDate remains fiscal-period end.
 - CafeF has no qualified availability field; fiscal/audit/request fields cannot substitute.
 - Value-route history examples are retained and value-blind, not current availability bounds.
+- The VNDirect route requires equals query assignments; the static gate rejects colon separators.
+- Static labels and all twelve terms version/effective-date fields remain `NOT_RETAINED` without
+  exact retained locators.
 - Route-local legal automation, retention, cache, caller-return, and redistribution rights remain open.
 - Current values, 26 metrics, failover order, and session boundary are unchanged.
 - RED, API/model changes, code, probes, source registration, push, and close are not authorized.

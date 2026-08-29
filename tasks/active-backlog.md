@@ -602,11 +602,11 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#234 — DESIGN_BLOCKED / DOCS_ONLY_CORRECTION (2026-08-30, provider-native fundamentals availability metadata).**
+- **#234 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-30, provider-native fundamentals availability metadata).**
   Packet `tasks/234-fundamentals-report-availability-source-spec.md` is at reviewer commit
   `f801d44`; public receipt is `issuecomment-5465144377`; clean published base is
-  `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; source/design
-  artifacts are exact handoff commit `a1d0d6c` with report blob
+  `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; prior source/design
+  content was commit `a1d0d6c` with report blob
   `12dd28496f9be93f1327951ebee8a03c95ec0f94` and design-note blob
   `db5cc5149eb7bf8d9704374eb78eb9bd937ec93d`. Actor is `vnfin-oss-reviewer`, next
   `RETURN_EXACT_SHA_DESIGN_VERDICT`. The disposition is `SOURCE_GAP_CLOSURE`: VNDirect and CafeF
@@ -623,51 +623,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   per-unit `terms_version`/`terms_effective_date`; B3 requires #233 DONE/CLOSED reconciliation
   and #234 as the sole current WIP. Expected correction actor is `vnfin-oss`; next
   `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`.
-
-- **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, narrow closure re-review handoff).**
-  The prior correction handoff was exact `c90598a372950ddefc0d0d0bf7eae9dfd2ab87a2`, with report
-  blob `fe473b174560ab0aa381ebfcbb9ecc2e207bf92e` and design-note blob
-  `260db7baf6993f09f4ccf340f382d0d7c0f1b80d`. The immutable historical BLOCK commit
-  `e6b777671eedc531d23aed6eff64113864c1b269` carries an erroneous actor field
-  `vnfin-oss-reviewer`; its expected correction actor was `vnfin-oss` because a BLOCK continues to
-  the builder. That historical commit cannot be rewritten.
-  The latest BLOCK was recorded first in separate backlog commit `d9c674b17cf75e8955863caf37842d4269bfdaf4`
-  for exact target `e19367336a6b4c7ea7921502d1a87bf73431b26c`, delivery `1f053a16`, report
-  `reviews/review-202608260254-issue233-final-design-review.md`, and reviewer commit `2e6a252`.
-  Its expected correction actor was `vnfin-oss`, next `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`.
-  The current correction actor was `vnfin-oss`; this separate backlog handoff is reviewer-owned.
-  The docs-only correction anchor is exact `76ce62db38ae29da1565131deaa04503d23e992b`; report blob
-  `0b7dfa920f2581428e47125908dc4811bf406bd8`; design-note blob
-  `380eabab1af815cc0caf38d71803b862935cee35`. Actor `vnfin-oss-reviewer`; next
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`. F1-F4 now have complete named normalized-MIME/legal axes with
-  no unnamed tuple token, corrected SSIAM/VLGF attribution/product form, conservative NAV/unit/
-  currency and per-fund crosswalk gaps, and narrow Eastspring/Manulife consent restrictions.
-  The correction remains docs/backlog-only from clean published base and preserves
-  `SOURCE_GAP_CLOSURE`, empty chain, four-operation Fmarket `DISABLE_PENDING_PERMISSION`,
-  NAV-only/missing-stays-missing semantics, complete deferred API/RED compatibility, the exact
-  post-PASS publication sequence, and every no-early-work gate.
-  Packet `tasks/233-public-fund-etf-listing-nav-spec.md` is at reviewer commit
-  `f426e85322d565f85efd25b00b39807c628124f7`; public triage receipt is `issuecomment-5415312502`.
-  Exact changed paths are this backlog, the research report, and `tasks/233-design-note.md`; no
-  probe, RED, API/model, code, source, push, public issue, or close before exact design PASS.
-  The current K1 lifecycle BLOCK was recorded first in this backlog-only correction commit: reviewed
-  target `fd3bedd2f4018fbbab2c91f8f170a707e60f0839`, delivery `3a141d4f`, report at `03:22 +07`
-  `reviews/review-202608260322-issue233-h1-lifecycle-closure-review.md`, and reviewer commit
-  `fbe4ad3`; BLOCK-first commit is `660824185382c8b4e36aa9e8095a1cc1acb75a96`, expected correction
-  actor is `vnfin-oss`, next `DOCS_ONLY_LIFECYCLE_CORRECTION_FROM_CLEAN_BASE`.
-  The corrected H1 chronology content anchor is exact `47ce6e92d30f1d01976c3a16cb48ee868170fab0`,
-  with research blob `dd41ff26ba121357125e05e9eef0dae88aac6466` and design-note blob
-  `2a3665c6e893f56daaff2dee6b4605108e081d0c`. It retains the newer H1 BLOCK-first receipt
-  `8bd994afdfa4cee1933daec5af8a89951d23cf8a`, binding reviewed `ef7f367b5ecd227e4da1cc54f93f8af0670f39ec`,
-  delivery `480b99be`, report at `03:15 +07`
-  `reviews/review-202608260315-issue233-g1-g2-closure-review.md`, and reviewer commit `232ae40`.
-  That receipt supersedes the preceding G1-G2 BLOCK-first `a30bb5126ae89f60382f70e16feebb52f19cf651`,
-  binding reviewed `f0601d89c96c30396dfc1c4068655c9181136da3`, delivery `27c94a31`, report
-  `reviews/review-202608260306-issue233-f1-f4-closure-review.md`, and reviewer `13556c6`. The
-  current handoff actor/next is `vnfin-oss-reviewer` / `RETURN_EXACT_SHA_DESIGN_VERDICT`. S01-ETF
-  remains bound to the exact #225 FUESS control, and affected listing rows do not promote
-  unretained NAV/currency/unit context; S02 and H01 retain their exact inherited context. Preserve
-  source-gap, empty chain, Fmarket disablement, and every no-early-work gate.
+  The corrected docs/backlog handoff keeps the source-gap and empty-chain decision. Its corrected
+  research blob is `4abd49505b1a8c95de14045aeac3dfa8e00537bb` and design-note blob is
+  `a3b8ddcd1b9a2437eb7af43ad284de70314818a6`: VNDirect uses equals query assignments with a
+  static colon-assignment rejection gate; every static label is `NOT_RETAINED` without an exact
+  retained locator; and all twelve units carry explicit `terms_version=NOT_RETAINED` and
+  `terms_effective_date=NOT_RETAINED`. #233 is one DONE/CLOSED record below, while #234 is the
+  sole current WIP. Current actor is `vnfin-oss-reviewer`; next
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
@@ -1103,8 +1066,8 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-No separate review blocker is active here; #232 is reconciled as `DONE/CLOSED` above. #233 is the
-current `SOURCE_DESIGN / REVIEW_REQUESTED` item in `Now (WIP)`.
+No separate review blocker is active here; #232 and #233 are reconciled as `DONE/CLOSED` above. #234 is the
+sole current `SOURCE_DESIGN / DOCS_ONLY_CORRECTION` item in `Now (WIP)`.
 
 ## Poller triage (newly triaged)
 
@@ -1151,6 +1114,13 @@ current `SOURCE_DESIGN / REVIEW_REQUESTED` item in `Now (WIP)`.
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#233 — DONE/CLOSED (2026-08-25), documentation-only SOURCE-GAP closure.** Published exact
+  `10028e0334aa52987942250f92d5593749f3d77c` to `origin/master`; the clean resolution is
+  `issuecomment-5416379268`, and GitHub re-read is `CLOSED`/`COMPLETED` since
+  `2026-08-25T20:32:04Z`. The public-fund/ETF listing and NAV source chain remains empty; no
+  provider probe, RED test, API/model change, production code, source registration, runtime
+  capability, or coverage claim was added.
 
 - **#228 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   approved anchor `d9bcf0478336aa1fb906e88d9d72f7a370911da5` to `origin/master`; remote HEAD,
