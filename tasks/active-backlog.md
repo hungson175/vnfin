@@ -606,9 +606,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   Packet `tasks/234-fundamentals-report-availability-source-spec.md` is at reviewer commit
   `f801d44`; public receipt is `issuecomment-5465144377`; clean published base is
   `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; source/design
-  artifacts are exact handoff commit `a0993dd` with report blob
+  artifacts are exact handoff commit `a1d0d6c` with report blob
   `12dd28496f9be93f1327951ebee8a03c95ec0f94` and design-note blob
-  `4107361869dc5e6fcafd4157c0af3f47822f2378`. Actor is `vnfin-oss-reviewer`, next
+  `db5cc5149eb7bf8d9704374eb78eb9bd937ec93d`. Actor is `vnfin-oss-reviewer`, next
   `RETURN_EXACT_SHA_DESIGN_VERDICT`. The disposition is `SOURCE_GAP_CLOSURE`: VNDirect and CafeF
   availability semantics, identity, coverage, transport, and route-local rights remain independent
   gaps; fiscal/retrieval/generic update times never substitute, session mapping stays caller-side,
