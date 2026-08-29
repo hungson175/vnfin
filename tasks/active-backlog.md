@@ -602,42 +602,6 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#234 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-30, provider-native fundamentals availability metadata).**
-  Packet `tasks/234-fundamentals-report-availability-source-spec.md` is at reviewer commit
-  `f801d44`; public receipt is `issuecomment-5465144377`; clean published base is
-  `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; prior source/design
-  content was commit `a1d0d6c` with report blob
-  `12dd28496f9be93f1327951ebee8a03c95ec0f94` and design-note blob
-  `db5cc5149eb7bf8d9704374eb78eb9bd937ec93d`. Actor is `vnfin-oss-reviewer`, next
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`. The disposition is `SOURCE_GAP_CLOSURE`: VNDirect and CafeF
-  availability semantics, identity, coverage, transport, and route-local rights remain independent
-  gaps; fiscal/retrieval/generic update times never substitute, session mapping stays caller-side,
-  current values/API/failover remain unchanged, and the new chain is empty. No provider probe without
-  a separately reviewed finite plan; no RED, API/model, code, source change, push, or close before
-  exact-SHA design PASS.
-  Latest design BLOCK was received for exact reviewed HEAD
-  `8f3c70798d34f924b0b94e03d32a38c5c0a2bbb4`, delivery `ccc6be1d`, report
-  `reviews/review-202608300528-issue234-design-source-gate.md`, and reviewer commit
-  `89a7dd74f4e4bed41e08ef581aae6d958ff04fd0`. B1 is the malformed VNDirect `size:`/`page:`
-  query separator; B2 requires per-label exact URL plus retained locator or `NOT_RETAINED`, and
-  per-unit `terms_version`/`terms_effective_date`; B3 requires #233 DONE/CLOSED reconciliation
-  and #234 as the sole current WIP. Expected correction actor is `vnfin-oss`; next
-  `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`.
-  The corrected docs/backlog handoff keeps the source-gap and empty-chain decision. Its corrected
-  research blob is `4abd49505b1a8c95de14045aeac3dfa8e00537bb` and design-note blob is
-  `a3b8ddcd1b9a2437eb7af43ad284de70314818a6`: VNDirect uses equals query assignments with a
-  static colon-assignment rejection gate; every static label is `NOT_RETAINED` without an exact
-  retained locator; and all twelve units carry explicit `terms_version=NOT_RETAINED` and
-  `terms_effective_date=NOT_RETAINED`. #233 is one DONE/CLOSED record in Done today below, while #234 is the
-  sole current WIP. Current actor is `vnfin-oss-reviewer`; next
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`.
-  The corrected-design BLOCK was received for exact reviewed HEAD
-  `1d5fd7b805940e811cd3db230a976720d3d59f50`, delivery `6ad8cd66`, report
-  `reviews/review-202608300539-issue234-corrected-design-rereview.md`, and reviewer commit
-  `3f82152a565dd1714c9ac7bdba2a3582b312f013`. B1 and B2 plus substantive B3 pass; F1 requires
-  one consistent current phase and replacing the stale #233 `above` locator with Done-today
-  wording. Expected correction actor is `vnfin-oss`; next `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`.
-
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
   `dbeea0e897e2c6688dd0b01b1cafbf4f04cd358c`, exact three approved paths, full/focused pytest,
@@ -1072,9 +1036,8 @@ Filed by Boss (`hungson175`) from the **vf-advisor** app; each replaces a curren
 
 ## Review blockers (reviewer BLOCK/P1 waiting for fix)
 
-No separate review blocker is active here; #232 is reconciled as `DONE/CLOSED` above and #233 is
-recorded in `Done today` below. #234 is the sole current `SOURCE_DESIGN / REVIEW_REQUESTED` item in
-`Now (WIP)`.
+No separate review blocker is active here; #232, #233, and #234 are reconciled as `DONE/CLOSED` in
+the backlog.
 
 ## Poller triage (newly triaged)
 
@@ -1121,6 +1084,17 @@ recorded in `Done today` below. #234 is the sole current `SOURCE_DESIGN / REVIEW
 - #124: crypto bar `time` checked tz-aware only, not exact UTC offset — future tightening.
 
 ## Done today (trim periodically)
+
+- **#234 — DONE/CLOSED (2026-08-30), documentation-only SOURCE-GAP closure.** Published exact
+  `c211b1e46b7e4950800f91846004d7d732a0723d` to `origin/master`; base
+  `10028e0334aa52987942250f92d5593749f3d77c` is an ancestor and exactly the three approved paths
+  were verified. Clean resolution is `issuecomment-5465322529`; GitHub re-read is
+  `CLOSED`/`COMPLETED` at `2026-08-29T22:46:28Z`. Research blob
+  `4abd49505b1a8c95de14045aeac3dfa8e00537bb` and design blob
+  `a3b8ddcd1b9a2437eb7af43ad284de70314818a6` are the approved artifacts. The availability chain
+  remains empty; current annual/quarterly values, 26-metric API, lineage, failover order, and
+  caller-side session handling are unchanged. No provider probe, RED, API/model/runtime/source
+  change, capability, or coverage claim was added.
 
 - **#233 — DONE/CLOSED (2026-08-25), documentation-only SOURCE-GAP closure.** Published exact
   `10028e0334aa52987942250f92d5593749f3d77c` to `origin/master`; the clean resolution is
