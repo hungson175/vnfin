@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#234 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-30, provider-native fundamentals availability metadata).**
+- **#234 — DESIGN_BLOCKED / DOCS_ONLY_CORRECTION (2026-08-30, provider-native fundamentals availability metadata).**
   Packet `tasks/234-fundamentals-report-availability-source-spec.md` is at reviewer commit
   `f801d44`; public receipt is `issuecomment-5465144377`; clean published base is
   `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; source/design
@@ -615,6 +615,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   current values/API/failover remain unchanged, and the new chain is empty. No provider probe without
   a separately reviewed finite plan; no RED, API/model, code, source change, push, or close before
   exact-SHA design PASS.
+  Latest design BLOCK was received for exact reviewed HEAD
+  `8f3c70798d34f924b0b94e03d32a38c5c0a2bbb4`, delivery `ccc6be1d`, report
+  `reviews/review-202608300528-issue234-design-source-gate.md`, and reviewer commit
+  `89a7dd74f4e4bed41e08ef581aae6d958ff04fd0`. B1 is the malformed VNDirect `size:`/`page:`
+  query separator; B2 requires per-label exact URL plus retained locator or `NOT_RETAINED`, and
+  per-unit `terms_version`/`terms_effective_date`; B3 requires #233 DONE/CLOSED reconciliation
+  and #234 as the sole current WIP. Expected correction actor is `vnfin-oss`; next
+  `DOCS_ONLY_CORRECTION_FROM_CLEAN_BASE`.
 
 - **#233 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-26, narrow closure re-review handoff).**
   The prior correction handoff was exact `c90598a372950ddefc0d0d0bf7eae9dfd2ab87a2`, with report
