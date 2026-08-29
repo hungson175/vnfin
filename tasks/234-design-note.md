@@ -192,7 +192,7 @@ This source/design handoff follows the verified intake:
 - packet f801d44;
 - public receipt issuecomment-5465144377;
 - clean published base 10028e0334aa52987942250f92d5593749f3d77c;
-- intake/backlog commit 95466ac76ba1ab71e7c9de787b94b635de2077c;
+- intake/backlog commit 95466ac76ba1ab71e7c9de787b94b635de2077c4;
 - actor at intake vnfin-oss, next PREPARE_EXACT_SHA_SOURCE_DESIGN.
 
 After the exact artifact and backlog handoff, the reviewer-owned next action is
