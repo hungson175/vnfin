@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#234 — SOURCE_DESIGN / REVIEW_REQUESTED (2026-08-30, provider-native fundamentals availability metadata).**
+- **#234 — DESIGN_BLOCKED / DOCS_ONLY_CORRECTION (2026-08-30, provider-native fundamentals availability metadata).**
   Packet `tasks/234-fundamentals-report-availability-source-spec.md` is at reviewer commit
   `f801d44`; public receipt is `issuecomment-5465144377`; clean published base is
   `10028e0334aa52987942250f92d5593749f3d77c`. Intake was recorded at `95466ac`; prior source/design
@@ -631,6 +631,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `terms_effective_date=NOT_RETAINED`. #233 is one DONE/CLOSED record below, while #234 is the
   sole current WIP. Current actor is `vnfin-oss-reviewer`; next
   `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  The corrected-design BLOCK was received for exact reviewed HEAD
+  `1d5fd7b805940e811cd3db230a976720d3d59f50`, delivery `6ad8cd66`, report
+  `reviews/review-202608300539-issue234-corrected-design-rereview.md`, and reviewer commit
+  `3f82152a565dd1714c9ac7bdba2a3582b312f013`. B1 and B2 plus substantive B3 pass; F1 requires
+  one consistent current phase and replacing the stale #233 `above` locator with Done-today
+  wording. Expected correction actor is `vnfin-oss`; next `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
