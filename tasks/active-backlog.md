@@ -602,12 +602,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **Internal quant request — daily USD/VND history (`BLOCKED`, 2026-08-30 08:06 +07).**
+- **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
   `vnfin.fx.history("USD", "VND", start=date(2000, 1, 1), end=date(2026, 8, 30),
-  frequency=Frequency.DAILY)`. Evidence is retained outside this repository at
-  `/home/hungson175/dev/trading-projects/quant-trading/quant-researcher-frontier/research/2026-08-30-vnfin-usdvnd-daily-cross-asset-anatomy/tdd/`;
-  the installed `0.2.0` gate exits `1` with `InvalidData: fx.history: only annual frequency is
+  frequency=Frequency.DAILY)`. Evidence is retained outside this repository at external commit
+  `b7519f985946480fa03c103732d326b0f3c94390`, rooted at
+  `/home/hungson175/dev/trading-projects/quant-trading/quant-researcher-frontier/research/2026-08-30-vnfin-usdvnd-daily-cross-asset-anatomy/`:
+  root `RESULTS.md` blob `10403aeb58fc315f4843d083ffd57e41f6c42365`; `tdd/source_gate.stdout`
+  `c93f8e77cd4d8fff1056b0bedc7fce92644b436e`; `tdd/source_gate.stderr`
+  `4715ea12a99e5f27386911b5db000f6acd48b86d`; `tdd/source_gate.exit`
+  `d00491fd7e5bb6fa28c517a0bb32b8b506539d4d`; and `tdd/red_exit.txt`
+  `0cfbf08886fca9a91cb753ec8734c84fcbe52c9f`.
+  The installed `0.2.0` gate exits `1` with `InvalidData: fx.history: only annual frequency is
   supported in v1, got 'daily'`. No daily rows or provider values were inspected or inferred;
   annual World Bank behavior stays unchanged. Source/API status and the future design path are
   committed at `97447ad299e15ab4b25dc9571a0dfa8491aaf865` in exactly
@@ -620,9 +626,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   under report commit `d9492d9` at `reviews/review-202608300804-frontier-daily-usdvnd-source-api.md`.
   Required correction is docs/backlog-only: distinguish root `RESULTS.md` from the four `tdd/`
   gate artifacts and bind external commit/blob identities; split request preflight from
-  response-backed pair identity; then hand back for review. Current actor remains `vnfin-oss`
-  pending that correction; no external code/probe/RED/API-model/runtime/source/push/public-issue/
-  close action is authorized.
+  response-backed pair identity; then hand back for review. Current actor is
+  `vnfin-oss-reviewer`; next `RETURN_EXACT_SOURCE_API_DESIGN_VERDICT`. No external
+  code/probe/RED/API-model/runtime/source/push/public-issue/close action is authorized.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base

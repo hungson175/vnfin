@@ -23,12 +23,20 @@ vnfin.fx.history(
 
 It serves World Bank `PA.NUS.FCRF` annual period-average USD/VND only. Current spot sources are
 not historical sources. `rate_on()` and `rate_for_year()` remain exact lookup accessors; neither
-fills or interpolates. The daily request's exact gate evidence is retained outside the repository
-under:
+fills or interpolates. The daily request's exact gate evidence is retained outside the repository at
+external commit `b7519f985946480fa03c103732d326b0f3c94390` under:
 
 ```text
-/home/hungson175/dev/trading-projects/quant-trading/quant-researcher-frontier/research/2026-08-30-vnfin-usdvnd-daily-cross-asset-anatomy/tdd/
+/home/hungson175/dev/trading-projects/quant-trading/quant-researcher-frontier/research/2026-08-30-vnfin-usdvnd-daily-cross-asset-anatomy/
 ```
+
+The root-level `RESULTS.md` blob is `10403aeb58fc315f4843d083ffd57e41f6c42365`; the four
+gate artifacts are under `tdd/`: `source_gate.stdout`
+(`c93f8e77cd4d8fff1056b0bedc7fce92644b436e`), `source_gate.stderr`
+(`4715ea12a99e5f27386911b5db000f6acd48b86d`), `source_gate.exit`
+(`d00491fd7e5bb6fa28c517a0bb32b8b506539d4d`), and `red_exit.txt`
+(`0cfbf08886fca9a91cb753ec8734c84fcbe52c9f`). This task reads those files as data and does not
+execute external research or measurement code.
 
 No annual point, current quote, documented market start, or cross-rate may be relabeled as a daily
 observation.
@@ -52,7 +60,8 @@ minimum the daily result must make these facts inspectable without inference:
 
 | Field/diagnostic | Future requirement |
 | --- | --- |
-| `base`, `quote` | Response-backed `USD` and `VND`; reject wrong pair before network. |
+| Request pair preflight | Normalize and validate the caller's requested `USD`/`VND`; reject an unsupported or wrong requested pair before network. This proves only request validity, not provider identity. |
+| Response pair identity | After dispatch, require the response itself to identify the exact `USD`/`VND` pair; missing, wrong, or malformed provider pair identity fails before cache/materialization/return. |
 | `points[].date` | Provider's observed/reference date, not retrieval date; plain date with documented timezone/date convention. |
 | `points[].rate` | Finite, positive, non-boolean numeric value in the provider-backed direction; no inversion or scale guess. |
 | `unit` / `value_unit` | Exact canonical `VND per 1 USD`, only after the provider's rate basis and scale are proven. |

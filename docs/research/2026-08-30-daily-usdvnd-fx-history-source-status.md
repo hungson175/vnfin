@@ -56,19 +56,22 @@ not register, contact, download, accept terms, or call a provider data endpoint.
 ### 2.1 Frozen source-gate evidence
 
 The evidence was read as data from the external research workspace; its test or measurement code was
-not executed by this task:
+not executed by this task. The immutable external evidence commit is
+`b7519f985946480fa03c103732d326b0f3c94390`.
 
 ```text
-/home/hungson175/dev/trading-projects/quant-trading/quant-researcher-frontier/research/2026-08-30-vnfin-usdvnd-daily-cross-asset-anatomy/tdd/
+/home/hungson175/dev/trading-projects/quant-trading/quant-researcher-frontier/research/2026-08-30-vnfin-usdvnd-daily-cross-asset-anatomy/
 ```
 
-| Artifact | Retained fact |
-| --- | --- |
-| `source_gate.stdout` | `request=vnfin.fx.history(USD,VND,2000-01-01..2026-08-30,Frequency.DAILY)` |
-| `source_gate.stderr` | Exact traceback ends with `InvalidData: fx.history: only annual frequency is supported in v1, got 'daily'`. |
-| `source_gate.exit` | `1` |
-| `red_exit.txt` | `2`; the intentionally failing implementation-side collection was not turned into a green implementation. |
-| `RESULTS.md` | `SOURCE_BLOCKED / NO_DAILY_CONTRACT`; no values, replay, or economic claim. |
+`RESULTS.md` is at the evidence root; the four gate artifacts are under its `tdd/` child:
+
+| Exact artifact path | Blob identity | Retained fact |
+| --- | --- | --- |
+| `RESULTS.md` (root) | `10403aeb58fc315f4843d083ffd57e41f6c42365` | `SOURCE_BLOCKED / NO_DAILY_CONTRACT`; no values, replay, or economic claim. |
+| `tdd/source_gate.stdout` | `c93f8e77cd4d8fff1056b0bedc7fce92644b436e` | `request=vnfin.fx.history(USD,VND,2000-01-01..2026-08-30,Frequency.DAILY)` |
+| `tdd/source_gate.stderr` | `4715ea12a99e5f27386911b5db000f6acd48b86d` | Exact traceback ends with `InvalidData: fx.history: only annual frequency is supported in v1, got 'daily'`. |
+| `tdd/source_gate.exit` | `d00491fd7e5bb6fa28c517a0bb32b8b506539d4d` | `1` |
+| `tdd/red_exit.txt` | `0cfbf08886fca9a91cb753ec8734c84fcbe52c9f` | `2`; the intentionally failing implementation-side collection was not turned into a green implementation. |
 
 The installed facade validates the requested frequency and raises before constructing or calling
 the annual source. Therefore the exception proves the current API boundary only; it does not prove
