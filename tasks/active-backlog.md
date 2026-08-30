@@ -602,6 +602,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **Internal quant request — daily USD/VND history (`SOURCE_DESIGN_ACTIVE`, 2026-08-30).**
+  Frozen request from `quant-researcher-frontier` (no public issue):
+  `vnfin.fx.history("USD", "VND", start=date(2000, 1, 1), end=date(2026, 8, 30),
+  frequency=Frequency.DAILY)`. Evidence is retained outside this repository at
+  `/home/hungson175/dev/trading-projects/quant-trading/quant-researcher-frontier/research/2026-08-30-vnfin-usdvnd-daily-cross-asset-anatomy/tdd/`;
+  the installed `0.2.0` gate exits `1` with `InvalidData: fx.history: only annual frequency is
+  supported in v1, got 'daily'`. No daily rows or provider values were inspected or inferred;
+  annual World Bank behavior stays unchanged. Actor is `vnfin-oss`; next
+  `RETURN_EXACT_SOURCE_API_STATUS`. Prepare only the source-status/design docs and retain the
+  no-login/no-key/no-payment, missing-stays-missing, no-fill, no-code, and no-public-issue gates.
+
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
   `dbeea0e897e2c6688dd0b01b1cafbf4f04cd358c`, exact three approved paths, full/focused pytest,
