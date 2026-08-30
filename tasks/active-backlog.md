@@ -614,7 +614,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `docs/research/2026-08-30-daily-usdvnd-fx-history-source-status.md` and
   `tasks/daily-usdvnd-fx-history-design-note.md`. The disposition is `SOURCE_GAP_CLOSURE`;
   no-login/no-key/no-payment, missing-stays-missing, no-fill, no-code, and no-public-issue gates
-  remain binding. Actor is `vnfin-oss`; next `RETURN_EXACT_SOURCE_API_DESIGN_VERDICT`.
+  remain binding. Merged-tree gates at prior handoff `b081a3f` pass: exact no-network
+  annual-only rejection, full `pytest -q`, isolated `uv build`, and `git diff --check`. Actor is
+  `vnfin-oss`; next `RETURN_EXACT_SOURCE_API_DESIGN_VERDICT`.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
