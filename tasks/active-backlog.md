@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30).**
+- **Internal quant request — daily USD/VND history (`BLOCKED`, 2026-08-30 08:06 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
   `vnfin.fx.history("USD", "VND", start=date(2000, 1, 1), end=date(2026, 8, 30),
   frequency=Frequency.DAILY)`. Evidence is retained outside this repository at
@@ -615,8 +615,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `tasks/daily-usdvnd-fx-history-design-note.md`. The disposition is `SOURCE_GAP_CLOSURE`;
   no-login/no-key/no-payment, missing-stays-missing, no-fill, no-code, and no-public-issue gates
   remain binding. Merged-tree gates at prior handoff `b081a3f` pass: exact no-network
-  annual-only rejection, full `pytest -q`, isolated `uv build`, and `git diff --check`. Actor is
-  `vnfin-oss`; next `RETURN_EXACT_SOURCE_API_DESIGN_VERDICT`.
+  annual-only rejection, full `pytest -q`, isolated `uv build`, and `git diff --check`.
+  Reviewer BLOCK delivery `e3540057` reviewed exact `656fbac40da2f9fbad3ea1d313e3b03fb924674a`
+  under report commit `d9492d9` at `reviews/review-202608300804-frontier-daily-usdvnd-source-api.md`.
+  Required correction is docs/backlog-only: distinguish root `RESULTS.md` from the four `tdd/`
+  gate artifacts and bind external commit/blob identities; split request preflight from
+  response-backed pair identity; then hand back for review. Current actor remains `vnfin-oss`
+  pending that correction; no external code/probe/RED/API-model/runtime/source/push/public-issue/
+  close action is authorized.
 
 - **#231 — DONE/CLOSED (2026-08-24), documentation-only SOURCE-GAP closure.** Published exact
   `d76bd6b6388855cb06a0febf575646a9b960556e` to `origin/master`; clean base
