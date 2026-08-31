@@ -763,6 +763,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   API-model redesign, RED edit, capability claim, push, or close was performed. Actor is now
   `vnfin-oss`; next action is `RETURN_EXACT_IMPLEMENTATION_VERDICT` via the reviewer code-review
   handoff; the implementation/release packet remains frozen.
+  Implementation review is now **BLOCKED** at release exact
+  `45f394956ae7d59767c6d5d03c6d9a05307c82ed`, lifecycle `76969b845228e2a38fde2cf0f1bdf3e99a3c5355`,
+  delivery `f3246823`, with report
+  `reviews/review-202608312329-issue235-implementation-review.md`. Runtime/API behavior and the
+  4,305-test/build gates are green. BLOCK was recorded before correction; the docs-only correction
+  must fix stale phase and reviewer-actor lifecycle text, make version/import/build checks distinct
+  from their release-row updates, and align `skills/vnfin/reference/domains.md`, the DBnomics module
+  docs, `docs/architecture/data-domains.md`, and tutorial generic wording with the VNM-only
+  `FPOLM_PA` boundary. Code, RED tests/fixtures, snapshot, and packets are frozen. Actor is now
+  `vnfin-oss`; next action is `CORRECT_IMPLEMENTATION_REVIEW_DOCS`; no probe, source registration,
+  API redesign, push, capability claim, or close is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
