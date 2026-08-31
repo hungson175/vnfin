@@ -809,6 +809,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `RETURN_EXACT_IMPLEMENTATION_VERDICT`. Historical BLOCK anchors `122b8d2` and `62a5df9` remain
   preserved; code, RED tests/fixtures, snapshot, packets, and all runtime/source/API work remain
   frozen or unauthorized.
+  The resolver-verified superseding lifecycle review is **BLOCKED** at exact
+  `023ce17e952096924ace7c805b5a9521d49fb417`, delivery `5558b4b0`, reviewer report commit
+  `23b553556c950f81eda0d7cd4674e4bb7584e14f`, report
+  `reviews/review-202608312347-issue235-final-docs-lifecycle.md`. The prior delivery `145c2ef5`
+  lacked resolver-consumption proof and is invalid. BLOCK was recorded before correction; append
+  the completed current handoff again after this BLOCK. Actor is now `vnfin-oss`; next action is
+  `CORRECT_FINAL_LIFECYCLE_RECEIPT`; docs/runtime/tests/API/source remain frozen and no push/close
+  is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
