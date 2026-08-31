@@ -783,6 +783,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   The exact corrected release/lifecycle SHA is the merged handoff returned to the reviewer; code,
   RED tests, fixtures, snapshot, packets, source registration, probes, push, capability claim, and
   close remain frozen or unauthorized.
+  The docs/lifecycle correction review remains **BLOCKED** at exact
+  `122b8d2a31301713a594292de408a65d2f3667eb`, delivery `b73d4093`, reviewer report commit
+  `185e58044f266cae878348e713b9d4c1ab02b859`, report
+  `reviews/review-202608312339-issue235-implementation-docs-correction.md`. BLOCK was recorded
+  before correction. The remaining docs-only fixes are to use one exact current requested phase
+  while retaining the historical BLOCK, correct the tutorial's no-per-country-branching claim,
+  and state across architecture/skill/module docs that hookless custom sources remain eligible,
+  declared country hooks must affirm eligibility, and returned identity/unit guards still apply.
+  Actor is now `vnfin-oss`; next action is `CORRECT_IMPLEMENTATION_DOCS_LIFECYCLE`; code, RED
+  tests/fixtures, snapshot, packets, probes, source registration, API redesign, push, and close
+  remain frozen or unauthorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
