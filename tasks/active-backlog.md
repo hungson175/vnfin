@@ -707,6 +707,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   M07 is the sole diagnostic signature/payload MUST_FAIL group, while C01-C12, M03, M08-M11,
   and M13 remain current green characterizations. No production/API/source/probe change was
   made. Actor is now `vnfin-oss-reviewer`; next action is `RETURN_EXACT_RED_TEST_VERDICT`.
+  RED test review is now **BLOCKED** at exact
+  `4f2fab1e894d1d27e8db1e490379f84bbc8da6d3`, delivery `5dabb8cd`, with report
+  `reviews/review-202608312237-issue235-red-test-review.md` and reviewer `83c5f0c`. The
+  23-failure shape/scope/safety passed; the remaining correction is test/backlog-only: assert the
+  keyword-only diagnostic signature, lock `_country_eligible_sources`/`supports_country`, and
+  complete DBnomics suffix/country/frequency/concept plus WDI URL-shaped/country-folded negative
+  identity cases. BLOCK is recorded before correction; actor is `vnfin-oss`, next action is
+  `CORRECT_EXACT_RED_TEST_MANIFEST`. No implementation, probe, source/API-model change, push,
+  capability claim, or close is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
