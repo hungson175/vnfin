@@ -607,9 +607,9 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   with companion research brief `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`,
   both at reviewer anchor `acbbb82`. Clean published base is `origin/master`
   `472cfe6d42ba43ab535a2ff676220896d5aaaacd`; substantive source/design anchor is
-  `b123a1cbd63391a493501b093897e037dad00975` with report blob
-  `ac893d0c67ad0359b2405038036be71d503ee64d` and design blob
-  `f5a9d58054a656a6407948e662e3db30e97aea8a`. Scope is the frozen canonical
+  `370fbcf267cd103d4665e34cb0460f6d65673277` with report blob
+  `3b345177d2d48257e25ba147b9a2a07f296a2a66` and design blob
+  `2c75ff44381434de17dfbbe69b379bcd94522bdb`. Scope is the frozen canonical
   `USA`/`CAN`/`MEX`/`CUB`/`DOM` cohort on strict common-year 2020 WDI; the 2025
   `USA`/`CAN`/`MEX`/`DOM`/`GTM` set is an explicitly incomplete appendix, not a substitute.
   The research artifact audits 50 independent cells: 5 `PROVEN_EXISTING`, 4 `PARTIAL`, 1
