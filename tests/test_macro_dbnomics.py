@@ -21,6 +21,7 @@ from vnfin.macro.indicators import (
     canonical_indicator_code,
     canonical_indicator_name,
 )
+from vnfin.transport import HttpDataSource
 
 COUNTRY = "ZZZ"  # ISO3 requested by callers; DBnomics IFS uses a 2-letter code internally
 
@@ -62,6 +63,24 @@ def _raising(exc):
 
 def _src(text):
     return DBnomicsSource(http_get=_static(text))
+
+
+def _cache_enabled_dbnomics_source(fake_get, clock):
+    """Test-only seam for exercising the inherited raw-text cache.
+
+    DBnomicsSource intentionally has no public ``cache_ttl`` constructor argument. The
+    RED cache characterization enables the existing base transport cache only on this
+    synthetic test instance; production constructors and source wiring stay untouched.
+    """
+    source = DBnomicsSource(http_get=fake_get)
+    HttpDataSource.__init__(
+        source,
+        http_get=fake_get,
+        timeout=25.0,
+        cache_ttl=60.0,
+        clock=clock,
+    )
+    return source
 
 
 # --- parsing ---------------------------------------------------------------
@@ -346,14 +365,14 @@ def test_policy_rate_monthly_happy_path(monkeypatch):
     # N-b: policy rate ~4.5 percent-points, NOT a 0.045 fraction.
     monkeypatch.setattr("vnfin.macro.dbnomics._today", lambda: date(2024, 4, 1))
     res = _src(dbn_success(
-        series_code="M.ZZ.FPOLM_PA",
+        series_code="M.VN.FPOLM_PA",
         periods=["2024-01-01", "2024-02-01", "2024-03-01"],
         values=[6.0, 5.0, 4.5],
-    )).get_indicator(COUNTRY, MacroIndicator.POLICY_RATE)
+    )).get_indicator("VNM", MacroIndicator.POLICY_RATE)
     assert res.unit == "% per annum"
     assert res.currency is None
     assert res.frequency.value == "monthly"
-    assert res.indicator_code == "M.ZZ.FPOLM_PA"
+    assert res.indicator_code == "M.VN.FPOLM_PA"
     # honest verbose proxy DISPLAY label rides on the result name
     assert res.indicator_name == _POLICY_RATE_DISPLAY
     assert res.points[-1][1] == pytest.approx(4.5)  # magnitude, not 0.045
@@ -367,8 +386,8 @@ def test_policy_rate_identity_keyed_to_code_not_display():
     assert canonical_indicator_name(MacroIndicator.POLICY_RATE) == "Policy Rate"
     assert _POLICY_RATE_DISPLAY != canonical_indicator_name(MacroIndicator.POLICY_RATE)
     # indicator_identity() (declared) returns the SAME verbose name the result carries
-    code, name = _src(dbn_success()).indicator_identity("ZZZ", MacroIndicator.POLICY_RATE)
-    assert code == "M.ZZ.FPOLM_PA"
+    code, name = _src(dbn_success()).indicator_identity("VNM", MacroIndicator.POLICY_RATE)
+    assert code == "M.VN.FPOLM_PA"
     assert name == _POLICY_RATE_DISPLAY
 
 
@@ -440,10 +459,10 @@ def test_series_end_gap_single_point_uses_monthly_fallback_floor():
 def test_get_indicator_emits_series_end_gap_when_stale(monkeypatch):
     monkeypatch.setattr("vnfin.macro.dbnomics._today", lambda: date(2026, 6, 1))
     res = _src(dbn_success(
-        series_code="M.ZZ.FPOLM_PA",
+        series_code="M.VN.FPOLM_PA",
         periods=["2023-10-01", "2023-11-01", "2023-12-01"],
         values=[5.0, 4.5, 4.5],
-    )).get_indicator(COUNTRY, MacroIndicator.POLICY_RATE)
+    )).get_indicator("VNM", MacroIndicator.POLICY_RATE)
     assert any(w.startswith(f"{_SERIES_END_GAP}:") for w in res.warnings)
     # the pinned _today (a date) must NOT leak into fetched_at_utc (a real datetime)
     assert isinstance(res.fetched_at_utc, datetime)
@@ -467,3 +486,69 @@ def test_annual_gdp_never_warns_even_when_old(monkeypatch):
     monkeypatch.setattr("vnfin.macro.dbnomics._today", lambda: date(2026, 6, 1))
     res = _src(dbn_success()).get_indicator(COUNTRY, MacroIndicator.GDP)  # annual NGDP_XDC
     assert res.warnings == ()
+
+
+# --- #235 RED authorization: direct guard and exact carrier characterizations ---
+
+_NON_VNM_POLICY_COUNTRIES = ("USA", "CHN", "JPN", "DEU", "ZZZ")
+_IFS_CC = {"USA": "US", "CHN": "CN", "JPN": "JP", "DEU": "DE", "ZZZ": "ZZ"}
+_NON_VNM_POLICY_ERROR = (
+    "dbnomics: policy_rate route is VNM-only; country={country} is not qualified"
+)
+
+
+@pytest.mark.parametrize("country", _NON_VNM_POLICY_COUNTRIES)
+def test_policy_rate_direct_non_vnm_guard_fails_before_transport(country):
+    calls = []
+
+    def _g(url, params, headers):
+        calls.append((url, params, headers))
+        return dbn_success(
+            series_code=f"M.{_IFS_CC[country]}.FPOLM_PA",
+            periods=["2024-01-01"],
+            values=[4.5],
+        )
+
+    with pytest.raises(InvalidData) as exc_info:
+        DBnomicsSource(http_get=_g).get_indicator(country, MacroIndicator.POLICY_RATE)
+    assert str(exc_info.value) == _NON_VNM_POLICY_ERROR.format(country=country)
+    assert calls == []
+
+
+@pytest.mark.parametrize("country", _NON_VNM_POLICY_COUNTRIES)
+def test_policy_rate_indicator_identity_non_vnm_guard_is_exact(country):
+    calls = []
+
+    def _g(url, params, headers):
+        calls.append((url, params, headers))
+        return dbn_success(series_code=f"M.{_IFS_CC[country]}.FPOLM_PA")
+
+    with pytest.raises(InvalidData) as exc_info:
+        DBnomicsSource(http_get=_g).indicator_identity(country, MacroIndicator.POLICY_RATE)
+    assert str(exc_info.value) == _NON_VNM_POLICY_ERROR.format(country=country)
+    assert calls == []
+
+
+def test_policy_rate_direct_malformed_response_has_exact_invalid_data_carrier():
+    source = _src(dbn_success(series_code="M.VN.WRONG"))
+    with pytest.raises(InvalidData) as exc_info:
+        source.get_indicator("VNM", MacroIndicator.POLICY_RATE)
+    assert str(exc_info.value) == (
+        "dbnomics: returned series_code 'M.VN.WRONG' != requested 'M.VN.FPOLM_PA'"
+    )
+
+
+def test_policy_rate_malformed_response_uses_existing_raw_text_cache_boundary():
+    calls = []
+
+    def _g(url, params, headers):
+        calls.append((url, params, headers))
+        return dbn_success(series_code="M.VN.WRONG")
+
+    source = _cache_enabled_dbnomics_source(_g, clock=lambda: 1000.0)
+    expected = "dbnomics: returned series_code 'M.VN.WRONG' != requested 'M.VN.FPOLM_PA'"
+    for _ in range(2):
+        with pytest.raises(InvalidData) as exc_info:
+            source.get_indicator("VNM", MacroIndicator.POLICY_RATE)
+        assert str(exc_info.value) == expected
+    assert len(calls) == 1

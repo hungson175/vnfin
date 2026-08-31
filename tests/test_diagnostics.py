@@ -1,6 +1,7 @@
 """Issue #145 — source-coverage diagnostics (offline, additive public API)."""
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, timedelta
 
 import pytest
@@ -15,6 +16,7 @@ from vnfin.diagnostics import (
 )
 from vnfin.exceptions import EmptyData, InvalidData, VnfinError
 from vnfin.gold.currency_api import COVERAGE_START, CurrencyApiGoldSource
+from vnfin.transport import HttpDataSource
 
 _COV = COVERAGE_START
 
@@ -159,19 +161,86 @@ def test_world_gold_max_day_boundary_exact():
 from vnfin.diagnostics import explain_fixed_income_coverage
 
 
-def test_fixed_income_coverage_is_offline_zero_network():
-    # Mirror the _no_network discipline of the sibling diagnostics: pure metadata,
-    # never a provider call.
+def _install_connected_transport_guard(monkeypatch):
+    """Install the real transport chokepoint as a connected no-network guard."""
     import vnfin.diagnostics as diag
 
-    called = {"n": 0}
-    # Any accidental http_get-like call would bump this; the function takes no
-    # http_get, so simply assert it runs and returns without touching the net.
+    calls = []
+
+    def _guard(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("fixed-income diagnostics must not perform network I/O")
+
+    monkeypatch.setattr(HttpDataSource, "_fetch_with_retry", _guard)
+    return diag, calls
+
+
+def test_fixed_income_coverage_is_offline_zero_network(monkeypatch):
+    # M08/C07: the no-argument characterization now guards the actual connected
+    # transport seam rather than a disconnected local counter.
+    diag, calls = _install_connected_transport_guard(monkeypatch)
     d = explain_fixed_income_coverage()
     assert isinstance(d, RequestDiagnostic)
-    assert called["n"] == 0
+    assert calls == []
     # exposed on the package namespace like the siblings
     assert diag.explain_fixed_income_coverage() == d
+    assert calls == []
+
+
+# M07 is the sole diagnostic signature/payload MUST_FAIL group. The VNM case is
+# a legacy-payload characterization: only the additive request field changes.
+def test_fixed_income_coverage_vnm_request_keeps_legacy_payload(monkeypatch):
+    _diag, calls = _install_connected_transport_guard(monkeypatch)
+    legacy = explain_fixed_income_coverage()
+    result = explain_fixed_income_coverage(country_iso3="VNM")
+    assert result == replace(legacy, request={"country_iso3": "VNM"})
+    assert calls == []
+
+
+def _expected_non_vnm_fixed_income_diagnostic(country_iso3):
+    return RequestDiagnostic(
+        domain="rates",
+        endpoint="fixed_income_coverage",
+        request={"country_iso3": country_iso3},
+        status="unknown",
+        sources=(
+            SourceCapability(
+                domain="rates",
+                endpoint="policy_rate",
+                source="(none)",
+                instruments=("policy_rate",),
+                granularity=None,
+                coverage_start=None,
+                coverage_end=None,
+                is_default=False,
+                is_opt_in=False,
+                is_single_source=False,
+                limitations=(
+                    "policy_rate is not qualified for the requested country; "
+                    "the current FPOLM_PA route is VNM-only",
+                    "no country-correct no-key provider is qualified; "
+                    "no fallback or substitution is made",
+                ),
+                suggested_action=None,
+            ),
+        ),
+        notes=(
+            f"policy_rate is not qualified for country {country_iso3}; missing remains missing",
+            "the current FPOLM_PA route is VNM-only; "
+            "no provider fallback or substitution is made",
+        ),
+        suggested_actions=(),
+    )
+
+
+@pytest.mark.parametrize("country_iso3", ["USA", "CHN", "JPN", "DEU", "ZZZ"])
+def test_fixed_income_coverage_non_vnm_payload_is_exact(country_iso3, monkeypatch):
+    _diag, calls = _install_connected_transport_guard(monkeypatch)
+    result = explain_fixed_income_coverage(country_iso3=country_iso3)
+    assert result == _expected_non_vnm_fixed_income_diagnostic(country_iso3)
+    assert "SBV" not in " ".join(result.notes)
+    assert result.suggested_actions == ()
+    assert calls == []
 
 
 def test_fixed_income_coverage_states_yield_curve_unavailable():

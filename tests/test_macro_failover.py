@@ -19,6 +19,7 @@ from vnfin.exceptions import (
 )
 from vnfin.macro import (
     DBnomicsSource,
+    Frequency,
     IMFDataMapperSource,
     IndicatorSeries,
     MacroIndicator,
@@ -32,6 +33,8 @@ from vnfin.macro import (
     get_indicator,
 )
 from vnfin.macro.dbnomics import _SERIES_END_GAP
+from vnfin.models import SourceAttempt
+from vnfin.transport import HttpDataSource
 
 
 # ---- fake sources (declare unit_for + get_indicator like the real ones) ----
@@ -1154,6 +1157,19 @@ def test_declared_source_code_mismatch_rejected():
     assert "indicator_code" in ei.value.attempts[0].reason
 
 
+def test_declared_source_name_mismatch_rejected():
+    src = _DeclaredSource(
+        "wb",
+        "NY.GDP.MKTP.CD",
+        "Returned GDP",
+        declared_code="NY.GDP.MKTP.CD",
+        declared_name="Declared GDP",
+    )
+    with pytest.raises(AllSourcesFailed) as ei:
+        get_indicator("ZZZ", MacroIndicator.GDP, sources=[src])
+    assert "indicator_name" in ei.value.attempts[0].reason
+
+
 def test_declared_source_name_none_is_code_only_but_requires_nonempty_name():
     # declared name None -> name is provider-derived; code validated, and a
     # non-empty name is still required by the result guard.
@@ -1192,11 +1208,11 @@ def test_cpi_yoy_resolves_dbnomics_only_monthly():
 
 
 def test_policy_rate_resolves_dbnomics_only_monthly():
-    dbn_text = _dbn_monthly("M.ZZ.FPOLM_PA", ["2024-01-01", "2024-02-01"], [5.0, 4.5])
+    dbn_text = _dbn_monthly("M.VN.FPOLM_PA", ["2024-01-01", "2024-02-01"], [5.0, 4.5])
     wb = WorldBankMacroSource(http_get=lambda u, p, h: json.dumps([{"total": 0}, None]))
     imf = IMFDataMapperSource(http_get=lambda u, p, h: json.dumps({"values": {}}))
     dbn = DBnomicsSource(http_get=lambda u, p, h: dbn_text)
-    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.POLICY_RATE)
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("VNM", MacroIndicator.POLICY_RATE)
     assert res.source == "dbnomics"
     assert res.unit == "% per annum"
     assert res.frequency.value == "monthly"
@@ -1226,10 +1242,210 @@ def test_series_end_gap_warning_survives_failover_finalize(monkeypatch):
     # that dropped source warnings in _finalize would be caught here. Pin _today far
     # past the last obs so the gap fires deterministically.
     monkeypatch.setattr("vnfin.macro.dbnomics._today", lambda: date(2026, 6, 1))
-    dbn_text = _dbn_monthly("M.ZZ.FPOLM_PA", ["2023-10-01", "2023-11-01", "2023-12-01"], [5.0, 4.5, 4.5])
+    dbn_text = _dbn_monthly("M.VN.FPOLM_PA", ["2023-10-01", "2023-11-01", "2023-12-01"], [5.0, 4.5, 4.5])
     wb = WorldBankMacroSource(http_get=lambda u, p, h: json.dumps([{"total": 0}, None]))
     imf = IMFDataMapperSource(http_get=lambda u, p, h: json.dumps({"values": {}}))
     dbn = DBnomicsSource(http_get=lambda u, p, h: dbn_text)
-    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("ZZZ", MacroIndicator.POLICY_RATE)
+    res = default_macro_client(sources=[wb, imf, dbn]).get_indicator("VNM", MacroIndicator.POLICY_RATE)
     assert res.source == "dbnomics"
     assert any(w.startswith(f"{_SERIES_END_GAP}:") for w in res.warnings)
+
+
+# --- #235 RED authorization: country-scoped preflight/failover carriers ---
+
+
+class _CountryAwarePolicySource:
+    """Tiny synthetic source with a provider-declared USA policy identity."""
+
+    def __init__(self, calls, *, name="qualified-custom", country="USA"):
+        self.name = name
+        self._calls = calls
+        self._country = country
+        self._code = "CUSTOM.USA.POLICY"
+        self._label = "Custom USA policy rate"
+
+    def supports(self, indicator):
+        return MacroIndicator(indicator) == MacroIndicator.POLICY_RATE
+
+    def supports_country(self, country_iso3, indicator):
+        return (
+            country_iso3 == self._country
+            and MacroIndicator(indicator) == MacroIndicator.POLICY_RATE
+        )
+
+    def unit_for(self, indicator):
+        return "% per annum"
+
+    def indicator_identity(self, country_iso3, indicator):
+        return self._code, self._label
+
+    def get_indicator(self, country_iso3, indicator):
+        self._calls.append(country_iso3)
+        return IndicatorSeries(
+            country=country_iso3,
+            indicator_code=self._code,
+            indicator_name=self._label,
+            points=((date(2024, 1, 1), 5.0),),
+            source=self.name,
+            unit="% per annum",
+            currency=None,
+            frequency=Frequency.MONTHLY,
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+class _HooklessPolicySource:
+    """Synthetic canonical policy source with no optional country hook."""
+
+    name = "hookless-custom"
+
+    def __init__(self, calls):
+        self._calls = calls
+
+    def supports(self, indicator):
+        return MacroIndicator(indicator) == MacroIndicator.POLICY_RATE
+
+    def unit_for(self, indicator):
+        return "% per annum"
+
+    def get_indicator(self, country_iso3, indicator):
+        self._calls.append(country_iso3)
+        return IndicatorSeries(
+            country=country_iso3,
+            indicator_code=canonical_indicator_code(MacroIndicator.POLICY_RATE),
+            indicator_name=canonical_indicator_name(MacroIndicator.POLICY_RATE),
+            points=((date(2024, 1, 1), 5.0),),
+            source=self.name,
+            unit="% per annum",
+            currency=None,
+            frequency=Frequency.MONTHLY,
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+_PUBLIC_NON_VNM_POLICY_COUNTRIES = {
+    "USA": "US",
+    "CHN": "CN",
+    "JPN": "JP",
+    "DEU": "DE",
+    "ZZZ": "ZZ",
+}
+
+
+@pytest.mark.parametrize("country", tuple(_PUBLIC_NON_VNM_POLICY_COUNTRIES))
+def test_policy_rate_public_non_vnm_preflight_has_exact_empty_failure_carrier(country):
+    calls = []
+
+    def _dbn_get(url, params, headers):
+        calls.append((url, params, headers))
+        return _dbn_monthly(
+            f"M.{_PUBLIC_NON_VNM_POLICY_COUNTRIES[country]}.FPOLM_PA",
+            ["2024-01-01"],
+            [5.0],
+        )
+
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        default_macro_client(sources=[DBnomicsSource(http_get=_dbn_get)]).get_indicator(
+            country, MacroIndicator.POLICY_RATE
+        )
+    err = exc_info.value
+    assert err.symbol == f"{country}/policy_rate"
+    assert err.interval is None
+    assert err.attempts == ()
+    assert calls == []
+
+
+def test_policy_rate_preflight_skips_dbnomics_for_qualified_custom_source():
+    dbn_calls = []
+    custom_calls = []
+
+    def _dbn_get(url, params, headers):
+        dbn_calls.append((url, params, headers))
+        return _dbn_monthly("M.US.FPOLM_PA", ["2024-01-01"], [5.0])
+
+    custom = _CountryAwarePolicySource(custom_calls)
+    result = default_macro_client(
+        sources=[DBnomicsSource(http_get=_dbn_get), custom]
+    ).get_indicator("USA", MacroIndicator.POLICY_RATE)
+    assert result.source == "qualified-custom"
+    assert result.indicator_code == "CUSTOM.USA.POLICY"
+    assert result.indicator_name == "Custom USA policy rate"
+    assert dbn_calls == []
+    assert custom_calls == ["USA"]
+
+
+def test_policy_rate_hookless_custom_source_remains_eligible():
+    calls = []
+    result = default_macro_client(
+        sources=[_HooklessPolicySource(calls)]
+    ).get_indicator("USA", MacroIndicator.POLICY_RATE)
+    assert result.source == "hookless-custom"
+    assert result.country == "USA"
+    assert calls == ["USA"]
+
+
+def test_policy_rate_public_malformed_response_preserves_exact_attempt_carrier():
+    source = DBnomicsSource(
+        http_get=lambda u, p, h: _dbn_monthly(
+            "M.VN.WRONG", ["2024-01-01"], [5.0]
+        )
+    )
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        default_macro_client(sources=[source]).get_indicator(
+            "VNM", MacroIndicator.POLICY_RATE
+        )
+    assert exc_info.value.symbol == "VNM/policy_rate"
+    assert exc_info.value.interval is None
+    assert exc_info.value.attempts == (
+        SourceAttempt(
+            "dbnomics",
+            False,
+            "InvalidData: dbnomics: returned series_code "
+            "'M.VN.WRONG' != requested 'M.VN.FPOLM_PA'",
+        ),
+    )
+
+
+def test_policy_rate_non_vnm_guard_runs_before_enabled_cache(monkeypatch):
+    calls = []
+
+    def _dbn_get(url, params, headers):
+        calls.append((url, params, headers))
+        raise AssertionError("country guard must run before cache/transport")
+
+    source = DBnomicsSource(http_get=_dbn_get)
+    # Test-only seam: enable the existing inherited raw-text cache without adding
+    # cache arguments or behavior to DBnomicsSource's production constructor.
+    HttpDataSource.__init__(
+        source,
+        http_get=_dbn_get,
+        timeout=25.0,
+        cache_ttl=60.0,
+        clock=lambda: 1000.0,
+    )
+
+    def _request_text_guard(*args, **kwargs):
+        raise AssertionError("country guard must run before cache lookup")
+
+    monkeypatch.setattr(source, "_request_text", _request_text_guard)
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        default_macro_client(sources=[source]).get_indicator(
+            "USA", MacroIndicator.POLICY_RATE
+        )
+    assert exc_info.value.symbol == "USA/policy_rate"
+    assert exc_info.value.interval is None
+    assert exc_info.value.attempts == ()
+    assert calls == []
+
+
+def test_policy_rate_usa_custom_runtime_identity_seam_is_preserved():
+    calls = []
+    result = default_macro_client(
+        sources=[_CountryAwarePolicySource(calls)]
+    ).get_indicator("USA", MacroIndicator.POLICY_RATE)
+    assert result.country == "USA"
+    assert result.indicator_code == "CUSTOM.USA.POLICY"
+    assert result.indicator_name == "Custom USA policy rate"
+    assert result.unit == "% per annum"
+    assert result.frequency.value == "monthly"
+    assert calls == ["USA"]
