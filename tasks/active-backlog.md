@@ -602,27 +602,27 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort source/design — BLOCKED (2026-08-31).** Public triage is
-  `issuecomment-5477977514`; reviewer packet is
+- **#235 — North America macro cohort source/design — REVIEW_REQUESTED (2026-08-31).** Public
+  triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
   `acbbb82`. Clean published base is `origin/master`
-  `472cfe6d42ba43ab535a2ff676220896d5aaaacd`. Reviewed head is
-  `0ee8dbfbe31b541ff072499998073bacc9c64156`; BLOCK delivery is `e1f3369a`, reviewer
-  `ae4493d`, report `reviews/review-202608311932-issue235-design-source-gate.md`, and prior
-  corrected handoff delivery is `5045372d`. The corrected source/design blobs are
-  `9fbcfa33a193a2fe89f8ce552c1a08a9dd1521d0` and
-  `ad111e03b42deaf5ddee7d74c0b390f4923d1a66`; new BLOCK report is
-  `reviews/review-202608312009-issue235-corrected-design-rereview.md`, reviewer
-  `1d7a220dfca49c8e2df2e27419f2bd0837dd1d6e`. Required correction: bind WDI `source=2` and
-  returned source identity while treating `2640` as a maximum envelope until observed; make all
-  permission-level automation/return/cache/retention axes explicit and correct current unmapped
-  monthly behavior; complete the exact public/API/model audit and split 40 existing
-  characterization cases from future batch RED; and repair the upstream evidence path plus scope
-  the no-dispatch wording to the post-intake builder cell audit. Preserve `PARTIAL_COHORT`, 50-cell
+  `472cfe6d42ba43ab535a2ff676220896d5aaaacd`. The current BLOCK-first backlog record is local
+  commit `26c43ad`; reviewed head `0ee8dbfbe31b541ff072499998073bacc9c64156`, BLOCK delivery
+  `5045372d`, reviewer `1d7a220dfca49c8e2df2e27419f2bd0837dd1d6e`, and report
+  `reviews/review-202608312009-issue235-corrected-design-rereview.md`. Corrected docs are
+  committed at `7bc415889ba874fa3c33d4b63b43bf66a233c3f4`, with research blob
+  `5b517860f2a3cdb190e3bd4f59f53dcebb401388` and design blob
+  `1a95a294edda241eea361c7895f5e06e5f36c373`. The correction binds WDI request/returned source
+  `2` and treats `2,640` as a maximum envelope with observed totals; makes all permission-level
+  automation/return/cache/retention axes explicit and records unmapped monthly pre-dispatch
+  behavior; completes the exact public/API/model/snapshot audit and separates 40 existing
+  characterization cases from future batch RED; and repairs the upstream evidence path plus scopes
+  no-dispatch wording to the post-intake builder cell audit. Preserve `PARTIAL_COHORT`, 50-cell
   `5`/`6`/`1`/`38` outcomes, current `get_indicator`/`IndicatorSeries`, missingness, no substitution,
-  and no provider dispatch, raw rows, RED, API/model, code, source change, push, or close. Actor is
-  `vnfin-oss`; next action is `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`.
+  and no post-intake builder cell-audit provider dispatch, raw rows, RED, API/model, code, source
+  change, push, or close. Actor is `vnfin-oss-reviewer`; next action is
+  `RETURN_EXACT_SHA_DESIGN_VERDICT`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
