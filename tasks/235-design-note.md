@@ -174,8 +174,9 @@ vnfin.macro.get_indicator(
 The current factories are `source(http_get=None, timeout=25.0) -> WorldBankMacroSource`,
 `client(http_get=None, timeout=25.0) -> MacroClient`, and
 `default_macro_client(sources=None, max_attempts=3, http_get=None, timeout=25.0) -> MacroClient`.
-`default_macro_sources(http_get=None, timeout=25.0) -> list` instantiates the current no-key
-World Bank → IMF DataMapper → DBnomics source order.
+The exact `default_macro_sources` signature is `(http_get=None, timeout: 'float' = 25.0)` with
+**no return annotation**; it returns the current no-key World Bank → IMF DataMapper → DBnomics
+source list at runtime.
 `MacroClient(sources=None, max_attempts=3, http_get=None, timeout=25.0)` exposes
 `get_indicator(country_iso3, indicator) -> IndicatorSeries`; `WorldBankMacroSource` additionally
 accepts `per_page=20000` and its source-level `get_indicator(country_iso3, indicator_code,
@@ -188,18 +189,33 @@ start_year=None, end_year=None)`. The exact `vnfin.macro.__all__` and order rema
 
 `IndicatorSeries` is a frozen dataclass with dataclass-generated `repr`/equality and no JSON-ready
 serializer. Its `to_dataframe()` has `date` as the index and `value`/`is_projection` as columns;
-metadata remains in `df.attrs`. Version `0.2.0` is guarded by the committed baseline
-`tests/snapshots/public_api_v0_2_0.json` (blob `28d6c181dc1504d1325f363a557d9bc4478d0357`), which
-is compared by `tests/test_public_api_surface.py` and is not regenerated here.
+exact `df.attrs` keys are `country`, `country_name`, `indicator_code`, `indicator_name`, `unit`,
+`value_unit`, `currency`, `frequency`, `projection_from_year`, and `source`. Version `0.2.0` is
+guarded by the committed baseline `tests/snapshots/public_api_v0_2_0.json` (blob
+`28d6c181dc1504d1325f363a557d9bc4478d0357`), which is compared by
+`tests/test_public_api_surface.py`: exact live comparison is **0 breaking and 60 additive
+differences**, including additive `MacroIndicator` members `CPI_YOY`, `POLICY_RATE`,
+`LENDING_RATE`, `DEPOSIT_RATE`, and `REAL_INTEREST_RATE`. The baseline is not regenerated here.
+
+The warning audit retains DBnomics `series_end_gap` behavior and the failover warning appended by
+`MacroClient._finalize` when more than one source attempt exists: `failover:
+{attempt.name}:{attempt.reason}; ...` (`vnfin/macro/client.py:454-461`). The cache is off by default;
+when enabled, `vnfin/transport.py:336-412` redacts URL-query secrets and recursively redacts nested
+secret-bearing values in params, JSON bodies, and headers while retaining deterministic hashed
+secret identity in the cache key. Plaintext credentials never enter the key, so different secret
+values remain isolated.
 
 **Country-neutral monthly identity answer:** a future qualified result can fit existing fields only
-if `country` is the response-backed ISO3, `indicator_code` the exact provider concept,
-`indicator_name` a country-neutral concept label, and `source`, units, frequency, retrieval time, and
-warnings retain their current meanings. This candidate fit is not approved: the current USA
-`POLICY_RATE` display override is an SBV proxy, and any future decision must preserve VNM/USA
-behavior, exports, repr/serialization, DataFrame shape, warnings, and snapshot compatibility. A
-separate API/model decision is mandatory before #235 can close; no monthly identity or production/RED
-change is made here.
+if `country` is the response-backed ISO3, `indicator_code` preserves the full provider-series
+identity, e.g. `M.US.FPOLM_PA`, rather than only `FPOLM_PA`, `indicator_name` is a country-neutral
+concept label, and `source`, units, frequency, retrieval time, and warnings retain their current
+meanings. If a future API wants a concept-only code, the separate API/model decision must define an
+explicit versioned migration and backward-compatibility rule; no silent truncation is allowed. This
+candidate fit is not approved: preserve unrelated VNM/USA public compatibility, exports,
+repr/serialization, DataFrame shape, warnings, and snapshot compatibility, but the USA
+`POLICY_RATE` SBV-specific display label is the known defect and must be explicitly removed,
+replaced, or migrated rather than preserved as North American identity. No monthly identity or
+production/RED change is made here.
 
 ## Evidence and legal gate
 
@@ -377,7 +393,9 @@ evidence, separate from the builder's future cell-audit plan.
 - Future WDI batch route binds request/returned source `2`; `2,640` is only the maximum position
   envelope, with provider page/total values observed and reconciled rather than predeclared.
 - Exact callable, model, DataFrame, repr/serialization, diagnostics, cache, and frozen v0.2.0
-  snapshot behavior is audited; existing 40 WDI cases are characterization, not future batch RED.
+  snapshot behavior is audited with 0 breaking/60 additive differences; `country_name`, failover
+  warnings, cache secret identity, and full DBnomics series identity are explicit. Existing 40 WDI
+  cases are characterization, not future batch RED.
 - Future traffic ceiling is 9 logical/physical requests, zero retries; no post-intake #235 cell-audit
   dispatch occurred, and the upstream ranking response is one-year evidence only.
 - No RED, code, source registration, push, closure, or runtime/coverage claim is authorized.

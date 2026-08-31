@@ -245,7 +245,9 @@ vnfin.macro.get_indicator(
 ) -> IndicatorSeries
 vnfin.macro.source(http_get=None, timeout: float = 25.0) -> WorldBankMacroSource
 vnfin.macro.client(http_get=None, timeout: float = 25.0) -> MacroClient
-vnfin.macro.default_macro_sources(http_get=None, timeout: float = 25.0) -> list
+# No return annotation: inspect.signature is
+# `(http_get=None, timeout: 'float' = 25.0)`; runtime result is a list.
+vnfin.macro.default_macro_sources(http_get=None, timeout: float = 25.0)
 vnfin.macro.default_macro_client(
     sources=None,
     max_attempts: int = 3,
@@ -289,26 +291,30 @@ batch, cohort, coverage, or source-registration symbol is added.
 | Surface | Current repository behavior | Required #235 treatment |
 |---|---|---|
 | `IndicatorSeries` | Frozen dataclass with fields `country`, `indicator_code`, `indicator_name`, `points`, `source`, `unit`, `value_unit`, `currency`, `frequency`, `projection_from_year`, `country_name`, `fetched_at_utc`, and `warnings`; dataclass-generated `repr` and equality; no JSON-ready or `to_json` serialization method. | Preserve field order, frozen/repr/equality behavior, and the absence of a JSON serializer. |
-| `to_dataframe()` | `TimeSeriesResult.to_dataframe()` returns `date` as the index and only `value`/`is_projection` as columns for `IndicatorSeries`; metadata is in `df.attrs` (`country`, code/name, units, currency, frequency, projection boundary, source). | Preserve the indexed shape; do not document `date` as an emitted data column or add coverage fields. |
-| v0.2.0 public snapshot | `pyproject.toml` declares version `0.2.0`; committed baseline is `tests/snapshots/public_api_v0_2_0.json` (blob `28d6c181dc1504d1325f363a557d9bc4478d0357`). `tests/test_public_api_surface.py` compares the live surface against it and permits only consciously additive differences; the snapshot is not regenerated here. | Characterize the committed snapshot result and keep it frozen; no #235 export/model change is proposed. |
+| `to_dataframe()` | `TimeSeriesResult.to_dataframe()` returns `date` as the index and only `value`/`is_projection` as columns for `IndicatorSeries`; exact `df.attrs` keys are `country`, `country_name`, `indicator_code`, `indicator_name`, `unit`, `value_unit`, `currency`, `frequency`, `projection_from_year`, and `source`. | Preserve the indexed shape and exact attrs; do not document `date` as an emitted data column or add coverage fields. |
+| v0.2.0 public snapshot | `pyproject.toml` declares version `0.2.0`; committed baseline is `tests/snapshots/public_api_v0_2_0.json` (blob `28d6c181dc1504d1325f363a557d9bc4478d0357`). `tests/test_public_api_surface.py` compares the live surface against it: exact result is **0 breaking and 60 additive differences**, including additive `MacroIndicator` members `CPI_YOY`, `POLICY_RATE`, `LENDING_RATE`, `DEPOSIT_RATE`, and `REAL_INTEREST_RATE`. The baseline is not regenerated here. | Preserve the 0-breaking/60-additive characterization; no #235 export/model change is proposed. |
 | Public call/export | `get_indicator` returns `IndicatorSeries`; keyword-only `sources`, `max_attempts`, `http_get`, and `timeout` are caller seams. `source()` is the bare World Bank factory; `client()` and `default_macro_client()` construct the failover client. | Preserve signatures/exports and audit them before any separate API decision. |
 | Live source identity | `vnfin/macro/dbnomics.py:75-82,141-150` maps `USA`; its shared `POLICY_RATE` display override says `SBV refinancing-rate proxy`. | `USA × POLICY_RATE` remains `SEMANTICS_GAP`; the Vietnam-specific label cannot be presented as North American identity. |
-| Warnings/diagnostics | `vnfin/diagnostics.py:230-249,536-582` recommends `get_indicator(..., "policy_rate")` and describes the SBV proxy; DBnomics may also attach the current `series_end_gap` warning. | A separate API/model decision must choose country-neutral identity, display, warning, and diagnostic suggested-action behavior before this hazard can close. |
+| Warnings/diagnostics | `vnfin/diagnostics.py:230-249,536-582` recommends `get_indicator(..., "policy_rate")` and describes the SBV proxy; DBnomics may also attach the current `series_end_gap` warning; `MacroClient._finalize` appends one `failover: {attempt.name}:{attempt.reason}; ...` warning when more than one source attempt exists (`vnfin/macro/client.py:454-461`). | A separate API/model decision must choose country-neutral identity, display, warning, and diagnostic suggested-action behavior before this hazard can close. |
 | Zero-capable failover | `vnfin/macro/client.py:205-228` raises `AllSourcesFailed(..., attempts=())` when no source is unit-capable, before network dispatch. | Preserve the current empty-attempts characterization until a separately authorized API decision changes it. |
-| Cache | `vnfin/transport.py:313-324,406-410` has caching off by default; opt-in keys include URL, params, body, and headers. | No #235 cache is added; any future cache/rights decision must retain key isolation and terms boundaries. |
+| Cache | `vnfin/transport.py:313-324,336-412` has caching off by default; an opt-in key contains the redacted URL, a hashed identity for secret-bearing URL query values, and normalized params/JSON body/headers. Secret values are recursively found in nested dict/list/tuple structures, redacted from the key, and represented by deterministic SHA-256-derived identity hashes so credential variants cannot collide; plaintext secrets are never retained in the key. | No #235 cache is added; any future cache/rights decision must retain this complete secret-identity isolation and terms boundary. |
 
 The merged public-surface gate passes with no breaking differences against this frozen snapshot; the
 snapshot file itself is unchanged and is not regenerated for #235.
 
 **Country-neutral monthly identity answer:** the existing fields can represent a future qualified
 monthly result without a new model field only if `country` is the response-backed ISO3,
-`indicator_code` is the exact provider concept, `indicator_name` is a country-neutral concept label,
-`source` identifies the selected provider/operator, while owner provenance remains in the design tuple, and existing `unit`, `value_unit`, `currency`, `frequency`,
-`fetched_at_utc`, and `warnings` retain their current meanings. That is a candidate fit, not an
-approval: the current USA display override is not country-neutral, and any change must preserve VNM
-and USA behavior, exports, repr/serialization, DataFrame shape, warnings, and snapshot compatibility.
-The separate API/model decision is mandatory before #235 can close; no new monthly identity or
-production/RED change is made here.
+`indicator_code` preserves the full provider-series identity, such as `M.US.FPOLM_PA`, rather than
+the concept suffix `FPOLM_PA`, `indicator_name` is a country-neutral concept label, and `source`
+identifies the selected provider/operator while owner provenance remains in the design tuple. If a
+future API instead wants a concept-only code, its separate API/model decision must define an explicit
+versioned migration and backward-compatibility rule; no silent truncation is allowed. Existing
+`unit`, `value_unit`, `currency`, `frequency`, `fetched_at_utc`, and `warnings` retain their current
+meanings. Preserve unrelated VNM/USA public compatibility, exports, repr/serialization, DataFrame
+shape, warnings, and snapshot compatibility, but do **not** preserve the USA `POLICY_RATE` SBV-specific
+display label as valid North American identity: the API/model decision must explicitly remove,
+replace, or migrate that label and its diagnostics. No new monthly identity or production/RED change
+is made here.
 
 ## 5 × 10 cell matrix
 
@@ -594,8 +600,9 @@ Durable repository evidence:
 - Preserve `get_indicator` and `IndicatorSeries`; no ranking, batch, substitution, or new model.
 - Future WDI batch route binds `source=2` and returned source identity; `2,640` is only the maximum
   position envelope and provider totals remain observed/reconciled, not predeclared.
-- Exact public/API/model/snapshot audit passes; existing 40 single-country WDI cases are
-  characterization, while any future batch cases require separate API/model and RED authorization.
+- Exact public/API/model/snapshot audit passes with 0 breaking/60 additive differences; the audit
+  binds `country_name`, failover warnings, and cache secret identity. Existing 40 single-country WDI
+  cases are characterization, while any future batch cases require separate API/model and RED authorization.
 - No post-intake #235 cell-audit dispatch, raw row, RED test, code, source registration, or capability
   claim occurred; the upstream ranking response is bound as one-year evidence only.
 - Future observation ceiling: at most 9 logical/physical requests, zero retries, only after exact gates.
