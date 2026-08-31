@@ -105,18 +105,20 @@ GET https://api.worldbank.org/v2/country/{ISO3}/indicator/{CODE}
 The exact future one-call route is:
 
 ```text
-GET https://api.worldbank.org/v2/country/USA;CAN;MEX;CUB;DOM/indicator/NY.GDP.MKTP.CD;NY.GDP.MKTP.KD.ZG;FP.CPI.TOTL;FP.CPI.TOTL.ZG;SL.UEM.TOTL.ZS;FR.INR.LEND;FR.INR.DPST;FR.INR.RINR?date=1960:2025&format=json&per_page=20000
+GET https://api.worldbank.org/v2/country/USA;CAN;MEX;CUB;DOM/indicator/NY.GDP.MKTP.CD;NY.GDP.MKTP.KD.ZG;FP.CPI.TOTL;FP.CPI.TOTL.ZG;SL.UEM.TOTL.ZS;FR.INR.LEND;FR.INR.DPST;FR.INR.RINR?date=1960:2025&format=json&per_page=20000&source=2
 ```
 
-This binds `route_version=v2`, `method=GET`, one logical reservation, and one physical
-dispatch with zero retries; no extra source parameter is assumed. Its response contract is one JSON
-envelope `[metadata, observations]` with `page=1`, `pages=1`, `per_page=20000`, and `total=2640`,
-covering every `(countryiso3code, indicator.id, date)` position for five countries, eight concepts,
-and 66 years, including nulls. Each row must return an allowed country code, exact indicator code,
-four-digit date, and provider value/unit; unique keys and the declared total must reconcile. A
-missing/null position stays missing. Any page/total mismatch, identity mismatch, bad MIME, redirect,
-byte exhaustion, or late failure invalidates the whole observation. The route is design evidence,
-not a dispatch.
+This binds `route_version=v2`, `method=GET`, request `source=2`, one logical reservation, and one
+physical dispatch with zero retries. The response must expose a retained source identity that
+reconciles to `2`; missing, ambiguous, or mismatched source identity fails closed. Its response
+contract is one JSON envelope `[metadata, observations]` with returned `page`, `pages`, `per_page`,
+and `total` retained as observed. The packet-derived `5 × 8 × 66 = 2,640` is the maximum expected
+position envelope, not a predeclared provider total. Reconcile observed totals and page semantics to
+every `(countryiso3code, indicator.id, date)` position, including provider-declared null/absent
+semantics; each row must return an allowed country code, exact indicator code, four-digit date, and
+provider value/unit. A missing/null position stays missing. Any source/page/total mismatch, identity
+mismatch, bad MIME, redirect, byte exhaustion, or late failure invalidates the whole observation. The
+route is design evidence, not a dispatch.
 
 The provider must return the requested `countryiso3code` and exact `indicator.id`; the route's
 syntactic validity is not an observation. The existing adapter's annual output has Jan-1 dates,
@@ -141,6 +143,8 @@ returned for any North American country. USA `POLICY_RATE` is therefore `SEMANTI
 For `CAN/MEX/CUB/DOM`, no exact DBnomics/IMF country/concept dimension response is retained. A
 candidate `M.{CC}.{CONCEPT}` template is not a qualified route. The four countries remain
 `NOT_PROBED`; no annual rate or national-central-bank value may fill a monthly cell.
+Current code rejects those four missing IFS mappings before network and the public failover returns a
+bounded failure rather than `IndicatorSeries`; the candidate template is future design evidence only.
 
 ### Fallback and model boundary
 
@@ -156,6 +160,47 @@ make a complete-looking cell.
 Existing docs drift (`docs/api.md` omits `CPI`; the DBnomics source guide overstates CPI routing) is
 recorded for a later approved docs correction, not changed in this packet.
 
+### Exact current API/model audit
+
+The current public call is:
+
+```python
+vnfin.macro.get_indicator(
+    country_iso3: str, indicator, *, sources=None, max_attempts: int = 3,
+    http_get=None, timeout: float = 25.0,
+) -> IndicatorSeries
+```
+
+The current factories are `source(http_get=None, timeout=25.0) -> WorldBankMacroSource`,
+`client(http_get=None, timeout=25.0) -> MacroClient`, and
+`default_macro_client(sources=None, max_attempts=3, http_get=None, timeout=25.0) -> MacroClient`.
+`default_macro_sources(http_get=None, timeout=25.0) -> list` instantiates the current no-key
+World Bank → IMF DataMapper → DBnomics source order.
+`MacroClient(sources=None, max_attempts=3, http_get=None, timeout=25.0)` exposes
+`get_indicator(country_iso3, indicator) -> IndicatorSeries`; `WorldBankMacroSource` additionally
+accepts `per_page=20000` and its source-level `get_indicator(country_iso3, indicator_code,
+start_year=None, end_year=None)`. The exact `vnfin.macro.__all__` and order remain the current
+20-name export list: `IndicatorSeries`, `MacroIndicator`, `MacroIndicatorSpec`, `Frequency`,
+`canonical_unit`, `canonical_currency`, `canonical_indicator_code`, `canonical_indicator_name`,
+`eligible_sources`, `normalize_indicator`, `WorldBankMacroSource`, `IMFDataMapperSource`,
+`DBnomicsSource`, `FREDMacroSource`, `MacroClient`, `default_macro_sources`,
+`default_macro_client`, `get_indicator`, `client`, `source`.
+
+`IndicatorSeries` is a frozen dataclass with dataclass-generated `repr`/equality and no JSON-ready
+serializer. Its `to_dataframe()` has `date` as the index and `value`/`is_projection` as columns;
+metadata remains in `df.attrs`. Version `0.2.0` is guarded by the committed baseline
+`tests/snapshots/public_api_v0_2_0.json` (blob `28d6c181dc1504d1325f363a557d9bc4478d0357`), which
+is compared by `tests/test_public_api_surface.py` and is not regenerated here.
+
+**Country-neutral monthly identity answer:** a future qualified result can fit existing fields only
+if `country` is the response-backed ISO3, `indicator_code` the exact provider concept,
+`indicator_name` a country-neutral concept label, and `source`, units, frequency, retrieval time, and
+warnings retain their current meanings. This candidate fit is not approved: the current USA
+`POLICY_RATE` display override is an SBV proxy, and any future decision must preserve VNM/USA
+behavior, exports, repr/serialization, DataFrame shape, warnings, and snapshot compatibility. A
+separate API/model decision is mandatory before #235 can close; no monthly identity or production/RED
+change is made here.
+
 ## Evidence and legal gate
 
 Every cell requires a separate retained tuple:
@@ -165,18 +210,19 @@ Every cell requires a separate retained tuple:
 returned_identity, status, complete_mime, redirect_final_host, auth/session,
 frequency, unit/currency/semantics, actual_or_projection,
 provider_declared_bounds, observed_count_and_bounds, nulls/gaps/duplicates,
-revision/correction/current_lag, terms_version/effective_date,
+revision/correction/current_lag, terms_version, terms_effective_date,
 automation, caller_return, cache/storage, retention/deletion,
 attribution, commercial/derivative_use, redistribution, amendment, revocation)
 ```
 
 No field is filled from a neighbouring country, indicator, provider, or generic route description.
-The research matrix gives every one of its 50 rows a cell-local tuple for `terms_version`,
-`terms_effective_date`, `automation`, `caller_return`, `cache/storage`, `retention/deletion`,
-`attribution`, `commercial/derivative_use`, `redistribution`, `amendment`, and `revocation`. The
-technical behavior fields describe the existing adapter only; they are never permission grants.
-`NOT_RETAINED`, `NOT_CLEARED`, and `NO_NEW_GRANT` are explicit cell outcomes, not inherited global
-assumptions, and remain distinct from zero, null, empty, denied, or permission granted.
+The research matrix gives every one of its 50 rows a single cell-local `Technical behavior` section
+and a separate `Permission` section. Permission explicitly includes `automation`, `caller_return`,
+`cache/storage`, `retention/deletion`, `terms_version`, `terms_effective_date`, `attribution`,
+`commercial/derivative_use`, `redistribution`, `amendment`, and `revocation`. Technical behavior
+fields describe the existing adapter only; they are never permission grants. `NOT_RETAINED`,
+`NOT_CLEARED`, and `NO_NEW_GRANT` are explicit cell outcomes, not inherited global assumptions, and
+remain distinct from zero, null, empty, denied, or permission granted.
 
 - World Bank public licensing defaults for World Bank-produced open datasets to CC BY 4.0 with
   attribution, while its public licensing page warns that dataset-specific and third-party
@@ -201,12 +247,15 @@ A late failure invalidates the entire observation and releases no partial result
 ### World Bank reservation
 
 - Reserve exactly one logical / one physical dispatch with zero retries for the semicolon-separated
-  multi-country/multi-indicator URI above, covering five frozen countries × eight WDI concepts over
-  `1960:2025`; maximum envelope `5 × 8 × 66 = 2,640` country-indicator-year positions including
-  nulls.
-- One page is required (`per_page=20000`, `page=1`, `pages=1`, `total=2640`); sequential,
-  25-second timeout, zero retry, no cookies/session/credentials. Every response identity and unique
-  key must reconcile to the exact 2,640-position envelope or the reservation fails closed.
+  `source=2` multi-country/multi-indicator URI above, covering five frozen countries × eight WDI
+  concepts over `1960:2025`; maximum envelope `5 × 8 × 66 = 2,640` country-indicator-year
+  positions including nulls. This is a maximum expected position envelope, not a provider total.
+- Request `per_page=20000`; retain returned source identity and `page/pages/per_page/total` exactly
+  as observed. The returned source must reconcile to `2`, and observed totals/page semantics must
+  reconcile with all returned identities and provider-declared null/absent positions. Sequential,
+  25-second timeout, zero retry, no cookies/session/credentials; a multi-page or unresolved result
+  cannot be followed under one physical reservation. Every identity/key must reconcile or the
+  reservation fails closed.
 - Redirects must preserve the owner host; complete MIME, status, `page/pages/per_page/total`, exact
   returned identities, and the whole response byte ledger are retained only as sanitized metadata.
 - Project safety ceilings are `4 MiB` compressed and `32 MiB` decompressed per response. These are
@@ -228,16 +277,29 @@ A late failure invalidates the entire observation and releases no partial result
 MIME, unexpected redirect, pagination/total mismatch, byte exhaustion, identity conflict, or
 incomplete legal axis yields no series and no partial coverage claim.
 
-## Deferred API/RED/release matrix
+## Characterization, deferred API/RED, and release matrix
 
-No RED is authorized by this design. After a design PASS, a separate API/model decision must decide
-whether any source-qualified cell can fit the unchanged primitive. Only then may reviewer-authorized
-RED tests be written, using synthetic offline fixtures only:
+No RED is authorized by this design. Existing runtime characterization and a future batch seam are
+separate.
 
-1. 40 World Bank cell cases (`5 × 8`) against the exact semicolon-separated multi-indicator route
-   and its `date=1960:2025&format=json&per_page=20000` contract, with request/response country and
-   indicator identity, unit/currency/frequency, Jan-1 dates, bounds, nulls, ordering, exact
-   `page/pages/per_page/total`, one-dispatch behavior, and no country-specific branch.
+### Existing World Bank characterization (not RED)
+
+The existing 40 World Bank cases are the current `5 × 8` single-country/single-indicator adapter
+calls and synthetic parser/model/failover tests. They are expected-green compatibility cases for the
+current route and current `IndicatorSeries`; they do not test or authorize the semicolon batch route,
+request `source=2`, a new batch model, or a new export.
+
+### Future batch RED (not authorized)
+
+After a separate API/model decision and reviewer RED authorization, synthetic offline fixtures may
+cover:
+
+1. 40 World Bank batch cases (`5 × 8`) against the exact semicolon-separated `source=2` route and
+   `date=1960:2025&format=json&per_page=20000` request, returned source identity, observed
+   `page/pages/per_page/total` semantics, maximum 2,640-position envelope, request/response country
+   and indicator identity, unit/currency/frequency, Jan-1 dates, bounds, nulls, ordering, one-dispatch
+   behavior, and no country-specific branch. No test preasserts `total=2640` without a retained
+   response contract.
 2. Each future-qualified DBnomics country/concept with exact IMF country code, monthly periods,
    country-neutral identity, source/operator attribution, no SBV-label leakage, and unsupported
    countries failing before dispatch.
@@ -286,7 +348,8 @@ must bind the exact content/design blob IDs, final handoff SHA, clean `origin/ma
 `472cfe6`, packet `acbbb82`, public receipt `issuecomment-5477977514`, and actor
 `vnfin-oss-reviewer` with next action `RETURN_EXACT_SHA_DESIGN_VERDICT`.
 
-A reviewer `PASS` authorizes only a later, explicit API/model decision. It does not authorize RED,
+A reviewer `PASS` authorizes only a later, explicit API/model decision. That decision is mandatory
+for the USA policy-label hazard; it does not authorize RED,
 production code, source registration, push, public capability/coverage claims, or issue closure.
 A future implementation sequence is: API/model decision → separate RED authorization → TDD
 implementation → exact-SHA code review → merged gates → publication/remote verification → clean
@@ -311,6 +374,10 @@ evidence, separate from the builder's future cell-audit plan.
 - Matrix: 50 cells; 5 proven CAN, 6 partial (USA GDP/CPI/INFLATION plus MEX/CUB/DOM GDP),
   1 policy semantics gap, and 38 unprobed.
 - Preserve `get_indicator` and `IndicatorSeries`; no ranking, batch, substitution, or new model.
+- Future WDI batch route binds request/returned source `2`; `2,640` is only the maximum position
+  envelope, with provider page/total values observed and reconciled rather than predeclared.
+- Exact callable, model, DataFrame, repr/serialization, diagnostics, cache, and frozen v0.2.0
+  snapshot behavior is audited; existing 40 WDI cases are characterization, not future batch RED.
 - Future traffic ceiling is 9 logical/physical requests, zero retries; no post-intake #235 cell-audit
   dispatch occurred, and the upstream ranking response is one-year evidence only.
 - No RED, code, source registration, push, closure, or runtime/coverage claim is authorized.
