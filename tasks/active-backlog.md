@@ -693,6 +693,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   signature/payload MUST_FAIL group, retains C07 behavior, and makes M08's connected guard an
   independent current-characterization zero-network proof. Actor is now `vnfin-oss-reviewer`; next
   action is `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`; RED remains unauthorized pending review.
+  RED authorization is now **AUTHORIZED** at exact
+  `e9ee35a65391029fa0ee905de14b2776bfd62ecc`, delivery `b235a852`, with report
+  `reviews/review-202608312216-issue235-red-authorization-pass.md` and reviewer `31e318e`.
+  The authorization is for packet blob `6420b7b9927a2c0f31464577fcaa686b4ad7b4ac` only and was
+  recorded before RED work. Actor is `vnfin-oss`, next action is `WRITE_EXACT_RED_TEST_MANIFEST`;
+  only the complete offline synthetic test/fixture manifest is authorized. No implementation,
+  provider probe, source/API change, capability claim, push, or close is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
