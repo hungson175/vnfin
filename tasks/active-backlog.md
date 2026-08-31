@@ -602,22 +602,23 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort source/design — REVIEW_REQUESTED (2026-08-31).** Public
-  triage is `issuecomment-5477977514`; reviewer packet is `tasks/235-north-america-macro-cohort-spec.md`
+- **#235 — North America macro cohort source/design — BLOCKED (2026-08-31).** Public triage is
+  `issuecomment-5477977514`; reviewer packet is `tasks/235-north-america-macro-cohort-spec.md`
   with companion research brief `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`,
   both at reviewer anchor `acbbb82`. Clean published base is `origin/master`
-  `472cfe6d42ba43ab535a2ff676220896d5aaaacd`; substantive source/design anchor is
-  `370fbcf267cd103d4665e34cb0460f6d65673277` with report blob
+  `472cfe6d42ba43ab535a2ff676220896d5aaaacd`; reviewed head is
+  `edea9a53365ecac421e7035fc53c30669b29a3d1`; BLOCK delivery is `e1f3369a`, reviewer
+  `ae4493d`, and report `reviews/review-202608311932-issue235-design-source-gate.md`.
+  The substantive source/design artifacts remain anchored at report blob
   `3b345177d2d48257e25ba147b9a2a07f296a2a66` and design blob
-  `2c75ff44381434de17dfbbe69b379bcd94522bdb`. Scope is the frozen canonical
-  `USA`/`CAN`/`MEX`/`CUB`/`DOM` cohort on strict common-year 2020 WDI; the 2025
-  `USA`/`CAN`/`MEX`/`DOM`/`GTM` set is an explicitly incomplete appendix, not a substitute.
-  The research artifact audits 50 independent cells: 5 `PROVEN_EXISTING`, 4 `PARTIAL`, 1
-  `SEMANTICS_GAP`, and 40 `NOT_PROBED`; aggregate disposition is `PARTIAL_COHORT`. Preserve
-  existing `get_indicator`/`IndicatorSeries`; no substitution, ranking API, batch API, or new
-  runtime source is proposed. No #235 provider dispatch occurred; no raw rows, RED, API/model,
-  code, source change, push, or close is authorized. Actor is now `vnfin-oss-reviewer`; next
-  action is `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  `2c75ff44381434de17dfbbe69b379bcd94522bdb`. Required correction: reconcile upstream WDI
+  ranking observations with no-dispatch wording and GDP outcomes; complete every per-cell legal
+  axis while separating behavior from permission; bind an executable multi-indicator WDI route
+  or correct the budget; and complete the API audit including the USA SBV-label/diagnostic hazard.
+  Preserve the frozen `USA`/`CAN`/`MEX`/`CUB`/`DOM` cohort, `PARTIAL_COHORT`, 50-cell scope,
+  `get_indicator`/`IndicatorSeries`, missingness, no substitution, no provider dispatch, and no
+  raw rows, RED, API/model, code, source change, push, or close. Actor is `vnfin-oss`; next
+  action is `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
