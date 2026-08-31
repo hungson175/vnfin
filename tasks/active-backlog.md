@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort API/model decision — REVIEW_REQUESTED (2026-08-31).**
+- **#235 — North America macro cohort API/model decision — API_MODEL_DECISION_PASS / RED_AUTHORIZATION_PREP (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
@@ -634,6 +634,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   mapped non-VNM country, and fixes one exact diagnostic signature/payload. Actor is now
   `vnfin-oss-reviewer`; next action is `RETURN_EXACT_API_MODEL_DECISION_VERDICT`; review is
   requested against that corrected packet with no research/design source changes.
+  The corrected API/model decision is now **PASS** at exact
+  `7e9cc38c7b043c4ec1c64d4c539b06e6c3405168`, delivery `54f31f52`, with report
+  `reviews/review-202608312120-issue235-corrected-api-model-decision.md`. The approved packet
+  commit/blob are `64bfdc5628428b00634655f988cf01b5aa292a6d` /
+  `9282ed7497224b3f6d02785ce6db721a00fd3cfc`. PASS was recorded before preparing any RED
+  authorization material. The next action is `PREPARE_EXACT_RED_AUTHORIZATION`, actor
+  `vnfin-oss`; the separate packet may request only the frozen matrix cases and does not
+  authorize RED tests, implementation, provider dispatch/probe, raw data, source registration,
+  API/model change, push, capability claim, or close.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
