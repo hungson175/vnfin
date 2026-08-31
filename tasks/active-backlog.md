@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort API/model decision — REVIEW_REQUESTED (2026-08-31).**
+- **#235 — North America macro cohort API/model decision — API_MODEL_DECISION_BLOCKED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
@@ -621,8 +621,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `get_indicator`/`IndicatorSeries`, missingness, no substitution, source/legal boundaries, and no
   provider dispatch, raw rows, RED, API/model implementation, code, source change, push, capability
   claim, or close. Clean packet base is `472cfe6d42ba43ab535a2ff676220896d5aaaacd`; actor is
-  `vnfin-oss`; next action is `RETURN_EXACT_API_MODEL_DECISION_VERDICT`; reviewer handoff is
-  requested against packet commit `1a45ac4937a862c8e4854c6f39a4c8ae4c0a5757`.
+  `vnfin-oss`; next action was `RETURN_EXACT_API_MODEL_DECISION_VERDICT`; reviewer handoff was
+  requested against packet commit `1a45ac4937a862c8e4854c6f39a4c8ae4c0a5757`. API/model decision
+  review is now **BLOCKED** at exact `abfe418a4671f356a07b22c87f7c401d40a58688`, delivery
+  `122e728d`, reviewer `162863d`, report
+  `reviews/review-202608312106-issue235-api-model-decision.md`; packet blob remains
+  `f9640cadff02ffc6cdfb0629d3960da295a11d30`. BLOCK was recorded before correction; B1-B5 require
+  one packet/backlog-only correction. Actor is `vnfin-oss`; next action is
+  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
