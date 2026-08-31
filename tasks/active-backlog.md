@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort API/model decision — API_MODEL_DECISION (2026-08-31).**
+- **#235 — North America macro cohort API/model decision — REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
@@ -611,13 +611,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `429870c252f4920422d071398a3ef169c15e1466`, delivery `7d65f45a`, reviewer `b5f0458`, and
   report `reviews/review-202608312046-issue235-final-design-approval.md`; the approved research
   blob is `4e9440803d9a72fa8cda161f5294de11976a0a3a` and design blob is
-  `597e057d5725ffe915ee1dd499d1e487b38ca9e9`. PASS was recorded before packet work; prepare one
-  exact API/model-decision packet for full provider-series `indicator_code` compatibility and the
-  USA SBV policy-rate label/diagnostic hazard without changing the current surface prematurely.
+  `597e057d5725ffe915ee1dd499d1e487b38ca9e9`. PASS was recorded before packet work. The exact
+  API/model-decision packet is `tasks/235-api-model-decision-note.md`, committed at
+  `1a45ac4937a862c8e4854c6f39a4c8ae4c0a5757` with blob
+  `f9640cadff02ffc6cdfb0629d3960da295a11d30`. It covers full provider-series `indicator_code`
+  compatibility and the USA SBV policy-rate label/diagnostic hazard without changing the current
+  surface prematurely.
   Preserve `PARTIAL_COHORT`, 50-cell `5`/`6`/`1`/`38` outcomes, empty new chain, current
   `get_indicator`/`IndicatorSeries`, missingness, no substitution, source/legal boundaries, and no
   provider dispatch, raw rows, RED, API/model implementation, code, source change, push, capability
-  claim, or close. Actor is `vnfin-oss`; next action is `PREPARE_EXACT_API_MODEL_DECISION`.
+  claim, or close. Clean packet base is `472cfe6d42ba43ab535a2ff676220896d5aaaacd`; actor is
+  `vnfin-oss`; next action is `RETURN_EXACT_API_MODEL_DECISION_VERDICT`; reviewer handoff is
+  requested against packet commit `1a45ac4937a862c8e4854c6f39a4c8ae4c0a5757`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
