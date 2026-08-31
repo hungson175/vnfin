@@ -164,6 +164,8 @@ gdp = vnfin.macro.get_indicator("VNM", vnfin.macro.MacroIndicator.GDP)  # Indica
 # MacroIndicator members: GDP, GDP_GROWTH, INFLATION, CPI_YOY, UNEMPLOYMENT, POLICY_RATE
 # (SBV refinancing proxy, monthly), and the #152 World Bank annual fixed-income rates:
 # LENDING_RATE / DEPOSIT_RATE / REAL_INTEREST_RATE (WDI FR.INR.LEND/DPST/RINR, % p.a.).
+# POLICY_RATE uses the DBnomics/IMF-IFS FPOLM_PA proxy only for VNM; other countries
+# remain missing unless a separately qualified custom source is supplied.
 # Govt-bond yield CURVE is unavailable (no clean source) -> see explain_fixed_income_coverage().
 
 # corp_actions — CASH dividends (VND/share) scraped from the VSDC depository. v1 CASH
@@ -336,13 +338,13 @@ never fabricated data:
   frequency=None) -> RequestDiagnostic` (issue #159) — classify a historical-FX request as
   `unsupported_pair` / `unsupported_frequency` / `coverage_gap` / `ok` vs the only v1 source
   (World Bank `PA.NUS.FCRF`, annual USD/VND, `window_too_wide` is not applicable here).
-- `vnfin.diagnostics.explain_fixed_income_coverage() -> RequestDiagnostic` (issue #152) —
-  state the VN fixed-income rate coverage: the government-bond **yield curve** is
-  **unavailable** (no clean redistributable source), while the available rate kinds are
-  enumerated with caveats — `policy_rate` (SBV refinancing proxy, monthly, IMF-IFS),
-  `lending_rate` / `deposit_rate` / `real_interest_rate` (World Bank annual, `FR.INR.*`) —
-  and policy vs interbank vs deposit vs govt-bond are distinguished so callers do not conflate
-  them.
+- `vnfin.diagnostics.explain_fixed_income_coverage(*, country_iso3=None) -> RequestDiagnostic`
+  (issue #152/#235) — offline fixed-income coverage. With no argument, the legacy
+  government-bond-yield-curve and four-rate explanation is returned unchanged. `VNM`
+  changes only the request metadata; every other valid ISO3 returns `status="unknown"`
+  with one `(none)` policy-rate capability, no SBV label, no generic policy-rate
+  suggestion, and the explicit `missing remains missing` note. The DBnomics/IMF-IFS
+  `FPOLM_PA` proxy is therefore never presented as a non-Vietnam policy rate.
 - `vnfin.diagnostics.explain_corp_actions_coverage() -> RequestDiagnostic` (issue #163) —
   state the corporate-actions coverage: v1 serves CASH dividends only (VSDC depository
   scrape), `ex_date` is **UNAVAILABLE** (depository publishes none; finfo enrichment leg

@@ -85,6 +85,11 @@ Honest-disclosure caveats — read these before relying on the values:
   monetary-policy-related rate; `indicator_name` says so explicitly
   (`"Policy Rate (SBV refinancing-rate proxy, IMF IFS FPOLM_PA)"`). For the *official* announced
   refinancing/discount rate, consult the State Bank of Vietnam directly: <https://sbv.gov.vn>.
+- **`POLICY_RATE` is currently qualified for Vietnam only.** A non-Vietnam request does not
+  receive the SBV-labelled `FPOLM_PA` series: the DBnomics route is rejected before cache or
+  transport, and the public failover call returns a zero-attempt `AllSourcesFailed` when no
+  separately qualified custom source remains. A custom source without the optional country
+  hook remains eligible and is still checked for its returned identity and units.
 - **`CPI_YOY` source authority.** The headline monthly CPI is published by the General Statistics
   Office: <https://gso.gov.vn>. The DBnomics figure is the IMF/IFS re-publication.
 - **Publication lag + staleness warning.** IMF/IFS routinely lags the source authority by ~2–6
@@ -134,6 +139,20 @@ print(d.status)        # 'yield_curve_unavailable'
 for note in d.notes:
     print(note)
 ```
+
+The same offline diagnostic accepts an additive keyword-only country qualifier:
+
+```python
+vietnam_rates = vnfin.diagnostics.explain_fixed_income_coverage(country_iso3="VNM")
+other_rates = vnfin.diagnostics.explain_fixed_income_coverage(country_iso3="USA")
+
+assert vietnam_rates.request == {"country_iso3": "VNM"}
+assert other_rates.status == "unknown"
+assert other_rates.suggested_actions == ()
+```
+
+For non-Vietnam countries it explicitly reports that the current `FPOLM_PA` route is not
+qualified and that missing remains missing; it does not suggest a proxy or fallback.
 
 ## Optional FRED key
 

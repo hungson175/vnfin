@@ -7,6 +7,16 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Country-correct macro policy-rate boundary** (#235) — the DBnomics/IMF-IFS
+  `FPOLM_PA` route remains qualified only for `VNM`: direct non-Vietnam calls now
+  fail with the exact typed `InvalidData` before cache/transport, and the public
+  macro preflight skips that route before failover so an otherwise empty chain
+  returns zero-attempt `AllSourcesFailed`. An eligible country-aware custom source
+  remains usable, while a custom source without the optional hook remains compatible
+  with the existing returned-identity guards. The offline fixed-income diagnostic
+  accepts the additive keyword-only `country_iso3` qualifier and reports explicit
+  no-qualified-source payloads for other countries; the existing no-argument and
+  Vietnam proxy payloads are unchanged.
 - **Fmarket funds source disabled pending permission** (#221) — `FmarketFundSource`,
   `vnfin.funds.source()`, and `vnfin.funds.client()` remain lazy and preserve imports, models,
   signatures, and the client alias, but every valid listing/NAV/holdings/allocation call now raises

@@ -997,7 +997,8 @@
         "source_capabilities",
         "explain_world_gold_history",
         "explain_index_constituents",
-        "explain_fx_coverage"
+        "explain_fx_coverage",
+        "explain_fixed_income_coverage"
       ],
       "members": {
         "RequestDiagnostic": {
@@ -1125,6 +1126,18 @@
           ],
           "frozen": true,
           "kind": "dataclass"
+        },
+        "explain_fixed_income_coverage": {
+          "kind": "function",
+          "params": [
+            {
+              "default_repr": "None",
+              "has_default": true,
+              "kind": "KEYWORD_ONLY",
+              "name": "country_iso3"
+            }
+          ],
+          "returns": "RequestDiagnostic"
         },
         "explain_fx_coverage": {
           "kind": "function",
@@ -5286,6 +5299,29 @@
                   "has_default": false,
                   "kind": "POSITIONAL_OR_KEYWORD",
                   "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "indicator"
+                }
+              ],
+              "returns": "bool"
+            },
+            "supports_country": {
+              "params": [
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "self"
+                },
+                {
+                  "default_repr": null,
+                  "has_default": false,
+                  "kind": "POSITIONAL_OR_KEYWORD",
+                  "name": "country_iso3"
                 },
                 {
                   "default_repr": null,

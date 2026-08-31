@@ -2,7 +2,7 @@
 
 **Adapter:** `vnfin.macro.DBnomicsSource`
 **Domain:** Macro — cross-country GDP (national currency, annual), CPI (index level, monthly), CPI YoY (% inflation, monthly), and the monetary policy rate (% p.a., monthly) from the IMF International Financial Statistics (IFS) dataset, served through DBnomics.
-**Role in chain:** no-key **broad backup** (default chain position 3: World Bank → IMF DataMapper → **DBnomics**). It is the **only** default source for the canonical CPI *index*, `CPI_YOY`, and `POLICY_RATE` indicators — those three reduce to a single-source monthly chain after the unit pre-filter.
+**Role in chain:** no-key **broad backup** (default chain position 3: World Bank → IMF DataMapper → **DBnomics**). It is the **only** default source for the canonical CPI *index*, `CPI_YOY`, and `POLICY_RATE` indicators — those three reduce to a single-source monthly chain after the unit pre-filter. `POLICY_RATE` is qualified only for `VNM`; the `FPOLM_PA` series is not a country-correct policy-rate result for other countries.
 **Verified:** 2026-06-18 (live curl + live Python probe from this host).
 **Clean-room:** endpoint + response shape learned only from DBnomics' own public API (`api.db.nomics.world/v22`) and `docs/research/2026-06-18-macro-no-key-byok.md`. No vnstock/derivative source consulted.
 
@@ -26,9 +26,28 @@ GET https://api.db.nomics.world/v22/series/IMF/IFS/{FREQ}.{CC}.{IFS_CODE}?observ
     `CPI` index.
   - `POLICY_RATE` → `M.{CC}.FPOLM_PA` (monetary-policy-related rate, **% per annum**,
     **monthly**; #179) — an **honest proxy** for the announced SBV refinancing rate, never
-    the exact announced figure. The result's `indicator_name` discloses this
+    the exact announced figure, and currently qualified for **VNM only**. The result's `indicator_name` discloses this
     (`"Policy Rate (SBV refinancing-rate proxy, IMF IFS FPOLM_PA)"`); the **canonical**
     code/name stay `policy_rate`/`Policy Rate`. Official rate: <https://sbv.gov.vn>.
+
+### Country qualification and pre-network guard
+
+`DBnomicsSource.supports_country(country_iso3, indicator)` is a local capability
+check. It returns `False` for non-`VNM` `POLICY_RATE` requests and `True` for the
+other mapped DBnomics indicators/countries. `get_indicator()` and
+`indicator_identity()` apply the same boundary before constructing a URL or
+touching cache/transport and raise the exact typed message:
+
+```text
+dbnomics: policy_rate route is VNM-only; country={ISO3} is not qualified
+```
+
+`MacroClient` applies this optional provider hook after its existing unit filter and
+before `FailoverClient` is built. An inapplicable DBnomics route is therefore skipped
+without an attempt; if no other eligible source remains, the public call raises
+`AllSourcesFailed("{ISO3}/policy_rate", None, ())`. A caller-supplied source with a
+country hook may qualify its own response-backed route, and a source without the
+optional hook remains eligible under the existing identity/unit/rejection guards.
 
 ## Auth / limits / terms
 
@@ -70,7 +89,8 @@ observations are `null` or the string `"NA"`.
 - `CPI` → `unit="index"`, `currency=None`, `frequency=monthly`.
 - `CPI_YOY` → `unit="%"`, `currency=None`, `frequency=monthly` (may be negative in
   deflation — not bounded ≥0).
-- `POLICY_RATE` → `unit="% per annum"`, `currency=None`, `frequency=monthly`.
+- `POLICY_RATE` → `unit="% per annum"`, `currency=None`, `frequency=monthly`, on the
+  qualified `VNM` DBnomics route only.
 
 ## Staleness warning (monthly, #179)
 
