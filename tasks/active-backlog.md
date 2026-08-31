@@ -726,6 +726,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `RETURN_EXACT_RED_TEST_VERDICT`, and the reviewer is requested to re-check this exact failing
   SHA. No implementation, probe, source/API-model change, push, capability claim, or close is
   authorized.
+  The corrected RED-test review is now **BLOCKED** at exact
+  `9f1f1e5bb54ff6eaa48fbb8fe89aabe8b10274cf`, delivery `baaf1bdc`, with report
+  `reviews/review-202608312254-issue235-corrected-red-test-review.md`. The exact 23-node count,
+  three-test-file scope, and safety gates pass, but M01/M02/M04/M05 seam assertions mask their
+  required normative carrier, ordering, direct-guard, and zero-dispatch RED reasons. BLOCK was
+  recorded before correction; actor is `vnfin-oss`, next action is `CORRECT_RED_TEST_ORDERING`.
+  No implementation, probe, source/API-model change, push, capability claim, or close is
+  authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
