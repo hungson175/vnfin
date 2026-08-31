@@ -681,6 +681,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   ledger-listed RED test manifest, and makes the connected diagnostic transport guard the
   zero-network proof. Actor is now `vnfin-oss-reviewer`; next action is
   `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`; RED remains unauthorized pending fresh review.
+  Final RED authorization remains **BLOCKED** at exact
+  `0f169d3ffb63268c0367d1764a214631c8eaf71a`, delivery `b078fdf5`, with report
+  `reviews/review-202608312206-issue235-final-red-authorization.md`; RED is not authorized.
+  BLOCK was recorded before this correction; actor is `vnfin-oss`, next action is
+  `CORRECT_RED_AUTHORIZATION_PACKET`, and no tests, fixtures, implementation, probe, source
+  change, push, capability claim, or close is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
