@@ -24,6 +24,13 @@ recorded before this correction in backlog commit `e3ea916c7121baaa5a190da3ea6e5
 the prior packet blob was `c631bd1d0cb669340e22cfd266344006478255cf`. This document is the
 single packet/backlog-only correction and requests a fresh exact RED-authorization verdict.
 
+**Latest RED-authorization review:** BLOCK at exact
+`bc5723b0f3958ad715fd7509d261bd235ff76a6f`, delivery `6c38b848`, report
+`reviews/review-202608312155-issue235-corrected-red-authorization.md`. This BLOCK was recorded
+first in backlog commit `9f77f6c`; RED remains unauthorized while this packet-only correction is
+prepared. No production constructor, runtime transport, provider, or test implementation change
+is included.
+
 ## Exact authorization requested
 
 This packet asks the reviewer to authorize **only** a later RED commit containing failing,
@@ -98,8 +105,8 @@ call; `0 provider` means the transport spy must record zero provider dispatches.
 | M08 connected diagnostic no-network guard | `MUST_FAIL_AT_RED` | **Modified** diagnostic offline test with an actual transport guard | Existing counter is disconnected; the new signature/payload test must fail before implementation while a raising transport seam proves zero dispatch | Expected 0 provider; raising guard must not fire |
 | M09 direct malformed-response carrier | `CURRENT_CHARACTERIZATION` | Existing DBnomics mismatch cases, plus exact carrier assertion | Direct adapter already raises `InvalidData`; keep it green and do not convert it to public aggregation | 1 injected response; no live call |
 | M10 public one-attempt failure carrier | `CURRENT_CHARACTERIZATION` | New exact `MacroClient` synthetic malformed-response characterization | Public path must retain one `SourceAttempt` and `AllSourcesFailed`; this is a carrier pin, not an implementation RED failure | 1 injected source/transport call |
-| M11 raw transport cache boundary | `CURRENT_CHARACTERIZATION` | Existing cache tests plus one exact raw-text cache assertion | Raw response-text caching remains unchanged; no parsed-result cache is introduced | 1 injected fetch then raw-cache hit |
-| M12 guard-before-cache | `MUST_FAIL_AT_RED` | New cache-enabled non-VNM preflight case in `tests/test_macro_failover.py` | Missing caller guard permits cache lookup/use or transport before the country rejection | Expected 0 provider and 0 cache use |
+| M11 raw transport cache boundary | `CURRENT_CHARACTERIZATION` | Existing cache tests plus one exact raw-text cache assertion through the test-only DBnomics cache seam in RED-10 | Raw response-text caching remains unchanged; no parsed-result cache is introduced | 1 injected fetch then raw-cache hit |
+| M12 guard-before-cache | `MUST_FAIL_AT_RED` | New cache-enabled non-VNM preflight case in `tests/test_macro_failover.py` using the same test-only seam | Missing caller guard permits cache lookup/use or transport before the country rejection | Expected 0 provider and 0 cache use |
 | M13 future USA custom runtime seam | `CURRENT_CHARACTERIZATION` | New synthetic custom identity characterization under RED-02/RED-09 | Exact custom country/identity/unit/failover eligibility remains possible; legal/source qualification is not a runtime assertion | 0 provider; custom synthetic call only |
 
 The five modified policy-rate success cases in C08-C12 are the complete current ZZZ-based success
@@ -115,6 +122,33 @@ set identified by the review. Their exact migration is:
 
 No unrelated ZZZ fixture is globally rewritten. The separate M01/M04/M05/M06 cases explicitly
 assert that ZZZ is a non-VNM test sentinel and cannot retain the old policy-rate success path.
+
+### Test-only cache-enablement seam — no production constructor expansion
+
+`DBnomicsSource.__init__` currently accepts `http_get` and `timeout`; it does **not** accept
+`cache_ttl`. The future RED commit must not add `cache_ttl`, a cache object, or any other transport
+parameter to that production constructor, and must not change its public API snapshot. M11 and M12
+use one executable seam in the test module: create a normal `DBnomicsSource(http_get=fake_get)` and
+then reinitialize that test-created instance through the existing base transport initializer:
+
+```python
+def _cache_enabled_dbnomics_source(fake_get, clock):
+    source = DBnomicsSource(http_get=fake_get)
+    HttpDataSource.__init__(
+        source,
+        http_get=fake_get,
+        timeout=25.0,
+        cache_ttl=60.0,
+        clock=clock,
+    )
+    return source
+```
+
+This helper is test-only and must live in the RED test module; it exercises the inherited
+`_request_text`/`_request_json` cache on the real `DBnomicsSource` instance without expanding or
+altering the production constructor. The test must fail if it instead calls
+`DBnomicsSource(cache_ttl=...)`, adds a production constructor parameter, introduces a second
+cache, or caches a parsed `IndicatorSeries`.
 
 ### RED-01 — Full DBnomics identity
 
@@ -318,8 +352,10 @@ RequestDiagnostic(
   no-argument, VNM, and non-VNM invocation. The RED test must monkeypatch the actual
   `vnfin.transport.HttpDataSource._fetch_with_retry` seam (and may additionally guard the socket
   constructor); any invocation raises immediately and increments the guard, and the final
-  assertion requires zero guard calls. This proves the diagnostic's no-network behavior rather
-  than merely asserting an unrelated counter.
+  assertion requires zero guard calls. This connected guard is the authoritative proof of the
+  diagnostic's no-network behavior: a disconnected local counter, an unused-helper monkeypatch,
+  or a source-list assertion is not a substitute. Any actual transport invocation must fail the
+  test, and every diagnostic invocation must be covered by the installed guard.
 
 ### RED-09 — Future USA qualification seam
 
@@ -359,8 +395,8 @@ transport invocations are injected synthetic calls, never live requests.
 |---|---|---|
 | Direct malformed response | VNM `DBnomicsSource.get_indicator()` receives `series_code="M.VN.WRONG"`; it raises exactly `InvalidData("dbnomics: returned series_code 'M.VN.WRONG' != requested 'M.VN.FPOLM_PA'")` and returns no `IndicatorSeries` | 1 injected source/transport call; direct carrier is `InvalidData`, not `AllSourcesFailed` |
 | Public malformed response | One eligible VNM DBnomics source receives the same synthetic response; `MacroClient` raises `AllSourcesFailed` with `.symbol == "VNM/policy_rate"`, `.interval is None`, and `.attempts == (SourceAttempt("dbnomics", False, "InvalidData: dbnomics: returned series_code 'M.VN.WRONG' != requested 'M.VN.FPOLM_PA'"),)` | Exactly 1 source operation and 1 injected transport call; one rejected `SourceAttempt`, no result |
-| Raw transport-text cache | With `cache_ttl=60`, first direct malformed call raises the exact `InvalidData`; a second identical call parses the cached raw synthetic text and raises the same error | First call 1 injected fetch; second call 0 fetches. The raw text cache is unchanged; no parsed-result cache or transport-cache redesign is authorized |
-| Guard before cache | Cache-enabled non-VNM policy-rate request patches the actual `HttpDataSource._request_text` cache/transport seam to a raising guard and invokes the public/direct country guard | M12 expects 0 cache lookups, 0 provider calls, and the exact pre-network carrier; the raising cache/transport guard must not fire |
+| Raw transport-text cache | Use `_cache_enabled_dbnomics_source(fake_get, clock)` above; first direct malformed call raises the exact `InvalidData`; a second identical call parses the cached raw synthetic text and raises the same error | First call 1 injected fetch; second call 0 fetches. The existing raw text cache is exercised; no parsed-result cache, production constructor expansion, or transport-cache redesign is authorized |
+| Guard before cache | Build the cache-enabled DBnomics fixture only through the test-only seam above, patch its actual `HttpDataSource._request_text` cache/transport path to a raising guard, and invoke the public/direct country guard | M12 expects 0 cache lookups, 0 provider calls, and the exact pre-network carrier; the raising cache/transport guard must not fire |
 | Secret cache identity and warnings | Existing secret-bearing query/params/JSON/header fixtures and multi-attempt warning fixtures remain exact characterizations | Existing injected call counts, deterministic redaction/hash identity, and `failover: {attempt.name}:{attempt.reason}; ...` grammar remain green |
 
 The caller country guard is therefore tested before both cache lookup/use and network dispatch for
@@ -370,10 +406,11 @@ text under the existing cache contract, but no parsed `IndicatorSeries` result i
 returned. The public and direct exception carriers above are exact; no shared transport-cache
 redesign is hidden in RED, and cache remains off by default.
 
-The connected no-network diagnostic guard is the separate M08 case in RED-08. Its raising
-`HttpDataSource._fetch_with_retry` monkeypatch is installed before each diagnostic invocation,
-including no-argument, VNM, and every non-VNM case; any actual transport call fails immediately.
-All transports remain spies and no source request or raw response is used.
+The connected no-network diagnostic guard is the separate M08 case in RED-08 and is its proof, not
+an incidental assertion. Its raising `HttpDataSource._fetch_with_retry` monkeypatch is installed
+before each diagnostic invocation, including no-argument, VNM, and every non-VNM case; any actual
+transport call fails immediately and the guard-call count must remain zero. All transports remain
+spies and no source request or raw response is used.
 
 ## Release row boundary
 
@@ -384,15 +421,43 @@ import/version checks, wheel/sdist, blacklist/secret/diff/path/ancestry/clean-tr
 obtain exact-SHA code review before any publication decision. No release file, snapshot, capability,
 or source-chain change is authorized by this packet.
 
+## Exact RED test-change manifest
+
+If the reviewer later authorizes RED, the RED commit must implement **every** test change named in
+the ledger, not only the rows marked `MUST_FAIL_AT_RED`. This manifest is the completeness check for
+that commit:
+
+- Retain C01-C07 exactly as current characterizations, including the existing DBnomics, custom,
+  WDI, public-snapshot, secret-cache, and no-argument diagnostic tests.
+- Apply all five C08-C12 ZZZ-to-VNM fixture migrations exactly as the migration table specifies;
+  these are green characterizations and must not be converted into RED failures.
+- Add or modify M01-M08 exactly as their ledger rows require: public preflight, custom ordering,
+  hookless custom eligibility, direct guards, explicit ZZZ negatives, country-aware diagnostic
+  signature/payload, and the connected no-network M08 proof.
+- Preserve M09 and add its exact direct `InvalidData` carrier assertion; add M10's exact public
+  `SourceAttempt`/`AllSourcesFailed` characterization; preserve M11 and add its exact raw-text
+  cache assertion through `_cache_enabled_dbnomics_source`; add M12's guard-before-cache failure;
+  and add M13's synthetic custom runtime characterization.
+- Keep legal/source/bounds qualification out of runtime tests, keep the Release row out of RED, and
+  change no test, fixture, constructor, source, or API surface not named by the ledger.
+
+The reviewer must compare the RED diff's test names and files against this manifest and the ledger
+before judging failure reasons. A missing characterization migration, omitted carrier assertion,
+or unlisted production-constructor change is a RED-scope failure even if the MUST_FAIL tests fail
+as expected.
+
 ## Exact RED commit and review sequence
 
 The expected lifecycle is deliberately two-phase:
 
 1. This packet is reviewed for exact matrix scope and no-network safety.
-2. If the reviewer returns **RED AUTHORIZED**, write only the failing tests and synthetic fixtures
-   listed above; do not make production code changes.
-3. Commit the RED state and return its exact SHA. The reviewer verifies that the tests fail for the
-   intended contract reasons, remain offline, and do not broaden scope.
+2. If the reviewer returns **RED AUTHORIZED**, write exactly the full test-change manifest above,
+   including green characterization migrations and carrier assertions as well as the failing tests
+   and synthetic fixtures; do not make production code changes or expand `DBnomicsSource.__init__`.
+3. Commit that complete RED state and return its exact SHA. The reviewer verifies every
+   ledger-listed test change, that MUST_FAIL tests fail for the intended contract reasons, that
+   the connected M08 guard proves zero network calls, and that all tests remain offline without
+   broadening scope.
 4. Only a separate explicit reviewer authorization permits implementation. Implementation must
    preserve the source-gap/empty-chain boundary.
 5. Reach GREEN, obtain exact-SHA code review, and run the merged release gates. Publication/closure
@@ -426,6 +491,11 @@ Only the reviewer can grant the next RED or implementation transition.
 - Prior RED-authorization BLOCK: exact `2528fcfe1350289f3c2ba0f75809e8526b449f37`, delivery
   `e56a4bff`, report `reviews/review-202608312139-issue235-red-authorization.md`, recorded first
   in backlog commit `e3ea916c7121baaa5a190da3ea6e58d83d082b12`. RED was not authorized.
+- Corrected RED-authorization BLOCK: exact `bc5723b0f3958ad715fd7509d261bd235ff76a6f`, delivery
+  `6c38b848`, report `reviews/review-202608312155-issue235-corrected-red-authorization.md`,
+  recorded first in backlog commit `9f77f6c`. The remaining correction is packet/backlog-only:
+  bind the test-only cache seam, forbid production constructor expansion, align the complete RED
+  manifest, and treat the connected M08 guard as proof. RED remains unauthorized.
 - Approved API/model packet: commit `64bfdc5628428b00634655f988cf01b5aa292a6d`, blob
   `9282ed7497224b3f6d02785ce6db721a00fd3cfc`.
 - Source/design PASS: exact `429870c252f4920422d071398a3ef169c15e1466`; research/design blobs
@@ -445,6 +515,11 @@ Only the reviewer can grant the next RED or implementation transition.
 - Scope is exactly the approved matrix rows 269-286; no new source or API design is added.
 - RED remains unauthorized until the corrected packet receives an exact reviewer authorization.
 - If authorized, RED would mean offline failing tests with synthetic fixtures only.
+- The DBnomics cache case uses a test-only base-initializer seam; production constructors stay
+  unchanged.
+- The RED commit must include every ledger-listed characterization, migration, carrier, and failure
+  test change, with no unlisted production/API change.
+- The connected diagnostic transport guard is the required zero-network proof, not a local counter.
 - No tests, fixtures, probes, provider calls, credentials, raw rows, or production code were added.
 - VNM proxy, annual World Bank, PARTIAL_COHORT 5/6/1/38, and empty chain stay unchanged.
 - Non-VNM policy-rate behavior is only a future test contract, not a current capability claim.
