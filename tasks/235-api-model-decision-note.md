@@ -172,6 +172,27 @@ call occurs.
 
 For `country_iso3="VNM"`, return the same legacy fields and exact current `sources`, `notes`, and
 `suggested_actions`, with only `request={"country_iso3": "VNM"}` identifying the supplied request.
+Concretely, its fields are `domain="rates"`, `endpoint="fixed_income_coverage"`,
+`request={"country_iso3": "VNM"}`, `status="yield_curve_unavailable"`,
+`sources=_FIXED_INCOME_CAPS`, the five exact note strings below, and the three exact suggested
+action strings below. `_FIXED_INCOME_CAPS` is the unchanged current three-entry tuple, and the
+exact current note/action tuples are:
+
+```text
+notes = (
+  "the Vietnam government-bond yield CURVE (by tenor + history) is UNAVAILABLE: no clean, redistributable, no-key source exists, so it is DEFERRED (no vnfin.bonds namespace is registered).",
+  "policy_rate IS available — vnfin.macro.get_indicator(iso3, 'policy_rate'): a MONTHLY series from DBnomics/IMF-IFS FPOLM_PA, but it is a PROXY for the SBV monetary-policy stance (not the announced refinancing/discount rate) and is stale (~Dec 2023). Read indicator_name + warnings.",
+  "lending_rate, deposit_rate and real_interest_rate ARE available — vnfin.macro.get_indicator(iso3, ...): ANNUAL World Bank WDI series (FR.INR.LEND / FR.INR.DPST / FR.INR.RINR), % per annum.",
+  "deposit_rate is an annual AGGREGATE bank deposit rate — there is NO clean, no-key per-tenor (1M/3M/6M/12M) RETAIL deposit-rate source in v1.",
+  "DISTINCT concepts — do not conflate: the POLICY rate (central-bank stance) is not the INTERBANK / money-market rate, which is not a bank DEPOSIT rate, which is not a GOVERNMENT BOND yield. v1 serves the policy proxy + the three annual World Bank bank rates; the interbank curve and the govt-bond yield curve are not served.",
+)
+suggested_actions = (
+  "for an interest-rate level: vnfin.macro.get_indicator(iso3, 'policy_rate') (monthly proxy) or 'lending_rate'/'deposit_rate'/'real_interest_rate' (WB annual)",
+  "for the officially announced SBV policy rate, consult the State Bank of Vietnam (https://sbv.gov.vn) directly — it is not redistributed here",
+  "a per-tenor government-bond yield curve is not available in v1 (no clean source)",
+)
+```
+
 For every other valid ISO3, including mapped `USA`, `CHN`, `JPN`, `DEU`, and test-only `ZZZ`, return
 this exact payload (where `{ISO3}` is the normalized request):
 
