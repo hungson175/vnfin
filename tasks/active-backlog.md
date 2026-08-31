@@ -611,13 +611,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `429870c252f4920422d071398a3ef169c15e1466`, delivery `7d65f45a`, reviewer `b5f0458`, and
   report `reviews/review-202608312046-issue235-final-design-approval.md`; the approved research
   blob is `4e9440803d9a72fa8cda161f5294de11976a0a3a` and design blob is
-  `597e057d5725ffe915ee1dd499d1e487b38ca9e9`. The next exact packet must decide full provider-series
-  `indicator_code` compatibility and the USA SBV policy-rate label/diagnostic hazard without changing
-  the current surface prematurely. Preserve `PARTIAL_COHORT`, 50-cell `5`/`6`/`1`/`38` outcomes,
-  empty new chain, current `get_indicator`/`IndicatorSeries`, missingness, no substitution, source/
-  legal boundaries, and no provider dispatch, raw rows, RED, API/model implementation, code, source
-  change, push, capability claim, or close. Actor is `vnfin-oss`; next action is
-  `PREPARE_EXACT_API_MODEL_DECISION`.
+  `597e057d5725ffe915ee1dd499d1e487b38ca9e9`. PASS was recorded before packet work; prepare one
+  exact API/model-decision packet for full provider-series `indicator_code` compatibility and the
+  USA SBV policy-rate label/diagnostic hazard without changing the current surface prematurely.
+  Preserve `PARTIAL_COHORT`, 50-cell `5`/`6`/`1`/`38` outcomes, empty new chain, current
+  `get_indicator`/`IndicatorSeries`, missingness, no substitution, source/legal boundaries, and no
+  provider dispatch, raw rows, RED, API/model implementation, code, source change, push, capability
+  claim, or close. Actor is `vnfin-oss`; next action is `PREPARE_EXACT_API_MODEL_DECISION`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
