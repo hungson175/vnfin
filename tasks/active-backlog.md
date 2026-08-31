@@ -628,8 +628,8 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `reviews/review-202608312106-issue235-api-model-decision.md`; packet blob remains
   `f9640cadff02ffc6cdfb0629d3960da295a11d30`. BLOCK was recorded before correction; B1-B5 require
   one packet/backlog-only correction. Corrected packet commit is
-  `d3c6cf6ad820f0deccc85b4a64ed0cd93d98b64c` with blob
-  `cd2f95c60407efe60241f32932052450758e75b8`; it restores the bare/custom canonical seam, binds
+  `64bfdc5628428b00634655f988cf01b5aa292a6d` with blob
+  `9282ed7497224b3f6d02785ce6db721a00fd3cfc`; it restores the bare/custom canonical seam, binds
   one country-scoped preflight and deterministic carriers, applies the VNM-only rule to every
   mapped non-VNM country, and fixes one exact diagnostic signature/payload. Actor is now
   `vnfin-oss-reviewer`; next action is `RETURN_EXACT_API_MODEL_DECISION_VERDICT`; review is
