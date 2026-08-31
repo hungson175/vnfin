@@ -674,6 +674,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   BLOCK was recorded before this correction; actor is `vnfin-oss`, next action is
   `CORRECT_RED_AUTHORIZATION_PACKET`, and no tests, fixtures, implementation, probe, source
   change, push, capability claim, or close is authorized.
+  The packet/backlog-only correction is committed at
+  `cae8db44e69639da9f5b0d06c1904bcec1caa5db` with packet blob
+  `286c8602a618507f7de3f482f96efcf1f127efde`. It binds an executable test-only cache seam for
+  `DBnomicsSource` without expanding its production constructor, aligns the complete
+  ledger-listed RED test manifest, and makes the connected diagnostic transport guard the
+  zero-network proof. Actor is now `vnfin-oss-reviewer`; next action is
+  `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`; RED remains unauthorized pending fresh review.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
