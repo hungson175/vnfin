@@ -668,6 +668,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   qualification outside runtime RED, and binds direct/public/raw-cache/connected no-network
   carriers without transport redesign. Actor is now `vnfin-oss-reviewer`; next action is
   `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`; RED remains unauthorized pending fresh review.
+  Corrected RED authorization remains **BLOCKED** at exact
+  `bc5723b0f3958ad715fd7509d261bd235ff76a6f`, delivery `6c38b848`, with report
+  `reviews/review-202608312155-issue235-corrected-red-authorization.md`; RED is not authorized.
+  BLOCK was recorded before this correction; actor is `vnfin-oss`, next action is
+  `CORRECT_RED_AUTHORIZATION_PACKET`, and no tests, fixtures, implementation, probe, source
+  change, push, capability claim, or close is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
