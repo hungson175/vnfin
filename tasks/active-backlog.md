@@ -713,9 +713,19 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   23-failure shape/scope/safety passed; the remaining correction is test/backlog-only: assert the
   keyword-only diagnostic signature, lock `_country_eligible_sources`/`supports_country`, and
   complete DBnomics suffix/country/frequency/concept plus WDI URL-shaped/country-folded negative
-  identity cases. BLOCK is recorded before correction; actor is `vnfin-oss`, next action is
-  `CORRECT_EXACT_RED_TEST_MANIFEST`. No implementation, probe, source/API-model change, push,
-  capability claim, or close is authorized.
+  identity cases. BLOCK was recorded before correction; the historical actor was `vnfin-oss` and
+  its next action was `CORRECT_EXACT_RED_TEST_MANIFEST`. No implementation, probe, source/API-model
+  change, push, capability claim, or close is authorized.
+  The corrected failing RED test manifest is committed at exact
+  `9f1f1e5bb54ff6eaa48fbb8fe89aabe8b10274cf` and changes only the same three synthetic test files.
+  It adds the keyword-only positional rejection, exact client/source country-filter seams and
+  custom-hook invocation assertion, explicit DBnomics suffix/country/frequency/concept/blank/null/
+  caller-echo identity negatives, and WDI URL-shaped/country-folded/cross-country negatives. The
+  full suite at this SHA exits 1 with exactly the intended 23 failures in M01/M02/M04-M07/M12;
+  `git diff --check` is clean. The current handoff actor is `vnfin-oss-reviewer`, next action is
+  `RETURN_EXACT_RED_TEST_VERDICT`, and the reviewer is requested to re-check this exact failing
+  SHA. No implementation, probe, source/API-model change, push, capability claim, or close is
+  authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
