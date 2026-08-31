@@ -734,6 +734,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   recorded before correction; actor is `vnfin-oss`, next action is `CORRECT_RED_TEST_ORDERING`.
   No implementation, probe, source/API-model change, push, capability claim, or close is
   authorized.
+  The ordering correction is committed at exact
+  `7e584a8e6652424d0d25a9e38632f9cd59cc03c6`; it changes only the authorized synthetic macro
+  test files and moves the normative behavioral assertions ahead of the seam assertions within
+  the existing M01/M02/M04/M05 nodes. The full suite still exits 1 with exactly the intended 23
+  failures; no new failure group or production behavior was introduced. Current handoff actor is
+  `vnfin-oss-reviewer`, next action is `RETURN_EXACT_RED_TEST_VERDICT`, and this exact failing RED
+  SHA is ready for re-review. No implementation, probe, source/API-model change, push, capability
+  claim, or close is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
