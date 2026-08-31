@@ -45,10 +45,11 @@ The no-key macro chain is World Bank → IMF DataMapper → DBnomics. Indicator 
 
 ### Cross-country example (Canada)
 
-`get_indicator` accepts a supported ISO3 country code — there is no per-country branching in the
-client, but series availability still depends on whether the underlying provider(s) actually
-publish that country. Canada (`CAN`) is verified to serve all five annual World Bank indicators
-shown so far:
+`get_indicator` accepts a supported ISO3 country code, and the client performs country-specific
+preflight before cache/transport when a source declares `supports_country`. A declared hook must
+affirm the country/indicator pair; a hookless custom source remains eligible and is still subject
+to returned-identity and unit validation. Canada (`CAN`) is verified to serve all five annual
+World Bank indicators shown so far:
 
 ```python
 canada_gdp = vnfin.macro.get_indicator("CAN", MacroIndicator.GDP)             # current US$
@@ -68,7 +69,8 @@ canada_inflation = vnfin.macro.get_indicator("CAN", MacroIndicator.INFLATION) # 
 DBnomics/IMF-IFS source; the default `POLICY_RATE` route uses the same source but is qualified
 only for Vietnam (`VNM`). For VNM, each resolves to a single-source monthly chain — distinct from
 the annual World Bank `CPI` (index level) and `INFLATION` (annual %). Non-VNM policy-rate
-requests have no default eligible route unless a separately qualified custom source is supplied.
+requests have no default eligible route. A custom source with a country hook must affirm eligibility;
+a hookless custom source remains eligible and is still subject to returned-identity/unit validation.
 
 ```python
 cpi_yoy = vnfin.macro.get_indicator("VNM", MacroIndicator.CPI_YOY)

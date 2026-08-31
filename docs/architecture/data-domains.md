@@ -248,9 +248,10 @@ served separately by `vnfin.fx.history()` -> `FXHistory` (annual USD/VND via Wor
 (enum `MacroIndicator`; #179). Unit pre-filter via `eligible_sources` keeps only sources serving
 the same canonical unit before failover. `CPI_YOY` is DBnomics-only; the default DBnomics
 `POLICY_RATE` route is VNM-only. For non-VNM policy-rate requests, country preflight removes the
-default route before cache/transport, so the default chain is empty unless a separately qualified
-custom source is supplied. Monthly results carry an additive `series_end_gap` staleness warning
-when the latest observation lags the series' own cadence.
+default route before cache/transport, so the default chain is empty. A custom source that declares
+`supports_country` must affirm eligibility; a hookless custom source remains eligible and is still
+subject to returned-identity and unit guards. Monthly results carry an additive `series_end_gap`
+staleness warning when the latest observation lags the series' own cadence.
 
 **Key contract enforcements (Phase 4 migration):**
 - `canonical_country_iso3` on input (`[A-Z]{3}` after `strip().upper()`).

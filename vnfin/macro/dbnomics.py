@@ -27,10 +27,11 @@ These DBnomics units differ from the WB-USD GDP level / WB percent indicators, s
 the per-indicator unit guard keeps each in its own homogeneous chain. CPI_YOY is
 DBnomics-only and resolves to a single-source monthly chain. The default POLICY_RATE
 DBnomics route is monthly but qualified only for VNM; non-VNM default requests are
-rejected before cache/transport and leave no eligible default source. A separately
-qualified custom source may remain eligible. There is no ordering ambiguity with the
-WB-annual CPI/INFLATION. #179: monthly results also carry a cadence-relative
-``series_end_gap`` staleness warning.
+rejected before cache/transport and leave no eligible default source. A custom source
+that declares ``supports_country`` must affirm eligibility; a hookless custom source
+remains eligible and is still subject to returned-identity and unit guards. There is
+no ordering ambiguity with the WB-annual CPI/INFLATION. #179: monthly results also
+carry a cadence-relative ``series_end_gap`` staleness warning.
 
 Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - transport/network error            -> ``SourceUnavailable``

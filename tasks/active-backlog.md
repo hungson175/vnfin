@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_BLOCKED (2026-08-31).**
+- **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
@@ -783,7 +783,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   The exact corrected release/lifecycle SHA is the merged handoff returned to the reviewer; code,
   RED tests, fixtures, snapshot, packets, source registration, probes, push, capability claim, and
   close remain frozen or unauthorized.
-  The docs/lifecycle correction review remains **BLOCKED** at exact
+  The prior docs/lifecycle correction review was **BLOCKED** at exact
   `122b8d2a31301713a594292de408a65d2f3667eb`, delivery `b73d4093`, reviewer report commit
   `185e58044f266cae878348e713b9d4c1ab02b859`, report
   `reviews/review-202608312339-issue235-implementation-docs-correction.md`. BLOCK was recorded
