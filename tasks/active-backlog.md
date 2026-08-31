@@ -742,6 +742,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `vnfin-oss-reviewer`, next action is `RETURN_EXACT_RED_TEST_VERDICT`, and this exact failing RED
   SHA is ready for re-review. No implementation, probe, source/API-model change, push, capability
   claim, or close is authorized.
+  RED test review is now **VERIFIED / IMPLEMENTATION_AUTHORIZED** at exact
+  `7e584a8e6652424d0d25a9e38632f9cd59cc03c6`, delivery `1d200f97`, with lifecycle
+  `c3fa1b63e4909edf62f814e3d63a39f25c38bba7` and report
+  `reviews/review-202608312303-issue235-red-test-pass.md`. The exact 4,305-test collection has
+  exactly the approved 23 intended failures; RED and the approved packet are frozen. Actor is now
+  `vnfin-oss`, next action is `IMPLEMENT_APPROVED_COUNTRY_PREFLIGHT_AND_DIAGNOSTICS`. Only the
+  approved country preflight, VNM-only guards/identity, custom ordering, cache-before-guard, and
+  diagnostic contracts may move to GREEN. No probe, source registration, API-model redesign, RED
+  edit, capability claim, push, or close is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
