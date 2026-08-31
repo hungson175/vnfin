@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort API/model decision — API_MODEL_DECISION_BLOCKED (2026-08-31).**
+- **#235 — North America macro cohort API/model decision — REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
@@ -627,8 +627,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `122e728d`, reviewer `162863d`, report
   `reviews/review-202608312106-issue235-api-model-decision.md`; packet blob remains
   `f9640cadff02ffc6cdfb0629d3960da295a11d30`. BLOCK was recorded before correction; B1-B5 require
-  one packet/backlog-only correction. Actor is `vnfin-oss`; next action is
-  `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`.
+  one packet/backlog-only correction. Corrected packet commit is
+  `d3c6cf6ad820f0deccc85b4a64ed0cd93d98b64c` with blob
+  `cd2f95c60407efe60241f32932052450758e75b8`; it restores the bare/custom canonical seam, binds
+  one country-scoped preflight and deterministic carriers, applies the VNM-only rule to every
+  mapped non-VNM country, and fixes one exact diagnostic signature/payload. Actor is now
+  `vnfin-oss-reviewer`; next action is `RETURN_EXACT_API_MODEL_DECISION_VERDICT`; review is
+  requested against that corrected packet with no research/design source changes.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
