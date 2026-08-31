@@ -31,6 +31,12 @@ first in backlog commit `9f77f6c`; RED remains unauthorized while this packet-on
 prepared. No production constructor, runtime transport, provider, or test implementation change
 is included.
 
+**Current final RED-authorization review:** BLOCK at exact
+`0f169d3ffb63268c0367d1764a214631c8eaf71a`, delivery `b078fdf5`, report
+`reviews/review-202608312206-issue235-final-red-authorization.md`. This BLOCK was recorded first
+in backlog commit `169833e6cbddfb14118d9e5eab3438b1dd3805c7`; RED remains unauthorized while the
+diagnostic classification correction is prepared.
+
 ## Exact authorization requested
 
 This packet asks the reviewer to authorize **only** a later RED commit containing failing,
@@ -67,7 +73,7 @@ Every proposed RED test is deterministic and offline:
 
 ## Frozen scope: one test group per approved matrix row
 
-The approved matrix has ten executable RED groups plus one separately gated Release row. The ten
+The approved matrix has ten executable authorization groups plus one separately gated Release row. The ten
 groups below map one-to-one to the executable matrix rows; the ledger deliberately separates tests
 that characterize current green behavior from tests that must fail before implementation. No
 additional feature, provider, indicator, source chain, enum, model field, warning, exception, or
@@ -89,7 +95,7 @@ call; `0 provider` means the transport spy must record zero provider dispatches.
 | C04 WDI country/indicator identity | `CURRENT_CHARACTERIZATION` | Existing `tests/test_macro_worldbank.py:579-599,877-895`, retain | Existing response identity guards stay green | 1 injected response; no live call |
 | C05 identity carriers/public snapshot | `CURRENT_CHARACTERIZATION` | Existing `tests/test_public_api_surface.py:273-286` and macro carrier tests, retain | Existing `IndicatorSeries`/snapshot compatibility stays green | 0 provider |
 | C06 secret cache identity/redaction | `CURRENT_CHARACTERIZATION` | Existing `tests/test_transport.py:369-429,496-623`, retain | Existing raw cache secret isolation stays green | 0 provider; injected transport only |
-| C07 static diagnostic no-arg baseline | `CURRENT_CHARACTERIZATION` | Existing `tests/test_diagnostics.py:162-174` baseline, retain | Current no-arg diagnostic remains unchanged; old local counter is not zero-network evidence | 0 provider |
+| C07 static diagnostic no-arg baseline | `CURRENT_CHARACTERIZATION` | Existing `tests/test_diagnostics.py:162-174` baseline, retain; replace only its disconnected counter with the connected guard specified for M08 | Current no-arg diagnostic output remains unchanged; the connected zero-call assertion is an independent characterization proof, not a RED failure | 0 provider |
 | C08 VNM policy-rate happy path | `CURRENT_CHARACTERIZATION` | **Modified** `tests/test_macro_dbnomics.py::test_policy_rate_monthly_happy_path` (345-359) | Migrate its current ZZZ fixture to VNM; it must stay green and is not a RED failure | 1 injected response; no live call |
 | C09 VNM policy-rate declared identity | `CURRENT_CHARACTERIZATION` | **Modified** `tests/test_macro_dbnomics.py::test_policy_rate_identity_keyed_to_code_not_display` (362-372) | Migrate ZZZ/`M.ZZ.FPOLM_PA` to VNM/`M.VN.FPOLM_PA`; preserve green proxy identity | 0 provider; synthetic identity only |
 | C10 VNM stale-warning path | `CURRENT_CHARACTERIZATION` | **Modified** `tests/test_macro_dbnomics.py::test_get_indicator_emits_series_end_gap_when_stale` (440-451) | Migrate request/fixture to VNM; preserve warning and metadata behavior | 1 injected response; no live call |
@@ -101,8 +107,8 @@ call; `0 provider` means the transport spy must record zero provider dispatches.
 | M04 direct non-VNM `get_indicator` guard | `MUST_FAIL_AT_RED` | New parametrized `tests/test_macro_dbnomics.py` case | Missing direct guard constructs/dispatches the route instead of exact `InvalidData` before transport | Expected 0 provider |
 | M05 direct non-VNM `indicator_identity` guard | `MUST_FAIL_AT_RED` | New parametrized `tests/test_macro_dbnomics.py` case | Missing identity guard advertises a non-VNM SBV identity instead of exact `InvalidData` | Expected 0 provider |
 | M06 ZZZ-to-VNM inversion | `MUST_FAIL_AT_RED` | New explicit ZZZ cases in preflight/direct-guard tests | Current ZZZ policy-rate success must be rejected; the five migrated VNM characterizations must not be deleted | Expected 0 provider for each guard |
-| M07 diagnostic country signature/payload | `MUST_FAIL_AT_RED` | New parametrized `tests/test_diagnostics.py` cases for VNM and USA/CHN/JPN/DEU/ZZZ | Current callable lacks the additive keyword and exact non-VNM payload | Expected 0 provider |
-| M08 connected diagnostic no-network guard | `MUST_FAIL_AT_RED` | **Modified** diagnostic offline test with an actual transport guard | Existing counter is disconnected; the new signature/payload test must fail before implementation while a raising transport seam proves zero dispatch | Expected 0 provider; raising guard must not fire |
+| M07 diagnostic country signature/payload | `MUST_FAIL_AT_RED` | New parametrized `tests/test_diagnostics.py` cases for VNM and USA/CHN/JPN/DEU/ZZZ | Current callable lacks the additive keyword and exact non-VNM payload; this is the sole diagnostic signature/payload failure group | Expected 0 provider |
+| M08 connected diagnostic no-network guard | `CURRENT_CHARACTERIZATION` | **Modified** diagnostic offline test with an actual transport guard, run independently of M07 payload assertions | Replace the disconnected counter with a connected guard; current static no-network behavior stays green, and the guard is proof/current characterization rather than an independent MUST_FAIL | Expected 0 provider; raising guard must not fire |
 | M09 direct malformed-response carrier | `CURRENT_CHARACTERIZATION` | Existing DBnomics mismatch cases, plus exact carrier assertion | Direct adapter already raises `InvalidData`; keep it green and do not convert it to public aggregation | 1 injected response; no live call |
 | M10 public one-attempt failure carrier | `CURRENT_CHARACTERIZATION` | New exact `MacroClient` synthetic malformed-response characterization | Public path must retain one `SourceAttempt` and `AllSourcesFailed`; this is a carrier pin, not an implementation RED failure | 1 injected source/transport call |
 | M11 raw transport cache boundary | `CURRENT_CHARACTERIZATION` | Existing cache tests plus one exact raw-text cache assertion through the test-only DBnomics cache seam in RED-10 | Raw response-text caching remains unchanged; no parsed-result cache is introduced | 1 injected fetch then raw-cache hit |
@@ -287,9 +293,11 @@ Pin the deliberately narrow compatibility boundary:
 
 **Planned location:** `tests/test_diagnostics.py`.
 
-The new country-argument cases are `MUST_FAIL_AT_RED` (M07/M08); the no-argument and VNM legacy
-payload assertions are current characterizations that must stay green once the additive signature
-is implemented.
+The new country-argument cases are `MUST_FAIL_AT_RED` only for M07. M07 is the sole diagnostic
+signature/payload failure group. The no-argument and VNM legacy payload assertions are current
+characterizations that must stay green once the additive signature is implemented. M08 is also a
+`CURRENT_CHARACTERIZATION`: it replaces the disconnected counter in the existing offline test with
+the connected transport guard, and does not introduce an independent failure assertion.
 
 Pin the additive signature and exact payload without a network call:
 
@@ -345,17 +353,18 @@ RequestDiagnostic(
 ```
 
 - Assert no SBV label and no generic policy-rate suggestion in non-VNM payloads. Existing country
-  validation and its exact input errors remain the input boundary. The diagnostic is static and
+  validation and its exact input errors remain the input boundary. M07's diagnostic is static and
   must make zero transport calls.
 - Replace the existing disconnected local `called` counter in
   `tests/test_diagnostics.py:162-174` with a connected raising guard installed before every
-  no-argument, VNM, and non-VNM invocation. The RED test must monkeypatch the actual
+  no-argument, VNM, and non-VNM invocation. The guard assertion is the independent M08 current
+  characterization and proof; it is not a second M07 failure. The test must monkeypatch the actual
   `vnfin.transport.HttpDataSource._fetch_with_retry` seam (and may additionally guard the socket
   constructor); any invocation raises immediately and increments the guard, and the final
   assertion requires zero guard calls. This connected guard is the authoritative proof of the
   diagnostic's no-network behavior: a disconnected local counter, an unused-helper monkeypatch,
   or a source-list assertion is not a substitute. Any actual transport invocation must fail the
-  test, and every diagnostic invocation must be covered by the installed guard.
+  proof, and every diagnostic invocation must be covered by the installed guard.
 
 ### RED-09 — Future USA qualification seam
 
@@ -406,11 +415,12 @@ text under the existing cache contract, but no parsed `IndicatorSeries` result i
 returned. The public and direct exception carriers above are exact; no shared transport-cache
 redesign is hidden in RED, and cache remains off by default.
 
-The connected no-network diagnostic guard is the separate M08 case in RED-08 and is its proof, not
-an incidental assertion. Its raising `HttpDataSource._fetch_with_retry` monkeypatch is installed
-before each diagnostic invocation, including no-argument, VNM, and every non-VNM case; any actual
-transport call fails immediately and the guard-call count must remain zero. All transports remain
-spies and no source request or raw response is used.
+The connected no-network diagnostic guard is the separate M08 current-characterization row in
+RED-08 and is its proof, not an incidental assertion or a second MUST_FAIL. M07 remains the sole
+diagnostic signature/payload failure. The raising `HttpDataSource._fetch_with_retry` monkeypatch is
+installed before each diagnostic invocation, including no-argument, VNM, and every non-VNM case;
+any actual transport call fails immediately and the guard-call count must remain zero. All
+transports remain spies and no source request or raw response is used.
 
 ## Release row boundary
 
@@ -427,13 +437,17 @@ If the reviewer later authorizes RED, the RED commit must implement **every** te
 the ledger, not only the rows marked `MUST_FAIL_AT_RED`. This manifest is the completeness check for
 that commit:
 
-- Retain C01-C07 exactly as current characterizations, including the existing DBnomics, custom,
-  WDI, public-snapshot, secret-cache, and no-argument diagnostic tests.
+- Retain C01-C07 behavioral assertions as current characterizations, including the existing
+  DBnomics, custom, WDI, public-snapshot, secret-cache, and no-argument diagnostic tests. For C07,
+  replace only the disconnected counter with the independent connected M08 guard proof; retain
+  all no-argument output/equality assertions.
 - Apply all five C08-C12 ZZZ-to-VNM fixture migrations exactly as the migration table specifies;
   these are green characterizations and must not be converted into RED failures.
-- Add or modify M01-M08 exactly as their ledger rows require: public preflight, custom ordering,
-  hookless custom eligibility, direct guards, explicit ZZZ negatives, country-aware diagnostic
-  signature/payload, and the connected no-network M08 proof.
+- Add or modify M01-M07 exactly as their ledger rows require: public preflight, custom ordering,
+  hookless custom eligibility, direct guards, explicit ZZZ negatives, and the country-aware
+  diagnostic signature/payload. M07 is the sole diagnostic MUST_FAIL group.
+- Modify M08 only as the current-characterization guard replacement described above; it must run
+  independently of M07's payload assertions and must not be classified as a second MUST_FAIL group.
 - Preserve M09 and add its exact direct `InvalidData` carrier assertion; add M10's exact public
   `SourceAttempt`/`AllSourcesFailed` characterization; preserve M11 and add its exact raw-text
   cache assertion through `_cache_enabled_dbnomics_source`; add M12's guard-before-cache failure;
@@ -456,8 +470,9 @@ The expected lifecycle is deliberately two-phase:
    and synthetic fixtures; do not make production code changes or expand `DBnomicsSource.__init__`.
 3. Commit that complete RED state and return its exact SHA. The reviewer verifies every
    ledger-listed test change, that MUST_FAIL tests fail for the intended contract reasons, that
-   the connected M08 guard proves zero network calls, and that all tests remain offline without
-   broadening scope.
+   M07 is the sole diagnostic signature/payload MUST_FAIL group, that M08/C07's connected guard
+   independently proves zero network calls as a current characterization, and that all tests
+   remain offline without broadening scope.
 4. Only a separate explicit reviewer authorization permits implementation. Implementation must
    preserve the source-gap/empty-chain boundary.
 5. Reach GREEN, obtain exact-SHA code review, and run the merged release gates. Publication/closure
@@ -496,6 +511,12 @@ Only the reviewer can grant the next RED or implementation transition.
   recorded first in backlog commit `9f77f6c`. The remaining correction is packet/backlog-only:
   bind the test-only cache seam, forbid production constructor expansion, align the complete RED
   manifest, and treat the connected M08 guard as proof. RED remains unauthorized.
+- Final RED-authorization BLOCK: exact `0f169d3ffb63268c0367d1764a214631c8eaf71a`, delivery
+  `b078fdf5`, report `reviews/review-202608312206-issue235-final-red-authorization.md`, recorded
+  first in backlog commit `169833e6cbddfb14118d9e5eab3438b1dd3805c7`. The remaining correction is
+  packet/backlog-only: keep M07 as the sole diagnostic signature/payload MUST_FAIL group, retain
+  C07 output behavior, and make M08's connected guard an independent current-characterization
+  proof. RED remains unauthorized.
 - Approved API/model packet: commit `64bfdc5628428b00634655f988cf01b5aa292a6d`, blob
   `9282ed7497224b3f6d02785ce6db721a00fd3cfc`.
 - Source/design PASS: exact `429870c252f4920422d071398a3ef169c15e1466`; research/design blobs
@@ -519,7 +540,8 @@ Only the reviewer can grant the next RED or implementation transition.
   unchanged.
 - The RED commit must include every ledger-listed characterization, migration, carrier, and failure
   test change, with no unlisted production/API change.
-- The connected diagnostic transport guard is the required zero-network proof, not a local counter.
+- The connected diagnostic transport guard is the required zero-network proof, not a local counter or
+  an independent MUST_FAIL group; M07 alone covers diagnostic signature/payload failure.
 - No tests, fixtures, probes, provider calls, credentials, raw rows, or production code were added.
 - VNM proxy, annual World Bank, PARTIAL_COHORT 5/6/1/38, and empty chain stay unchanged.
 - Non-VNM policy-rate behavior is only a future test contract, not a current capability claim.
