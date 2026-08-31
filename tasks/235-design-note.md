@@ -10,10 +10,11 @@
 ## Decision
 
 Choose **`PARTIAL_COHORT`** as the documentation/design disposition. The current library already has
-response-backed Canada World Bank behavior for five annual cells from the approved #200 work, and
-bounded older USA evidence for four annual cells. Forty cells remain unprobed and the USA monthly
-policy-rate cell has an explicit semantics problem. No new source is qualified for an API/RED
-extension decision by this note.
+response-backed Canada World Bank behavior for five annual cells from the approved #200 work,
+bounded older USA evidence for three annual cells, and a separate one-year GDP ranking observation
+for each frozen member in the accepted packet. Thirty-eight cells remain unprobed and the USA
+monthly policy-rate cell has an explicit semantics problem. No new source is qualified for an
+API/RED extension decision by this note.
 
 The product surface remains exactly:
 
@@ -36,11 +37,20 @@ common-year cohort is:
 USA, CAN, MEX, CUB, DOM
 ```
 
-It is ranked only by World Bank `NY.GDP.MKTP.CD` GDP in current US dollars using common year 2020.
-The 2025 available-case `USA/CAN/MEX/DOM/GTM` result is an explicitly incomplete appendix; it
+It is ranked only by World Bank `NY.GDP.MKTP.CD` GDP in current US dollars using the accepted
+packet's frozen common year 2020. This design does not independently prove that no later common year
+exists: 2021–2024 were not independently retained or audited, and the query is reproducible ranking
+context only. The 2025 available-case `USA/CAN/MEX/DOM/GTM` result is an explicitly incomplete appendix; it
 cannot replace Cuba, become runtime membership, or be compared as if all eligible countries had a
 2025 observation. The full source evidence and official links are in
 `docs/research/2026-08-31-north-america-five-economy-macro-coverage.md`.
+
+The accepted packet's upstream ranking evidence is retained separately at
+`acbbb82:docs/research/2026-08-31-issue235-north-america-macro-cohort.md` (blob
+`621545ca505ff6234cad32b9be7989d5e5add426`), observed 2026-08-31. Its official 2020 and incomplete
+2025 WDI GDP responses are ranking-only evidence: they bind returned country/code/date/value/unit
+for the GDP observation, but do not establish a full series cell or activate the future observation
+plan.
 
 The ten audited indicators are:
 
@@ -54,17 +64,19 @@ outcome is explicit and reviewable:
 
 | Country | GDP | GDP_GROWTH | CPI | INFLATION | UNEMPLOYMENT | CPI_YOY | POLICY_RATE | LENDING_RATE | DEPOSIT_RATE | REAL_INTEREST_RATE |
 |---|---|---|---|---|---|---|---|---|---|---|
-| USA | `PARTIAL` | `NOT_PROBED` | `PARTIAL` | `PARTIAL` | `PARTIAL` | `NOT_PROBED` | `SEMANTICS_GAP` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
+| USA | `PARTIAL` | `NOT_PROBED` | `PARTIAL` | `PARTIAL` | `NOT_PROBED` | `NOT_PROBED` | `SEMANTICS_GAP` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
 | CAN | `PROVEN_EXISTING` | `PROVEN_EXISTING` | `PROVEN_EXISTING` | `PROVEN_EXISTING` | `PROVEN_EXISTING` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
-| MEX | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
-| CUB | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
-| DOM | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
+| MEX | `PARTIAL` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
+| CUB | `PARTIAL` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
+| DOM | `PARTIAL` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` | `NOT_PROBED` |
 
-Counts are **5 `PROVEN_EXISTING`, 4 `PARTIAL`, 1 `SEMANTICS_GAP`, and 40 `NOT_PROBED`**. The
+Counts are **5 `PROVEN_EXISTING`, 6 `PARTIAL`, 1 `SEMANTICS_GAP`, and 38 `NOT_PROBED`**. The
 `PROVEN_EXISTING` label means the existing public source path returned the exact Canada concept
 in the retained #200 live summary; it does not promote the unretained date bounds to a complete
-2018/current or 1960/current coverage claim. `PARTIAL` means the older USA evidence is a bounded
-example or span, not a complete cell qualification.
+2018/current or 1960/current coverage claim. `PARTIAL` means USA GDP/CPI/INFLATION have bounded
+older evidence and MEX/CUB/DOM GDP have one-year 2020 ranking evidence; none is a complete cell
+qualification. USA unemployment is `NOT_PROBED` because its older broad statement lacks an exact
+retained per-cell response.
 
 ## Source and semantic decision
 
@@ -89,6 +101,22 @@ Route template, for a future exact observation only:
 GET https://api.worldbank.org/v2/country/{ISO3}/indicator/{CODE}
     ?format=json&per_page={N}&date={Y1}:{Y2}
 ```
+
+The exact future one-call route is:
+
+```text
+GET https://api.worldbank.org/v2/country/USA;CAN;MEX;CUB;DOM/indicator/NY.GDP.MKTP.CD;NY.GDP.MKTP.KD.ZG;FP.CPI.TOTL;FP.CPI.TOTL.ZG;SL.UEM.TOTL.ZS;FR.INR.LEND;FR.INR.DPST;FR.INR.RINR?date=1960:2025&format=json&per_page=20000
+```
+
+This binds `route_version=v2`, `method=GET`, one logical reservation, and one physical
+dispatch with zero retries; no extra source parameter is assumed. Its response contract is one JSON
+envelope `[metadata, observations]` with `page=1`, `pages=1`, `per_page=20000`, and `total=2640`,
+covering every `(countryiso3code, indicator.id, date)` position for five countries, eight concepts,
+and 66 years, including nulls. Each row must return an allowed country code, exact indicator code,
+four-digit date, and provider value/unit; unique keys and the declared total must reconcile. A
+missing/null position stays missing. Any page/total mismatch, identity mismatch, bad MIME, redirect,
+byte exhaustion, or late failure invalidates the whole observation. The route is design evidence,
+not a dispatch.
 
 The provider must return the requested `countryiso3code` and exact `indicator.id`; the route's
 syntactic validity is not an observation. The existing adapter's annual output has Jan-1 dates,
@@ -143,7 +171,12 @@ attribution, commercial/derivative_use, redistribution, amendment, revocation)
 ```
 
 No field is filled from a neighbouring country, indicator, provider, or generic route description.
-`NOT_RETAINED` is distinct from zero, null, empty, denied, or permission granted.
+The research matrix gives every one of its 50 rows a cell-local tuple for `terms_version`,
+`terms_effective_date`, `automation`, `caller_return`, `cache/storage`, `retention/deletion`,
+`attribution`, `commercial/derivative_use`, `redistribution`, `amendment`, and `revocation`. The
+technical behavior fields describe the existing adapter only; they are never permission grants.
+`NOT_RETAINED`, `NOT_CLEARED`, and `NO_NEW_GRANT` are explicit cell outcomes, not inherited global
+assumptions, and remain distinct from zero, null, empty, denied, or permission granted.
 
 - World Bank public licensing defaults for World Bank-produced open datasets to CC BY 4.0 with
   attribution, while its public licensing page warns that dataset-specific and third-party
@@ -158,19 +191,22 @@ No field is filled from a neighbouring country, indicator, provider, or generic 
 
 ## Bounded observation plan (written, not activated)
 
-The following is a future finite plan, not a #235 probe authorization. No provider dispatch occurred.
-The plan's atomic reservations are deterministic: reserve a unique logical candidate before opening
+The following is a future finite plan, not a #235 probe authorization. This builder made no
+post-intake #235 cell-audit provider dispatch; the upstream ranking response is separately bound
+as ranking-only evidence. The plan's atomic reservations are deterministic: reserve a unique logical candidate before opening
 transport; increment physical usage only when a request is dispatched; retries are always zero; on
 any failed reservation or exhausted budget, do not dispatch or fall through to an unreserved source.
 A late failure invalidates the entire observation and releases no partial result to callers.
 
 ### World Bank reservation
 
-- One logical / one physical dispatch for the five frozen countries × eight WDI concepts over
+- Reserve exactly one logical / one physical dispatch with zero retries for the semicolon-separated
+  multi-country/multi-indicator URI above, covering five frozen countries × eight WDI concepts over
   `1960:2025`; maximum envelope `5 × 8 × 66 = 2,640` country-indicator-year positions including
   nulls.
-- One page is required (`per_page=20000`; if provider reports `pages != 1`, the one-physical-call
-  budget fails closed). Sequential, 25-second timeout, zero retry, no cookies/session/credentials.
+- One page is required (`per_page=20000`, `page=1`, `pages=1`, `total=2640`); sequential,
+  25-second timeout, zero retry, no cookies/session/credentials. Every response identity and unique
+  key must reconcile to the exact 2,640-position envelope or the reservation fails closed.
 - Redirects must preserve the owner host; complete MIME, status, `page/pages/per_page/total`, exact
   returned identities, and the whole response byte ledger are retained only as sanitized metadata.
 - Project safety ceilings are `4 MiB` compressed and `32 MiB` decompressed per response. These are
@@ -198,9 +234,10 @@ No RED is authorized by this design. After a design PASS, a separate API/model d
 whether any source-qualified cell can fit the unchanged primitive. Only then may reviewer-authorized
 RED tests be written, using synthetic offline fixtures only:
 
-1. 40 World Bank route cases (`5 × 8`) with exact path/code/params, request/response country and
-   indicator identity, unit/currency/frequency, Jan-1 dates, bounds, nulls, ordering, totals,
-   one-dispatch behavior, and no country-specific branch.
+1. 40 World Bank cell cases (`5 × 8`) against the exact semicolon-separated multi-indicator route
+   and its `date=1960:2025&format=json&per_page=20000` contract, with request/response country and
+   indicator identity, unit/currency/frequency, Jan-1 dates, bounds, nulls, ordering, exact
+   `page/pages/per_page/total`, one-dispatch behavior, and no country-specific branch.
 2. Each future-qualified DBnomics country/concept with exact IMF country code, monthly periods,
    country-neutral identity, source/operator attribution, no SBV-label leakage, and unsupported
    countries failing before dispatch.
@@ -238,7 +275,9 @@ passes all applicable axes together:
 
 For monthly non-USA cells, official IMF dimensions and exact national concept authority are
 additional gates. For USA `POLICY_RATE`, the SBV proxy display must be removed/replaced by a
-country-correct response-backed concept before qualification.
+country-correct response-backed concept before qualification. The API/model decision for this hazard
+is mandatory before #235 can close; a design PASS cannot silently accept the current label or
+diagnostics as a North American policy-rate contract.
 
 ## Lifecycle and release contract
 
@@ -259,15 +298,20 @@ The clean-room checklist is `docs/vnstock-blacklist.md`; the exact exclusion str
 the source report. Official source links and the full 50-cell evidence table are in
 `docs/research/2026-08-31-north-america-five-economy-macro-coverage.md`. Existing #200 evidence is
 kept at `tasks/199-200-design-note.md` and `tests/test_macro_worldbank.py`; those synthetic tests
-are not live provider coverage.
+are not live provider coverage. The reviewer-packet evidence
+`acbbb82:docs/research/2026-08-31-issue235-north-america-macro-cohort.md` (blob
+`621545ca505ff6234cad32b9be7989d5e5add426`) is retained as upstream ranking-only 2020/2025 response
+evidence, separate from the builder's future cell-audit plan.
 
 ## Bottom summary
 
 - Decision: **`PARTIAL_COHORT`**; no new cell qualifies for API/RED extension yet.
 - Cohort: frozen `USA/CAN/MEX/CUB/DOM` from strict common-year 2020 WDI GDP.
 - 2025 `USA/CAN/MEX/DOM/GTM` remains an incomplete appendix, never a Cuba substitute.
-- Matrix: 50 cells; 5 proven CAN, 4 partial USA, 1 policy semantics gap, 40 unprobed.
+- Matrix: 50 cells; 5 proven CAN, 6 partial (USA GDP/CPI/INFLATION plus MEX/CUB/DOM GDP),
+  1 policy semantics gap, and 38 unprobed.
 - Preserve `get_indicator` and `IndicatorSeries`; no ranking, batch, substitution, or new model.
-- Future traffic ceiling is 9 logical/physical requests, zero retries; no #235 dispatch occurred.
+- Future traffic ceiling is 9 logical/physical requests, zero retries; no post-intake #235 cell-audit
+  dispatch occurred, and the upstream ranking response is one-year evidence only.
 - No RED, code, source registration, push, closure, or runtime/coverage claim is authorized.
 - Need from reviewer: exact-SHA design verdict; no Boss decision is required now.
