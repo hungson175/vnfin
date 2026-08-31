@@ -509,8 +509,14 @@ def test_policy_rate_direct_non_vnm_guard_fails_before_transport(country):
             values=[4.5],
         )
 
+    source = DBnomicsSource(http_get=_g)
+    assert callable(getattr(source, "supports_country", None))
+    assert source.supports_country("VNM", MacroIndicator.POLICY_RATE) is True
+    assert source.supports_country(country, MacroIndicator.POLICY_RATE) is False
+    assert source.supports_country("USA", MacroIndicator.GDP) is True
+
     with pytest.raises(InvalidData) as exc_info:
-        DBnomicsSource(http_get=_g).get_indicator(country, MacroIndicator.POLICY_RATE)
+        source.get_indicator(country, MacroIndicator.POLICY_RATE)
     assert str(exc_info.value) == _NON_VNM_POLICY_ERROR.format(country=country)
     assert calls == []
 
@@ -523,8 +529,14 @@ def test_policy_rate_indicator_identity_non_vnm_guard_is_exact(country):
         calls.append((url, params, headers))
         return dbn_success(series_code=f"M.{_IFS_CC[country]}.FPOLM_PA")
 
+    source = DBnomicsSource(http_get=_g)
+    assert callable(getattr(source, "supports_country", None))
+    assert source.supports_country("VNM", MacroIndicator.POLICY_RATE) is True
+    assert source.supports_country(country, MacroIndicator.POLICY_RATE) is False
+    assert source.supports_country("USA", MacroIndicator.GDP) is True
+
     with pytest.raises(InvalidData) as exc_info:
-        DBnomicsSource(http_get=_g).indicator_identity(country, MacroIndicator.POLICY_RATE)
+        source.indicator_identity(country, MacroIndicator.POLICY_RATE)
     assert str(exc_info.value) == _NON_VNM_POLICY_ERROR.format(country=country)
     assert calls == []
 
@@ -536,6 +548,44 @@ def test_policy_rate_direct_malformed_response_has_exact_invalid_data_carrier():
     assert str(exc_info.value) == (
         "dbnomics: returned series_code 'M.VN.WRONG' != requested 'M.VN.FPOLM_PA'"
     )
+
+
+@pytest.mark.parametrize(
+    "bad_code",
+    [
+        "FPOLM_PA",          # suffix-only: no frequency/country identity
+        "M.US.FPOLM_PA",     # wrong country
+        "A.VN.FPOLM_PA",     # wrong frequency
+        "M.VN.WRONG",        # wrong concept
+        "",                  # blank
+        "   ",               # whitespace-only
+        None,                 # null
+        "policy_rate",       # caller echo only
+    ],
+    ids=[
+        "suffix-only",
+        "wrong-country",
+        "wrong-frequency",
+        "wrong-concept",
+        "blank",
+        "whitespace",
+        "null",
+        "caller-echo-only",
+    ],
+)
+def test_policy_rate_full_series_identity_rejects_explicit_negative_codes(bad_code):
+    with pytest.raises(InvalidData) as exc_info:
+        _src(dbn_success(series_code=bad_code)).get_indicator(
+            "VNM", MacroIndicator.POLICY_RATE
+        )
+    if isinstance(bad_code, str) and bad_code.strip():
+        expected = (
+            f"dbnomics: returned series_code {bad_code!r} != "
+            "requested 'M.VN.FPOLM_PA'"
+        )
+    else:
+        expected = f"dbnomics: malformed series_code {bad_code!r}"
+    assert str(exc_info.value) == expected
 
 
 def test_policy_rate_malformed_response_uses_existing_raw_text_cache_boundary():

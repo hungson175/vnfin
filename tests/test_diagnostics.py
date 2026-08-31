@@ -197,6 +197,17 @@ def test_fixed_income_coverage_vnm_request_keeps_legacy_payload(monkeypatch):
     assert calls == []
 
 
+def test_fixed_income_coverage_country_argument_is_keyword_only(monkeypatch):
+    # The approved additive signature is ``(*, country_iso3=None)``.  The
+    # no-argument implementation at RED already rejects positional arguments;
+    # retain that green characterization so a future positional-capable
+    # implementation cannot silently widen the public contract.
+    _diag, calls = _install_connected_transport_guard(monkeypatch)
+    with pytest.raises(TypeError):
+        explain_fixed_income_coverage("VNM")
+    assert calls == []
+
+
 def _expected_non_vnm_fixed_income_diagnostic(country_iso3):
     return RequestDiagnostic(
         domain="rates",

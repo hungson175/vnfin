@@ -5,6 +5,7 @@ wired over the generic :class:`vnfin.failover.FailoverClient` with a per-indicat
 unit-homogeneity guard. Uses fake in-memory sources and fabricated values; no
 network, no real provider rows.
 """
+import inspect
 import json
 from datetime import date, datetime, timedelta, timezone
 
@@ -1260,6 +1261,7 @@ class _CountryAwarePolicySource:
     def __init__(self, calls, *, name="qualified-custom", country="USA"):
         self.name = name
         self._calls = calls
+        self._country_checks = []
         self._country = country
         self._code = "CUSTOM.USA.POLICY"
         self._label = "Custom USA policy rate"
@@ -1268,6 +1270,7 @@ class _CountryAwarePolicySource:
         return MacroIndicator(indicator) == MacroIndicator.POLICY_RATE
 
     def supports_country(self, country_iso3, indicator):
+        self._country_checks.append((country_iso3, MacroIndicator(indicator)))
         return (
             country_iso3 == self._country
             and MacroIndicator(indicator) == MacroIndicator.POLICY_RATE
@@ -1344,10 +1347,17 @@ def test_policy_rate_public_non_vnm_preflight_has_exact_empty_failure_carrier(co
             [5.0],
         )
 
+    client = default_macro_client(sources=[DBnomicsSource(http_get=_dbn_get)])
+    country_filter = getattr(client, "_country_eligible_sources", None)
+    assert callable(country_filter)
+    signature = inspect.signature(country_filter)
+    assert tuple(signature.parameters) == ("sources", "country_iso3", "indicator")
+    assert all(
+        parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+        for parameter in signature.parameters.values()
+    )
     with pytest.raises(AllSourcesFailed) as exc_info:
-        default_macro_client(sources=[DBnomicsSource(http_get=_dbn_get)]).get_indicator(
-            country, MacroIndicator.POLICY_RATE
-        )
+        client.get_indicator(country, MacroIndicator.POLICY_RATE)
     err = exc_info.value
     assert err.symbol == f"{country}/policy_rate"
     assert err.interval is None
@@ -1364,14 +1374,24 @@ def test_policy_rate_preflight_skips_dbnomics_for_qualified_custom_source():
         return _dbn_monthly("M.US.FPOLM_PA", ["2024-01-01"], [5.0])
 
     custom = _CountryAwarePolicySource(custom_calls)
-    result = default_macro_client(
+    client = default_macro_client(
         sources=[DBnomicsSource(http_get=_dbn_get), custom]
-    ).get_indicator("USA", MacroIndicator.POLICY_RATE)
+    )
+    country_filter = getattr(client, "_country_eligible_sources", None)
+    assert callable(country_filter)
+    signature = inspect.signature(country_filter)
+    assert tuple(signature.parameters) == ("sources", "country_iso3", "indicator")
+    assert all(
+        parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+        for parameter in signature.parameters.values()
+    )
+    result = client.get_indicator("USA", MacroIndicator.POLICY_RATE)
     assert result.source == "qualified-custom"
     assert result.indicator_code == "CUSTOM.USA.POLICY"
     assert result.indicator_name == "Custom USA policy rate"
     assert dbn_calls == []
     assert custom_calls == ["USA"]
+    assert custom._country_checks == [("USA", MacroIndicator.POLICY_RATE)]
 
 
 def test_policy_rate_hookless_custom_source_remains_eligible():
@@ -1382,6 +1402,65 @@ def test_policy_rate_hookless_custom_source_remains_eligible():
     assert result.source == "hookless-custom"
     assert result.country == "USA"
     assert calls == ["USA"]
+
+
+def _wdi_identity_payload(*, returned_code="NY.GDP.MKTP.CD", returned_country="ZZZ"):
+    country_id = "US" if returned_country == "USA" else "ZZ"
+    country_name = "Synthetic USA" if returned_country == "USA" else "Synthetic ZZZ"
+    return json.dumps(
+        [
+            {"page": 1, "pages": 1, "per_page": 1, "total": 1},
+            [
+                {
+                    "indicator": {"id": returned_code, "value": "Synthetic GDP"},
+                    "country": {"id": country_id, "value": country_name},
+                    "countryiso3code": returned_country,
+                    "date": "2023",
+                    "value": 42.0,
+                    "unit": "current US$",
+                }
+            ],
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "case, returned_code, returned_country",
+    [
+        (
+            "url-shaped-code",
+            "https://api.worldbank.org/v2/country/ZZZ/indicator/NY.GDP.MKTP.CD",
+            "ZZZ",
+        ),
+        ("country-folded-code", "ZZZ.NY.GDP.MKTP.CD", "ZZZ"),
+        ("cross-country-response", "NY.GDP.MKTP.CD", "USA"),
+    ],
+    ids=["url-shaped-code", "country-folded-code", "cross-country-response"],
+)
+def test_worldbank_rejects_explicit_invented_identity_negatives(
+    case, returned_code, returned_country
+):
+    calls = []
+
+    def _wb_get(url, params, headers):
+        calls.append((url, params, headers))
+        return _wdi_identity_payload(
+            returned_code=returned_code, returned_country=returned_country
+        )
+
+    with pytest.raises(InvalidData) as exc_info:
+        WorldBankMacroSource(http_get=_wb_get).get_indicator(
+            "ZZZ", "NY.GDP.MKTP.CD", 2023, 2023
+        )
+    if case == "cross-country-response":
+        expected = "worldbank: observation country 'USA' != requested 'ZZZ'"
+    else:
+        expected = (
+            f"worldbank: observation indicator.id {returned_code!r} != "
+            "requested 'NY.GDP.MKTP.CD'"
+        )
+    assert str(exc_info.value) == expected
+    assert len(calls) == 1
 
 
 def test_policy_rate_public_malformed_response_preserves_exact_attempt_carrier():
