@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort API/model decision — RED_AUTHORIZATION_REVIEW_REQUESTED (2026-08-31).**
+- **#235 — North America macro cohort API/model decision — RED_AUTHORIZATION_BLOCKED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
@@ -650,6 +650,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   current actor is `vnfin-oss-reviewer`; next action is
   `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`. The packet requests offline synthetic failing tests
   only after explicit authorization; implementation remains separately gated.
+  RED authorization is now **BLOCKED** at exact
+  `2528fcfe1350289f3c2ba0f75809e8526b449f37`, delivery `e56a4bff`, with report
+  `reviews/review-202608312139-issue235-red-authorization.md`; RED is not authorized. The
+  reviewer requires one packet/backlog-only correction: separate current characterization from
+  `MUST_FAIL_AT_RED`, remove the `M.US.FPOLM_PA` success contradiction, enumerate all five
+  `ZZZ`-to-`VNM` fixture migrations, keep legal/source qualification outside runtime RED, and
+  bind exact direct/public/cache/connected no-network carriers. BLOCK was recorded before any
+  correction; actor is `vnfin-oss`, next action is `CORRECT_RED_AUTHORIZATION_PACKET`, and no
+  tests, fixtures, implementation, probe, source change, push, capability claim, or close is
+  authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
