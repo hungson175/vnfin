@@ -1348,6 +1348,13 @@ def test_policy_rate_public_non_vnm_preflight_has_exact_empty_failure_carrier(co
         )
 
     client = default_macro_client(sources=[DBnomicsSource(http_get=_dbn_get)])
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        client.get_indicator(country, MacroIndicator.POLICY_RATE)
+    err = exc_info.value
+    assert err.symbol == f"{country}/policy_rate"
+    assert err.interval is None
+    assert err.attempts == ()
+    assert calls == []
     country_filter = getattr(client, "_country_eligible_sources", None)
     assert callable(country_filter)
     signature = inspect.signature(country_filter)
@@ -1356,13 +1363,6 @@ def test_policy_rate_public_non_vnm_preflight_has_exact_empty_failure_carrier(co
         parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
         for parameter in signature.parameters.values()
     )
-    with pytest.raises(AllSourcesFailed) as exc_info:
-        client.get_indicator(country, MacroIndicator.POLICY_RATE)
-    err = exc_info.value
-    assert err.symbol == f"{country}/policy_rate"
-    assert err.interval is None
-    assert err.attempts == ()
-    assert calls == []
 
 
 def test_policy_rate_preflight_skips_dbnomics_for_qualified_custom_source():
@@ -1377,6 +1377,13 @@ def test_policy_rate_preflight_skips_dbnomics_for_qualified_custom_source():
     client = default_macro_client(
         sources=[DBnomicsSource(http_get=_dbn_get), custom]
     )
+    result = client.get_indicator("USA", MacroIndicator.POLICY_RATE)
+    assert result.source == "qualified-custom"
+    assert result.indicator_code == "CUSTOM.USA.POLICY"
+    assert result.indicator_name == "Custom USA policy rate"
+    assert dbn_calls == []
+    assert custom_calls == ["USA"]
+    assert custom._country_checks == [("USA", MacroIndicator.POLICY_RATE)]
     country_filter = getattr(client, "_country_eligible_sources", None)
     assert callable(country_filter)
     signature = inspect.signature(country_filter)
@@ -1385,13 +1392,6 @@ def test_policy_rate_preflight_skips_dbnomics_for_qualified_custom_source():
         parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
         for parameter in signature.parameters.values()
     )
-    result = client.get_indicator("USA", MacroIndicator.POLICY_RATE)
-    assert result.source == "qualified-custom"
-    assert result.indicator_code == "CUSTOM.USA.POLICY"
-    assert result.indicator_name == "Custom USA policy rate"
-    assert dbn_calls == []
-    assert custom_calls == ["USA"]
-    assert custom._country_checks == [("USA", MacroIndicator.POLICY_RATE)]
 
 
 def test_policy_rate_hookless_custom_source_remains_eligible():

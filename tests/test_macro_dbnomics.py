@@ -510,15 +510,15 @@ def test_policy_rate_direct_non_vnm_guard_fails_before_transport(country):
         )
 
     source = DBnomicsSource(http_get=_g)
-    assert callable(getattr(source, "supports_country", None))
-    assert source.supports_country("VNM", MacroIndicator.POLICY_RATE) is True
-    assert source.supports_country(country, MacroIndicator.POLICY_RATE) is False
-    assert source.supports_country("USA", MacroIndicator.GDP) is True
-
     with pytest.raises(InvalidData) as exc_info:
         source.get_indicator(country, MacroIndicator.POLICY_RATE)
     assert str(exc_info.value) == _NON_VNM_POLICY_ERROR.format(country=country)
     assert calls == []
+
+    assert callable(getattr(source, "supports_country", None))
+    assert source.supports_country("VNM", MacroIndicator.POLICY_RATE) is True
+    assert source.supports_country(country, MacroIndicator.POLICY_RATE) is False
+    assert source.supports_country("USA", MacroIndicator.GDP) is True
 
 
 @pytest.mark.parametrize("country", _NON_VNM_POLICY_COUNTRIES)
@@ -530,15 +530,15 @@ def test_policy_rate_indicator_identity_non_vnm_guard_is_exact(country):
         return dbn_success(series_code=f"M.{_IFS_CC[country]}.FPOLM_PA")
 
     source = DBnomicsSource(http_get=_g)
-    assert callable(getattr(source, "supports_country", None))
-    assert source.supports_country("VNM", MacroIndicator.POLICY_RATE) is True
-    assert source.supports_country(country, MacroIndicator.POLICY_RATE) is False
-    assert source.supports_country("USA", MacroIndicator.GDP) is True
-
     with pytest.raises(InvalidData) as exc_info:
         source.indicator_identity(country, MacroIndicator.POLICY_RATE)
     assert str(exc_info.value) == _NON_VNM_POLICY_ERROR.format(country=country)
     assert calls == []
+
+    assert callable(getattr(source, "supports_country", None))
+    assert source.supports_country("VNM", MacroIndicator.POLICY_RATE) is True
+    assert source.supports_country(country, MacroIndicator.POLICY_RATE) is False
+    assert source.supports_country("USA", MacroIndicator.GDP) is True
 
 
 def test_policy_rate_direct_malformed_response_has_exact_invalid_data_carrier():
