@@ -794,6 +794,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   Actor is now `vnfin-oss`; next action is `CORRECT_IMPLEMENTATION_DOCS_LIFECYCLE`; code, RED
   tests/fixtures, snapshot, packets, probes, source registration, API redesign, push, and close
   remain frozen or unauthorized.
+  The final docs/lifecycle review was **BLOCKED** at exact
+  `023ce17e952096924ace7c805b5a9521d49fb417`, delivery `145c2ef5`, reviewer report commit
+  `23b553556c950f81eda0d7cd4674e4bb7584e14f`, report
+  `reviews/review-202608312347-issue235-final-docs-lifecycle.md`. BLOCK was recorded before
+  correction. The sole remaining issue is a durable chronological handoff: append a current
+  completion record for `023ce17` with reviewer actor and `RETURN_EXACT_IMPLEMENTATION_VERDICT`,
+  while preserving historical BLOCK facts. Actor is now `vnfin-oss`; next action is
+  `CORRECT_IMPLEMENTATION_LIFECYCLE_HANDOFF`; no docs/runtime/test/API/source/push/close change
+  beyond that backlog-only correction is authorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
