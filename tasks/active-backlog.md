@@ -700,6 +700,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   recorded before RED work. Actor is `vnfin-oss`, next action is `WRITE_EXACT_RED_TEST_MANIFEST`;
   only the complete offline synthetic test/fixture manifest is authorized. No implementation,
   provider probe, source/API change, capability claim, push, or close is authorized.
+  The complete authorized RED test/fixture manifest is committed at exact
+  `4f2fab1e894d1d27e8db1e490379f84bbc8da6d3` and changes only
+  `tests/test_diagnostics.py`, `tests/test_macro_dbnomics.py`, and
+  `tests/test_macro_failover.py`. The intended failing groups are M01/M02/M04-M07/M12;
+  M07 is the sole diagnostic signature/payload MUST_FAIL group, while C01-C12, M03, M08-M11,
+  and M13 remain current green characterizations. No production/API/source/probe change was
+  made. Actor is now `vnfin-oss-reviewer`; next action is `RETURN_EXACT_RED_TEST_VERDICT`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
