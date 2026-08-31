@@ -602,15 +602,22 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort source/design — SOURCE_DESIGN_ACTIVE (2026-08-31).** Public
+- **#235 — North America macro cohort source/design — REVIEW_REQUESTED (2026-08-31).** Public
   triage is `issuecomment-5477977514`; reviewer packet is `tasks/235-north-america-macro-cohort-spec.md`
   with companion research brief `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`,
-  both at reviewer anchor `acbbb82`. Scope is the canonical `USA`/`CAN`/`MEX`/`CUB`/`DOM` cohort
-  on strict common-year 2020 WDI; the 2025 `USA`/`CAN`/`MEX`/`DOM`/`GTM` set is an incomplete
-  appendix, not a substitute. Audit all 5x10 cells with existing `get_indicator` semantics;
-  substitution, ranking APIs, and extra probes are out of scope. Actor is `vnfin-oss`; next action
-  is `PREPARE_EXACT_SHA_SOURCE_DESIGN`. No probe outside a separately finite plan, RED, API/model,
-  code, source change, push, or close before exact design PASS.
+  both at reviewer anchor `acbbb82`. Clean published base is `origin/master`
+  `472cfe6d42ba43ab535a2ff676220896d5aaaacd`; substantive source/design anchor is
+  `b123a1cbd63391a493501b093897e037dad00975` with report blob
+  `ac893d0c67ad0359b2405038036be71d503ee64d` and design blob
+  `f5a9d58054a656a6407948e662e3db30e97aea8a`. Scope is the frozen canonical
+  `USA`/`CAN`/`MEX`/`CUB`/`DOM` cohort on strict common-year 2020 WDI; the 2025
+  `USA`/`CAN`/`MEX`/`DOM`/`GTM` set is an explicitly incomplete appendix, not a substitute.
+  The research artifact audits 50 independent cells: 5 `PROVEN_EXISTING`, 4 `PARTIAL`, 1
+  `SEMANTICS_GAP`, and 40 `NOT_PROBED`; aggregate disposition is `PARTIAL_COHORT`. Preserve
+  existing `get_indicator`/`IndicatorSeries`; no substitution, ranking API, batch API, or new
+  runtime source is proposed. No #235 provider dispatch occurred; no raw rows, RED, API/model,
+  code, source change, push, or close is authorized. Actor is now `vnfin-oss-reviewer`; next
+  action is `RETURN_EXACT_SHA_DESIGN_VERDICT`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
