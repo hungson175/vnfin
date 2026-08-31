@@ -64,9 +64,11 @@ canada_inflation = vnfin.macro.get_indicator("CAN", MacroIndicator.INFLATION) # 
 ### Monthly inflation (CPI YoY) and the policy rate
 
 `CPI_YOY` (consumer-price inflation, % vs the same month a year earlier) and `POLICY_RATE`
-(the monetary-policy rate, % per annum) are **monthly** series. Both are served **only** by the
-DBnomics/IMF-IFS source, so each resolves to a single-source monthly chain — distinct from the
-annual World Bank `CPI` (index level) and `INFLATION` (annual %).
+(the monetary-policy rate, % per annum) are **monthly** series. `CPI_YOY` is served only by the
+DBnomics/IMF-IFS source; the default `POLICY_RATE` route uses the same source but is qualified
+only for Vietnam (`VNM`). For VNM, each resolves to a single-source monthly chain — distinct from
+the annual World Bank `CPI` (index level) and `INFLATION` (annual %). Non-VNM policy-rate
+requests have no default eligible route unless a separately qualified custom source is supplied.
 
 ```python
 cpi_yoy = vnfin.macro.get_indicator("VNM", MacroIndicator.CPI_YOY)

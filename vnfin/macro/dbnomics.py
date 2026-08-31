@@ -21,13 +21,16 @@ Indicator coverage (canonical -> IFS series template, unit DBnomics emits):
 - GDP         -> ``A.{CC}.NGDP_XDC``         (GDP, *national currency* — NOT canonical USD level)
 - CPI         -> ``M.{CC}.PCPI_IX``          (CPI index level)
 - CPI_YOY     -> ``M.{CC}.PCPI_PC_CP_A_PT``  (#179: CPI % change vs same month prior year)
-- POLICY_RATE -> ``M.{CC}.FPOLM_PA``         (#179: monetary-policy-related rate, % p.a. — SBV proxy)
+- POLICY_RATE -> ``M.{CC}.FPOLM_PA``         (#179: monetary-policy-related rate, % p.a. — SBV proxy; default route qualified for VNM only)
 
 These DBnomics units differ from the WB-USD GDP level / WB percent indicators, so
-the per-indicator unit guard keeps each in its own homogeneous chain. CPI_YOY and
-POLICY_RATE are DBnomics-only, so each resolves to a single-source monthly chain by
-default (no ordering ambiguity with the WB-annual CPI/INFLATION). #179: monthly
-results also carry a cadence-relative ``series_end_gap`` staleness warning.
+the per-indicator unit guard keeps each in its own homogeneous chain. CPI_YOY is
+DBnomics-only and resolves to a single-source monthly chain. The default POLICY_RATE
+DBnomics route is monthly but qualified only for VNM; non-VNM default requests are
+rejected before cache/transport and leave no eligible default source. A separately
+qualified custom source may remain eligible. There is no ordering ambiguity with the
+WB-annual CPI/INFLATION. #179: monthly results also carry a cadence-relative
+``series_end_gap`` staleness warning.
 
 Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - transport/network error            -> ``SourceUnavailable``

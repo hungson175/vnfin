@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort API/model decision — RED_AUTHORIZATION_REVIEW_REQUESTED (2026-08-31).**
+- **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_BLOCKED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
@@ -752,7 +752,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   diagnostic contracts may move to GREEN. No probe, source registration, API-model redesign, RED
   edit, capability claim, push, or close is authorized.
   Implementation is now **GREEN** at exact `8e4926c28eb3db0aa6d1519a81034bc3a07aed48`, with
-  release-row docs/snapshot/CHANGELOG/version/import/build updates at exact
+  release-row docs/snapshot/CHANGELOG updates at exact
   `45f394956ae7d59767c6d5d03c6d9a05307c82ed`. The implementation range is
   `7e584a8e..8e4926c`; the release-row range is `8e4926c..45f3949`. Only the approved country
   preflight, VNM-only policy-rate guard/identity, custom-source ordering, cache-before-guard
@@ -760,9 +760,10 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   annual World Bank, and existing source registrations remain unchanged. Merged `pytest -q`
   passes with an exact 4,305-test collection; focused API/docs/no-secret checks, import/version
   `0.2.0`, `uv build --wheel --sdist`, and `git diff --check` pass. No probe, source registration,
-  API-model redesign, RED edit, capability claim, push, or close was performed. Actor is now
-  `vnfin-oss`; next action is `RETURN_EXACT_IMPLEMENTATION_VERDICT` via the reviewer code-review
-  handoff; the implementation/release packet remains frozen.
+  API-model redesign, RED edit, capability claim, push, or close was performed. The green
+  implementation/release handoff was prepared by actor `vnfin-oss`; its next action was
+  `RETURN_EXACT_IMPLEMENTATION_VERDICT` via the reviewer code-review handoff. The current
+  implementation-review state is recorded below; the implementation/release packet remains frozen.
   Implementation review is now **BLOCKED** at release exact
   `45f394956ae7d59767c6d5d03c6d9a05307c82ed`, lifecycle `76969b845228e2a38fde2cf0f1bdf3e99a3c5355`,
   delivery `f3246823`, with report
@@ -774,6 +775,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   `FPOLM_PA` boundary. Code, RED tests/fixtures, snapshot, and packets are frozen. Actor is now
   `vnfin-oss`; next action is `CORRECT_IMPLEMENTATION_REVIEW_DOCS`; no probe, source registration,
   API redesign, push, capability claim, or close is authorized.
+  The B1-B2 correction is complete in this docs/backlog-only handoff: the current phase is
+  `IMPLEMENTATION_REVIEW_REQUESTED`, the current actor is `vnfin-oss-reviewer`, and the next
+  action is `RETURN_EXACT_IMPLEMENTATION_VERDICT`. The corrected references now state that the
+  default `FPOLM_PA` policy-rate route is qualified only for VNM, with non-VNM default-chain
+  exhaustion before cache/transport and separately qualified custom sources remaining explicit.
+  The exact corrected release/lifecycle SHA is the merged handoff returned to the reviewer; code,
+  RED tests, fixtures, snapshot, packets, source registration, probes, push, capability claim, and
+  close remain frozen or unauthorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):

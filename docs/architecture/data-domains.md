@@ -246,9 +246,11 @@ served separately by `vnfin.fx.history()` -> `FXHistory` (annual USD/VND via Wor
 **Canonical indicators:** `GDP`, `GDP_GROWTH`, `CPI`, `INFLATION`, `UNEMPLOYMENT`, plus
 **monthly** `CPI_YOY` (% YoY) and `POLICY_RATE` (% per annum, SBV-proxy via IMF/IFS `FPOLM_PA`)
 (enum `MacroIndicator`; #179). Unit pre-filter via `eligible_sources` keeps only sources serving
-the same canonical unit before failover — because `CPI_YOY`/`POLICY_RATE` are served only by
-DBnomics, each reduces to a single-source monthly chain. Monthly results carry an additive
-`series_end_gap` staleness warning when the latest observation lags the series' own cadence.
+the same canonical unit before failover. `CPI_YOY` is DBnomics-only; the default DBnomics
+`POLICY_RATE` route is VNM-only. For non-VNM policy-rate requests, country preflight removes the
+default route before cache/transport, so the default chain is empty unless a separately qualified
+custom source is supplied. Monthly results carry an additive `series_end_gap` staleness warning
+when the latest observation lags the series' own cadence.
 
 **Key contract enforcements (Phase 4 migration):**
 - `canonical_country_iso3` on input (`[A-Z]{3}` after `strip().upper()`).
