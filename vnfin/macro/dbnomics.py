@@ -150,6 +150,10 @@ _ISO3_TO_IFS_CC: dict[str, str] = {
     "ZZZ": "ZZ",  # synthetic test sentinel
 }
 
+_POLICY_RATE_VNM_ONLY_ERROR = (
+    "dbnomics: policy_rate route is VNM-only; country={country} is not qualified"
+)
+
 
 class DBnomicsSource(HttpDataSource):
     """Adapter over the DBnomics v22 series API (IMF / IFS dataset, no key)."""
@@ -173,6 +177,24 @@ class DBnomicsSource(HttpDataSource):
             return normalize_indicator(indicator) in _DBN_MAP
         except ValueError:
             return False
+
+    def supports_country(self, country_iso3, indicator) -> bool:
+        """Return whether this route is qualified for a country/indicator pair.
+
+        This is a local capability check only.  The IMF/IFS ``FPOLM_PA`` route
+        is retained as the explicitly disclosed Vietnam proxy; it is not a
+        country-correct policy-rate route for the other mapped countries.
+        """
+        try:
+            ind = normalize_indicator(indicator)
+            if not isinstance(country_iso3, str):
+                return False
+            country = country_iso3.strip().upper()
+        except (AttributeError, TypeError, ValueError):
+            return False
+        if country not in _ISO3_TO_IFS_CC or ind not in _DBN_MAP:
+            return False
+        return not (ind is MacroIndicator.POLICY_RATE and country != "VNM")
 
     def unit_for(self, indicator) -> str:
         ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
@@ -204,6 +226,8 @@ class DBnomicsSource(HttpDataSource):
         # #32 + #21(macro): validate the country and require a mapped IFS code so we
         # never construct an "A.None.*" series id from an unknown/malformed country.
         country = canonical_country_iso3(country_iso3, self.NAME)
+        if ind is MacroIndicator.POLICY_RATE and country != "VNM":
+            raise InvalidData(_POLICY_RATE_VNM_ONLY_ERROR.format(country=country))
         cc = _ISO3_TO_IFS_CC.get(country)
         if cc is None:
             raise InvalidData(f"{self.NAME}: no IFS country code for ISO3 {country}")
@@ -220,6 +244,8 @@ class DBnomicsSource(HttpDataSource):
             freq, concept, unit, result_freq, display = _DBN_MAP[ind]
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
+        if ind is MacroIndicator.POLICY_RATE and country != "VNM":
+            raise InvalidData(_POLICY_RATE_VNM_ONLY_ERROR.format(country=country))
         cc = _ISO3_TO_IFS_CC.get(country)
         if cc is None:
             raise InvalidData(f"{self.NAME}: no IFS country code for ISO3 {country}")

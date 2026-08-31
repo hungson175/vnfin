@@ -191,6 +191,24 @@ class MacroClient:
     def max_attempts(self) -> int:
         return self._max_attempts
 
+    @staticmethod
+    def _country_eligible_sources(sources, country_iso3, indicator) -> list:
+        """Keep sources that can serve ``indicator`` for ``country_iso3``.
+
+        The country hook is deliberately optional: a caller-supplied source that
+        has no country declaration remains eligible and is still checked by the
+        existing returned-identity/rejection guards.  Sources that do declare
+        ``supports_country`` must affirm the requested pair before they enter the
+        failover engine, so an inapplicable provider is neither cached nor called.
+        """
+        kept = []
+        for source in sources:
+            supports_country = getattr(source, "supports_country", None)
+            if callable(supports_country) and not supports_country(country_iso3, indicator):
+                continue
+            kept.append(source)
+        return kept
+
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
         """Fetch one canonical indicator for one country over the failover chain.
 
@@ -207,6 +225,10 @@ class MacroClient:
         # unit-homogeneous (so default GDP/CPI/percent never raise
         # UnitMismatchError) and no value can be relabelled into a foreign unit.
         sources = eligible_sources(self._sources, ind)
+        # Country qualification is a second, provider-scoped preflight.  It must
+        # run after unit filtering and before FailoverClient construction so an
+        # inapplicable provider cannot touch cache/transport or create an attempt.
+        sources = self._country_eligible_sources(sources, country, ind)
         if not sources:
             # No source can serve this indicator in the canonical unit; this is a
             # capability outcome, not a network failure -> AllSourcesFailed (no attempts).

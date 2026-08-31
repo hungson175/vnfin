@@ -27,7 +27,7 @@ Bank ``PA.NUS.FCRF``).
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 
 from ._contracts import canonical_security_symbol
@@ -36,7 +36,7 @@ from .gold.currency_api import (
     COVERAGE_START as _WORLD_GOLD_COVERAGE_START,
     _MAX_DAYS as _WORLD_GOLD_MAX_DAYS,
 )
-from .validation import validate_date_range
+from .validation import validate_country_iso3, validate_date_range
 
 __all__ = [
     "SourceCapability",
@@ -533,7 +533,7 @@ def explain_fx_coverage(
     )
 
 
-def explain_fixed_income_coverage() -> RequestDiagnostic:
+def explain_fixed_income_coverage(*, country_iso3: str | None = None) -> RequestDiagnostic:
     """Explain fixed-income / interest-rate coverage (issue #152; no network).
 
     The headline ask of #152 — a Vietnam **government-bond yield CURVE** (by tenor +
@@ -551,6 +551,11 @@ def explain_fixed_income_coverage() -> RequestDiagnostic:
     no clean no-key per-tenor retail deposit-rate source) and DISTINGUISHES the
     policy rate vs the interbank/money-market rate vs a bank deposit rate vs a
     government-bond yield, so a caller never conflates them. Offline — no provider call.
+
+    ``country_iso3`` is an additive, keyword-only request qualifier.  ``None``
+    preserves the legacy diagnostic exactly; ``VNM`` changes only the request
+    metadata.  Other valid countries receive an explicit no-qualified-source
+    policy-rate diagnostic rather than the Vietnam proxy label.
     """
     notes = (
         # (a) the govt-bond yield CURVE is unavailable (no clean source)
@@ -582,7 +587,7 @@ def explain_fixed_income_coverage() -> RequestDiagnostic:
         "(https://sbv.gov.vn) directly — it is not redistributed here",
         "a per-tenor government-bond yield curve is not available in v1 (no clean source)",
     )
-    return RequestDiagnostic(
+    legacy = RequestDiagnostic(
         domain="rates",
         endpoint="fixed_income_coverage",
         request={},
@@ -590,6 +595,46 @@ def explain_fixed_income_coverage() -> RequestDiagnostic:
         sources=_FIXED_INCOME_CAPS,
         notes=notes,
         suggested_actions=suggested_actions,
+    )
+    if country_iso3 is None:
+        return legacy
+
+    country = validate_country_iso3(country_iso3)
+    if country == "VNM":
+        return replace(legacy, request={"country_iso3": country})
+
+    return RequestDiagnostic(
+        domain="rates",
+        endpoint="fixed_income_coverage",
+        request={"country_iso3": country},
+        status="unknown",
+        sources=(
+            SourceCapability(
+                domain="rates",
+                endpoint="policy_rate",
+                source="(none)",
+                instruments=("policy_rate",),
+                granularity=None,
+                coverage_start=None,
+                coverage_end=None,
+                is_default=False,
+                is_opt_in=False,
+                is_single_source=False,
+                limitations=(
+                    "policy_rate is not qualified for the requested country; "
+                    "the current FPOLM_PA route is VNM-only",
+                    "no country-correct no-key provider is qualified; "
+                    "no fallback or substitution is made",
+                ),
+                suggested_action=None,
+            ),
+        ),
+        notes=(
+            f"policy_rate is not qualified for country {country}; missing remains missing",
+            "the current FPOLM_PA route is VNM-only; "
+            "no provider fallback or substitution is made",
+        ),
+        suggested_actions=(),
     )
 
 
