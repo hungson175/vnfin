@@ -803,6 +803,12 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   while preserving historical BLOCK facts. Actor is now `vnfin-oss`; next action is
   `CORRECT_IMPLEMENTATION_LIFECYCLE_HANDOFF`; no docs/runtime/test/API/source/push/close change
   beyond that backlog-only correction is authorized.
+  The lifecycle-only correction is complete: the current handoff binds corrected exact
+  `023ce17e952096924ace7c805b5a9521d49fb417`, remains in phase
+  `IMPLEMENTATION_REVIEW_REQUESTED`, names `vnfin-oss-reviewer` as actor, and sets next action to
+  `RETURN_EXACT_IMPLEMENTATION_VERDICT`. Historical BLOCK anchors `122b8d2` and `62a5df9` remain
+  preserved; code, RED tests/fixtures, snapshot, packets, and all runtime/source/API work remain
+  frozen or unauthorized.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
