@@ -1,10 +1,10 @@
 # #235 design note — North America five-economy macro cohort
 
-**Date:** 31 August 2026 (+07)  
-**Packet:** `tasks/235-north-america-macro-cohort-spec.md` at reviewer `acbbb82`  
-**Public triage:** `issuecomment-5477977514`  
-**Source/design base:** published `origin/master` `472cfe6d42ba43ab535a2ff676220896d5aaaacd`  
-**Phase:** `SOURCE_DESIGN` → `REVIEW_REQUESTED`  
+**Date:** 31 August 2026 (+07)
+**Packet:** `tasks/235-north-america-macro-cohort-spec.md` at reviewer `acbbb82`
+**Public triage:** `issuecomment-5477977514`
+**Source/design base:** published `origin/master` `472cfe6d42ba43ab535a2ff676220896d5aaaacd`
+**Phase:** `SOURCE_DESIGN` → `REVIEW_REQUESTED`
 **Implementation status:** no RED, API/model, source-registration, production-code, push, or close
 
 ## Decision

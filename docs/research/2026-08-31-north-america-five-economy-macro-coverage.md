@@ -1,10 +1,10 @@
 # #235 North America five-economy macro coverage
 
-**Research date:** 31 August 2026 (+07)  
-**Phase:** `SOURCE_DESIGN` — design review requested; no runtime change  
-**Packet:** `tasks/235-north-america-macro-cohort-spec.md` at reviewer anchor `acbbb82`  
-**Public triage receipt:** `issuecomment-5477977514`  
-**Published base used for this handoff:** `origin/master` at `472cfe6d42ba43ab535a2ff676220896d5aaaacd`  
+**Research date:** 31 August 2026 (+07)
+**Phase:** `SOURCE_DESIGN` — design review requested; no runtime change
+**Packet:** `tasks/235-north-america-macro-cohort-spec.md` at reviewer anchor `acbbb82`
+**Public triage receipt:** `issuecomment-5477977514`
+**Published base used for this handoff:** `origin/master` at `472cfe6d42ba43ab535a2ff676220896d5aaaacd`
 **Scope:** source, legal, coverage, and API-boundary evidence only. No provider request, raw-row retention,
 source registration, RED test, API/model change, production code, push, or issue closure was performed.
 
