@@ -602,6 +602,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#235 — North America macro cohort source/design — SOURCE_DESIGN_ACTIVE (2026-08-31).** Public
+  triage is `issuecomment-5477977514`; reviewer packet is `tasks/235-north-america-macro-cohort-spec.md`
+  with companion research brief `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`,
+  both at reviewer anchor `acbbb82`. Scope is the canonical `USA`/`CAN`/`MEX`/`CUB`/`DOM` cohort
+  on strict common-year 2020 WDI; the 2025 `USA`/`CAN`/`MEX`/`DOM`/`GTM` set is an incomplete
+  appendix, not a substitute. Audit all 5x10 cells with existing `get_indicator` semantics;
+  substitution, ranking APIs, and extra probes are out of scope. Actor is `vnfin-oss`; next action
+  is `PREPARE_EXACT_SHA_SOURCE_DESIGN`. No probe outside a separately finite plan, RED, API/model,
+  code, source change, push, or close before exact design PASS.
+
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
   `vnfin.fx.history("USD", "VND", start=date(2000, 1, 1), end=date(2026, 8, 30),
