@@ -602,27 +602,25 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort source/design — REVIEW_REQUESTED (2026-08-31).** Public
-  triage is `issuecomment-5477977514`; reviewer packet is
+- **#235 — North America macro cohort source/design — BLOCKED (2026-08-31).** Public triage is
+  `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
   `acbbb82`. Clean published base is `origin/master`
   `472cfe6d42ba43ab535a2ff676220896d5aaaacd`. The current BLOCK-first backlog record is local
-  commit `26c43ad`; reviewed head `0ee8dbfbe31b541ff072499998073bacc9c64156`, BLOCK delivery
-  `5045372d`, reviewer `1d7a220dfca49c8e2df2e27419f2bd0837dd1d6e`, and report
-  `reviews/review-202608312009-issue235-corrected-design-rereview.md`. Corrected docs are
+  commit `26c43ad`; reviewed head `fbe28e3a0690aef06e7c14ae02e0270aa4f412f7`, BLOCK delivery
+  `d787a3ea`, reviewer `59d4a5d`, and report
+  `reviews/review-202608312034-issue235-final-design-rereview.md`. Corrected docs remain
   committed at `7bc415889ba874fa3c33d4b63b43bf66a233c3f4`, with research blob
   `5b517860f2a3cdb190e3bd4f59f53dcebb401388` and design blob
-  `1a95a294edda241eea361c7895f5e06e5f36c373`. The correction binds WDI request/returned source
-  `2` and treats `2,640` as a maximum envelope with observed totals; makes all permission-level
-  automation/return/cache/retention axes explicit and records unmapped monthly pre-dispatch
-  behavior; completes the exact public/API/model/snapshot audit and separates 40 existing
-  characterization cases from future batch RED; and repairs the upstream evidence path plus scopes
-  no-dispatch wording to the post-intake builder cell audit. Preserve `PARTIAL_COHORT`, 50-cell
-  `5`/`6`/`1`/`38` outcomes, current `get_indicator`/`IndicatorSeries`, missingness, no substitution,
-  and no post-intake builder cell-audit provider dispatch, raw rows, RED, API/model, code, source
-  change, push, or close. Actor is `vnfin-oss-reviewer`; next action is
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  `1a95a294edda241eea361c7895f5e06e5f36c373`. Required correction: make the API audit bind the
+  real `default_macro_sources` signature, exact `0` breaking / `60` additive snapshot result,
+  `country_name` DataFrame attribute, failover warning, and complete cache secret-identity behavior;
+  bind monthly `indicator_code` to the full provider-series identity or an explicit migration and
+  clarify USA SBV-label compatibility. Preserve `PARTIAL_COHORT`, 50-cell `5`/`6`/`1`/`38` outcomes,
+  current `get_indicator`/`IndicatorSeries`, missingness, no substitution, source/legal boundaries,
+  and no provider dispatch, raw rows, RED, API/model, code, source change, push, or close. Actor is
+  `vnfin-oss`; next action is `DOCS_ONLY_CORRECTION_AND_RETURN_EXACT_SHA`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
