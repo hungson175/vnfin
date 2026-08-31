@@ -602,26 +602,22 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#235 — North America macro cohort source/design — REVIEW_REQUESTED (2026-08-31).** Public
-  triage is `issuecomment-5477977514`; reviewer packet is
+- **#235 — North America macro cohort API/model decision — API_MODEL_DECISION (2026-08-31).**
+  Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
   `docs/research/2026-08-31-issue235-north-america-macro-cohort.md`, both at reviewer anchor
   `acbbb82`. Clean published base is `origin/master`
-  `472cfe6d42ba43ab535a2ff676220896d5aaaacd`. The current BLOCK-first backlog record is local
-  commit `113f7be`; reviewed head `fbe28e3a0690aef06e7c14ae02e0270aa4f412f7`, BLOCK delivery
-  `d787a3ea`, reviewer `59d4a5d`, and report
-  `reviews/review-202608312034-issue235-final-design-rereview.md`. Corrected docs are committed
-  at `d06e0fd4a1ae0981c63ae8c69372fa1f5649b235`, with research blob
-  `4e9440803d9a72fa8cda161f5294de11976a0a3a` and design blob
-  `597e057d5725ffe915ee1dd499d1e487b38ca9e9`. The correction binds the real
-  `default_macro_sources` signature and exact `0` breaking / `60` additive snapshot result;
-  records `country_name` in DataFrame attrs, the failover warning, and complete cache secret
-  identity; and binds monthly `indicator_code` to full provider-series identity with explicit
-  migration and USA SBV-label compatibility rules. Preserve `PARTIAL_COHORT`, 50-cell
-  `5`/`6`/`1`/`38` outcomes, current `get_indicator`/`IndicatorSeries`, missingness, no substitution,
-  source/legal boundaries, and no post-intake #235 cell-audit provider dispatch, raw rows, RED,
-  API/model, code, source change, push, or close. Actor is `vnfin-oss-reviewer`; next action is
-  `RETURN_EXACT_SHA_DESIGN_VERDICT`.
+  `472cfe6d42ba43ab535a2ff676220896d5aaaacd`. Source/design PASS is exact
+  `429870c252f4920422d071398a3ef169c15e1466`, delivery `7d65f45a`, reviewer `b5f0458`, and
+  report `reviews/review-202608312046-issue235-final-design-approval.md`; the approved research
+  blob is `4e9440803d9a72fa8cda161f5294de11976a0a3a` and design blob is
+  `597e057d5725ffe915ee1dd499d1e487b38ca9e9`. The next exact packet must decide full provider-series
+  `indicator_code` compatibility and the USA SBV policy-rate label/diagnostic hazard without changing
+  the current surface prematurely. Preserve `PARTIAL_COHORT`, 50-cell `5`/`6`/`1`/`38` outcomes,
+  empty new chain, current `get_indicator`/`IndicatorSeries`, missingness, no substitution, source/
+  legal boundaries, and no provider dispatch, raw rows, RED, API/model implementation, code, source
+  change, push, capability claim, or close. Actor is `vnfin-oss`; next action is
+  `PREPARE_EXACT_API_MODEL_DECISION`.
 
 - **Internal quant request — daily USD/VND history (`REVIEW_REQUESTED`, 2026-08-30 08:09 +07).**
   Frozen request from `quant-researcher-frontier` (no public issue):
