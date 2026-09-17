@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — AUTHORIZED_RED_TEST_MANIFEST_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — RED_TEST_HERMETICITY_CORRECTION_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -707,6 +707,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   test manifest. No implementation, runtime docs/API/model/snapshot change, provider/network,
   push, capability claim, or close. Current actor: `vnfin-oss`; next action: write tests only, run
   current and intended-failure partitions separately, commit exact RED SHA for review.**
+  Exact RED-test review **BLOCKED** at
+  `073c21019bf75f781b92d3d456988ff69c0fada8`, delivery `672c7dad`, reviewer `2bc176f`,
+  report `review-202609172211-issue236-red-tests-BLOCK.md`. Preserve the exact 60 IDs / 150 cases /
+  88 current passes / 62 intended failures. B1 requires raising/counting injected `http_get` plus
+  zero-call assertions in the new mapped-identity and SingStat/default-source absence tests. B2
+  requires raising `_request_text` tripwires in all three `supports_country()` preflight groups.
+  **Implementation remains unauthorized. Current actor: `vnfin-oss`; next action: bounded
+  test-only hermeticity correction, with no network or provider access.**
   Corrected RED authorization **BLOCKED** exact
   `a2920f0728935f007034fd7d6f8d6462eaf18c73`, delivery `1440c54b`, reviewer `ff8040f`,
   report `review-202609172140-issue236-corrected-red-authorization-BLOCK.md`. The 60 IDs, 26 paths,
