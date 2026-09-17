@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — CORRECTED_RED_AUTHORIZATION_REVIEW_REQUESTED (2026-09-17).**
+- **#236 — Singapore macro coverage — RED_AUTHORIZATION_COUNTER_CORRECTION_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -696,6 +696,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   runtime/API/model/snapshot change, provider/network access, push, capability claim, or close.
   Current actor: `vnfin-oss-reviewer`; next action:
   `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`.**
+  Corrected RED authorization **BLOCKED** exact
+  `a2920f0728935f007034fd7d6f8d6462eaf18c73`, delivery `1440c54b`, reviewer `ff8040f`,
+  report `review-202609172140-issue236-corrected-red-authorization-BLOCK.md`. The 60 IDs, 26 paths,
+  16 allowed lines, zero residual content, and private-seam provenance pass. Remaining B1 is limited
+  to executable equality semantics: freeze exact split-literal casefold needles, record each
+  matching line once, and compare occurrence-preservingly with `Counter` or sorted lists so traversal
+  order does not matter and duplicate lines cannot collapse. **RED remains unauthorized. Current
+  actor: `vnfin-oss`; next action: record this BLOCK, then make one packet/backlog-only correction.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
