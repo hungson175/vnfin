@@ -602,6 +602,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
+- **#236 — Singapore macro coverage — SOURCE/API DESIGN (2026-09-17).**
+  Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
+  (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
+  `8d450a4`; deliver `tasks/236-design-note.md` plus a focused official-source research note and
+  exact committed SHA for design review. Scope is the ten existing `MacroIndicator` cells for
+  `SGP`; preserve `get_indicator`; no RED/production code/public capability claim until explicit
+  reviewer design verdict. Clean-room research uses official primary sources only with the full
+  VNStock exclusion.
+
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
   `tasks/235-north-america-macro-cohort-spec.md` with companion research brief
