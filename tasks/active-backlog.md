@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — DESIGN_REVIEW_REQUESTED (2026-09-17).**
+- **#236 — Singapore macro coverage — DESIGN_BLOCKED / CORRECTION_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake commit `7d7bf29`; bounded pre-transport plan `945c981`. Design artifacts are
@@ -615,7 +615,13 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   26/34 requests with zero retry/redirect; the separate discovery-search ceiling was exceeded and
   is disclosed for reviewer ruling. Preserve `get_indicator`, VNM-only policy-rate guard, and
   current source/model behavior. No RED/code/public capability claim until an explicit reviewer
-  verdict; next actor `vnfin-oss-reviewer`, requested action exact-SHA source/API design review.
+  verdict. Design review **BLOCKED** exact `5bbdec51841c374c9d454fdcc3b36ec846d690d6`,
+  delivery `9b4c8f76`, reviewer `4890a84`, report
+  `review-202609171937-issue236-design-BLOCK.md`. Fix B1–B6 only: retain actual SingStat
+  OpenAPI/API terms; split WDI-primary qualification from IMF whole-chain legal status; correct
+  `NO_DATA` taxonomy; complete the future RED matrix; reconcile the search-cap ledger with a
+  postmortem; and correct actor/MIME/MAS citations. No RED/code. Current actor `vnfin-oss`; next
+  action is one docs/backlog correction commit and exact-SHA design re-review request.
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
