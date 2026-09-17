@@ -174,6 +174,13 @@ hist = vnfin.corp_actions.dividends("FAKECORP", seed_id=197900)  # DividendHisto
 src  = vnfin.corp_actions.VsdcCashDividendSource()               # the VSDC scrape adapter
 ```
 
+The macro chain performs country qualification before failover. For SGP, the
+three IMF percent-series routes are skipped before cache, transport, and attempt
+accounting. `SGP/CPI_YOY` and `SGP/POLICY_RATE` also remain missing from the
+built-in chain rather than being filled by a proxy. See
+[`docs/sources/macro-imf.md`](sources/macro-imf.md) for the exact boundary and
+direct-source behavior.
+
 ### Why gold takes an explicit provider
 
 Gold spans two unit families — VN domestic (**VND/lượng**) and world XAU (**USD/oz**) —
@@ -507,3 +514,5 @@ advanced use — the domain factories are simply the recommended one-obvious-ent
 > **bring-your-own-key** alternative requiring `FRED_API_KEY` (official API only,
 > never `fredgraph.csv`); without a key it is *not capable* and is skipped in a
 > failover chain with no network call — it is excluded from the no-key default chain.
+> SGP-specific IMF qualification and missing monthly cells are documented in
+> [`docs/sources/macro-imf.md`](sources/macro-imf.md).

@@ -20,6 +20,32 @@ GET https://www.imf.org/external/datamapper/api/v1/{INDICATOR}/{ISO3}
     `current US$`, so the unit pre-filter keeps IMF GDP out of the WB-USD chain.
 - `{ISO3}` — ISO-3 country code (e.g. `USA`, `VNM`).
 
+## Singapore country qualification
+
+The DataMapper routes for `SGP/GDP_GROWTH` (`NGDP_RPCH`), `SGP/INFLATION`
+(`PCPIPCH`), and `SGP/UNEMPLOYMENT` (`LUR`) are **country-ineligible** in this
+adapter. `IMFDataMapperSource.supports_country()` reports those pairs as false,
+and the macro client removes them before cache, transport, and failover attempt
+accounting. Consequently, a skipped IMF route is absent from attempts; it is a
+capability preflight outcome, not provider `NO_DATA` or a provider failure.
+
+World Bank remains primary. If it fails for one of those SGP indicators, a
+country-aware custom source may still be tried in caller order. A custom source
+without the optional hook (a hookless source) remains eligible under the normal
+unit and returned-identity guards. The same mapped routes for a valid non-SGP
+country retain their existing behavior.
+
+Direct `get_indicator()` and `indicator_identity()` calls enforce the same gate.
+For a gated pair they raise `InvalidData` before cache or transport. Identity
+lookup continues to check the indicator mapping first, then validates the
+country; eligible identity tuples are unchanged.
+
+This country gate does not fill adjacent data gaps. `SGP/CPI_YOY` and
+`SGP/POLICY_RATE` remain missing in the built-in chain: there is no SingStat
+source and no proxy substitution from SORA, an interbank rate, a facility,
+lending or deposit rates, a bond yield, or FX. A caller may provide a truthful
+custom source under the normal capability and result contracts.
+
 ## Auth / limits / terms
 
 - **Auth:** NONE (no key, no token).

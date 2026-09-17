@@ -43,6 +43,12 @@ print(cpi.unit, cpi.latest())
 The no-key macro chain is World Bank → IMF DataMapper → DBnomics. Indicator units differ; read
 `series.unit` and `series.currency`.
 
+Country qualification runs before failover. For SGP, the IMF growth, inflation,
+and unemployment routes are skipped before cache, transport, and attempt
+accounting. `SGP/CPI_YOY` and `SGP/POLICY_RATE` remain missing from the built-in
+chain rather than being replaced by another rate or market series. See the
+[IMF source boundary](../sources/macro-imf.md).
+
 ### Cross-country example (Canada)
 
 `get_indicator` accepts a supported ISO3 country code, and the client performs country-specific

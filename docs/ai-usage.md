@@ -384,5 +384,7 @@ malformed currency code) raises **before** any network call.
 - [`docs/api.md`](api.md) — the public facade & naming standard.
 - [`docs/units.md`](units.md) — canonical units per domain (read this when a number looks off).
 - [`docs/sources/`](sources/) — per-source provenance, terms, rate limits.
+- [`docs/sources/macro-imf.md`](sources/macro-imf.md) — IMF country qualification,
+  including the SGP preflight boundary.
 - [`skills/vnfin/SKILL.md`](../skills/vnfin/SKILL.md) — the installable agent skill.
 - [`llms.txt`](../llms.txt) — machine-readable index of these resources.

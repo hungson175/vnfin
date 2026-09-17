@@ -137,6 +137,10 @@ Most domains expose two factories:
 | Gold | `vnfin.gold.vn()` / `vnfin.gold.world()` | BTMC/PNJ; CurrencyApi | VND/lượng; USD/oz |
 | Crypto | `vnfin.crypto.client().get_klines()` | Binance → Coinbase | USD |
 
+The default macro chain applies provider/country qualification before failover.
+In particular, three SGP IMF routes are skipped before cache, transport, and
+attempt accounting; see [the IMF source boundary](docs/sources/macro-imf.md).
+
 For exact public APIs, see [docs/api.md](docs/api.md). For unit rules, see
 [docs/units.md](docs/units.md).
 

@@ -28,6 +28,11 @@ only optional BYOK source and is deliberately excluded from this default chain.
 Capability skip: a source that does not map the requested indicator is skipped
 without a network call (it does not count against ``max_attempts``), exactly like
 the price client skips a source that does not support an interval.
+
+Country qualification is also an optional preflight.  The built-in IMF source
+uses it to exclude its three unqualified SGP percent-series routes before cache,
+transport, and attempt accounting.  Custom sources without the hook remain
+eligible under the existing unit and returned-identity guards.
 """
 from __future__ import annotations
 

@@ -7,6 +7,15 @@ All notable changes to `vnfin` are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Singapore IMF country qualification** (#236) — the built-in IMF fallback is
+  now skipped before cache, transport, and attempt accounting for SGP growth,
+  inflation, and unemployment. Direct fetch and `indicator_identity()` enforce
+  the same boundary; identity now validates mapped country inputs. The additive
+  `IMFDataMapperSource.supports_country()` capability hook is available to the
+  existing macro preflight. Non-SGP routes and caller-supplied country-aware or
+  hookless sources retain their prior behavior. `SGP/CPI_YOY` and
+  `SGP/POLICY_RATE` remain missing in the built-in chain, with no proxy
+  substitution. See [`docs/sources/macro-imf.md`](docs/sources/macro-imf.md).
 - **Country-correct macro policy-rate boundary** (#235) — the DBnomics/IMF-IFS
   `FPOLM_PA` route remains qualified only for `VNM`: direct non-Vietnam calls now
   fail with the exact typed `InvalidData` before cache/transport, and the public

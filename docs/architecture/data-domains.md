@@ -373,6 +373,9 @@ warning is always attached. Not a provider-published turnover field.
 
 ## Single-source legs (known limitations)
 
+Macro source eligibility is country-qualified before failover; the SGP rule on
+the World Bank → IMF chain is specified in `docs/sources/macro-imf.md`.
+
 These domains currently have no active clean failover path (the first row is policy-disabled):
 
 | Domain/endpoint | Current source | Status |

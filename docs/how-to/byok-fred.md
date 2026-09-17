@@ -9,6 +9,8 @@ export FRED_API_KEY=...
 
 Then construct/use the FRED source explicitly when you need it. The no-key default chain remains
 World Bank → IMF DataMapper → DBnomics.
+Country-specific qualification of the no-key IMF leg, including the SGP boundary,
+is documented in `docs/sources/macro-imf.md`; adding FRED does not weaken it.
 
 Rules:
 

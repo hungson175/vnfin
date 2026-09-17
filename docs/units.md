@@ -50,3 +50,7 @@ Fix applied (`vnfin/gold/vn.py`):
 5. The cross-source parity test (`live_tests/test_cross_source_live.py::test_vn_gold_dealers_same_magnitude`)
    is **no longer xfail**; it asserts both dealers are `VND/luong`, inside the per-lượng band,
    and within a <0.5 relative spread.
+
+Macro source eligibility is separate from unit compatibility. See
+`docs/sources/macro-imf.md` for the SGP country preflight applied after unit
+filtering in the World Bank → IMF chain.

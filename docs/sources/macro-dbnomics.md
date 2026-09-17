@@ -104,3 +104,6 @@ kept, never dropped** — the warning is informational. Annual series (`GDP`) ne
 ## Result model
 
 `IndicatorSeries(country, indicator_code=series_id, indicator_name, points, source="dbnomics", unit, value_unit, currency=None, frequency, fetched_at_utc, warnings)`.
+
+For country qualification on the preceding IMF leg of the default chain, see
+`docs/sources/macro-imf.md`.

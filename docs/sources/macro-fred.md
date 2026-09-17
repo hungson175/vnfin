@@ -68,3 +68,6 @@ The string `"."` denotes a missing value (skipped).
 ## Result model
 
 `IndicatorSeries(country="", indicator_code=series_id, indicator_name=series_id, points, source="fred", unit, value_unit, currency=None, fetched_at_utc)`.
+
+FRED is not a bypass for country qualification in the no-key chain. The SGP IMF
+boundary is documented in `docs/sources/macro-imf.md`.

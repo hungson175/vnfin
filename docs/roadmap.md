@@ -45,6 +45,8 @@ with reviewer → TDD implement → document → commit.**
 ## Source notes
 
 - **Macro (Step 5):** Boss directs us to use **FRED** (`api.stlouisfed.org`), key in `~/dev/.env`. ⚠️ As of 2026-06-18 no FRED-named var is present in `~/dev/.env` (vars checked by name) — resolve the key before Step 5 macro implementation. Meanwhile the **World Bank API** (`api.worldbank.org/v2`, no key) is the no-key cross-country fallback.
+- **Macro country qualification:** the shipped SGP boundary on the IMF leg is
+  recorded in `docs/sources/macro-imf.md`.
 
 ## Parallelization
 

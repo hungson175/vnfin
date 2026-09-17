@@ -37,6 +37,11 @@ Failure mapping (failover-safe, reuses ``vnfin.exceptions``):
 - unsupported indicator for IMF     -> ``InvalidData``
 - malformed scalar / NaN / bad year -> ``InvalidData``
 - country absent / all-null         -> ``EmptyData``
+
+Singapore route qualification: the three percent-series mappings are not
+qualified for ``SGP``.  Capability probing, direct fetch, and identity lookup
+share one country/indicator predicate and reject those routes before cache or
+transport.  Mapped non-SGP routes are unchanged.
 """
 from __future__ import annotations
 
@@ -64,6 +69,14 @@ _IMF_MAP: dict[MacroIndicator, tuple[str, str]] = {
     MacroIndicator.UNEMPLOYMENT: ("LUR", "%"),
     MacroIndicator.GDP: ("NGDPD", "USD bn"),  # distinct unit -> guard keeps it out of WB chain
 }
+
+_SGP_UNQUALIFIED_INDICATORS = frozenset(
+    {
+        MacroIndicator.GDP_GROWTH,
+        MacroIndicator.INFLATION,
+        MacroIndicator.UNEMPLOYMENT,
+    }
+)
 
 
 class IMFDataMapperSource(HttpDataSource):
@@ -95,6 +108,32 @@ class IMFDataMapperSource(HttpDataSource):
         except ValueError:
             return False
 
+    def _supports_country_pair(
+        self,
+        country_iso3: str,
+        indicator: MacroIndicator,
+    ) -> bool:
+        """Return eligibility for an already-canonical, mapped pair."""
+        return not (
+            country_iso3 == "SGP" and indicator in _SGP_UNQUALIFIED_INDICATORS
+        )
+
+    def supports_country(self, country_iso3, indicator) -> bool:
+        """Return whether a mapped country/indicator route is qualified.
+
+        This local capability probe is deliberately quiet: malformed countries
+        and unknown or unmapped indicators return ``False``.  It never performs
+        cache or transport work.
+        """
+        try:
+            country = self._validate_country_iso3(country_iso3)
+            ind = normalize_indicator(indicator)
+            if ind not in _IMF_MAP:
+                return False
+        except (InvalidData, ValueError):
+            return False
+        return self._supports_country_pair(country, ind)
+
     def unit_for(self, indicator) -> str:
         """Unit IMF emits for ``indicator``. Raises ``InvalidData`` if unsupported."""
         ind = canonical_macro_indicator(indicator)  # #48: InvalidData, not ValueError
@@ -112,6 +151,11 @@ class IMFDataMapperSource(HttpDataSource):
             code, _unit = _IMF_MAP[ind]
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
+        country = self._validate_country_iso3(country_iso3)
+        if not self._supports_country_pair(country, ind):
+            raise InvalidData(
+                f"{self.NAME}: {ind.value} route is not qualified for country={country}"
+            )
         return (code, f"{ind.value} ({code})")
 
     def get_indicator(self, country_iso3: str, indicator) -> IndicatorSeries:
@@ -127,6 +171,10 @@ class IMFDataMapperSource(HttpDataSource):
             code, unit = _IMF_MAP[ind]
         except KeyError as exc:
             raise InvalidData(f"{self.NAME}: unsupported indicator {ind.value}") from exc
+        if not self._supports_country_pair(country, ind):
+            raise InvalidData(
+                f"{self.NAME}: {ind.value} route is not qualified for country={country}"
+            )
 
         url = f"{self.BASE_URL}/{code}/{country}"
         data = self._request_json(url, headers=self._headers())
