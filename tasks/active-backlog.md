@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — CORRECTED_DESIGN_BLOCKED / C1-C5_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — DESIGN_REVIEW_REQUESTED (C1-C5 corrected, 2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -615,27 +615,25 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   chains** (`GDP`, `CPI`, lending/deposit/real interest); **three `PARTIAL` whole chains** (growth,
   inflation, unemployment) because their automatic IMF fallback is not legally cleared. SingStat
   `M213781` exactly returns monthly CPI YoY in `Per Cent` but remains
-  `ROUTE_GAP + LEGAL_GAP`; `POLICY_RATE` remains `SEMANTICS_GAP` because Singapore uses S$NEER,
-  not an interest-rate target. Real-interest local transport was `NOT_DISPATCHED`, never
+  `ROUTE_GAP + LEGAL_GAP`; `POLICY_RATE` remains `SEMANTICS_GAP`, while the retained policy-
+  framework evidence is explicitly `SOURCE_LOCATOR_GAP` and the SORA conclusion is a combined-
+  source inference. Real-interest local transport was `NOT_DISPATCHED`, never
   `NO_DATA`. Initial provider probes used 26/34; B1 correction used 3/4 actions and zero searches,
   retries, or redirects.
 
   Search-discovery incident is reconciled at **72 queries / 19 dispatches vs hard 6/6** in
-  `docs/research/2026-09-17-singapore-macro-search-ledger.md`; exact delegate queries, result
-  mappings, postmortem, and atomic fail-closed guard are committed. The complete twelve-case future
-  RED matrix covers WDI8, IMF3/projections/latest, both zero-attempt SGP monthly gaps, compatible
-  country-aware and hookless custom sources, VNM/USA/other countries, and optional SingStat. Exact
-  per-row MIME and direct MAS framework/SORA citations are bound. Preserve `get_indicator`, source
-  order, VNM-only policy-rate guard, and current model behavior. **No RED/code/public capability
-  claim.** Corrected design review **BLOCKED** exact
+  `docs/research/2026-09-17-singapore-macro-search-ledger.md`. Corrected design review **BLOCKED** exact
   `32c01bcf89f92f3501fbc7fdd2e2ea867fa34b2b`, delivery `8f68e483`, reviewer `3baf245`, report
-  `review-202609172009-issue236-corrected-design-BLOCK.md`. Fix C1-C5 only from retained evidence:
-  exact batch-to-official-URL/`RESULT_URL_NOT_RETAINED` mapping; classify the prose-only guard as
-  `PROCESS_CONTROL_GAP`; trigger the twelve-case matrix for every #236 behavior/code change; add a
-  durable MAS locator or `SOURCE_LOCATOR_GAP` plus explicit combined-source inference; remove
-  internal-agent/private-path details from the public ledger. **No network, RED, code, push, or
-  capability claim. Current actor: `vnfin-oss`; next action: docs/backlog correction and exact-SHA
-  re-review request.**
+  `review-202609172009-issue236-corrected-design-BLOCK.md`; intake receipt `26bd949`. C1-C5
+  correction artifacts are `d18ca12b3291f8b082814487dd16c7992b62767a`: all 12 neutral batches
+  map to exact official URLs or `RESULT_URL_NOT_RETAINED`; public ledger has no workflow roles or
+  machine-local paths; control is `PROCESS_CONTROL_GAP`, not an implemented atomic guard; all later
+  search discovery is blocked pending a reviewer-approved external mechanism; every #236 behavior/
+  code change activates the full twelve-case matrix; MAS policy evidence is
+  `SOURCE_LOCATOR_GAP`, with SORA's policy-target rejection labeled a combined-source inference.
+  Preserve `get_indicator`, source order, VNM-only policy-rate guard, and current model behavior.
+  **No network, RED, code, push, or capability claim. Current actor: `vnfin-oss-reviewer`; builder
+  awaits exact-SHA re-review verdict.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
