@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — GREEN_ARCH_DOC_CORRECTION_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — GREEN_SCANNER_EXPECTATION_CORRECTION_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -745,6 +745,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   no provider/network access, push, claim, resolution, or close. Current actor: `vnfin-oss`; next
   action: make the one-sentence architecture correction, rebuild/recheck, and return exact SHA plus
   refreshed artifact hashes.**
+  Final corrected GREEN review **BLOCKED on source-level scanner circumvention** at exact
+  `73619143bad925c4e15ad5b557e07252b0a4b437`, delivery `7d0b3e46`, report
+  `review-202609172258-issue236-final-corrected-green-BLOCK.md`. Rendered legal text is accurate,
+  but the hidden obsolete universal-clearance anchor and percent-encoded policy link are not valid
+  policy references. A narrow exception is authorized: remove the anchor, restore the normal
+  rendered clean-room policy sentence/link, and update only the two system-overview entries in
+  `ALLOWED_POLICY_REFERENCES`. Preserve the same test ID, 26 paths, split needle, once-per-line
+  collection, `Counter` equality, 16 exact occurrences, zero residual, runtime, all other tests/docs,
+  snapshot, and behavior. **No provider/network access, push, claim, resolution, or close. Current
+  actor: `vnfin-oss`; next action: apply the exact two-file correction, rerun all gates/artifacts,
+  and return its exact SHA and refreshed hashes.**
   Corrected RED authorization **BLOCKED** exact
   `a2920f0728935f007034fd7d6f8d6462eaf18c73`, delivery `1440c54b`, reviewer `ff8040f`,
   report `review-202609172140-issue236-corrected-red-authorization-BLOCK.md`. The 60 IDs, 26 paths,
