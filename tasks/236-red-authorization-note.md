@@ -4,7 +4,7 @@
 
 **Phase:** `RED_AUTHORIZATION` — test authorization request only
 
-**Status:** `PROPOSED_FOR_REVIEW`; RED is **not authorized** and this packet contains no feature
+**Status:** `CORRECTED_FOR_REVIEW`; RED is **not authorized** and this packet contains no feature
 test, fixture, implementation, runtime/API/model change, or capability claim
 
 **Clean published base:** `8d450a40cd9763a58bdb85c5f125edcc18d182da`
@@ -17,6 +17,12 @@ test, fixture, implementation, runtime/API/model change, or capability claim
 `review-202609172105-issue236-scanner-api-model-PASS.md`. The PASS approves the corrected decision
 in `tasks/236-api-model-decision-note.md` and its complete twelve-case matrix. Backlog commit
 `e4e0f387f40d395651ffb4d78a67c4ff0bf19d35` records the PASS before this packet.
+
+**Prior RED-authorization review:** BLOCK at exact
+`185caaaff3d4affd242866b6a9b08454c9af4759`, delivery `dd9c823d`, reviewer `1a006f8`, report
+`review-202609172127-issue236-red-authorization-BLOCK.md`. The BLOCK was recorded before this
+correction at `8fc1ceac3a2238be7952fe819142f841dbe8e5bb`. This bounded correction addresses only B1's
+executable/exact retained gates and B2's private-seam provenance wording.
 
 ## Exact authorization requested
 
@@ -104,28 +110,29 @@ current assertion to be counted as an intended RED failure.
 | 1. Eight WDI primaries | `CURRENT_CHARACTERIZATION` | `tests/test_macro_worldbank.py::test_sgp_eight_wdi_primaries_preserve_exact_contract`; `tests/test_docs_contract.py::test_issue236_sgp_wdi_bounds_and_historical_rate_caveats_are_retained` | Successful WDI `IndicatorSeries`; retained bounds/revision/lag statements are static evidence, not runtime rows | One fabricated injected WDI response per parameter; no live call. Docs test reads repository files only |
 | 2A. WDI malformed/empty paths | `CURRENT_CHARACTERIZATION` | Retain existing named WDI guards; add `tests/test_macro_worldbank.py::test_sgp_wdi_boolean_value_keeps_invalid_data_carrier` | Existing `InvalidData`/`EmptyData` carriers remain exact; null observations remain skipped and are not redefined | One fabricated injected response; no live call |
 | 2B. Gated WDI failure | `MUST_FAIL_AT_RED` | `tests/test_macro_failover.py::test_sgp_gated_wdi_failure_has_only_wdi_attempt_and_no_imf_transport` | Current tree reaches IMF; required result is `AllSourcesFailed` with the one exact WDI attempt above | WDI gets one fabricated empty response; IMF `_request_text` tripwire and HTTP counter remain untouched |
-| 3A. IMF provider predicate/API | `MUST_FAIL_AT_RED` | `tests/test_macro_imf.py::test_sgp_gated_supports_country_is_quiet_false`; `::test_imf_supports_country_quiet_false_for_malformed_or_unmapped_inputs`; `::test_imf_supports_country_preserves_eligible_pairs`; `::test_imf_three_entrypoints_share_one_canonical_pair_predicate` | Current class lacks `supports_country()` and the shared pair gate | Pure calls/spies; 0 transport/cache |
-| 3B. Direct IMF fetch and identity | `MUST_FAIL_AT_RED` | `tests/test_macro_imf.py::test_sgp_gated_direct_fetch_rejects_canonical_country_forms_before_cache_transport`; `::test_sgp_gated_identity_rejects_canonical_country_forms`; `tests/test_macro_contracts.py::test_imf_identity_mapped_indicator_newly_validates_country` | Current calls dispatch/advertise tuples; required carrier is exact route `InvalidData`, or existing exact ISO3 `InvalidData` for malformed mapped identity | Raising `_request_text` plus HTTP counter for fetch; identity is pure; all 0 |
-| 3C. Existing precedence/compatibility | `CURRENT_CHARACTERIZATION` | `tests/test_macro_imf.py::test_imf_fetch_mixed_invalid_remains_country_first_before_transport`; `::test_imf_identity_mixed_invalid_remains_indicator_mapping_first`; `::test_imf_eligible_non_sgp_identity_tuple_is_unchanged`; `::test_sgp_imf_gdp_remains_unit_filtered_without_transport` | Current exact `InvalidData` precedence and eligible tuples stay green; GDP keeps zero-attempt public carrier after unit filter | Pure validation or raising transport; 0 transport/cache |
+| 3A. IMF provider predicate/API | `MUST_FAIL_AT_RED` | `tests/test_macro_imf.py::test_sgp_gated_supports_country_is_quiet_false`; `tests/test_macro_imf.py::test_imf_supports_country_quiet_false_for_malformed_or_unmapped_inputs`; `tests/test_macro_imf.py::test_imf_supports_country_preserves_eligible_pairs`; `tests/test_macro_imf.py::test_imf_three_entrypoints_share_one_canonical_pair_predicate` | Current class lacks `supports_country()` and the shared pair gate | Pure calls/spies; 0 transport/cache |
+| 3B. Direct IMF fetch and identity | `MUST_FAIL_AT_RED` | `tests/test_macro_imf.py::test_sgp_gated_direct_fetch_rejects_canonical_country_forms_before_cache_transport`; `tests/test_macro_imf.py::test_sgp_gated_identity_rejects_canonical_country_forms`; `tests/test_macro_contracts.py::test_imf_identity_mapped_indicator_newly_validates_country` | Current calls dispatch/advertise tuples; required carrier is exact route `InvalidData`, or existing exact ISO3 `InvalidData` for malformed mapped identity | Raising `_request_text` plus HTTP counter for fetch; identity is pure; all 0 |
+| 3C. Existing precedence/compatibility | `CURRENT_CHARACTERIZATION` | `tests/test_macro_imf.py::test_imf_fetch_mixed_invalid_remains_country_first_before_transport`; `tests/test_macro_imf.py::test_imf_identity_mixed_invalid_remains_indicator_mapping_first`; `tests/test_macro_imf.py::test_imf_eligible_non_sgp_identity_tuple_is_unchanged`; `tests/test_macro_imf.py::test_sgp_imf_gdp_remains_unit_filtered_without_transport` | Current exact `InvalidData` precedence and eligible tuples stay green; GDP keeps zero-attempt public carrier after unit filter | Pure validation or raising transport; 0 transport/cache |
 | 3D. Public IMF-only/cache path | `MUST_FAIL_AT_RED` | `tests/test_macro_failover.py::test_sgp_gated_imf_only_has_exact_zero_attempt_carrier_before_cache_transport` | Current tree calls IMF; required exact empty-attempt `AllSourcesFailed` | Test-only cache-enabled IMF instance; raising `_request_text`; HTTP list `[]` |
-| 4. Non-SGP IMF projections | `CURRENT_CHARACTERIZATION` | Modify/rename existing projection tests to `tests/test_macro_imf.py::test_non_sgp_projection_boundary_warning_and_latest_are_exact` and `::test_non_sgp_historical_series_has_no_projection_boundary` | Successful non-SGP IMF `IndicatorSeries`; exact projection warning and `latest()` behavior unchanged | Frozen clock and one fabricated injected IMF response; no live call |
-| 5. No repair/stitching | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_macro_failover_never_stitches_partial_wdi_and_imf_points`; `::test_non_sgp_wdi_failure_returns_whole_imf_series_not_mixed_points`; retain the three existing unit-filter/relabel guards named below | Whole first successful provider series only; no point repair, fill, relabel, frequency conversion, or cross-source merge | Synthetic sources/injected responses only; call-order counters |
+| 4. Non-SGP IMF projections | `CURRENT_CHARACTERIZATION` | Modify/rename existing projection tests to `tests/test_macro_imf.py::test_non_sgp_projection_boundary_warning_and_latest_are_exact` and `tests/test_macro_imf.py::test_non_sgp_historical_series_has_no_projection_boundary` | Successful non-SGP IMF `IndicatorSeries`; exact projection warning and `latest()` behavior unchanged | Frozen clock and one fabricated injected IMF response; no live call |
+| 5. No repair/stitching | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_macro_failover_never_stitches_partial_wdi_and_imf_points`; `tests/test_macro_failover.py::test_non_sgp_wdi_failure_returns_whole_imf_series_not_mixed_points`; retain the three fully qualified existing unit-filter/relabel guards below | Whole first successful provider series only; no point repair, fill, relabel, frequency conversion, or cross-source merge | Synthetic sources/injected responses only; call-order counters |
 | 6. Missing SGP monthly CPI YoY | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_sgp_cpi_yoy_default_chain_has_exact_zero_attempt_carrier_before_cache_transport` | Exact `AllSourcesFailed("SGP/cpi_yoy", None, ())`; exact no-sources string; no SingStat attempt | Every built-in `_request_text` is a raising tripwire; all HTTP lists `[]` |
 | 7. Missing SGP policy rate | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_sgp_policy_rate_default_chain_has_exact_zero_attempt_carrier_and_no_proxy_route`; docs half in case 12 | Exact `AllSourcesFailed("SGP/policy_rate", None, ())`; exact no-sources string; no proxy source/attempt | Every built-in `_request_text` is a raising tripwire; all HTTP lists `[]` |
-| 8A. Country-aware custom monthly/false hook | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_sgp_missing_monthly_cells_accept_truthful_country_aware_custom_source`; `::test_sgp_false_country_hook_is_skipped_before_fetch_cache_transport_and_attempt_accounting` | Truthful custom result stays eligible; false-hook source makes no attempt | Synthetic custom source only; false hook has raising fetch/cache tripwires |
+| 8A. Country-aware custom monthly/false hook | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_sgp_missing_monthly_cells_accept_truthful_country_aware_custom_source`; `tests/test_macro_failover.py::test_sgp_false_country_hook_is_skipped_before_fetch_cache_transport_and_attempt_accounting` | Truthful custom result stays eligible; false-hook source makes no attempt | Synthetic custom source only; false hook has raising fetch/cache tripwires |
 | 8B. Country-aware custom after annual WDI failure | `MUST_FAIL_AT_RED` | `tests/test_macro_failover.py::test_sgp_gated_annual_imf_skip_preserves_truthful_custom_source_and_attempt_trail` | Current tree reaches IMF; required result is custom, IMF absent, warning exactly WDI failure then custom `ok` | WDI one fabricated empty response; IMF tripwire/HTTP `[]`; custom one synthetic call |
 | 9. Hookless custom | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_sgp_hookless_custom_source_remains_eligible_in_caller_order` | Existing hookless eligibility plus canonical unit/identity/result guards remain green | Synthetic custom only; 0 provider/cache/HTTP |
 | 10. Other countries | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_non_sgp_three_percent_indicators_keep_wdi_to_imf_fallback`; retain the four named VNM policy tests; eligible identity is covered by case 3C | WDI empty attempt then successful whole IMF series; exact percent/annual identity; VNM route unchanged | Fabricated WDI/IMF responses and counters only; no live call |
 | 11. SingStat boundary | `CURRENT_CHARACTERIZATION` | `tests/test_macro_failover.py::test_singstat_remains_absent_from_default_source_registry_and_exports`; `tests/test_public_api_surface.py::test_singstat_remains_absent_from_live_and_committed_public_surface` | No source, module export, registry member, or public-surface entry; the alternate full SingStat contract is not selected | Static introspection/files only; 0 provider/cache/HTTP |
 | 12A. Additive IMF method surface | `MUST_FAIL_AT_RED` | `tests/test_public_api_surface.py::test_imf_supports_country_is_frozen_as_exact_additive_surface` | Live class currently lacks the approved method; later exact signature is `(self, country_iso3, indicator) -> bool`, additive with zero breaking changes | Introspection/surface builder only; 0 network |
-| 12B. Runtime docs/skill/CHANGELOG | `MUST_FAIL_AT_RED` | `tests/test_docs_contract.py::test_issue236_sgp_imf_gate_docs_skill_and_changelog_are_in_lockstep`; `::test_issue236_sgp_missing_monthly_cells_remain_missing_without_proxy_substitution` | Runtime docs do not yet disclose the three-pair exception, skipped-attempt meaning, identity narrowing, and missing-without-proxy boundary | Repository text only; 0 network |
-| 12C. Existing hermetic/security gates | `CURRENT_CHARACTERIZATION` | Existing public-surface, secret-scan, warning-token, VNStock-blacklist, docs, and full-suite tests; exact commands below | Must remain green; these are gates, not intended RED failures | Local files/synthetic tests only; provider access forbidden |
+| 12B. Runtime docs/skill/CHANGELOG | `MUST_FAIL_AT_RED` | `tests/test_docs_contract.py::test_issue236_sgp_imf_gate_docs_skill_and_changelog_are_in_lockstep`; `tests/test_docs_contract.py::test_issue236_sgp_missing_monthly_cells_remain_missing_without_proxy_substitution` | Runtime docs do not yet disclose the three-pair exception, skipped-attempt meaning, identity narrowing, and missing-without-proxy boundary | Repository text only; 0 network |
+| 12C. Existing hermetic/security gates | `CURRENT_CHARACTERIZATION` | Exact public-surface, secret, warning-token, and newly defined clean-room blacklist IDs in the case-12 manifest below | Every named test must stay green; these are gates, not intended RED failures | Local files/synthetic tests only; provider access forbidden |
 
 ## Exact case details and test data
 
 ### Cases 1–2 — WDI remains the primary and sole recorded failing attempt
 
-`test_sgp_eight_wdi_primaries_preserve_exact_contract` is parameterized exactly as follows:
+`tests/test_macro_worldbank.py::test_sgp_eight_wdi_primaries_preserve_exact_contract` is
+parameterized exactly as follows:
 
 | Indicator | WDI code | Unit | Currency |
 |---|---|---|---|
@@ -145,14 +152,14 @@ points; and no projection boundary. No observed Singapore values are fixtures.
 
 Retain these existing WDI characterization tests by exact name:
 
-- `test_worldbank_observation_country_mismatch_raises_invalid`
-- `test_wb_rejects_mismatched_observation_indicator_id`
-- `test_null_obs_value_skipped_not_invalid`
-- `test_all_null_values_raise_empty`
-- `test_malformed_scalar_value_raises_invalid`
-- `test_nan_value_raises_invalid`
-- `test_out_of_window_year_raises_empty`
-- `test_wb_rejects_duplicate_observation_date`
+- `tests/test_macro_worldbank.py::test_worldbank_observation_country_mismatch_raises_invalid`
+- `tests/test_macro_worldbank.py::test_wb_rejects_mismatched_observation_indicator_id`
+- `tests/test_macro_worldbank.py::test_null_obs_value_skipped_not_invalid`
+- `tests/test_macro_worldbank.py::test_all_null_values_raise_empty`
+- `tests/test_macro_worldbank.py::test_malformed_scalar_value_raises_invalid`
+- `tests/test_macro_worldbank.py::test_nan_value_raises_invalid`
+- `tests/test_macro_worldbank.py::test_out_of_window_year_raises_empty`
+- `tests/test_macro_worldbank.py::test_wb_rejects_duplicate_observation_date`
 
 The docs characterization pins retained statements for observed bounds, no observed interior gaps,
 revision lineage `NOT_RETAINED`, and the three 2021-ending rate series as historical-only. It does
@@ -173,7 +180,9 @@ exact one-WDI-attempt carrier in the vocabulary section and `imf_calls == []`.
 
 ### Case 3 — exact predicate, precedence, direct/public carriers, and cache seam
 
-The approved private implementation seam is frozen for testability as one instance method:
+The API/model PASS approved only the invariant that all three entrypoints use one provider-local
+predicate; it did **not** approve a helper name, method kind, or annotations. This corrected packet
+newly proposes the following private instance-method seam for white-box testability:
 
 ```python
 IMFDataMapperSource._supports_country_pair(
@@ -186,7 +195,9 @@ IMFDataMapperSource._supports_country_pair(
 It receives only an already-canonical ISO3 and mapped canonical indicator. The shared-predicate RED
 test spies on that single method and proves `supports_country()`, `get_indicator()`, and
 `indicator_identity()` each pass the same canonical pair; there may be no duplicated three-pair
-rule. This private seam is not exported or added to the public snapshot.
+rule. This private seam is not exported or added to the public snapshot. It becomes binding only if
+the reviewer explicitly ratifies it in the corrected RED-authorization verdict; until then it is a
+proposal, not a historical API/model approval claim.
 
 The following exact inputs are mandatory:
 
@@ -259,19 +270,19 @@ No-stitch tests prove both branches: a nonempty WDI series wins whole and IMF is
 non-SGP WDI `EmptyData`, the returned series contains only IMF's fabricated points and preserves the
 WDI-failure/IMF-success failover warning. Retain these existing exact unit guards:
 
-- `test_noncanonical_unit_source_is_filtered_out_not_raised`
-- `test_reject_reason_refuses_to_relabel_a_drifted_unit`
-- `test_default_gdp_chain_does_not_raise_unit_mismatch`
+- `tests/test_macro_failover.py::test_noncanonical_unit_source_is_filtered_out_not_raised`
+- `tests/test_macro_failover.py::test_reject_reason_refuses_to_relabel_a_drifted_unit`
+- `tests/test_macro_failover.py::test_default_gdp_chain_does_not_raise_unit_mismatch`
 
-`test_non_sgp_three_percent_indicators_keep_wdi_to_imf_fallback` parameterizes the three gated
-indicators over `USA` and fixture-only valid ISO3 `ZZZ`: one injected WDI empty response, then one
-injected IMF success, exact IMF identity, `%`, annual frequency, no currency, and no mixed points.
-Retain the current VNM policy characterizations:
+`tests/test_macro_failover.py::test_non_sgp_three_percent_indicators_keep_wdi_to_imf_fallback`
+parameterizes the three gated indicators over `USA` and fixture-only valid ISO3 `ZZZ`: one injected
+WDI empty response, then one injected IMF success, exact IMF identity, `%`, annual frequency, no
+currency, and no mixed points. Retain the current VNM policy characterizations:
 
-- `test_policy_rate_resolves_dbnomics_only_monthly`
-- `test_policy_rate_direct_non_vnm_guard_fails_before_transport`
-- `test_policy_rate_indicator_identity_non_vnm_guard_is_exact`
-- `test_policy_rate_non_vnm_guard_runs_before_enabled_cache`
+- `tests/test_macro_failover.py::test_policy_rate_resolves_dbnomics_only_monthly`
+- `tests/test_macro_dbnomics.py::test_policy_rate_direct_non_vnm_guard_fails_before_transport`
+- `tests/test_macro_dbnomics.py::test_policy_rate_indicator_identity_non_vnm_guard_is_exact`
+- `tests/test_macro_failover.py::test_policy_rate_non_vnm_guard_runs_before_enabled_cache`
 
 Nothing in these tests legally qualifies IMF elsewhere; they freeze out-of-scope compatibility.
 
@@ -306,8 +317,8 @@ cannot be mocked into a production-source claim.
 The additive surface test uses `scripts/dump_api_surface.py`'s in-process builder and asserts only
 the approved public method entry on `IMFDataMapperSource`: method kind, exact positional parameters
 `self`, `country_iso3`, `indicator`, and return annotation `bool`. It also retains
-`test_live_surface_introduces_no_breaking_changes`. The committed v0.2.0 baseline is not regenerated
-in RED.
+`tests/test_public_api_surface.py::test_live_surface_introduces_no_breaking_changes`. The committed
+v0.2.0 baseline is not regenerated in RED.
 
 The docs lockstep tests scan the exact current/runtime-facing set that makes generic macro-chain
 claims: `README.md`, `docs/api.md`, `docs/how-to/byok-fred.md`,
@@ -328,19 +339,107 @@ runtime instructions. Green implementation must disclose or link directly to a d
 
 No docs test may claim the feature exists while its MUST_FAIL runtime tests remain red.
 
+The exact case-12C retained gate manifest is:
+
+- `tests/test_public_api_surface.py::test_live_surface_introduces_no_breaking_changes`
+- `tests/test_public_api_surface.py::test_build_surface_is_deterministic`
+- `tests/test_no_secrets.py::test_no_jwt_like_strings_in_tracked_files`
+- `tests/test_no_secrets.py::test_no_real_bearer_tokens_in_tracked_files`
+- `tests/test_no_secrets.py::test_no_long_secret_blobs_in_tracked_files`
+- `tests/test_no_secrets.py::test_scanner_covers_source_and_itself`
+- `tests/test_no_secrets.py::test_btmc_widget_key_is_a_plain_literal_and_allowlisted`
+- `tests/test_no_secrets.py::test_public_url_blobs_allowlisted_and_sourced_from_official_locators`
+- `tests/test_no_secrets.py::test_btmc_widget_key_resolves_from_constant_constructor_and_env`
+- `tests/test_no_secrets.py::test_scanner_still_flags_a_non_allowlisted_secret`
+- `tests/test_docs_contract.py::test_skill_warning_tokens_section_in_lockstep_with_code`
+- `tests/test_docs_contract.py::test_emitted_warning_tokens_are_all_documented`
+- newly added `tests/test_clean_room_blacklist.py::test_issue236_changed_surfaces_have_zero_blacklist_contamination`
+
+The newly named clean-room test is a `CURRENT_CHARACTERIZATION`, not an intended failure. It scans
+the following exact relative-path tuple as UTF-8 text; missing paths fail rather than silently skip:
+
+```text
+vnfin/macro/imf.py
+vnfin/macro/client.py
+tests/test_macro_worldbank.py
+tests/test_macro_imf.py
+tests/test_macro_failover.py
+tests/test_macro_contracts.py
+tests/test_public_api_surface.py
+tests/test_docs_contract.py
+tests/test_no_secrets.py
+tests/test_clean_room_blacklist.py
+README.md
+CHANGELOG.md
+docs/vnstock-blacklist.md
+docs/api.md
+docs/how-to/byok-fred.md
+docs/tutorials/macro-and-fx.md
+docs/sources/macro-imf.md
+docs/sources/macro-worldbank.md
+docs/sources/macro-dbnomics.md
+docs/sources/macro-fred.md
+docs/ai-usage.md
+docs/units.md
+docs/roadmap.md
+docs/architecture/system-overview.md
+docs/architecture/data-domains.md
+skills/vnfin/reference/domains.md
+```
+
+The test constructs both the prohibited case-folded terms **and the expected-line fragments** from
+split literals, so neither its scanner rule nor its exact allowlist constants self-match in the raw
+test file. It records every matching `(relative_path, stripped_line)` pair. The only allowed policy/
+clean-room references are these exact sixteen existing pairs; no wildcard path, substring
+allowlist, file skip, or generated/binary exclusion is accepted:
+
+```text
+docs/vnstock-blacklist.md | # VNStock Blacklist Checklist
+docs/vnstock-blacklist.md | - [ ] Search queries exclude VNStock using negative terms where possible.
+docs/vnstock-blacklist.md | - [ ] No VNStock/Vnstock/vnstock-hq/vnstocks.com/thinh-vu/vnstock/vnstock-agent result was opened.
+docs/vnstock-blacklist.md | - [ ] No VNStock code, docs, API examples, endpoint maps, tests, notebooks, package metadata, or behavior was used.
+docs/vnstock-blacklist.md | -vnstock -"VNStock" -vnstocks.com -"thinh-vu/vnstock" -vnstock-hq -"vnstock-agent"
+docs/vnstock-blacklist.md | If avoiding VNStock makes the task impossible, stop and ask Boss for direction.
+README.md | - **Clean-room policy.** The project does not use VNStock/vnstock-derived code, docs, schemas, or
+README.md | endpoint maps. See [docs/vnstock-blacklist.md](docs/vnstock-blacklist.md).
+docs/sources/macro-imf.md | **Clean-room:** endpoint + response shape learned only from the provider's own server (`www.imf.org/external/datamapper/api/v1`) and `docs/research/2026-06-18-macro-no-key-byok.md` / `docs/research/2026-06-18-macro-vietnam.md`. No vnstock/derivative source consulted.
+docs/sources/macro-worldbank.md | **Clean-room:** endpoints learned only from the provider's own server + `docs/research/2026-06-18-macro-global-cross-country.md` and `docs/research/2026-06-18-macro-vietnam.md`. No vnstock/derivative source consulted.
+docs/sources/macro-dbnomics.md | **Clean-room:** endpoint + response shape learned only from DBnomics' own public API (`api.db.nomics.world/v22`) and `docs/research/2026-06-18-macro-no-key-byok.md`. No vnstock/derivative source consulted.
+docs/sources/macro-fred.md | `docs/research/2026-06-18-macro-no-key-byok.md`. No vnstock/derivative source.
+docs/roadmap.md | - Clean-room throughout; VNStock fully blacklisted.
+docs/architecture/system-overview.md | developers**. All sources are lawful and license-clear; VNStock/vnstock and any derived
+docs/architecture/system-overview.md | material are permanently blacklisted (`docs/vnstock-blacklist.md`).
+CHANGELOG.md | already fetches via `vnfin.indices` (no vnstock; no `industryID`/`industryIDv2`/`industry_name`). New
+```
+
+The executable assertion is equality, not merely subset membership:
+
+```python
+assert actual_policy_references == ALLOWED_POLICY_REFERENCES
+assert residual_contamination == []
+```
+
+Thus an altered/missing policy reference, any additional occurrence in a scanned source/test/doc,
+or any prohibited occurrence in production/test code fails. The expected result at RED and green is
+exactly sixteen allowed policy/clean-room reference pairs and **zero residual contamination**.
+Previously approved retained research/design files are not implementation/runtime scan surfaces and
+are not modified by the future RED or implementation manifest.
+
 After a later implementation commit, but not as part of RED, run these exact merged-tree gates:
 
 ```bash
 python -m pytest tests/test_macro_worldbank.py tests/test_macro_imf.py \
   tests/test_macro_failover.py tests/test_macro_contracts.py \
-  tests/test_public_api_surface.py tests/test_docs_contract.py tests/test_no_secrets.py -q
+  tests/test_public_api_surface.py tests/test_docs_contract.py tests/test_no_secrets.py \
+  tests/test_clean_room_blacklist.py -q
 python -m pytest -q
 python -m build --no-isolation
 ```
 
-Also run the repository's VNStock-blacklist scan, inspect wheel/sdist membership for forbidden raw
-evidence/secrets, and import the built wheel in an offline temporary environment. These are later
-green/release gates, not additional RED behavior or provider access.
+The exact clean-room test above replaces the nonexistent generic scan. Also inspect wheel/sdist
+membership for forbidden raw evidence/secrets and import the built wheel in an offline temporary
+environment. Those two package checks remain later green/release gates, not additional RED behavior
+or provider access.
 
 ## Exact future RED result partition
 

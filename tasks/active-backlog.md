@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — RED_AUTHORIZATION_CORRECTION_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — CORRECTED_RED_AUTHORIZATION_REVIEW_REQUESTED (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -686,7 +686,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   characterization with fixed surfaces/allowed policy references/zero-residual result. B2 accepts
   the private shared-helper seam but requires it to be identified as newly proposed here and
   awaiting RED-verdict ratification, not as part of the prior API/model approval. **RED remains
-  unauthorized. Current actor: `vnfin-oss`; next action: bounded docs/backlog-only correction.**
+  unauthorized. BLOCK was recorded first at `8fc1ceac3a2238be7952fe819142f841dbe8e5bb`.
+  The corrected packet now fully qualifies every normative retained test, names all exact
+  public-surface/secret/warning-token gates, and defines
+  `tests/test_clean_room_blacklist.py::test_issue236_changed_surfaces_have_zero_blacklist_contamination`
+  as a current-characterization equality scan over 26 fixed paths, 16 exact allowed policy/
+  clean-room line pairs, and zero residual contamination. `_supports_country_pair` is now labeled a
+  newly proposed private seam awaiting ratification by this corrected verdict. **No RED, fixture,
+  runtime/API/model/snapshot change, provider/network access, push, capability claim, or close.
+  Current actor: `vnfin-oss-reviewer`; next action:
+  `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
