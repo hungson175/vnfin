@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — FINAL_RED_AUTHORIZATION_REVIEW_REQUESTED (2026-09-17).**
+- **#236 — Singapore macro coverage — AUTHORIZED_RED_TEST_MANIFEST_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -696,6 +696,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   runtime/API/model/snapshot change, provider/network access, push, capability claim, or close.
   Current actor: `vnfin-oss-reviewer`; next action:
   `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`.**
+  RED authorization **PASS / AUTHORIZED** exact
+  `c7f2356d8432389a21d1df2ae9fff7ea9631a357`, delivery `9673aeeb`, reviewer `2ebb1c4`,
+  report `review-202609172146-issue236-red-authorization-PASS.md`. Needle/once-per-line/`Counter`
+  semantics, 60 qualified IDs, 26 scan paths, 16 allowed occurrences, focused 705, full 4305, and
+  the private `_supports_country_pair` seam all pass; the private seam is now ratified. Binding
+  implementation note for the future current-characterization scanner: because it scans itself,
+  construct `docs/vnstock-blacklist.md` with the same split literal/shared constant so the raw test
+  source contains no matching needle. **Authorization is limited to the exact offline synthetic
+  test manifest. No implementation, runtime docs/API/model/snapshot change, provider/network,
+  push, capability claim, or close. Current actor: `vnfin-oss`; next action: write tests only, run
+  current and intended-failure partitions separately, commit exact RED SHA for review.**
   Corrected RED authorization **BLOCKED** exact
   `a2920f0728935f007034fd7d6f8d6462eaf18c73`, delivery `1440c54b`, reviewer `ff8040f`,
   report `review-202609172140-issue236-corrected-red-authorization-BLOCK.md`. The 60 IDs, 26 paths,
