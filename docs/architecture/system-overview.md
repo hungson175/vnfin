@@ -32,7 +32,10 @@ flowchart TD
     class C priv;
 ```
 
-The same layering as an ASCII reference:
+The same layering as an ASCII reference. The macro source order shown below is
+country-qualified: for SGP, growth, inflation, and unemployment skip the IMF leg
+before cache, transport, and attempt accounting; see the
+[IMF source boundary](../sources/macro-imf.md#singapore-country-qualification).
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐

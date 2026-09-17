@@ -62,14 +62,17 @@ indicators it actually supports, in the canonical unit:
 |---|---|---|---|
 | `GDP` (current US$) | ✅ | — (IMF's `NGDPD` is `USD bn`, unit-filtered out) | — (national currency, unit-filtered out) |
 | `CPI` (index) | ✅ (`FP.CPI.TOTL`, first-capable — not DBnomics) | — | ✅ (backup only) |
-| `GDP_GROWTH`, `INFLATION`, `UNEMPLOYMENT` (%) | ✅ | ✅ | — (not mapped) |
+| `GDP_GROWTH`, `INFLATION`, `UNEMPLOYMENT` (%) | ✅ | ✅ for eligible non-SGP pairs; the [exact SGP triple is country-ineligible](macro-imf.md#singapore-country-qualification) | — (not mapped) |
 | `CPI_YOY`, `POLICY_RATE` (monthly) | — (not mapped) | — (not mapped) | ✅ (sole source) |
 | `LENDING_RATE`, `DEPOSIT_RATE`, `REAL_INTEREST_RATE` (% p.a., #152) | ✅ (sole source) | — | — |
 
 This is why GDP and CPI resolve to World Bank specifically (not "any of three"), the percent
-growth/inflation/unemployment trio has a genuine 2-source WB→IMF failover, and CPI_YOY/POLICY_RATE/
-the annual rate indicators each reduce to a single-source chain — all without ever tripping
-`UnitMismatchError`. See `docs/design/macro-no-key-byok.md` for the full semantic contract.
+growth/inflation/unemployment trio has a genuine 2-source WB→IMF failover only for eligible
+non-SGP pairs, and CPI_YOY/POLICY_RATE/the annual rate indicators each reduce to a single-source
+chain — all without ever tripping `UnitMismatchError`. For SGP, those exact three IMF routes are
+removed before cache, transport, and attempt accounting; see the
+[Singapore country qualification](macro-imf.md#singapore-country-qualification).
+See `docs/design/macro-no-key-byok.md` for the full semantic contract.
 
 ## Annual fixed-income rate indicators (#152)
 

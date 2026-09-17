@@ -51,9 +51,17 @@ custom source under the normal capability and result contracts.
 - **Auth:** NONE (no key, no token).
 - **Rate:** no documented key/limit; on-demand fetch only. Observed HTTP 403 from
   some hosts/IPs (anti-bot) — adapter wraps that as `SourceUnavailable` (failover-safe).
-- **License/terms:** IMF data is all-rights-reserved; on-demand API fetch is fine,
-  **do not bundle/redistribute IMF rows as files**. Emit IMF attribution downstream.
-- **Redistribution:** runtime fetch only; tests use synthetic fixtures.
+- **License/terms:** IMF WEO special data terms conditionally permit download,
+  extraction, copying, derivatives, publication, and distribution with accurate
+  attribution and disclosure of transformations. They prohibit bulk automated
+  download without permission and direct commercial users to request permission.
+  The retained evidence does not legally clear IMF for an automatic OSS default.
+- **Compatibility is not clearance:** preserving mapped non-SGP runtime behavior is
+  technical compatibility only, not legal qualification or a permission grant.
+- **Data caveat:** WEO data may be continually updated or revised and may contain
+  estimates, projections, and spliced historical series.
+- **Redistribution:** runtime fetch only; **do not bundle/redistribute IMF rows as
+  files**. Tests use synthetic fixtures.
 
 ## Response shape (verified)
 
