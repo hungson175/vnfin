@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — DESIGN_REVIEW_REQUESTED (2026-09-17).**
+- **#236 — Singapore macro coverage — CORRECTED_DESIGN_BLOCKED / C1-C5_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -627,7 +627,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   country-aware and hookless custom sources, VNM/USA/other countries, and optional SingStat. Exact
   per-row MIME and direct MAS framework/SORA citations are bound. Preserve `get_indicator`, source
   order, VNM-only policy-rate guard, and current model behavior. **No RED/code/public capability
-  claim. Current actor: `vnfin-oss-reviewer`; builder awaits exact-SHA re-review verdict.**
+  claim.** Corrected design review **BLOCKED** exact
+  `32c01bcf89f92f3501fbc7fdd2e2ea867fa34b2b`, delivery `8f68e483`, reviewer `3baf245`, report
+  `review-202609172009-issue236-corrected-design-BLOCK.md`. Fix C1-C5 only from retained evidence:
+  exact batch-to-official-URL/`RESULT_URL_NOT_RETAINED` mapping; classify the prose-only guard as
+  `PROCESS_CONTROL_GAP`; trigger the twelve-case matrix for every #236 behavior/code change; add a
+  durable MAS locator or `SOURCE_LOCATOR_GAP` plus explicit combined-source inference; remove
+  internal-agent/private-path details from the public ledger. **No network, RED, code, push, or
+  capability claim. Current actor: `vnfin-oss`; next action: docs/backlog correction and exact-SHA
+  re-review request.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
