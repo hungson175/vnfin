@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — AUTHORIZED_IMPLEMENTATION_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — GREEN_DOCS_CORRECTION_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -724,6 +724,17 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   SingStat/proxy, API/model redesign, baseline regeneration, push, capability claim, resolution, or
   close. Current actor: `vnfin-oss`; next action: implement to GREEN, run merged gates/build/
   artifact/offline-import evidence, and return exact implementation SHA/range for review.**
+  GREEN implementation review **BLOCKED on runtime documentation only** at exact
+  `5a3be6d42b4c728d4799879856cea3a911852af8`, delivery `0f574bb1`, reviewer `82b2137`, report
+  `review-202609172237-issue236-green-BLOCK.md`. Runtime code, frozen tests, public snapshot,
+  behavior, and artifacts are verified correct. B1 requires the IMF source page to replace its
+  unsupported positive legal-clearance sentence with the retained conditional terms and state that
+  non-SGP compatibility is not legal qualification or permission. B2 requires the World Bank source
+  page and system overview to qualify/link their generic chain claims at the exact SGP exception.
+  **Correction is limited to those three docs, followed by offline gates and rebuilt artifacts; no
+  provider/network access, code/test/API/model/snapshot change, push, claim, resolution, or close.
+  Current actor: `vnfin-oss`; next action: make the bounded three-doc correction and return its exact
+  SHA plus refreshed artifact hashes for review.**
   Corrected RED authorization **BLOCKED** exact
   `a2920f0728935f007034fd7d6f8d6462eaf18c73`, delivery `1440c54b`, reviewer `ff8040f`,
   report `review-202609172140-issue236-corrected-red-authorization-BLOCK.md`. The 60 IDs, 26 paths,
