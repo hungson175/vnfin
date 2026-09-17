@@ -60,6 +60,29 @@ must decide whether the design can pass with this disclosed deviation. Sixteen o
 URL-open actions were made within the 18-action reservation; the browser abstraction did not retain
 underlying HTTP request count, bytes, or redirect hops.
 
+### Design-block correction mini-budget (committed before access)
+
+Reviewer block `9b4c8f76` permits a narrowly bounded B1 correction and forbids further search
+discovery. The correction budget is atomic and independent of unused reservations above:
+
+| Correction surface | Logical reservation | Physical ceiling | Exact purpose and stop rule |
+|---|---:|---:|---|
+| Search engine | 0 | 0 | No further discovery query, including retry or alternate wording |
+| SingStat official OpenAPI page | 1 | 1 | Direct open of `/view-api/for-developers/openapi`; retain only contract metadata, official links, and clause locators; expected HTML |
+| SingStat Terms of Use | 1 | 1 | Follow only the official page's exact “Terms of Use” navigation target; no guessed path or alternate search |
+| SingStat API Terms of Service | 1 | 1 | Follow only the official page's exact “API Terms of Service” navigation target; no guessed path or alternate search |
+| SingStat `M213781` | 1 | 1 | One exact existing table request solely because the prior private receipt omitted `uoM`; retain sanitized table/row metadata and response-contract keys, not values/rows |
+| **Correction total** | **4** | **4** | Zero retries; an unavailable, unexpected, or exhausted reservation stops that evidence leg |
+
+The three document/navigation actions may not leave the official SingStat host family. The exact
+table request remains a sequential `GET` with a 5-second connect timeout, 25-second total timeout,
+4 MiB compressed / 16 MiB decompressed local ceiling, complete status/MIME/final-host capture, and
+zero redirects/retries. Expected document HTML is not a WAF failure by itself; unexpected login,
+challenge, external redirect, or missing official navigation target stops that leg. Retain only
+sanitized hashes, link targets, clause headings/locators, and short paraphrases. No raw body,
+provider observation, header, cookie, or live value is committed. Unused capacity expires after
+this correction and cannot be reassigned.
+
 ## Existing architecture at the target base
 
 The source order is World Bank -> IMF DataMapper -> DBnomics. Canonical-unit filtering and optional
