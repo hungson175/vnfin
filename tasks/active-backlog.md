@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — GREEN_DOCS_CORRECTION_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — GREEN_ARCH_DOC_CORRECTION_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -735,6 +735,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   provider/network access, code/test/API/model/snapshot change, push, claim, resolution, or close.
   Current actor: `vnfin-oss`; next action: make the bounded three-doc correction and return its exact
   SHA plus refreshed artifact hashes for review.**
+  Corrected GREEN review **BLOCKED on one residual architecture sentence** at exact
+  `a52ff24fa0997b2b9330c2d7b28d43d1ea3442fc`, delivery `39735200`, reviewer `01fbc16`, report
+  `review-202609172245-issue236-corrected-green-BLOCK.md`. Prior B1/B2 are closed and all tests,
+  artifacts, membership, HEAD-match, and isolated-wheel checks pass. The sole correction is to
+  replace `docs/architecture/system-overview.md`'s universal legal-clearance claim with per-source
+  provenance/terms qualification, an IMF/terms link, and the rule that technical compatibility is
+  not itself legal clearance. **Preserve every other doc, `vnfin/`, tests, snapshot, and behavior;
+  no provider/network access, push, claim, resolution, or close. Current actor: `vnfin-oss`; next
+  action: make the one-sentence architecture correction, rebuild/recheck, and return exact SHA plus
+  refreshed artifact hashes.**
   Corrected RED authorization **BLOCKED** exact
   `a2920f0728935f007034fd7d6f8d6462eaf18c73`, delivery `1440c54b`, reviewer `ff8040f`,
   report `review-202609172140-issue236-corrected-red-authorization-BLOCK.md`. The 60 IDs, 26 paths,
