@@ -39,11 +39,12 @@ missing-value fill is allowed.
 | `QUALIFIED_EXISTING` | GDP, CPI, LENDING_RATE, DEPOSIT_RATE, REAL_INTEREST_RATE | The complete default chain is qualified. Each World Bank WDI v2 route returned exact `SGP` and code identities; the three rate cells are historical through 2021, not current-rate claims. |
 | `PARTIAL` | GDP_GROWTH, INFLATION, UNEMPLOYMENT | The WDI primary leg is technically and legally qualified, but the existing IMF fallback is not legally cleared for an OSS default. Therefore the whole automatic chain is not qualified. |
 | `ROUTE_GAP + LEGAL_GAP` | CPI_YOY | SingStat `M213781`, row key `1` / `All Items`, returned the exact provider-published monthly concept and unit, but the official OpenAPI contract and direct-route permission lifecycle were not retained. |
-| `SEMANTICS_GAP` | POLICY_RATE | Singapore's monetary-policy stance is exchange-rate-centred. SORA, interbank rates, facility rates, MAS Bills and SGS yields are not an official policy target and cannot fill this cell. |
+| `SEMANTICS_GAP` | POLICY_RATE | No exact interest-rate policy target was established. The direct MAS page defines SORA as a market benchmark; rejecting it as the policy target is an explicit combined-source inference, while the retained policy-framework context has `SOURCE_LOCATOR_GAP`. No proxy is authorized. |
 
 There are **8 technically qualified WDI primary legs, 5 qualified whole default chains, 3 partial
-whole chains, 1 route/legal gap, and 1 semantic gap**. No new source, enum, model, adapter,
-registration, or capability claim is approved by this research.
+whole chains, 1 route/legal gap, and 1 semantic gap whose policy-framework evidence also has
+`SOURCE_LOCATOR_GAP`**. No new source, enum, model, adapter, registration, or capability claim is
+approved by this research.
 
 ## Pre-transport plan and process accounting
 
@@ -54,21 +55,22 @@ sanitized summaries only. Unexpected auth, WAF/HTML, redirect, pagination, ident
 behavior was a stop condition. No raw provider rows or response bodies are committed.
 
 The provider budget was respected: 26 of 34 logical and physical reservations were used. The
-search-discovery budget was **not** respected: the whole team issued **72 query strings in 19 search
-dispatches** against the declared 6/6 ceiling. The blocked design counted only the orchestrator's
-25/7 and omitted 47/12 delegated use. Exact delegated strings, source mappings, and the failure
-postmortem are in the [companion search ledger](2026-09-17-singapore-macro-search-ledger.md); the
-orchestrator's 25 exact strings are `NOT_RETAINED` and support no claim. All retained exact queries
-used the exclusion string, and only direct official pages/probes support findings. Logged official-
-document navigation also exceeded its 18-action reservation: at least **116 logical URL-open
-actions** are attributable (16 orchestrator, 98 delegated, 2 correction); underlying physical HTTP
+search-discovery budget was **not** respected: the whole study issued **72 query strings in 19
+dispatches** against the declared 6/6 ceiling. The blocked design counted only an earlier 25/7
+sequence and omitted a fully retained 47/12 sequence. Exact retained batch strings, exact official
+URLs or `RESULT_URL_NOT_RETAINED`, and the failure postmortem are in the
+[companion search ledger](2026-09-17-singapore-macro-search-ledger.md); the earlier 25 exact strings
+and result URLs are `NOT_RETAINED` and support no claim. All retained exact queries used the
+exclusion string, and only direct official pages/probes support findings. Logged official-document
+navigation also exceeded its 18-action reservation: at least **116 logical URL-open actions** are
+attributable (16 earlier-sequence, 98 retained-sequence, 2 correction); underlying physical HTTP
 count, bytes, and redirect hops are `NOT_RETAINED`. These are process incidents, not waivers or
 unused capacity. They did not add to the bounded provider-data probe set.
 
 ### Design-block correction mini-budget (committed before access)
 
 Reviewer block `9b4c8f76` permits a narrowly bounded B1 correction and forbids further search
-discovery. The correction budget is atomic and independent of unused reservations above:
+discovery. The correction budget is fixed and independent of unused reservations above:
 
 | Correction surface | Logical reservation | Physical ceiling | Exact purpose and stop rule |
 |---|---:|---:|---|
@@ -151,7 +153,7 @@ operational evidence. `NOT_RETAINED` is not zero; `NOT_DISPATCHED` is not a nega
 | **INFLATION** `PARTIAL` | Qualified primary: WDI `FP.CPI.TOTL.ZG`, World Bank, v2 GET. Existing but legally uncleared fallback: IMF DataMapper `PCPIPCH`. | Both returned exact requested SGP/code; WDI HTTP 200 `application/json;charset=utf-8`, final `api.worldbank.org`; IMF HTTP 200 `application/json`, final `www.imf.org`; 0 redirects; no auth observed. | Annual `%`; WDI annual consumer-price change. IMF annual average consumer-price inflation; 2026+ marked projections by vnfin's current-year rule. Neither is the monthly CPI_YOY cell. | WDI 65 non-null/1 null, 1961–2025, 0 interior gaps/dups, update 2026-07-13, lag 1. IMF 52 non-null, 1980–2031, 0 gaps; 2026–2031 treated as projections; exact vintage/revisions NOT_RETAINED. | WDI page 1/1 total 66, 15,224 bytes. IMF no adapter pagination, 120,999 bytes. Provider quotas NOT_RETAINED; retry 0; local ceilings passed. Whole chain remains partial until IMF is legally cleared or country-gated. |
 | **UNEMPLOYMENT** `PARTIAL` | Qualified primary: WDI `SL.UEM.TOTL.ZS`, World Bank, modeled ILO estimate, v2 GET. Existing but legally uncleared fallback: IMF DataMapper `LUR`. SingStat `M182332` is a distinct end-June seasonally-adjusted national table. | WDI exact SGP/code: HTTP 200 `application/json;charset=utf-8`, final `api.worldbank.org`; IMF exact nested code/SGP: HTTP 200 `application/json`, final `www.imf.org`; SingStat exact table/row: HTTP 200 `application/json; charset=utf-8`, final SingStat host. All had 0 redirects and no auth observed. | WDI annual `% of labour force`, modeled estimate; IMF annual `%`, with 2026+ internal projection cutoff. SingStat annual end-June seasonally adjusted point-in-time rate is semantically different. | WDI 35 non-null/31 null envelope positions, 1991–2025, no gaps within non-null bounds/dups, update 2026-07-13, lag 1. IMF 52 non-null, 1980–2031, no gaps, 2026–2031 projection-classed. SingStat row has 35 periods, 1992–2026, no retained markers/dups, table updated 31 Jul 2026. Revision lineage NOT_RETAINED. | WDI page 1/1 total 66, 16,394 bytes. IMF 58,066 bytes. SingStat table 3,538 bytes. No numeric provider quota retained; retry 0; ceilings passed. Whole chain remains partial until IMF is legally cleared or country-gated. |
 | **CPI_YOY** `ROUTE_GAP + LEGAL_GAP` | Exact technical candidate: SingStat-owned/operated `M213781`, row key `1`, `All Items`, “Percent Change In CPI Over Corresponding Period Of Previous Year…Monthly”; observed `GET /api/table/tabledata/M213781`. | Requested table -> exact id/title/frequency/row key and label; response envelope `Data`/`DataCount`/`Message`/`StatusCode`; HTTP 200 `application/json; charset=utf-8`, final `tablebuilder.singstat.gov.sg`, 0 redirects, no auth observed. The actual OpenAPI page returned only a JavaScript shell, so method/error/paging/max/version contract is NOT_RETAINED. | Monthly same-month-prior-year percentage change, 2024 CPI base family; provider-published, so no local derivation. Exact response `uoM="Per Cent"`; no projection flag. | Provider-declared bounds NOT_RETAINED; observed 775 periods, 1962 Jan–2026 Jul, 0 retained missing markers/dups; table updated 24 Aug 2026; revision/correction policy and current-lag rule NOT_RETAINED. | Re-probe: 168,396 bytes, retry 0, no redirect, under local ceiling; response carried `limit="5000"` and null offset/sort/filter/range fields. Documented pagination maximum, rate/concurrency/byte contract NOT_RETAINED. Route and permission remain unregistered. |
-| **POLICY_RATE** `SEMANTICS_GAP` | No qualifying concept. MAS owner/operator surfaces examined: S$NEER policy framework, SORA, facilities, MAS Bills/SGS yields. No route was selected because none is the canonical monetary-policy target-rate concept. | `NOT_DISPATCHED`; requested/returned identity, status, MIME, redirect/final host, and auth are `NOT_RETAINED`. Existing DBnomics SGP route is absent and the policy route stays VNM-only. | Canonical cell expects monthly `% per annum` policy rate. Singapore manages S$NEER band slope/width/centre; the basket/band are undisclosed. SORA is an unsecured overnight transaction benchmark, not a target. Facility rates/yields are distinct. Actual/projection not applicable. | Bounds/count/null/gap/dup/revision/lag `NOT_RETAINED`; absence of a qualifying concept is not `NO_DATA`. | Direct MAS portal is JS-only; exact public API contract, quota, pages, retries, bytes, and no-key posture NOT_RETAINED. No transport occurred. |
+| **POLICY_RATE** `SEMANTICS_GAP` + `SOURCE_LOCATOR_GAP` | No qualifying concept. Retained context described an S$NEER framework, SORA, facilities, MAS Bills/SGS yields, but no durable title/date/page/section locator survives for the framework statement. No rate route was selected. | `NOT_DISPATCHED`; requested/returned identity, status, MIME, redirect/final host, and auth are `NOT_RETAINED`. Existing DBnomics SGP route is absent and the policy route stays VNM-only. | Canonical cell expects monthly `% per annum` policy rate. The official MAS rate page defines SORA as a market benchmark; “not the policy target” is vnfin's combined-source inference, not wording from that page. Framework slope/width/centre/basket/band details carry `SOURCE_LOCATOR_GAP`. Actual/projection not applicable. | Bounds/count/null/gap/dup/revision/lag `NOT_RETAINED`; absence of a qualifying concept is not `NO_DATA`. | Direct MAS portal is JS-only; exact public API contract, quota, pages, retries, bytes, and no-key posture NOT_RETAINED. No transport occurred. |
 | **LENDING_RATE** `QUALIFIED_EXISTING` | WDI `FR.INR.LEND`, World Bank; annual lending rate generally meeting private-sector short/medium financing needs; v2 GET. data.gov.sg bank-rates dataset is only a local candidate and was not dispatched. | WDI exact SGP/code: HTTP 200 `application/json;charset=utf-8`, final `api.worldbank.org`, 0 redirects, no auth. Local candidate exact series identity NOT_RETAINED; no row-position selection allowed. | Annual `%`, no currency; aggregate lending-rate concept, not policy rate. No projection flag. Local monthly end-period rates cannot replace it without exact row definition/equivalence. | WDI 44 non-null/22 null positions, 1978–2021, 0 interior gaps/dups, update 2026-07-13, **5-year lag**. Revision flags NOT_RETAINED. Qualified as historical only; no current-rate claim. | Page 1/1 total 66, 13,623 bytes; quota NOT_RETAINED; retry 0; local ceiling passed. |
 | **DEPOSIT_RATE** `QUALIFIED_EXISTING` | WDI `FR.INR.DPST`, World Bank; commercial/similar-bank demand/time/savings deposit rate; v2 GET. data.gov.sg bank-rates dataset remains an unprobed candidate. | WDI exact SGP/code: HTTP 200 `application/json;charset=utf-8`, final `api.worldbank.org`, 0 redirects, no auth. Local series identity/equivalence NOT_RETAINED. | Annual aggregate `%`, no currency; not a tenor-specific quote or policy rate. No projection flag. | WDI 45 non-null/21 null positions, 1977–2021, 0 interior gaps/dups, update 2026-07-13, **5-year lag**. Revision flags NOT_RETAINED. Historical-only qualification. | Page 1/1 total 66, 13,811 bytes; quota NOT_RETAINED; retry 0; local ceiling passed. |
 | **REAL_INTEREST_RATE** `QUALIFIED_EXISTING` | WDI `FR.INR.RINR`, World Bank; lending rate adjusted by GDP-deflator inflation; v2 GET. An exact local MAS/SingStat/data.gov route was not retained. | WDI exact SGP/code: HTTP 200 `application/json;charset=utf-8`, final `api.worldbank.org`, 0 redirects, no auth. Local transport was `NOT_DISPATCHED`, so the bounded local result is `ROUTE_GAP`, not `NO_DATA`; no nominal-minus-CPI derivation. | Annual `%`, may be negative; exact WDI real-interest concept. No projection flag. | WDI 44 non-null/22 null positions, 1978–2021, 0 interior gaps/dups, update 2026-07-13, **5-year lag**. Revision flags NOT_RETAINED. Historical-only qualification. | Page 1/1 total 66, 13,758 bytes; quota NOT_RETAINED; retry 0; local ceiling passed. Local rate/page/byte behavior NOT_RETAINED because no local request occurred. |
@@ -171,7 +173,7 @@ source note, and source organization. The observation envelopes were page 1 of 1
 | **INFLATION** `PARTIAL` | Same qualified WDI CC BY 4.0 primary and uncleared IMF special-data fallback posture as GDP_GROWTH | WDI primary cleared; IMF bulk automation/commercial reuse NOT_CLEARED without permission, so the whole chain is not qualified | WDI storage allowed/no retained TTL; IMF lifecycle NOT_CLEARED/NOT_RETAINED; cache off | WDI attribution and reuse allowed; IMF attribution/transformation conditions, commercial reuse NOT_CLEARED | Terms/API may change; exact notice NOT_RETAINED |
 | **UNEMPLOYMENT** `PARTIAL` | Same qualified WDI primary and uncleared IMF fallback posture; direct SingStat terms NOT_RETAINED | WDI primary cleared; IMF bulk/commercial posture NOT_CLEARED, so the whole chain is not qualified; SingStat caller use NOT_CLEARED | WDI storage allowed/no retained TTL; IMF/SingStat lifecycle NOT_CLEARED/NOT_RETAINED | WDI attribution/reuse allowed; IMF conditional attribution with commercial gap; SingStat reuse NOT_CLEARED | Change/revocation possible; route-specific notice NOT_RETAINED |
 | **CPI_YOY** `ROUTE_GAP + LEGAL_GAP` | Official general Terms of Use target returned 403. API Terms URL/content, version, and effective date are NOT_RETAINED | Automation and returning rows to callers NOT_CLEARED | Cache/storage/retention/deletion NOT_CLEARED/NOT_RETAINED | Attribution, commercial/derivative use, and redistribution NOT_CLEARED | Amendment/revocation and route-compatibility promises NOT_RETAINED |
-| **POLICY_RATE** `SEMANTICS_GAP` | No qualifying dataset/route, so no transferable terms. Direct MAS eServices terms could not be retained | NOT_APPLICABLE to a rejected proxy; direct MAS automation/caller return NOT_CLEARED | NOT_APPLICABLE; direct MAS storage/retention/deletion NOT_CLEARED/NOT_RETAINED | NOT_APPLICABLE. MAS bilateral FX also names Refinitiv-derived rights, so it cannot be presumed redistributable | NOT_RETAINED |
+| **POLICY_RATE** `SEMANTICS_GAP` + `SOURCE_LOCATOR_GAP` | No qualifying dataset/route, so no transferable terms. Direct MAS eServices terms and a durable policy-framework locator were not retained | NOT_APPLICABLE to a rejected proxy; direct MAS automation/caller return NOT_CLEARED | NOT_APPLICABLE; direct MAS storage/retention/deletion NOT_CLEARED/NOT_RETAINED | NOT_APPLICABLE. MAS bilateral FX also names Refinitiv-derived rights, so it cannot be presumed redistributable | NOT_RETAINED |
 | **LENDING_RATE** `QUALIFIED_EXISTING` | WDI series CC BY 4.0, effective date NOT_RETAINED. data.gov.sg candidate would be ODL 1.0, but it is not the qualified cell route | WDI automation/caller return cleared. Candidate data.gov public API allows commercial/noncommercial calls, but exact series identity remains unqualified | WDI storage allowed/no retained TTL. data.gov ODL permits copying; no retained retention/deletion duty; API termination means stop API use | WDI credit/reuse allowed. data.gov candidate would require conspicuous dataset/source/access-date/current-license notice and permits commercial/derivative/redistribution subject to exclusions | WDI/API and data.gov terms can change; data.gov access can be suspended/terminated |
 | **DEPOSIT_RATE** `QUALIFIED_EXISTING` | Same WDI primary and unqualified data.gov ODL-candidate posture as LENDING_RATE | WDI cleared; data.gov candidate not promoted without exact series proof | WDI storage allowed/no TTL retained; candidate lifecycle as above | WDI attribution/reuse allowed; candidate ODL rights do not cure identity/semantic gaps | Change/suspension/revocation possible; notice NOT_RETAINED |
 | **REAL_INTEREST_RATE** `QUALIFIED_EXISTING` | WDI series CC BY 4.0, effective date NOT_RETAINED; no exact local dataset | WDI automation/caller return cleared; local derivation not authorized | WDI storage allowed/no retained TTL/deletion; cache off | WDI attribution required; commercial/derivative/redistribution allowed under CC BY 4.0 | API/terms may change/revoke; exact notice NOT_RETAINED |
@@ -221,15 +223,20 @@ application shell to the bounded client; method/parameter/error/paging/max/versi
 
 ### Monetary-policy boundary
 
-MAS describes an exchange-rate-centred framework: S$NEER is managed against a trade-weighted basket
-within an undisclosed band, and stance is expressed via the band's slope, width, and centre
-([MAS offering circular, policy-framework discussion](https://www.mas.gov.sg/-/media/mas/sgs/sgs-announcements-pdf/bonds-pdf/green-sgs-infrastructure-and-syndication/offering-circular.pdf)).
-S$NEER is an exchange-rate-policy variable, not a rate. SORA is a volume-weighted unsecured
-overnight SGD cash-market transaction benchmark, not a policy target
-([MAS domestic interest rates / SORA](https://eservices.mas.gov.sg/Statistics/dir/DomesticInterestRates.aspx)).
-Historical interbank rates, facility rates, MAS Bills, SGS repo/yields, and commercial-bill rates
-are also distinct concepts. The `POLICY_RATE` cell therefore remains `SEMANTICS_GAP`, not a
-best-effort proxy.
+The retained research notes characterize Singapore's framework as exchange-rate-centred and its
+stance in terms of an S$NEER band's slope, width, and centre, but no durable official title/date/
+page/section locator survived. The attempted MAS circular target returned maintenance HTML rather
+than the PDF. Those specific framework statements therefore carry **`SOURCE_LOCATOR_GAP`** and are
+not presented as independently locatable evidence.
+
+The retained official [MAS domestic-interest-rate page](https://eservices.mas.gov.sg/Statistics/dir/DomesticInterestRates.aspx)
+defines SORA as a volume-weighted unsecured overnight SGD cash-market transaction benchmark. It
+does **not** literally state that SORA is “not the policy target.” That conclusion is explicitly a
+**combined-source inference** from the retained market-benchmark definition and the
+exchange-rate-centred framework context, whose durable locator is missing. Consequently the
+`POLICY_RATE` cell remains blocked as `SEMANTICS_GAP` with `SOURCE_LOCATOR_GAP`; no SORA,
+interbank/facility rate, MAS Bill, SGS repo/yield, commercial-bill rate, lending rate, or deposit
+rate is authorized as a best-effort proxy.
 
 The data.gov.sg “Current Banks Interest Rates (End Of Period), Monthly” candidate
 `d_5fe5a4bb4a1ecc4d8a56a095832e2b24` is catalogued as MAS source / SingStat manager, monthly,
@@ -259,7 +266,9 @@ Binding boundaries:
 7. Before any build, resolve the three partial chains by either legally qualifying the IMF fallback
    or country-gating it for `SGP` before cache/transport; this design does not choose or authorize
    either change.
-8. No enum/model/public snapshot change is justified by this evidence.
+8. Any #236 behavior or code change—IMF legal qualification, IMF country-gating, or a new source
+   registration—activates the complete twelve-case offline matrix in `tasks/236-design-note.md`.
+9. No enum/model/public snapshot change is justified by this evidence.
 
 ## Ranked candidate expansion — proposal only
 
@@ -286,8 +295,8 @@ and RED gate.
 | data.gov.sg | 0 / 4 | 0 / 4 | official docs/catalog evidence was sufficient to identify future candidates; no exact row-qualified parity candidate selected within plan |
 | **Provider total** | **26 / 34** | **26 / 34** | **1,090,218 bytes; zero retries; all dispatched requests 200; no redirects; no raw rows committed** |
 | Design-block correction | 3 / 4 actions | 3 / 4 ceiling | OpenAPI shell + general Terms 403 + one `M213781` re-probe; exact API Terms target unavailable and its reservation expired; zero retries/redirects/searches |
-| Official docs/terms | **at least 116 / 18 logical URL actions** | underlying physical transport NOT_RETAINED | 16 orchestrator + 98 delegated + 2 correction actions; hard ceiling breached; same-page ref reopens mean this is a logical-action count, not a reconstructed HTTP count |
-| Search discovery | **72 / 6 query strings** | **19 / 6 dispatches** | **hard-cap incident**; see the [exact delegated ledger and postmortem](2026-09-17-singapore-macro-search-ledger.md); root exact strings NOT_RETAINED; no prohibited result opened or used |
+| Official docs/terms | **at least 116 / 18 logical URL actions** | underlying physical transport NOT_RETAINED | 16 earlier-sequence + 98 retained-sequence + 2 correction actions; hard ceiling breached; same-page ref reopens mean this is a logical-action count, not a reconstructed HTTP count |
+| Search discovery | **72 / 6 query strings** | **19 / 6 dispatches** | **hard-cap incident + `PROCESS_CONTROL_GAP`**; see the [neutral exact-batch ledger](2026-09-17-singapore-macro-search-ledger.md); earlier exact strings/result URLs NOT_RETAINED; no prohibited result opened or used |
 
 The private sanitized receipts were used only during design and are not committed. Production
 adapters currently do not enforce the qualification harness's MIME, redirect, or response-byte
@@ -326,7 +335,7 @@ undispatched or unretained candidate routes are `NOT_DISPATCHED`, `NOT_RETAINED`
 - [SingStat general Terms of Use target](https://www.singstat.gov.sg/terms-of-use) — returned 403
   during the bounded correction; no clause or permission was retained
 - [SingStat `M213781` table route](https://tablebuilder.singstat.gov.sg/api/table/tabledata/M213781)
-- [MAS policy-framework discussion (offering circular)](https://www.mas.gov.sg/-/media/mas/sgs/sgs-announcements-pdf/bonds-pdf/green-sgs-infrastructure-and-syndication/offering-circular.pdf)
+- [Attempted MAS policy-framework circular target](https://www.mas.gov.sg/-/media/mas/sgs/sgs-announcements-pdf/bonds-pdf/green-sgs-infrastructure-and-syndication/offering-circular.pdf) — returned maintenance HTML; title/date/page/section not retained; `SOURCE_LOCATOR_GAP`, not supporting evidence
 - [MAS domestic interest rates](https://eservices.mas.gov.sg/Statistics/dir/DomesticInterestRates.aspx)
 - [MAS Financial Database](https://eservices.mas.gov.sg/statistics/fdanet/)
 - [MAS API portal](https://eservices.mas.gov.sg/apimg-portal/home)
@@ -344,8 +353,8 @@ Process evidence: [search-discovery incident ledger](2026-09-17-singapore-macro-
 - Eight WDI primary legs are exact; only five whole default chains are qualified because three IMF fallbacks are not legally cleared.
 - GDP/growth/CPI/inflation/unemployment WDI legs reach 2025; three rate cells end in 2021 and are historical-only.
 - SingStat `M213781` is exact monthly CPI YoY with `uoM="Per Cent"`, but remains `ROUTE_GAP + LEGAL_GAP`.
-- Singapore has no honest interest-rate `POLICY_RATE`; exchange-rate policy is a distinct future primitive.
+- `POLICY_RATE` remains `SEMANTICS_GAP`; its exchange-rate-framework evidence also has `SOURCE_LOCATOR_GAP`, and the SORA conclusion is an explicit combined-source inference.
 - No new source, API/model, enum, adapter, RED test, or production code is approved here.
 - Initial provider probes stayed within 26/34 calls; correction used 3/4 actions; no raw provider rows were committed.
-- Search discovery actually used 72 queries/19 dispatches vs 6/6; the companion ledger records the breach and fail-closed guard.
+- Search discovery used 72 queries/19 dispatches vs 6/6; the narrative control is a `PROCESS_CONTROL_GAP`, so later discovery is blocked pending an externally enforced mechanism.
 - Need from reviewer: source/API design verdict and, only if approved, an exact API/model + RED authorization.

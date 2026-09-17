@@ -23,7 +23,7 @@ inflation, and unemployment are not legally cleared for an OSS automatic default
 | `INFLATION` | `PARTIAL` | qualified WDI `FP.CPI.TOTL.ZG`; uncleared IMF `PCPIPCH` fallback | 65 WDI annual points, 1961–2025 | WDI leg qualifies; whole chain does not |
 | `UNEMPLOYMENT` | `PARTIAL` | qualified WDI `SL.UEM.TOTL.ZS`; uncleared IMF `LUR` fallback | 35 WDI annual points, 1991–2025 | WDI leg qualifies; whole chain does not |
 | `CPI_YOY` | `ROUTE_GAP + LEGAL_GAP` | candidate SingStat `M213781`, row `1` | 775 monthly periods, 1962 Jan–2026 Jul | exact identity and `Per Cent` unit; OpenAPI contract and permission lifecycle unretained |
-| `POLICY_RATE` | `SEMANTICS_GAP` | none | not applicable | Singapore's policy instrument is S$NEER; no interest-rate proxy |
+| `POLICY_RATE` | `SEMANTICS_GAP` | none | not applicable | no rate proxy; policy-framework evidence also has `SOURCE_LOCATOR_GAP` |
 | `LENDING_RATE` | `QUALIFIED_EXISTING` | `FR.INR.LEND` | 44 annual points, 1978–2021 | historical aggregate only; five-year current lag |
 | `DEPOSIT_RATE` | `QUALIFIED_EXISTING` | `FR.INR.DPST` | 45 annual points, 1977–2021 | historical aggregate only; five-year current lag |
 | `REAL_INTEREST_RATE` | `QUALIFIED_EXISTING` | `FR.INR.RINR` | 44 annual points, 1978–2021 | historical; GDP-deflator-adjusted lending rate; five-year lag |
@@ -60,6 +60,7 @@ prohibit bulk automated download without permission and direct commercial reuse 
 request, so IMF is not legally cleared for an OSS default. Before any code, a separate API/model
 decision must either legally qualify IMF or country-gate it for `SGP` before cache/transport; this
 design authorizes neither option and does not describe the present whole chains as qualified.
+Either implementation is a #236 behavior change and activates the complete twelve-case matrix.
 
 `GDP` remains World Bank-only because IMF `NGDPD` is `USD bn` rather than the canonical current-US$
 level. `CPI` remains annual World Bank-only; the exact monthly SingStat index differs in frequency
@@ -98,12 +99,18 @@ monthly cell. None is a silent failover for the annual WDI CPI contract.
 
 ## Singapore monetary-policy boundary
 
-The `POLICY_RATE` cell remains `SEMANTICS_GAP`. MAS uses an exchange-rate-centred framework and
-expresses stance through the S$NEER band's slope, width, and centre; the basket and band are
-undisclosed ([MAS offering circular, policy-framework discussion](https://www.mas.gov.sg/-/media/mas/sgs/sgs-announcements-pdf/bonds-pdf/green-sgs-infrastructure-and-syndication/offering-circular.pdf)).
-S$NEER is an exchange-rate variable, not a rate. MAS's domestic-interest-rate page identifies SORA
-as a market benchmark, not a policy target
-([MAS domestic interest rates / SORA](https://eservices.mas.gov.sg/Statistics/dir/DomesticInterestRates.aspx)).
+The `POLICY_RATE` cell remains `SEMANTICS_GAP`, and its policy-framework evidence has a separate
+`SOURCE_LOCATOR_GAP`. Retained local evidence identifies an official MAS offering-circular URL and
+a search-result heading, but no durable circular title, issuance date, page number, or section
+locator. A bounded direct fetch returned maintenance HTML. The URL and snippet are therefore not
+treated as durable standalone proof for the S$NEER slope/width/centre/basket/band statements.
+
+The official [MAS domestic-interest-rate page](https://eservices.mas.gov.sg/Statistics/dir/DomesticInterestRates.aspx)
+defines SORA as a volume-weighted unsecured overnight SGD market rate. The statement that SORA is
+not Singapore's monetary-policy target is **vnfin's combined-source inference**, not wording from
+that page: it combines the market-benchmark definition with the separately described
+exchange-rate-centred framework. Because the framework locator remains incomplete, the cell stays
+blocked; no rate proxy is qualified.
 
 Do not relabel any of these as `POLICY_RATE`:
 
@@ -169,28 +176,32 @@ requests were sequential, status 200, zero-retry, and zero-redirect; 1,090,218 b
 within local ceilings. No provider rows or live response bodies are committed.
 
 The discovery-query plan was breached more severely than the blocked design reported: the whole
-team issued **72 query strings in 19 dispatches** against the declared 6/6 cap. The first count of
-25/7 omitted 47/12 delegated use. The exact delegated strings, official-result mapping, sanitized
-private-log locators, cause analysis, and claim reconciliation are committed in
-`docs/research/2026-09-17-singapore-macro-search-ledger.md`. The orchestrator's exact 25 strings are
-`NOT_RETAINED` and support no claim. All retained exact strings carried the blacklist exclusion;
-one irrelevant third-party listing was not opened or used. Only direct official pages and bounded
-exact probes support the design. Logged official-document navigation also exceeded its reservation
-at least 116 logical URL-open actions against 18; underlying physical HTTP count is
+study issued **72 query strings in 19 dispatches** against the declared 6/6 cap. The first count of
+25/7 omitted a fully retained 47/12 sequence. Exact retained strings, neutral batch IDs, exact
+official URLs or `RESULT_URL_NOT_RETAINED`, cause analysis, and claim reconciliation are committed
+in `docs/research/2026-09-17-singapore-macro-search-ledger.md`. The earlier 25 strings and result
+URLs are `NOT_RETAINED` and support no claim. All retained exact strings carried the blacklist
+exclusion; one irrelevant third-party listing was not opened or used. Only direct official pages
+and bounded exact probes support the design. Logged official-document navigation also exceeded its
+reservation at least 116 logical URL-open actions against 18; underlying physical HTTP count is
 `NOT_RETAINED`.
 
-Cause: the counter lived in the orchestrator narrative rather than one atomic team ledger,
-delegates received no explicit reservation, and multi-query batches obscured logical use. Future
-research is fail-closed: before any search, the parent must atomically verify
-`used_queries + batch_size <= logical_cap` and `used_dispatches + 1 <= dispatch_cap`; delegates
-default to zero allowance, failures do not restore capacity, and no rollover is allowed. The
-correction made zero search queries. The incidents are presented for reviewer ruling, not
-normalized away; the bounded provider probes were unaffected.
+Control status is **`PROCESS_CONTROL_GAP`**. The breached ceiling was narrative-only; no externally
+enforced shared reservation mechanism existed. Consequently, no later search-discovery phase may
+start until a separate reviewer-approved control serializes global reservations before dispatch,
+emits durable receipts, and prevents direct unreserved calls. The arithmetic checks in the incident
+ledger are desired acceptance criteria, not an implemented atomic guard. This docs-only correction
+implements no control and authorizes zero searches. The incident is presented for reviewer ruling,
+not normalized away; the bounded provider probes were unaffected.
 
 ## Deferred RED/build gate
 
-No RED or production code is authorized. If the reviewer later approves a qualified new source,
-the separate build packet must cover this complete matrix:
+No RED or production code is authorized. **Any #236 behavior or code change** must account for this
+complete twelve-case matrix in a separately authorized build packet. This includes legally
+qualifying or retaining the existing IMF fallback for `SGP`, country-gating that fallback before
+cache/transport, registering a new source, or changing any route, model, eligibility guard, or
+failover behavior. Case 11 is exercised if SingStat is introduced; otherwise the packet must prove
+SingStat remains unregistered.
 
 1. Parameterize all eight WDI primary legs: exact request country/code, exact returned identity,
    canonical unit/currency/frequency, finite observations, ascending unique dates, and bounds.
@@ -229,6 +240,11 @@ the separate build packet must cover this complete matrix:
   `9b4c8f76`; reviewer commit `4890a84`; report
   `review-202609171937-issue236-design-BLOCK.md`.
 - Historical correction actor: `vnfin-oss` (B1–B6 documents only; no RED/code).
+- Corrected design target `32c01bcf89f92f3501fbc7fdd2e2ea867fa34b2b` was blocked at delivery
+  `8f68e483`; reviewer commit `3baf245`; report
+  `review-202609172009-issue236-corrected-design-BLOCK.md`.
+- Current correction actor: `vnfin-oss` (C1–C5 retained evidence and docs/backlog only; no network,
+  RED, or code).
 - At the corrected exact-SHA handoff, current actor becomes `vnfin-oss-reviewer`; `vnfin-oss`
   waits for the verdict. The reviewer should fan out its own source/legal/API reviewers as required.
 - No implementation, push, issue close, release, or capability claim follows without explicit
@@ -239,9 +255,9 @@ the separate build packet must cover this complete matrix:
 - Eight WDI primary legs are exact; five whole chains qualify and three IMF-fallback chains are `PARTIAL`.
 - Five non-rate WDI legs reach 2025; lending/deposit/real-interest stop in 2021 and are historical-only.
 - SingStat `M213781` is exact monthly CPI YoY in `Per Cent` but remains `ROUTE_GAP + LEGAL_GAP`.
-- `POLICY_RATE` stays unsupported: Singapore's S$NEER framework has no honest interest-rate equivalent.
+- `POLICY_RATE` stays blocked as `SEMANTICS_GAP`; policy-framework evidence has `SOURCE_LOCATOR_GAP`, and the SORA conclusion is an explicit inference.
 - Public API/model and source order stay unchanged; no new source, RED, code, snapshot, push, or close.
 - Initial provider probe budget passed (26/34); correction used 3/4 actions and zero searches/retries/redirects.
-- Search use was 72 queries/19 dispatches vs 6/6; the committed incident ledger and guard await reviewer ruling.
+- Search use was 72 queries/19 dispatches vs 6/6; control status is `PROCESS_CONTROL_GAP`, not an implemented guard.
 - Expansion ranking is trade, money supply, reserves, real retail sales, industrial production, then FX/S$NEER.
 - Need from reviewer: exact-SHA design verdict and, if any subset passes, a separate API/model + RED authorization.
