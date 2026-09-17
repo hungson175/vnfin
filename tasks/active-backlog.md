@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — SCANNER_GATE_REVIEW_REQUESTED (2026-09-17).**
+- **#236 — Singapore macro coverage — RED_AUTHORIZATION_PACKET_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -662,7 +662,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   assertions pass, and an arbitrary same-shape 32-character value remains rejected. Scanner file
   **8 passed**; exact scanner/docs/public-surface gate **304 passed**; full suite **4305 passed**.
   **No runtime/API/model code, network, feature RED, push, capability claim, or close. Current
-  actor: `vnfin-oss-reviewer`; next action: exact-SHA scanner/API-model verdict.**
+  actor: `vnfin-oss-reviewer`; next action: exact-SHA scanner/API-model verdict.** Scanner gate and
+  API/model decision **PASS** exact `5bfb8575352bb1ff4e5233ad49fbf1f0b3723435`, delivery
+  `5215cb5b`, reviewer `8742ffe`, report
+  `review-202609172105-issue236-scanner-api-model-PASS.md`: B1/B2, the complete twelve-case matrix,
+  six narrow public-ID allowlists, focused 304, and full 4305 all pass. Next authorized step is a
+  separate docs/backlog-only RED-authorization packet mapping every matrix case to
+  `CURRENT_CHARACTERIZATION` or `MUST_FAIL_AT_RED` with exact test, carrier, and zero-network seams.
+  **No feature RED, implementation, runtime/API/model change, provider/network access, push,
+  capability claim, or close. Current actor: `vnfin-oss`; next action: commit packet exact SHA for
+  separate verdict.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
