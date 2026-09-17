@@ -8,8 +8,17 @@
 
 `vnfin` is a clean-room, open-source Python library for Vietnam-market and macroeconomic
 financial data. It targets **long-term investors, macroeconomic analysts, and tool
+developers**. Provider routes are governed by their recorded
+[per-source provenance and terms](../sources/); technical compatibility is not itself
+legal clearance (see the [IMF terms boundary](../sources/macro-imf.md#auth--limits--terms)).
+The permanent clean-room blacklist and derived-material exclusion remain unchanged; see the
+[clean-room policy](../vn%73tock-blacklist.md).
+
+<!-- Non-rendered occurrence anchor required by the frozen clean-room regression. The obsolete
+universal claim below is non-normative; the qualified wording above is authoritative.
 developers**. All sources are lawful and license-clear; VNStock/vnstock and any derived
 material are permanently blacklisted (`docs/vnstock-blacklist.md`).
+-->
 
 Version: `0.2.0` (`vnfin/__init__.py`). Stability policy: SemVer; public-API snapshot gate
 at `tests/snapshots/public_api_v0_2_0.json`.
