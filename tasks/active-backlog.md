@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — RED_AUTHORIZATION_PACKET_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — RED_AUTHORIZATION_REVIEW_REQUESTED (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -669,9 +669,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   six narrow public-ID allowlists, focused 304, and full 4305 all pass. Next authorized step is a
   separate docs/backlog-only RED-authorization packet mapping every matrix case to
   `CURRENT_CHARACTERIZATION` or `MUST_FAIL_AT_RED` with exact test, carrier, and zero-network seams.
-  **No feature RED, implementation, runtime/API/model change, provider/network access, push,
-  capability claim, or close. Current actor: `vnfin-oss`; next action: commit packet exact SHA for
-  separate verdict.**
+  That packet is now `tasks/236-red-authorization-note.md`: all twelve cases map to exact planned
+  tests; current WDI/non-SGP/VNM/missing-monthly/custom/SingStat-absence behavior is separated from
+  intended RED for the SGP IMF predicate/direct/public skip, gated annual custom fallback, additive
+  method surface, and runtime-doc lockstep. It freezes exact `InvalidData`, WDI-only-attempt, and
+  zero-attempt `AllSourcesFailed` carriers; injected HTTP plus a connected `_request_text` tripwire
+  proves every pre-cache/pre-transport boundary. It authorizes nothing by itself and contains no
+  feature tests or fixtures. **No feature RED, implementation, runtime/API/model change,
+  provider/network access, push, capability claim, or close. Current actor:
+  `vnfin-oss-reviewer`; next action: `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
