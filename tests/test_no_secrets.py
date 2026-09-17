@@ -69,6 +69,24 @@ SECRET_BLOB_RE = re.compile(r"[A-Za-z0-9]{%d,}" % _SECRET_BLOB_MIN)
 #     credential, and is not a user secret — accepted for OSS distribution by explicit
 #     project decision (design note D4). Each hex segment is sourced at runtime from the
 #     URLs themselves so this test never embeds the literal hash.
+#   * data.gov.sg public dataset identifiers (#236): six official, unauthenticated
+#     dataset locators in the Singapore macro source-design evidence contain 32-char
+#     hexadecimal catalog identifiers. They are public URL path segments, not
+#     credentials. The scanner blobs are derived only from the fixed official locator
+#     URLs below; arbitrary 32-char hex values remain rejected.
+_DATA_GOV_SG_DATASET_URLS = (
+    "https://data.gov.sg/datasets/d_0cd4e1d703f04efda7dcf64485c950cc/view",
+    "https://data.gov.sg/datasets/d_183f0b0c1a539f150c0c0f080a66d357/view",
+    "https://data.gov.sg/datasets/d_31b2dcafe417ff922e1542d45ed6f176/view",
+    "https://data.gov.sg/datasets/d_5fe5a4bb4a1ecc4d8a56a095832e2b24/view",
+    "https://data.gov.sg/datasets/d_7ed3eccba609ac0bdfcf406d939bdb0b/view",
+    "https://data.gov.sg/datasets/d_92afecf58ad03196ff6a7abb7a03d631/view",
+)
+_DATA_GOV_SG_DATASET_URL_RE = re.compile(
+    r"https://data\.gov\.sg/datasets/d_([0-9a-f]{32})/view"
+)
+
+
 def _cmo_vintage_blobs() -> frozenset[str]:
     """The vintage-hash path segments inside the public CMO annual-xlsx URLs.
 
@@ -85,10 +103,22 @@ def _cmo_vintage_blobs() -> frozenset[str]:
     return frozenset(blobs)
 
 
+def _data_gov_sg_dataset_blobs() -> frozenset[str]:
+    """Secret-shaped path segments from six fixed public data.gov.sg locators."""
+    blobs: set[str] = set()
+    for url in _DATA_GOV_SG_DATASET_URLS:
+        blobs.update(SECRET_BLOB_RE.findall(url))
+    return frozenset(blobs)
+
+
 def _allowlisted_blobs() -> frozenset[str]:
     from vnfin.gold import BTMC_PUBLIC_WIDGET_KEY  # imported, not embedded as a literal
 
-    return frozenset({BTMC_PUBLIC_WIDGET_KEY}) | _cmo_vintage_blobs()
+    return (
+        frozenset({BTMC_PUBLIC_WIDGET_KEY})
+        | _cmo_vintage_blobs()
+        | _data_gov_sg_dataset_blobs()
+    )
 
 
 _ALLOWLISTED_BLOBS = _allowlisted_blobs()
@@ -258,8 +288,8 @@ def test_scanner_covers_source_and_itself() -> None:
 
 def test_btmc_widget_key_is_a_plain_literal_and_allowlisted() -> None:
     """The BTMC public widget key is committed as a single PLAIN literal (no
-    fragment/concatenation trickery) and is the only blob the scanner allowlists by
-    explicit project decision. The runtime value resolves correctly."""
+    fragment/concatenation trickery) and is explicitly allowlisted by project
+    decision. The runtime value resolves correctly."""
     from vnfin.gold import BTMC_PUBLIC_WIDGET_KEY
     from vnfin.gold.vn import BTMCGoldSource
 
@@ -274,8 +304,8 @@ def test_btmc_widget_key_is_a_plain_literal_and_allowlisted() -> None:
         "the public widget token must be a single plain literal in vnfin/gold/vn.py"
     )
 
-    # The BTMC public token is in the allowlist (alongside the documented CMO vintage
-    # hashes, #185); it is one of EXACTLY two documented project-decision carve-outs.
+    # The BTMC public token is in the allowlist alongside the separately documented
+    # CMO-vintage and data.gov.sg public-locator categories.
     assert BTMC_PUBLIC_WIDGET_KEY in _ALLOWLISTED_BLOBS
     # The allowlisted value is itself blob-allowed; an arbitrary other secret is NOT.
     # (Build the fake from fragments so this test file itself stays scanner-clean.)
@@ -284,13 +314,11 @@ def test_btmc_widget_key_is_a_plain_literal_and_allowlisted() -> None:
     assert not _blob_is_allowed(fake_other)
 
 
-def test_cmo_vintage_hash_allowlisted_and_sourced_from_urls() -> None:
-    """#185: the CMO Pink Sheet annual-xlsx URLs embed a public per-release vintage
-    hash. It is allowlisted by explicit project decision (CC-BY public data URL, not a
-    credential), and the allowlist value is sourced at runtime from the live
-    ``_CMO_ANNUAL_URLS`` tuple — never embedded as a literal in this test file."""
+def test_public_url_blobs_allowlisted_and_sourced_from_official_locators() -> None:
+    """Allow only the documented CMO and data.gov.sg public-URL path blobs."""
     from vnfin.gold.worldbank_cmo import _CMO_ANNUAL_URLS
 
+    # #185: the CMO Pink Sheet annual-xlsx URLs embed public release-vintage hashes.
     cmo_blobs = _cmo_vintage_blobs()
     assert cmo_blobs, "the CMO URLs should contain at least one long hex vintage segment"
     # Every long blob from the CMO URLs is allowlisted (so the scanner stays green).
@@ -299,6 +327,26 @@ def test_cmo_vintage_hash_allowlisted_and_sourced_from_urls() -> None:
         assert _blob_is_allowed(blob)
     # Sanity: the URLs are the World Bank public docs host.
     assert all("worldbank.org" in u for u in _CMO_ANNUAL_URLS)
+
+    # #236: exactly six scanner blobs come from exact official dataset locators.
+    dataset_blobs = _data_gov_sg_dataset_blobs()
+    assert len(_DATA_GOV_SG_DATASET_URLS) == 6
+    assert len(dataset_blobs) == 6
+
+    for url in _DATA_GOV_SG_DATASET_URLS:
+        match = _DATA_GOV_SG_DATASET_URL_RE.fullmatch(url)
+        assert match is not None, url
+        blob = match.group(1)
+        assert blob in dataset_blobs
+        assert blob in _ALLOWLISTED_BLOBS
+        assert _blob_is_allowed(blob)
+
+    # Same shape is not enough: an arbitrary 32-char lowercase-hex value remains
+    # rejected. Fragments stay below the scanner threshold in this source file.
+    fake_catalog_secret = "deadbeef1234" + "abcd5678ef90" + "1234abcd"
+    assert re.fullmatch(r"[0-9a-f]{32}", fake_catalog_secret)
+    assert fake_catalog_secret not in _ALLOWLISTED_BLOBS
+    assert not _blob_is_allowed(fake_catalog_secret)
 
 
 def test_btmc_widget_key_resolves_from_constant_constructor_and_env(monkeypatch) -> None:

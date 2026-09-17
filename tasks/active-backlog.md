@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — API_MODEL_DECISION_REVIEW_REQUESTED (2026-09-17).**
+- **#236 — Singapore macro coverage — SCANNER_GATE_REVIEW_REQUESTED (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -651,7 +651,18 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   coverage for canonical equivalents/malformed inputs/all three gated identities/non-SGP tuples.
   The neutral process wording cleanup is complete. **Docs/backlog only; no network, RED, runtime
   code, push, capability claim, or close. Current actor: `vnfin-oss-reviewer`; next action:
-  corrected exact-SHA API/model verdict.**
+  corrected exact-SHA API/model verdict.** Corrected API/model decision **BLOCKED ON MANDATORY
+  SECRET SCAN** exact `cf40dec1acba9dffc93e77a84ec34d4a9727eb4e`, delivery `c7aa7f75`, reviewer
+  `2a2f86c`, report `review-202609172054-issue236-corrected-api-model-BLOCK.md`; B1/B2 pass, full
+  suite was 4304 passed / 1 failed because six fixed official data.gov.sg dataset IDs match the
+  generic secret heuristic. Authorized correction is scanner-test plus backlog only: exact
+  allowlist blobs derived from those six fixed official dataset URLs, narrow assertions, and
+  arbitrary-secret rejection preserved; no blanket hex or file skip. Gate repair changes only
+  `tests/test_no_secrets.py`: six exact fixed official locators feed the allowlist, locator/source
+  assertions pass, and an arbitrary same-shape 32-character value remains rejected. Scanner file
+  **8 passed**; exact scanner/docs/public-surface gate **304 passed**; full suite **4305 passed**.
+  **No runtime/API/model code, network, feature RED, push, capability claim, or close. Current
+  actor: `vnfin-oss-reviewer`; next action: exact-SHA scanner/API-model verdict.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
