@@ -24,6 +24,12 @@ in `tasks/236-api-model-decision-note.md` and its complete twelve-case matrix. B
 correction at `8fc1ceac3a2238be7952fe819142f841dbe8e5bb`. This bounded correction addresses only B1's
 executable/exact retained gates and B2's private-seam provenance wording.
 
+**Latest corrected RED-authorization review:** BLOCK at exact
+`a2920f0728935f007034fd7d6f8d6462eaf18c73`, delivery `1440c54b`, reviewer `ff8040f`, report
+`review-202609172140-issue236-corrected-red-authorization-BLOCK.md`. The BLOCK was recorded before
+this correction at `6a4b75432fafa5d061c595191ff00ff04e297c93`. All prior B1/B2 items pass; this correction
+only freezes the scan needle, once-per-line collection, and duplicate-safe equality semantics.
+
 ## Exact authorization requested
 
 Authorize one later, separately committed **RED test manifest** implementing only the tests named
@@ -387,11 +393,17 @@ docs/architecture/data-domains.md
 skills/vnfin/reference/domains.md
 ```
 
-The test constructs both the prohibited case-folded terms **and the expected-line fragments** from
-split literals, so neither its scanner rule nor its exact allowlist constants self-match in the raw
-test file. It records every matching `(relative_path, stripped_line)` pair. The only allowed policy/
-clean-room references are these exact sixteen existing pairs; no wildcard path, substring
-allowlist, file skip, or generated/binary exclusion is accepted:
+The exact case-folded needle tuple contains one split literal:
+
+```python
+BLACKLIST_NEEDLES = (("vn" + "stock").casefold(),)
+```
+
+That single substring deliberately covers the whole named blacklist family, including domain,
+repository, organization, and agent-name variants. The test constructs the expected-line fragments
+from split literals too, so neither its scanner rule nor its exact allowlist constants self-match in
+the raw test file. The only allowed policy/clean-room references are these exact sixteen existing
+pairs; no wildcard path, substring allowlist, file skip, or generated/binary exclusion is accepted:
 
 ```text
 docs/vnstock-blacklist.md | # VNStock Blacklist Checklist
@@ -412,18 +424,38 @@ docs/architecture/system-overview.md | material are permanently blacklisted (`do
 CHANGELOG.md | already fetches via `vnfin.indices` (no vnstock; no `industryID`/`industryIDv2`/`industry_name`). New
 ```
 
-The executable assertion is equality, not merely subset membership:
+Collection is exactly once per physical matching line: path order and needle count cannot multiply
+a record. The future test uses this executable algorithm:
 
 ```python
-assert actual_policy_references == ALLOWED_POLICY_REFERENCES
+from collections import Counter
+
+actual_pairs = []
+for relative_path in SCAN_PATHS:
+    text = (repo_root / relative_path).read_text(encoding="utf-8")
+    for raw_line in text.splitlines():
+        folded = raw_line.casefold()
+        if any(needle in folded for needle in BLACKLIST_NEEDLES):
+            actual_pairs.append((relative_path, raw_line.strip()))
+
+actual_counts = Counter(actual_pairs)
+allowed_counts = Counter(ALLOWED_POLICY_REFERENCES)
+residual_counts = actual_counts - allowed_counts
+residual_contamination = list(residual_counts.elements())
+
+assert actual_counts == allowed_counts
 assert residual_contamination == []
 ```
 
-Thus an altered/missing policy reference, any additional occurrence in a scanned source/test/doc,
-or any prohibited occurrence in production/test code fails. The expected result at RED and green is
-exactly sixteen allowed policy/clean-room reference pairs and **zero residual contamination**.
-Previously approved retained research/design files are not implementation/runtime scan surfaces and
-are not modified by the future RED or implementation manifest.
+`Counter` equality is order-independent but occurrence-preserving: a duplicate identical matching
+line increments its count and fails, while a missing allowed occurrence also fails. `any(...)`
+records a line once even if the needle tuple is extended later and multiple needles match it. Set or
+frozenset equality is forbidden. Thus an altered/missing policy reference, any additional occurrence
+in a scanned source/test/doc, or any prohibited occurrence in production/test code fails. The
+expected result at RED and green is exactly sixteen allowed policy/clean-room line occurrences and
+**zero residual contamination**. Previously approved retained research/design files are not
+implementation/runtime scan surfaces and are not modified by the future RED or implementation
+manifest.
 
 After a later implementation commit, but not as part of RED, run these exact merged-tree gates:
 

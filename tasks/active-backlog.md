@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — RED_AUTHORIZATION_COUNTER_CORRECTION_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — FINAL_RED_AUTHORIZATION_REVIEW_REQUESTED (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -704,6 +704,14 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   matching line once, and compare occurrence-preservingly with `Counter` or sorted lists so traversal
   order does not matter and duplicate lines cannot collapse. **RED remains unauthorized. Current
   actor: `vnfin-oss`; next action: record this BLOCK, then make one packet/backlog-only correction.**
+  BLOCK was recorded first at `6a4b75432fafa5d061c595191ff00ff04e297c93`. The packet now freezes
+  the exact split-literal needle tuple `(("vn" + "stock").casefold(),)`, reads each fixed path as
+  UTF-8, appends each matching physical line once via `any(...)`, and compares
+  `Counter(actual_pairs)` to `Counter(ALLOWED_POLICY_REFERENCES)`. Traversal order is irrelevant,
+  while duplicate or missing occurrences fail; set/frozenset equality is forbidden. **No RED,
+  fixture, runtime/API/model/snapshot change, provider/network access, push, claim, or close.
+  Current actor: `vnfin-oss-reviewer`; next action:
+  `RETURN_EXACT_RED_AUTHORIZATION_VERDICT`.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
