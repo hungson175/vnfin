@@ -2006,8 +2006,19 @@ def test_singstat_remains_absent_from_default_source_registry_and_exports():
     import vnfin.macro as macro
     from vnfin.macro.client import _DEFAULT_MACRO_SOURCE_CLASSES
 
+    calls = []
+
+    def _get(url, params, headers):
+        calls.append((url, params, headers))
+        raise AssertionError("source-registry introspection must not reach transport")
+
+    sources = default_macro_sources(http_get=_get)
     assert importlib.util.find_spec("vnfin.macro.singstat") is None
     assert "SingStatSource" not in macro.__all__
     assert not hasattr(macro, "SingStatSource")
-    assert all("singstat" not in cls.__module__.casefold() for cls in _DEFAULT_MACRO_SOURCE_CLASSES)
-    assert all("singstat" not in source.name.casefold() for source in default_macro_sources())
+    assert all(
+        "singstat" not in cls.__module__.casefold()
+        for cls in _DEFAULT_MACRO_SOURCE_CLASSES
+    )
+    assert all("singstat" not in source.name.casefold() for source in sources)
+    assert calls == []

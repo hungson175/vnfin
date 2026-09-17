@@ -109,6 +109,13 @@ def test_dbnomics_indicator_identity_unmapped_country_raises_not_none():
 def test_imf_identity_mapped_indicator_newly_validates_country(
     bad_country, expected, indicator
 ):
+    calls = []
+
+    def _get(url, params, headers):
+        calls.append((url, params, headers))
+        raise AssertionError("identity validation must run before transport")
+
     with pytest.raises(InvalidData) as exc_info:
-        IMFDataMapperSource().indicator_identity(bad_country, indicator)
+        IMFDataMapperSource(http_get=_get).indicator_identity(bad_country, indicator)
     assert str(exc_info.value) == expected
+    assert calls == []

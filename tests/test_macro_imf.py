@@ -355,34 +355,58 @@ _GATED_IMF_CASES = [
 ]
 
 
+def _issue236_preflight_source(monkeypatch):
+    calls = []
+
+    def _get(url, params, headers):
+        calls.append(("http", url, params, headers))
+        raise AssertionError("capability preflight must run before transport")
+
+    source = IMFDataMapperSource(http_get=_get)
+
+    def _cache_tripwire(*args, **kwargs):
+        calls.append(("raw-cache", args, kwargs))
+        raise AssertionError("capability preflight must run before raw-cache lookup")
+
+    monkeypatch.setattr(source, "_request_text", _cache_tripwire)
+    return source, calls
+
+
 @pytest.mark.parametrize("country", ["SGP", "sgp", " SGP "])
 @pytest.mark.parametrize("indicator,_code", _GATED_IMF_CASES)
-def test_sgp_gated_supports_country_is_quiet_false(country, indicator, _code):
-    source = IMFDataMapperSource(http_get=lambda *_: pytest.fail("transport reached"))
+def test_sgp_gated_supports_country_is_quiet_false(
+    monkeypatch, country, indicator, _code
+):
+    source, calls = _issue236_preflight_source(monkeypatch)
     supports_country = getattr(source, "supports_country", None)
     assert callable(supports_country), "approved supports_country API is missing"
     assert supports_country(country, indicator) is False
+    assert calls == []
 
 
 @pytest.mark.parametrize("country", [None, "", "SG", "USA"])
 @pytest.mark.parametrize("indicator", ["not_an_indicator", MacroIndicator.CPI])
 def test_imf_supports_country_quiet_false_for_malformed_or_unmapped_inputs(
-    country, indicator
+    monkeypatch, country, indicator
 ):
-    source = IMFDataMapperSource(http_get=lambda *_: pytest.fail("transport reached"))
+    source, calls = _issue236_preflight_source(monkeypatch)
     supports_country = getattr(source, "supports_country", None)
     assert callable(supports_country), "approved supports_country API is missing"
     assert supports_country(country, indicator) is False
+    assert calls == []
 
 
 @pytest.mark.parametrize("country", ["USA", "usa", " USA "])
 @pytest.mark.parametrize("indicator,_code", _GATED_IMF_CASES)
-def test_imf_supports_country_preserves_eligible_pairs(country, indicator, _code):
-    source = IMFDataMapperSource(http_get=lambda *_: pytest.fail("transport reached"))
+def test_imf_supports_country_preserves_eligible_pairs(
+    monkeypatch, country, indicator, _code
+):
+    source, calls = _issue236_preflight_source(monkeypatch)
     supports_country = getattr(source, "supports_country", None)
     assert callable(supports_country), "approved supports_country API is missing"
     assert supports_country(country, indicator) is True
     assert supports_country("SGP", MacroIndicator.GDP) is True
+    assert calls == []
 
 
 def test_imf_three_entrypoints_share_one_canonical_pair_predicate(monkeypatch):
