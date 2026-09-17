@@ -357,4 +357,4 @@ Process evidence: [search-discovery incident ledger](2026-09-17-singapore-macro-
 - No new source, API/model, enum, adapter, RED test, or production code is approved here.
 - Initial provider probes stayed within 26/34 calls; correction used 3/4 actions; no raw provider rows were committed.
 - Search discovery used 72 queries/19 dispatches vs 6/6; the narrative control is a `PROCESS_CONTROL_GAP`, so later discovery is blocked pending an externally enforced mechanism.
-- Need from reviewer: source/API design verdict and, only if approved, an exact API/model + RED authorization.
+- Next gate: exact-SHA API/model verdict; RED and implementation remain separately unauthorized.

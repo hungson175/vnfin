@@ -4,8 +4,9 @@
 **Packet:** `triage-202609171910-issue236-singapore-macro.md` at reviewer `ef81fe2`
 **Public triage:** `issuecomment-5714070058`
 **Source/design base:** published `origin/master` `8d450a40cd9763a58bdb85c5f125edcc18d182da`
-**Phase:** `DESIGN_BLOCK_CORRECTION` -> `DESIGN_REVIEW_REQUESTED`
-**Implementation status:** no RED, API/model, adapter, registration, production-code, push, or close
+**Phase:** `SOURCE_DESIGN_APPROVED` -> `API_MODEL_DECISION`
+**Implementation status:** API/model decision docs only; no RED, adapter, registration,
+production-code, push, or close
 
 ## Decision
 
@@ -188,7 +189,7 @@ reservation at least 116 logical URL-open actions against 18; underlying physica
 
 Control status is **`PROCESS_CONTROL_GAP`**. The breached ceiling was narrative-only; no externally
 enforced shared reservation mechanism existed. Consequently, no later search-discovery phase may
-start until a separate reviewer-approved control serializes global reservations before dispatch,
+start until a separate explicitly approved control serializes global reservations before dispatch,
 emits durable receipts, and prevents direct unreserved calls. The arithmetic checks in the incident
 ledger are desired acceptance criteria, not an implemented atomic guard. This docs-only correction
 implements no control and authorizes zero searches. The incident is presented for reviewer ruling,
@@ -245,8 +246,9 @@ SingStat remains unregistered.
   `review-202609172009-issue236-corrected-design-BLOCK.md`.
 - Current correction actor: `vnfin-oss` (C1–C5 retained evidence and docs/backlog only; no network,
   RED, or code).
-- At the corrected exact-SHA handoff, current actor becomes `vnfin-oss-reviewer`; `vnfin-oss`
-  waits for the verdict. The reviewer should fan out its own source/legal/API reviewers as required.
+- Final source/design approval is exact `631410a2d95cf27aaff43791e5b041fc853b9de2`, delivery
+  `e750b5a5`, reviewer commit `b9ae587`; independent source/legal/API review is required for the
+  API/model decision.
 - No implementation, push, issue close, release, or capability claim follows without explicit
   reviewer authorization.
 
@@ -260,4 +262,4 @@ SingStat remains unregistered.
 - Initial provider probe budget passed (26/34); correction used 3/4 actions and zero searches/retries/redirects.
 - Search use was 72 queries/19 dispatches vs 6/6; control status is `PROCESS_CONTROL_GAP`, not an implemented guard.
 - Expansion ranking is trade, money supply, reserves, real retail sales, industrial production, then FX/S$NEER.
-- Need from reviewer: exact-SHA design verdict and, if any subset passes, a separate API/model + RED authorization.
+- Next gate: exact-SHA API/model verdict; RED and implementation remain separately unauthorized.

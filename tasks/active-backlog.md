@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — API_MODEL_DECISION_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — API_MODEL_DECISION_REVIEW_REQUESTED (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -634,13 +634,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   Preserve `get_indicator`, source order, VNM-only policy-rate guard, and current model behavior.
   Final source/design **APPROVE_WITH_NOTES** exact
   `631410a2d95cf27aaff43791e5b041fc853b9de2`, delivery `e750b5a5`, reviewer `b9ae587`, report
-  `review-202609172026-issue236-final-design-approval.md`. Next authorized step is one docs-only
-  API/model decision packet choosing SGP-specific IMF country-gating before cache/transport for
-  growth/inflation/unemployment while preserving WDI primary, public API/model, all other countries,
-  country-aware and hookless custom sources, diagnostics, and the twelve-case matrix. Fold N1
-  direct-page-vs-batch provenance and N2 neutral process wording into the packet. **No network,
-  RED, runtime/source/model code, push, capability claim, or close. Current actor: `vnfin-oss`;
-  next action: commit exact packet SHA for separate reviewer verdict.**
+  `review-202609172026-issue236-final-design-approval.md`. The docs-only API/model decision packet is
+  `tasks/236-api-model-decision-note.md`: choose SGP-only IMF country-gating before cache/transport
+  for growth/inflation/unemployment, reuse the existing optional country hook, mirror the guard on
+  direct IMF fetch/identity, preserve WDI primary/all other countries/custom and hookless sources,
+  make no diagnostic/model change, accept the one additive `supports_country()` API-snapshot entry,
+  and bind the full twelve-case matrix. N1 direct-page-vs-batch provenance and N2 neutral process
+  wording are folded into the same docs-only change. **No network, RED, runtime/source/model code,
+  push, capability claim, or close. Current actor: `vnfin-oss-reviewer`; next action: exact-SHA
+  API/model verdict before any RED/build authorization.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is

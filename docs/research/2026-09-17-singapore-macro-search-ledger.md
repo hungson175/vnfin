@@ -77,7 +77,7 @@ not reconstructed transport evidence. No claim relies solely on an unretained ac
 The proposed counter formula is a policy description, **not an implemented or enforceable atomic
 guard**: there is no shared durable state, lock/single-writer contract, pre-dispatch reservation
 receipt, or bypass prevention. This is therefore a **`PROCESS_CONTROL_GAP`**. No later
-search-discovery phase may start until a separate reviewer-approved, externally enforced
+search-discovery phase may start until a separate explicitly approved, externally enforced
 reservation mechanism exists and proves all four properties. A future mechanism must reject before
 dispatch when `used_queries + batch_size > logical_cap` or
 `used_dispatches + 1 > dispatch_cap`, default every workstream to zero allowance, issue durable
@@ -90,7 +90,10 @@ correction used zero search queries and needs no more research.
 - WDI cell evidence comes from exact direct metadata/observation probes and official pages, not the unretained search sequence.
 - SingStat table identity/unit comes from exact direct `M213781` responses; the unavailable OpenAPI/terms legs remain explicit route/legal gaps.
 - MAS rate semantics use the retained direct SORA page; the policy-framework citation has `SOURCE_LOCATOR_GAP`, so the combined-source inference is explicitly qualified in the main report.
-- The proposal-only expansion ranking is retained only where a batch above maps to a direct official data.gov dataset cited in the main report; unsupported claims are removed.
+- Proposal-only expansion rows are supported by separately cited direct official pages where
+  present; retained search-result provenance is recorded independently per batch and is not
+  retroactively inferred. Trade, retail-sales, and industrial-production direct pages do not
+  acquire batch provenance when their exact result URLs are `RESULT_URL_NOT_RETAINED`.
 
 ## Bottom summary
 
@@ -100,6 +103,5 @@ correction used zero search queries and needs no more research.
 - This public ledger uses neutral batch IDs and contains no machine-local source paths.
 - Findings rely on direct official pages/probes, never search-result snippets.
 - The narrative counter is a `PROCESS_CONTROL_GAP`, not an implemented atomic guard.
-- Later search discovery is blocked pending a reviewer-approved externally enforced reservation mechanism.
+- Later search discovery is blocked pending an explicitly approved externally enforced reservation mechanism.
 - This correction made zero search queries; no further #236 research is required.
-- Need from reviewer: accept or reject this C1/C2/C5 evidence-contract correction.
