@@ -10,6 +10,7 @@ import pytest
 from vnfin.exceptions import InvalidData
 from vnfin.macro.dbnomics import DBnomicsSource
 from vnfin.macro.imf import IMFDataMapperSource
+from vnfin.macro.indicators import MacroIndicator
 from vnfin.macro.worldbank import WorldBankMacroSource
 
 _SOURCES = [WorldBankMacroSource, IMFDataMapperSource, DBnomicsSource]
@@ -81,3 +82,33 @@ def test_dbnomics_indicator_identity_unmapped_country_raises_not_none():
     # valid ISO3 shape but no IFS mapping -> InvalidData (not "A.None.<concept>").
     with pytest.raises(InvalidData, match="no IFS country code"):
         DBnomicsSource().indicator_identity("QQQ", "gdp")
+
+
+@pytest.mark.parametrize(
+    "bad_country,expected",
+    [
+        (
+            None,
+            "imf_datamapper: country must be a 3-letter ISO3 code, got NoneType",
+        ),
+        ("", "imf_datamapper: country must be a 3-letter ISO3 code, got ''"),
+        (
+            "SG",
+            "imf_datamapper: country must be a 3-letter ISO3 code, got 'SG'",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "indicator",
+    [
+        MacroIndicator.GDP_GROWTH,
+        MacroIndicator.INFLATION,
+        MacroIndicator.UNEMPLOYMENT,
+    ],
+)
+def test_imf_identity_mapped_indicator_newly_validates_country(
+    bad_country, expected, indicator
+):
+    with pytest.raises(InvalidData) as exc_info:
+        IMFDataMapperSource().indicator_identity(bad_country, indicator)
+    assert str(exc_info.value) == expected

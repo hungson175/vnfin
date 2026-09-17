@@ -290,6 +290,56 @@ def test_build_surface_is_deterministic():
     assert build_surface() == build_surface()
 
 
+def test_singstat_remains_absent_from_live_and_committed_public_surface():
+    live = build_surface()
+    baseline = json.loads(_BASELINE.read_text(encoding="utf-8"))
+    for surface in (live, baseline):
+        encoded = json.dumps(surface, sort_keys=True).casefold()
+        assert "singstat" not in encoded
+        macro_module = surface["modules"]["vnfin.macro"]
+        assert "SingStatSource" not in macro_module["all"]
+        assert "SingStatSource" not in macro_module["members"]
+
+
+def test_imf_supports_country_is_frozen_as_exact_additive_surface():
+    live = build_surface()
+    methods = live["modules"]["vnfin.macro"]["members"][
+        "IMFDataMapperSource"
+    ]["methods"]
+    expected = {
+        "params": [
+            {
+                "name": "self",
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "has_default": False,
+                "default_repr": None,
+            },
+            {
+                "name": "country_iso3",
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "has_default": False,
+                "default_repr": None,
+            },
+            {
+                "name": "indicator",
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "has_default": False,
+                "default_repr": None,
+            },
+        ],
+        "returns": "bool",
+    }
+    assert methods.get("supports_country") == expected
+
+    # RED does not regenerate the committed v0.2.0 baseline.  The new method is
+    # expected to be additive against that baseline when implementation arrives.
+    baseline = json.loads(_BASELINE.read_text(encoding="utf-8"))
+    baseline_methods = baseline["modules"]["vnfin.macro"]["members"][
+        "IMFDataMapperSource"
+    ]["methods"]
+    assert "supports_country" not in baseline_methods
+
+
 # ---------------------------------------------------------------------------
 # P1 hardening (reviewer gate 1): return types, param order/kind/default,
 # constructors, sources coverage, exceptions __all__, version lockstep

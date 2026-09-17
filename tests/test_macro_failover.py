@@ -1528,3 +1528,486 @@ def test_policy_rate_usa_custom_runtime_identity_seam_is_preserved():
     assert result.unit == "% per annum"
     assert result.frequency.value == "monthly"
     assert calls == ["USA"]
+
+
+# ---------------------------------------------------------------------------
+# Issue #236 RED manifest — SGP country gating and compatibility matrix.
+# All provider-shaped payloads below are fabricated and every transport is
+# injected; no test in this section can use the default network transport.
+# ---------------------------------------------------------------------------
+
+_ISSUE236_GATED = [
+    (MacroIndicator.GDP_GROWTH, "NY.GDP.MKTP.KD.ZG", "NGDP_RPCH"),
+    (MacroIndicator.INFLATION, "FP.CPI.TOTL.ZG", "PCPIPCH"),
+    (MacroIndicator.UNEMPLOYMENT, "SL.UEM.TOTL.ZS", "LUR"),
+]
+
+
+def _issue236_wdi_empty():
+    return json.dumps(
+        [
+            {
+                "page": 0,
+                "pages": 0,
+                "per_page": 0,
+                "total": 0,
+                "sourceid": None,
+                "lastupdated": None,
+            },
+            None,
+        ]
+    )
+
+
+def _issue236_wdi_success(country, code, years):
+    rows = [
+        {
+            "indicator": {"id": code, "value": "Fabricated WDI label"},
+            "country": {"id": "ZZ", "value": "Fabricated country label"},
+            "countryiso3code": country,
+            "date": str(year),
+            "value": value,
+            "unit": "%",
+            "obs_status": "",
+            "decimal": 1,
+        }
+        for year, value in years
+    ]
+    return json.dumps(
+        [{"page": 1, "pages": 1, "per_page": 20000, "total": len(rows)}, rows]
+    )
+
+
+def _issue236_imf_success(country, code, years):
+    return json.dumps(
+        {
+            "values": {code: {country: {str(year): value for year, value in years}}},
+            "api": {"version": "1", "output-method": "json"},
+        }
+    )
+
+
+@pytest.mark.parametrize("indicator,wdi_code,imf_code", _ISSUE236_GATED)
+def test_sgp_gated_wdi_failure_has_only_wdi_attempt_and_no_imf_transport(
+    monkeypatch, indicator, wdi_code, imf_code
+):
+    wdi_calls = []
+    imf_calls = []
+
+    def _wdi_get(url, params, headers):
+        wdi_calls.append((url, params, headers))
+        return _issue236_wdi_empty()
+
+    def _imf_get(url, params, headers):
+        imf_calls.append((url, params, headers))
+        return _issue236_imf_success("SGP", imf_code, [(2018, 8.0)])
+
+    world_bank = WorldBankMacroSource(http_get=_wdi_get)
+    imf = IMFDataMapperSource(http_get=_imf_get)
+
+    def _imf_cache_tripwire(*args, **kwargs):
+        imf_calls.append(("raw-cache", args, kwargs))
+        raise AssertionError("ineligible IMF route reached raw cache")
+
+    monkeypatch.setattr(imf, "_request_text", _imf_cache_tripwire)
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        default_macro_client(sources=[world_bank, imf]).get_indicator(
+            "SGP", indicator
+        )
+    expected_attempt = SourceAttempt(
+        "worldbank",
+        False,
+        "EmptyData: worldbank: no observations in requested window "
+        f"for SGP/{wdi_code}",
+    )
+    assert exc_info.value.symbol == f"SGP/{indicator.value}"
+    assert exc_info.value.interval is None
+    assert exc_info.value.attempts == (expected_attempt,)
+    assert str(exc_info.value) == (
+        f"all sources failed for SGP/{indicator.value} None -> "
+        f"worldbank:{expected_attempt.reason}"
+    )
+    assert len(wdi_calls) == 1
+    assert imf_calls == []
+
+
+def test_sgp_gated_imf_only_has_exact_zero_attempt_carrier_before_cache_transport(
+    monkeypatch,
+):
+    calls = []
+
+    def _imf_get(url, params, headers):
+        calls.append((url, params, headers))
+        raise AssertionError("country gate must run before transport")
+
+    source = IMFDataMapperSource(http_get=_imf_get)
+    HttpDataSource.__init__(
+        source,
+        http_get=_imf_get,
+        timeout=25.0,
+        cache_ttl=60.0,
+        clock=lambda: 1000.0,
+    )
+
+    def _cache_tripwire(*args, **kwargs):
+        raise AssertionError("country gate must run before raw-cache lookup")
+
+    monkeypatch.setattr(source, "_request_text", _cache_tripwire)
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        default_macro_client(sources=[source]).get_indicator(
+            "SGP", MacroIndicator.GDP_GROWTH
+        )
+    assert exc_info.value.symbol == "SGP/gdp_growth"
+    assert exc_info.value.interval is None
+    assert exc_info.value.attempts == ()
+    assert str(exc_info.value) == (
+        "all sources failed for SGP/gdp_growth None -> no sources attempted"
+    )
+    assert calls == []
+
+
+def test_macro_failover_never_stitches_partial_wdi_and_imf_points():
+    wdi_calls = []
+    imf_calls = []
+    code = "NY.GDP.MKTP.KD.ZG"
+
+    def _wdi_get(url, params, headers):
+        wdi_calls.append((url, params, headers))
+        return _issue236_wdi_success("ZZZ", code, [(2019, 19.0), (2018, 18.0)])
+
+    def _imf_get(url, params, headers):
+        imf_calls.append((url, params, headers))
+        return _issue236_imf_success("ZZZ", "NGDP_RPCH", [(2020, 20.0)])
+
+    result = default_macro_client(
+        sources=[
+            WorldBankMacroSource(http_get=_wdi_get),
+            IMFDataMapperSource(http_get=_imf_get),
+        ]
+    ).get_indicator("ZZZ", MacroIndicator.GDP_GROWTH)
+    assert result.source == "worldbank"
+    assert result.points == ((date(2018, 1, 1), 18.0), (date(2019, 1, 1), 19.0))
+    assert result.warnings == ()
+    assert len(wdi_calls) == 1
+    assert imf_calls == []
+
+
+def test_non_sgp_wdi_failure_returns_whole_imf_series_not_mixed_points():
+    wdi_calls = []
+    imf_calls = []
+
+    def _wdi_get(url, params, headers):
+        wdi_calls.append((url, params, headers))
+        return _issue236_wdi_empty()
+
+    def _imf_get(url, params, headers):
+        imf_calls.append((url, params, headers))
+        return _issue236_imf_success(
+            "ZZZ", "NGDP_RPCH", [(2018, 81.0), (2019, 91.0)]
+        )
+
+    result = default_macro_client(
+        sources=[
+            WorldBankMacroSource(http_get=_wdi_get),
+            IMFDataMapperSource(http_get=_imf_get),
+        ]
+    ).get_indicator("ZZZ", MacroIndicator.GDP_GROWTH)
+    assert result.source == "imf_datamapper"
+    assert result.points == ((date(2018, 1, 1), 81.0), (date(2019, 1, 1), 91.0))
+    assert result.warnings == (
+        "failover: worldbank:EmptyData: worldbank: no observations in requested "
+        "window for ZZZ/NY.GDP.MKTP.KD.ZG; imf_datamapper:ok",
+    )
+    assert len(wdi_calls) == 1
+    assert len(imf_calls) == 1
+
+
+def _issue236_assert_no_attempt_carrier(monkeypatch, indicator):
+    calls = []
+    sources = [
+        WorldBankMacroSource(http_get=lambda *args: calls.append(("worldbank", args))),
+        IMFDataMapperSource(http_get=lambda *args: calls.append(("imf", args))),
+        DBnomicsSource(http_get=lambda *args: calls.append(("dbnomics", args))),
+    ]
+
+    def _tripwire(*args, **kwargs):
+        raise AssertionError("ineligible built-in reached raw cache or transport")
+
+    for source in sources:
+        monkeypatch.setattr(source, "_request_text", _tripwire)
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        default_macro_client(sources=sources).get_indicator("SGP", indicator)
+    err = exc_info.value
+    assert err.symbol == f"SGP/{indicator.value}"
+    assert err.interval is None
+    assert err.attempts == ()
+    assert str(err) == (
+        f"all sources failed for SGP/{indicator.value} None -> no sources attempted"
+    )
+    assert calls == []
+
+
+def test_sgp_cpi_yoy_default_chain_has_exact_zero_attempt_carrier_before_cache_transport(
+    monkeypatch,
+):
+    _issue236_assert_no_attempt_carrier(monkeypatch, MacroIndicator.CPI_YOY)
+
+
+def test_sgp_policy_rate_default_chain_has_exact_zero_attempt_carrier_and_no_proxy_route(
+    monkeypatch,
+):
+    _issue236_assert_no_attempt_carrier(monkeypatch, MacroIndicator.POLICY_RATE)
+    assert all(
+        source.name not in {"sora", "interbank", "facility", "bond_yield", "fx"}
+        for source in default_macro_sources(http_get=lambda *_: pytest.fail("transport"))
+    )
+
+
+class _QualifiedCountrySource:
+    name = "qualified-custom"
+
+    def __init__(self, indicators, calls, country="SGP"):
+        self._indicators = set(indicators)
+        self._calls = calls
+        self._country = country
+        self.country_checks = []
+
+    def supports(self, indicator):
+        return MacroIndicator(indicator) in self._indicators
+
+    def supports_country(self, country_iso3, indicator):
+        pair = (country_iso3, MacroIndicator(indicator))
+        self.country_checks.append(pair)
+        return pair[0] == self._country and pair[1] in self._indicators
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def indicator_identity(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        return canonical_indicator_code(ind), canonical_indicator_name(ind)
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        self._calls.append((country_iso3, ind))
+        frequency = (
+            Frequency.MONTHLY
+            if ind in {MacroIndicator.CPI_YOY, MacroIndicator.POLICY_RATE}
+            else Frequency.ANNUAL
+        )
+        return IndicatorSeries(
+            country=country_iso3,
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=((date(2019, 1, 1), 9.0),),
+            source=self.name,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            frequency=frequency,
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+class _HooklessSyntheticSource:
+    name = "hookless-custom"
+
+    def __init__(self, indicators, calls):
+        self._indicators = set(indicators)
+        self._calls = calls
+
+    def supports(self, indicator):
+        return MacroIndicator(indicator) in self._indicators
+
+    def unit_for(self, indicator):
+        return canonical_unit(MacroIndicator(indicator))
+
+    def get_indicator(self, country_iso3, indicator):
+        ind = MacroIndicator(indicator)
+        self._calls.append((country_iso3, ind))
+        return IndicatorSeries(
+            country=country_iso3,
+            indicator_code=canonical_indicator_code(ind),
+            indicator_name=canonical_indicator_name(ind),
+            points=((date(2019, 1, 1), 9.0),),
+            source=self.name,
+            unit=canonical_unit(ind),
+            currency=canonical_currency(ind),
+            frequency=Frequency.MONTHLY,
+            fetched_at_utc=datetime.now(timezone.utc),
+        )
+
+
+@pytest.mark.parametrize(
+    "indicator", [MacroIndicator.CPI_YOY, MacroIndicator.POLICY_RATE]
+)
+def test_sgp_missing_monthly_cells_accept_truthful_country_aware_custom_source(
+    indicator,
+):
+    calls = []
+    source = _QualifiedCountrySource([indicator], calls)
+    result = default_macro_client(sources=[source]).get_indicator("SGP", indicator)
+    assert result.country == "SGP"
+    assert result.source == "qualified-custom"
+    assert result.indicator_code == canonical_indicator_code(indicator)
+    assert result.indicator_name == canonical_indicator_name(indicator)
+    assert result.unit == canonical_unit(indicator)
+    assert result.currency == canonical_currency(indicator)
+    assert result.frequency == Frequency.MONTHLY
+    assert calls == [("SGP", indicator)]
+    assert source.country_checks == [("SGP", indicator)]
+
+
+def test_sgp_false_country_hook_is_skipped_before_fetch_cache_transport_and_attempt_accounting():
+    class _FalseCountrySource:
+        name = "false-custom"
+
+        def __init__(self):
+            self.country_checks = []
+            self.fetch_calls = []
+
+        def supports(self, indicator):
+            return MacroIndicator(indicator) == MacroIndicator.CPI_YOY
+
+        def supports_country(self, country_iso3, indicator):
+            self.country_checks.append((country_iso3, MacroIndicator(indicator)))
+            return False
+
+        def unit_for(self, indicator):
+            return "%"
+
+        def _request_text(self, *args, **kwargs):
+            raise AssertionError("false country hook reached raw cache")
+
+        def get_indicator(self, country_iso3, indicator):
+            self.fetch_calls.append((country_iso3, indicator))
+            raise AssertionError("false country hook reached fetch")
+
+    source = _FalseCountrySource()
+    with pytest.raises(AllSourcesFailed) as exc_info:
+        default_macro_client(sources=[source]).get_indicator(
+            "SGP", MacroIndicator.CPI_YOY
+        )
+    assert exc_info.value.symbol == "SGP/cpi_yoy"
+    assert exc_info.value.interval is None
+    assert exc_info.value.attempts == ()
+    assert source.country_checks == [("SGP", MacroIndicator.CPI_YOY)]
+    assert source.fetch_calls == []
+
+
+def test_sgp_gated_annual_imf_skip_preserves_truthful_custom_source_and_attempt_trail(
+    monkeypatch,
+):
+    wdi_calls = []
+    imf_calls = []
+    custom_calls = []
+
+    def _wdi_get(url, params, headers):
+        wdi_calls.append((url, params, headers))
+        return _issue236_wdi_empty()
+
+    def _imf_get(url, params, headers):
+        imf_calls.append((url, params, headers))
+        raise AssertionError("ineligible IMF route reached transport")
+
+    imf = IMFDataMapperSource(http_get=_imf_get)
+    HttpDataSource.__init__(
+        imf,
+        http_get=_imf_get,
+        timeout=25.0,
+        cache_ttl=60.0,
+        clock=lambda: 1000.0,
+    )
+
+    def _cache_tripwire(*args, **kwargs):
+        raise AssertionError("ineligible IMF route reached raw cache")
+
+    monkeypatch.setattr(imf, "_request_text", _cache_tripwire)
+    custom = _QualifiedCountrySource(
+        [MacroIndicator.GDP_GROWTH], custom_calls
+    )
+    result = default_macro_client(
+        sources=[
+            WorldBankMacroSource(http_get=_wdi_get),
+            imf,
+            custom,
+        ]
+    ).get_indicator("SGP", MacroIndicator.GDP_GROWTH)
+    assert result.source == "qualified-custom"
+    assert result.points == ((date(2019, 1, 1), 9.0),)
+    assert result.warnings == (
+        "failover: worldbank:EmptyData: worldbank: no observations in requested "
+        "window for SGP/NY.GDP.MKTP.KD.ZG; qualified-custom:ok",
+    )
+    assert len(wdi_calls) == 1
+    assert imf_calls == []
+    assert custom_calls == [("SGP", MacroIndicator.GDP_GROWTH)]
+
+
+def test_sgp_hookless_custom_source_remains_eligible_in_caller_order():
+    custom_calls = []
+    built_in_calls = []
+    custom = _HooklessSyntheticSource([MacroIndicator.CPI_YOY], custom_calls)
+    dbnomics = DBnomicsSource(
+        http_get=lambda *args: built_in_calls.append(args) or pytest.fail("transport")
+    )
+    result = default_macro_client(sources=[custom, dbnomics]).get_indicator(
+        "SGP", MacroIndicator.CPI_YOY
+    )
+    assert result.country == "SGP"
+    assert result.source == "hookless-custom"
+    assert result.indicator_code == "cpi_yoy"
+    assert result.indicator_name == "CPI Year-over-Year"
+    assert result.unit == "%"
+    assert result.frequency == Frequency.MONTHLY
+    assert custom_calls == [("SGP", MacroIndicator.CPI_YOY)]
+    assert built_in_calls == []
+
+
+@pytest.mark.parametrize("country", ["USA", "ZZZ"])
+@pytest.mark.parametrize("indicator,wdi_code,imf_code", _ISSUE236_GATED)
+def test_non_sgp_three_percent_indicators_keep_wdi_to_imf_fallback(
+    country, indicator, wdi_code, imf_code
+):
+    wdi_calls = []
+    imf_calls = []
+
+    def _wdi_get(url, params, headers):
+        wdi_calls.append((url, params, headers))
+        return _issue236_wdi_empty()
+
+    def _imf_get(url, params, headers):
+        imf_calls.append((url, params, headers))
+        return _issue236_imf_success(country, imf_code, [(2018, 18.0), (2019, 19.0)])
+
+    result = default_macro_client(
+        sources=[
+            WorldBankMacroSource(http_get=_wdi_get),
+            IMFDataMapperSource(http_get=_imf_get),
+        ]
+    ).get_indicator(country, indicator)
+    assert result.country == country
+    assert result.source == "imf_datamapper"
+    assert result.indicator_code == imf_code
+    assert result.indicator_name == f"{indicator.value} ({imf_code})"
+    assert result.unit == "%"
+    assert result.currency is None
+    assert result.frequency == Frequency.ANNUAL
+    assert result.points == ((date(2018, 1, 1), 18.0), (date(2019, 1, 1), 19.0))
+    assert result.warnings == (
+        "failover: worldbank:EmptyData: worldbank: no observations in requested "
+        f"window for {country}/{wdi_code}; imf_datamapper:ok",
+    )
+    assert len(wdi_calls) == 1
+    assert len(imf_calls) == 1
+
+
+def test_singstat_remains_absent_from_default_source_registry_and_exports():
+    import importlib.util
+    import vnfin.macro as macro
+    from vnfin.macro.client import _DEFAULT_MACRO_SOURCE_CLASSES
+
+    assert importlib.util.find_spec("vnfin.macro.singstat") is None
+    assert "SingStatSource" not in macro.__all__
+    assert not hasattr(macro, "SingStatSource")
+    assert all("singstat" not in cls.__module__.casefold() for cls in _DEFAULT_MACRO_SOURCE_CLASSES)
+    assert all("singstat" not in source.name.casefold() for source in default_macro_sources())

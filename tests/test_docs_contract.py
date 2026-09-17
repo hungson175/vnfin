@@ -1285,3 +1285,122 @@ def test_forward_discovery_guard_catches_a_planted_gap():
     assert "zero_liquidity" in flagged, (
         "the forward-discovery guard failed to flag a removed (undocumented) emitted token"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #236 RED manifest — retained evidence and later runtime-doc lockstep.
+# ---------------------------------------------------------------------------
+
+_ISSUE236_RUNTIME_DOC_PATHS = (
+    "README.md",
+    "docs/api.md",
+    "docs/how-to/byok-fred.md",
+    "docs/tutorials/macro-and-fx.md",
+    "docs/sources/macro-imf.md",
+    "docs/sources/macro-worldbank.md",
+    "docs/sources/macro-dbnomics.md",
+    "docs/sources/macro-fred.md",
+    "docs/ai-usage.md",
+    "docs/units.md",
+    "docs/roadmap.md",
+    "docs/architecture/system-overview.md",
+    "docs/architecture/data-domains.md",
+    "skills/vnfin/reference/domains.md",
+    "CHANGELOG.md",
+)
+
+
+def test_issue236_sgp_wdi_bounds_and_historical_rate_caveats_are_retained():
+    design = " ".join(_read("tasks/236-design-note.md").split()).replace("**", "")
+    ledger = _read("docs/research/2026-09-17-singapore-macro-search-ledger.md")
+
+    for exact in (
+        "66 annual points, 1960–2025",
+        "65 WDI annual points, 1961–2025",
+        "35 WDI annual points, 1991–2025",
+        "44 annual points, 1978–2021",
+        "45 annual points, 1977–2021",
+        "There were no duplicate years or interior gaps inside each non-null bound.",
+        "The three WDI interest rates are qualified as historical series, not current Singapore bank-rate capability.",
+        "No staleness warning or code change is authorized in this phase.",
+    ):
+        assert exact in design
+    assert "revision/correction behavior is not documented sufficiently" in design
+    assert "NOT_RETAINED" in ledger
+    assert "cannot support a claim" in ledger
+
+
+def test_issue236_sgp_imf_gate_docs_skill_and_changelog_are_in_lockstep():
+    texts = {path: _read(path) for path in _ISSUE236_RUNTIME_DOC_PATHS}
+    assert tuple(texts) == _ISSUE236_RUNTIME_DOC_PATHS
+
+    central_folded = texts["docs/sources/macro-imf.md"].casefold()
+    for token in (
+        "sgp",
+        "gdp_growth",
+        "ngdp_rpch",
+        "inflation",
+        "pcpipch",
+        "unemployment",
+        "lur",
+        "country-ineligible",
+        "absent from attempts",
+        "indicator_identity",
+        "non-sgp",
+        "custom",
+        "hookless",
+    ):
+        assert token.casefold() in central_folded, (
+            f"docs/sources/macro-imf.md lacks #236 disclosure token {token!r}"
+        )
+
+    # A runtime-facing file that states the generic WB-to-IMF chain must carry
+    # the SGP exception or link directly to the central source disclosure.
+    for path, text in texts.items():
+        folded = text.casefold()
+        states_chain = "world bank" in folded and "imf" in folded
+        if states_chain and path != "docs/sources/macro-imf.md":
+            assert "sgp" in folded or "docs/sources/macro-imf.md" in folded, path
+
+    for path in (
+        "README.md",
+        "docs/api.md",
+        "docs/tutorials/macro-and-fx.md",
+        "skills/vnfin/reference/domains.md",
+        "CHANGELOG.md",
+    ):
+        folded = texts[path].casefold()
+        assert "sgp" in folded or "docs/sources/macro-imf.md" in folded, path
+
+
+def test_issue236_sgp_missing_monthly_cells_remain_missing_without_proxy_substitution():
+    texts = {path: _read(path) for path in _ISSUE236_RUNTIME_DOC_PATHS}
+    central = texts["docs/sources/macro-imf.md"].casefold()
+    for token in (
+        "sgp/cpi_yoy",
+        "sgp/policy_rate",
+        "remain missing",
+        "no singstat",
+        "no proxy",
+        "sora",
+        "interbank",
+        "facility",
+        "lending",
+        "deposit",
+        "bond yield",
+        "fx",
+    ):
+        assert token in central, (
+            "docs/sources/macro-imf.md must state the missing-without-proxy "
+            f"boundary for {token!r}"
+        )
+
+    for path in (
+        "docs/api.md",
+        "docs/tutorials/macro-and-fx.md",
+        "skills/vnfin/reference/domains.md",
+        "CHANGELOG.md",
+    ):
+        folded = texts[path].casefold()
+        assert "sgp/cpi_yoy" in folded or "docs/sources/macro-imf.md" in folded, path
+        assert "sgp/policy_rate" in folded or "docs/sources/macro-imf.md" in folded, path

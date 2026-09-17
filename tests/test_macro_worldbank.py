@@ -24,6 +24,7 @@ World Bank response shapes covered:
 - null obs value: an obs whose "value" is null (missing year) -> skipped, not InvalidData
 """
 import json
+import math
 from datetime import date
 
 import pytest
@@ -971,3 +972,102 @@ def test_can_public_path_five_indicators(indicator, wdi_code, unit, currency):
     # ascending order together, despite the fixture being fed newest-first.
     assert dates == [date(2021, 1, 1), date(2022, 1, 1)]
     assert len(result.points) == 2
+
+
+# ---------------------------------------------------------------------------
+# Issue #236 RED manifest — Singapore's eight qualified WDI primary legs.
+#
+# These fixtures intentionally retain only the real routing identities.  Every
+# display label, date, and value is fabricated, and each source has an injected
+# transport so this characterization can never reach a provider.
+# ---------------------------------------------------------------------------
+
+_SGP_WDI_PRIMARY_CASES = [
+    (MacroIndicator.GDP, "NY.GDP.MKTP.CD", "current US$", "USD"),
+    (MacroIndicator.GDP_GROWTH, "NY.GDP.MKTP.KD.ZG", "%", None),
+    (MacroIndicator.CPI, "FP.CPI.TOTL", "index", None),
+    (MacroIndicator.INFLATION, "FP.CPI.TOTL.ZG", "%", None),
+    (MacroIndicator.UNEMPLOYMENT, "SL.UEM.TOTL.ZS", "%", None),
+    (MacroIndicator.LENDING_RATE, "FR.INR.LEND", "%", None),
+    (MacroIndicator.DEPOSIT_RATE, "FR.INR.DPST", "%", None),
+    (MacroIndicator.REAL_INTEREST_RATE, "FR.INR.RINR", "%", None),
+]
+
+
+@pytest.mark.parametrize(
+    "indicator,wdi_code,unit,currency", _SGP_WDI_PRIMARY_CASES
+)
+def test_sgp_eight_wdi_primaries_preserve_exact_contract(
+    indicator, wdi_code, unit, currency
+):
+    fake_name = "Fabricated Singapore-contract display label"
+    rows = [
+        _obs("SG", "SGP", 2042, 22.0, name=fake_name, code=wdi_code, unit=unit),
+        _obs("SG", "SGP", 2041, 11.0, name=fake_name, code=wdi_code, unit=unit),
+    ]
+    payload = json.dumps([_meta(2), rows])
+    calls = []
+
+    def _g(url, params, headers):
+        calls.append((url, params, headers))
+        return payload
+
+    result = WorldBankMacroSource(http_get=_g).get_canonical_indicator(
+        "SGP", indicator
+    )
+
+    assert len(calls) == 1
+    url, params, _headers = calls[0]
+    assert url == (
+        "https://api.worldbank.org/v2/country/SGP/indicator/" + wdi_code
+    )
+    assert params == {"format": "json", "per_page": 20000}
+    assert result.country == "SGP"
+    assert result.indicator_code == wdi_code
+    assert result.indicator_name == fake_name
+    assert result.source == "worldbank"
+    assert result.unit == unit
+    assert result.value_unit == unit
+    assert result.currency == currency
+    assert result.frequency == Frequency.ANNUAL
+    assert result.points == (
+        (date(2041, 1, 1), 11.0),
+        (date(2042, 1, 1), 22.0),
+    )
+    assert all(math.isfinite(value) for _point_date, value in result.points)
+    assert result.projection_from_year is None
+    assert len({point_date for point_date, _ in result.points}) == 2
+
+
+def test_sgp_wdi_boolean_value_keeps_invalid_data_carrier():
+    code = "FP.CPI.TOTL.ZG"
+    payload = json.dumps(
+        [
+            _meta(1),
+            [
+                _obs(
+                    "SG",
+                    "SGP",
+                    2041,
+                    True,
+                    name="Fabricated malformed value label",
+                    code=code,
+                    unit="%",
+                )
+            ],
+        ]
+    )
+    calls = []
+
+    def _g(url, params, headers):
+        calls.append((url, params, headers))
+        return payload
+
+    with pytest.raises(InvalidData) as exc_info:
+        WorldBankMacroSource(http_get=_g).get_canonical_indicator(
+            "SGP", MacroIndicator.INFLATION
+        )
+    assert str(exc_info.value) == (
+        f"worldbank: malformed number (observation for {code}): bool is not numeric"
+    )
+    assert len(calls) == 1
