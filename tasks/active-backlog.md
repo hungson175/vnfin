@@ -602,7 +602,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — DESIGN_REVIEW_REQUESTED (C1-C5 corrected, 2026-09-17).**
+- **#236 — Singapore macro coverage — API_MODEL_DECISION_WIP (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
   `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
@@ -632,8 +632,15 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   code change activates the full twelve-case matrix; MAS policy evidence is
   `SOURCE_LOCATOR_GAP`, with SORA's policy-target rejection labeled a combined-source inference.
   Preserve `get_indicator`, source order, VNM-only policy-rate guard, and current model behavior.
-  **No network, RED, code, push, or capability claim. Current actor: `vnfin-oss-reviewer`; builder
-  awaits exact-SHA re-review verdict.**
+  Final source/design **APPROVE_WITH_NOTES** exact
+  `631410a2d95cf27aaff43791e5b041fc853b9de2`, delivery `e750b5a5`, reviewer `b9ae587`, report
+  `review-202609172026-issue236-final-design-approval.md`. Next authorized step is one docs-only
+  API/model decision packet choosing SGP-specific IMF country-gating before cache/transport for
+  growth/inflation/unemployment while preserving WDI primary, public API/model, all other countries,
+  country-aware and hookless custom sources, diagnostics, and the twelve-case matrix. Fold N1
+  direct-page-vs-batch provenance and N2 neutral process wording into the packet. **No network,
+  RED, runtime/source/model code, push, capability claim, or close. Current actor: `vnfin-oss`;
+  next action: commit exact packet SHA for separate reviewer verdict.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
