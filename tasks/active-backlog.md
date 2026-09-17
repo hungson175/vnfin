@@ -628,7 +628,7 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   correction artifacts are `d18ca12b3291f8b082814487dd16c7992b62767a`: all 12 neutral batches
   map to exact official URLs or `RESULT_URL_NOT_RETAINED`; public ledger has no workflow roles or
   machine-local paths; control is `PROCESS_CONTROL_GAP`, not an implemented atomic guard; all later
-  search discovery is blocked pending a reviewer-approved external mechanism; every #236 behavior/
+  search discovery is blocked pending an explicitly approved external mechanism; every #236 behavior/
   code change activates the full twelve-case matrix; MAS policy evidence is
   `SOURCE_LOCATOR_GAP`, with SORA's policy-target rejection labeled a combined-source inference.
   Preserve `get_indicator`, source order, VNM-only policy-rate guard, and current model behavior.
@@ -642,7 +642,16 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
   and bind the full twelve-case matrix. N1 direct-page-vs-batch provenance and N2 neutral process
   wording are folded into the same docs-only change. **No network, RED, runtime/source/model code,
   push, capability claim, or close. Current actor: `vnfin-oss-reviewer`; next action: exact-SHA
-  API/model verdict before any RED/build authorization.**
+  API/model verdict before any RED/build authorization.** Initial API/model decision **BLOCKED**
+  exact `aaf7350a187d1258bd895b8e858125ee27f980c1`, delivery `a62ab490`, reviewer `c34bde5`, report
+  `review-202609172042-issue236-api-model-decision-BLOCK.md`. The corrected packet now binds
+  `indicator_identity()`'s new canonical-country validation, fetch-country-first versus
+  identity-indicator-first error precedence, the mixed-invalid carriers, eligible-pair-only
+  compatibility, the shared provider-local canonical-pair predicate, and expanded deferred RED
+  coverage for canonical equivalents/malformed inputs/all three gated identities/non-SGP tuples.
+  The neutral process wording cleanup is complete. **Docs/backlog only; no network, RED, runtime
+  code, push, capability claim, or close. Current actor: `vnfin-oss-reviewer`; next action:
+  corrected exact-SHA API/model verdict.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is

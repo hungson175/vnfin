@@ -53,7 +53,8 @@ The chosen rule does **not**:
 - change the eight WDI primary mappings or allow a different primary;
 - gate IMF for another country or for `SGP/GDP`;
 - make IMF `NGDPD` a GDP fallback (its `USD bn` unit remains noncanonical for current-US$ GDP);
-- alter projection classification, `latest()`, source warnings, unit/identity guards, or failover;
+- alter projection classification, `latest()`, source warnings, unit/result-identity validation,
+  eligible-pair identity tuples, or failover;
 - special-case or remove a caller-supplied country-aware or hookless source; or
 - qualify, register, derive, relabel, fill, or stitch a Singapore monthly series or policy proxy.
 
@@ -104,25 +105,52 @@ Its exact behavior is:
 | Malformed country or unsupported indicator | `False`, without network or transport |
 
 The three-member set is frozen and provider-local. Indicator-only `supports()`, `unit_for()`,
-`_IMF_MAP`, source construction, timeout, headers, response parsing, identity values, and the
-projection boundary remain unchanged.
+`_IMF_MAP`, source construction, timeout, headers, response parsing, and the projection boundary
+remain unchanged. Existing identity tuples remain byte-equal for every eligible canonical pair;
+the exported identity method's country-input behavior is deliberately narrowed in D3.
 
 `IMFDataMapperSource` is exported and snapshot-inspected, so `supports_country()` is an **additive
 public class method** even though the client uses it as a capability hook. This additive snapshot
 delta is accepted as the narrow architectural choice; it mirrors the existing
 `DBnomicsSource.supports_country()` protocol and avoids coupling generic orchestration to an IMF
-type/name special case. No existing method, function, constructor, parameter, enum, export, model
-field, serialization shape, or return type changes.
+type/name special case. No existing signature, constructor parameter, enum, export, model field,
+serialization shape, or return type changes. This does not claim all existing method behavior is
+unchanged: `indicator_identity()` newly validates its previously ignored country argument as
+specified below.
 
 ### D3 — Bind the same rule on direct IMF paths
 
 The public client preflight alone is insufficient because callers may instantiate the exported IMF
-source directly. A later implementation must use one shared private guard in both:
+source directly. A later implementation must define one provider-local predicate over an already
+canonical `(country, indicator)` pair. `supports_country()`, direct fetch, and direct identity must
+all use that same predicate; no method may carry an independent copy of the three-pair rule.
 
-- `IMFDataMapperSource.get_indicator()`, after existing country/indicator validation and mapping,
-  but before URL construction, `_request_json()`, cache lookup, retry, or HTTP; and
-- `IMFDataMapperSource.indicator_identity()`, so the source cannot advertise an identity for a
-  route that it refuses to serve.
+Canonicalization and error precedence are method-specific and frozen:
+
+1. `supports_country()` safely canonicalizes the country with the shared ISO3 contract and the
+   indicator with the existing normalizer, verifies that the indicator is in `_IMF_MAP`, then calls
+   the shared predicate. Any malformed country or unknown/unmapped indicator returns `False`; the
+   capability probe never raises and never touches cache/transport.
+2. `get_indicator()` preserves its current **country-first** order: canonicalize/validate country,
+   then normalize/map indicator, then call the shared predicate. The provider-local eligibility
+   error is raised before URL construction, `_request_json()`, cache lookup, retry, or HTTP.
+3. `indicator_identity()` preserves its current **indicator/mapping-first** order, then newly calls
+   `canonical_country_iso3(country_iso3, "imf_datamapper")`, then calls the shared predicate. This
+   new country read/validation prevents the exported source from advertising an ineligible SGP
+   identity.
+
+This is an intentional narrowing of direct-call compatibility. Today `indicator_identity()`
+ignores `country_iso3`, so `None`, `""`, `"SG"`, `"sgp"`, and `" SGP "` all return a tuple when the
+indicator is mapped. After the later implementation:
+
+- `None`, `""`, and `"SG"` raise the existing typed `InvalidData` ISO3 carrier instead of returning
+  an identity;
+- `"sgp"` and `" SGP "` canonicalize to `SGP` and therefore hit the route gate for the three
+  blocked indicators; and
+- a valid eligible country returns the exact same `(code, name)` tuple as today.
+
+The exported method's signature and eligible-pair identity values are compatible; malformed-country
+acceptance and the three gated SGP identity results are not compatibility promises.
 
 For each gated pair, direct fetch and identity calls raise existing typed `InvalidData` with this
 exact sanitized message, substituting the canonical lowercase indicator value:
@@ -131,10 +159,25 @@ exact sanitized message, substituting the canonical lowercase indicator value:
 imf_datamapper: {indicator} route is not qualified for country=SGP
 ```
 
-Examples substitute `gdp_growth`, `inflation`, or `unemployment`. Malformed direct inputs retain
-the existing canonical input-validation errors; unsupported indicators retain the existing
-unsupported-indicator error. No new exception type, warning, diagnostic model, or status token is
-introduced.
+Examples substitute `gdp_growth`, `inflation`, or `unemployment`. No new exception type, warning,
+diagnostic model, or status token is introduced.
+
+The direct-method precedence matrix is exact:
+
+| Method and mixed input | First observable outcome |
+|---|---|
+| `get_indicator(malformed_country, unsupported_indicator)` | Existing `imf_datamapper` country `InvalidData`; fetch remains country-first. |
+| `get_indicator(valid_country, unknown_raw_indicator)` | Existing source-specific unsupported-indicator `InvalidData`. |
+| `get_indicator(valid_country, canonical_but_unmapped_indicator)` | Existing `imf_datamapper: unsupported indicator {value}` mapping error. |
+| `indicator_identity(malformed_country, unknown_raw_indicator)` | Existing `canonical_macro_indicator()` unknown-indicator `InvalidData`; identity remains indicator-first. |
+| `indicator_identity(malformed_country, canonical_but_unmapped_indicator)` | Existing `imf_datamapper: unsupported indicator {value}` mapping error before country validation. |
+| `indicator_identity(malformed_country, mapped_indicator)` | Newly exposes the existing `imf_datamapper` country `InvalidData` carrier. |
+| Either direct method with canonicalized `SGP` and a mapped gated indicator | Exact route-qualification `InvalidData` above, after that method's input/mapping checks. |
+| `supports_country()` with any malformed/unsupported combination | `False`; no exception and no transport. |
+
+Thus the mixed-invalid carrier differs intentionally: fetch reports country first, while identity
+reports indicator/mapping first. The shared predicate is reached only after each method has a
+canonical mapped pair.
 
 ## Exact public behavior and failure carriers
 
@@ -146,7 +189,7 @@ introduced.
 | `SGP` gated cell, WDI fails and an eligible custom source succeeds | Existing result/finalization behavior; the attempt trail/warning contains only actual attempted sources, never skipped IMF. |
 | Direct IMF fetch or identity for a gated pair | Exact `InvalidData` above before URL/cache/transport. |
 | Same three indicators for any valid non-SGP country | Existing WDI -> IMF fallback eligibility and behavior remain unchanged. |
-| Any other indicator/country route | Existing eligibility, unit filtering, identity, failover, and diagnostics remain unchanged. |
+| Any other valid, eligible indicator/country pair | Existing eligibility, unit filtering, identity tuple, failover, and diagnostics remain unchanged. |
 
 A skipped IMF route is a **capability/legal preflight outcome**. It must never be reclassified as
 `EmptyData`, `NO_DATA`, `SourceUnavailable`, an IMF failure attempt, or a successful qualified
@@ -185,9 +228,10 @@ failure. The rule filters the built-in IMF route, not the canonical indicator it
 
 ### Public API, model, and diagnostics
 
-The following stay exact:
+The following surfaces and shapes stay exact:
 
-- `vnfin.macro.get_indicator(country_iso3, indicator) -> IndicatorSeries`;
+- the `vnfin.macro.get_indicator(country_iso3, indicator) -> IndicatorSeries` signature and result
+  type;
 - `MacroClient.get_indicator()` and constructor signatures;
 - the frozen `IndicatorSeries` fields/order/equality/`repr`/DataFrame behavior;
 - `MacroIndicator`, canonical codes/names/units/currencies/frequencies, and exports;
@@ -195,6 +239,11 @@ The following stay exact:
 - current diagnostic callables and payloads, including fixed-income coverage and health probes;
 - warning-token inventory and all existing warning text, including IMF projection warnings; and
 - no Singapore helper, coverage object, new status, new model field, or new diagnostic endpoint.
+
+`IMFDataMapperSource.indicator_identity(country_iso3, indicator)` keeps its signature and keeps its
+exact tuple for every eligible pair, but it does **not** keep the old acceptance of malformed
+countries. It newly applies canonical ISO3 validation after indicator/mapping validation. This is
+the one deliberate existing-method behavior narrowing in addition to the three SGP route gates.
 
 The only public-surface addition accepted by this decision is the provider capability method in
 D2, with its synchronized additive API-snapshot entry. Runtime documentation must explain that a
@@ -234,9 +283,17 @@ the following expectations exact:
    empty or out-of-window results, forbidden interior gaps, conflicting duplicates, revisions, and
    stale-rate overclaims. For the three gated cells, preserve the exact WDI attempt and prove no IMF
    attempt follows.
-3. **Exact SGP IMF gate:** cover `NGDP_RPCH`, `PCPIPCH`, and `LUR` through public client, direct
-   fetch, and identity paths; all gate before cache/transport. Prove there is no IMF GDP
-   substitution and that `SGP/GDP` is still excluded by unit, not this gate.
+3. **Exact SGP IMF gate and direct precedence:** cover `NGDP_RPCH`, `PCPIPCH`, and `LUR` through
+   public client, direct fetch, identity, and `supports_country()` paths; all gate before
+   cache/transport. The later RED packet must include: exact uppercase `SGP`; lowercase `"sgp"`;
+   whitespace `" SGP "`; each of `None`, `""`, and `"SG"`; raw unknown and canonical-but-unmapped
+   indicators; fetch with both country and indicator invalid (country carrier wins); identity with
+   both invalid (indicator/mapping carrier wins); all three gated identity pairs; eligible non-SGP
+   identity tuples byte-equal to current behavior, including canonical/lowercase/whitespace forms
+   of an eligible non-SGP ISO3; `supports_country()` returning `False` rather
+   than raising for every malformed/unsupported combination; and `SGP/GDP` remaining eligible to
+   the provider predicate while excluded from canonical GDP failover by unit. Prove there is no IMF
+   GDP substitution. Every method must exercise the same provider-local canonical-pair predicate.
 4. **IMF projection compatibility:** use non-SGP synthetic fixtures to freeze the current UTC-year
    projection boundary, exact warning/flag behavior, and `latest()` exclusion.
 5. **No repair or stitching:** prove semantic/unit/frequency mismatch cannot stitch, relabel, or
@@ -291,12 +348,18 @@ Provider response success alone is insufficient.
    contradictory capability contract.
 6. Projection tests must move to non-SGP synthetic cases because the three SGP IMF paths will no
    longer dispatch.
+7. Direct `indicator_identity()` callers that relied on its ignored country argument will newly
+   receive typed country errors for malformed mapped requests; this is accepted and must be called
+   out in runtime docs/CHANGELOG with the additive `supports_country()` surface.
 
 ## Lifecycle and next gate
 
 - Intake receipt: `56fa8457`; public anchor `issuecomment-5714070058`.
 - Final source/design approval: exact `631410a2d95cf27aaff43791e5b041fc853b9de2`, delivery
   `e750b5a5`, reviewer commit `b9ae587`.
+- Initial API/model decision was blocked at exact
+  `aaf7350a187d1258bd895b8e858125ee27f980c1`, delivery `a62ab490`, reviewer commit `c34bde5`;
+  this correction is limited to B1 identity-country semantics and B2 neutral wording.
 - Current scope is this retained-evidence API/model decision plus the approved N1/N2 wording fixes.
 - Independent source/legal/API review is required before any RED or implementation work.
 - No provider/network access, RED, runtime/source/model edit, push, capability claim, or close is
@@ -308,7 +371,9 @@ Provider response success alone is insufficient.
 - WDI remains primary; healthy WDI results and all eight annual mappings remain unchanged.
 - Direct IMF fetch/identity raise exact `InvalidData`; public skips create no IMF attempt.
 - Non-SGP IMF behavior, source order, VNM policy routing, and custom/hookless sources are preserved.
-- `get_indicator`, `IndicatorSeries`, models, diagnostics, warnings, and status tokens stay exact.
+- Public `get_indicator` signatures, `IndicatorSeries`, diagnostics, warnings, and status-token
+  shapes stay exact.
+- Direct identity newly validates country after indicator/mapping; eligible tuples stay exact.
 - Accept one additive `IMFDataMapperSource.supports_country()` API-snapshot entry.
 - SingStat and a Singapore policy-rate proxy remain unregistered and blocked.
 - The complete twelve-case matrix is mandatory after a separate RED/build authorization.
