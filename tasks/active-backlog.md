@@ -602,26 +602,32 @@ byte-equal throughout, no clean-room hits. Phase-6 stash dropped (superseded by 
 
 ## Now (WIP)
 
-- **#236 — Singapore macro coverage — DESIGN_BLOCKED / CORRECTION_WIP (2026-09-17).**
+- **#236 — Singapore macro coverage — DESIGN_REVIEW_REQUESTED (2026-09-17).**
   Reviewer ACCEPT/SPEC_SENT packet `triage-202609171910-issue236-singapore-macro.md`
   (`ef81fe2`; public anchor `issuecomment-5714070058`). Work from clean `origin/master`
-  `8d450a4`. Intake commit `7d7bf29`; bounded pre-transport plan `945c981`. Design artifacts are
-  `tasks/236-design-note.md` and
-  `docs/research/2026-09-17-singapore-macro-official-sources.md`. Outcome: eight exact existing
-  World Bank annual cells (`GDP`, growth, CPI, inflation, unemployment, lending/deposit/real
-  interest); three rates are historical through 2021. SingStat `M213781` is the exact
-  provider-published monthly CPI YoY candidate but remains `LEGAL_GAP`; `POLICY_RATE` remains
-  `SEMANTICS_GAP` because Singapore uses S$NEER, not an interest-rate target. Provider probes used
-  26/34 requests with zero retry/redirect; the separate discovery-search ceiling was exceeded and
-  is disclosed for reviewer ruling. Preserve `get_indicator`, VNM-only policy-rate guard, and
-  current source/model behavior. No RED/code/public capability claim until an explicit reviewer
-  verdict. Design review **BLOCKED** exact `5bbdec51841c374c9d454fdcc3b36ec846d690d6`,
-  delivery `9b4c8f76`, reviewer `4890a84`, report
-  `review-202609171937-issue236-design-BLOCK.md`. Fix B1–B6 only: retain actual SingStat
-  OpenAPI/API terms; split WDI-primary qualification from IMF whole-chain legal status; correct
-  `NO_DATA` taxonomy; complete the future RED matrix; reconcile the search-cap ledger with a
-  postmortem; and correct actor/MIME/MAS citations. No RED/code. Current actor `vnfin-oss`; next
-  action is one docs/backlog correction commit and exact-SHA design re-review request.
+  `8d450a4`. Intake `7d7bf29`; pre-transport plan `945c981`; blocked design
+  `5bbdec51841c374c9d454fdcc3b36ec846d690d6`; BLOCK delivery `9b4c8f76`, reviewer `4890a84`,
+  report `review-202609171937-issue236-design-BLOCK.md`. Correction intake `d49b3f4`; bounded B1
+  mini-budget `64706f4`; corrected design/research/search-ledger artifacts
+  `96b972adfe57d8e3f6ed2a9625af2bc758d1ef84`.
+
+  Corrected outcome: eight technically qualified World Bank primary legs; **five qualified whole
+  chains** (`GDP`, `CPI`, lending/deposit/real interest); **three `PARTIAL` whole chains** (growth,
+  inflation, unemployment) because their automatic IMF fallback is not legally cleared. SingStat
+  `M213781` exactly returns monthly CPI YoY in `Per Cent` but remains
+  `ROUTE_GAP + LEGAL_GAP`; `POLICY_RATE` remains `SEMANTICS_GAP` because Singapore uses S$NEER,
+  not an interest-rate target. Real-interest local transport was `NOT_DISPATCHED`, never
+  `NO_DATA`. Initial provider probes used 26/34; B1 correction used 3/4 actions and zero searches,
+  retries, or redirects.
+
+  Search-discovery incident is reconciled at **72 queries / 19 dispatches vs hard 6/6** in
+  `docs/research/2026-09-17-singapore-macro-search-ledger.md`; exact delegate queries, result
+  mappings, postmortem, and atomic fail-closed guard are committed. The complete twelve-case future
+  RED matrix covers WDI8, IMF3/projections/latest, both zero-attempt SGP monthly gaps, compatible
+  country-aware and hookless custom sources, VNM/USA/other countries, and optional SingStat. Exact
+  per-row MIME and direct MAS framework/SORA citations are bound. Preserve `get_indicator`, source
+  order, VNM-only policy-rate guard, and current model behavior. **No RED/code/public capability
+  claim. Current actor: `vnfin-oss-reviewer`; builder awaits exact-SHA re-review verdict.**
 
 - **#235 — North America macro cohort API/model decision — IMPLEMENTATION_REVIEW_REQUESTED (2026-08-31).**
   Public triage is `issuecomment-5477977514`; reviewer packet is
