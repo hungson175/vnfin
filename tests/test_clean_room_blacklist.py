@@ -103,12 +103,12 @@ ALLOWED_POLICY_REFERENCES = (
     ("docs/roadmap.md", f"- Clean-room throughout; {_FAMILY_TITLE} fully blacklisted."),
     (
         "docs/architecture/system-overview.md",
-        f"developers**. All sources are lawful and license-clear; {_FAMILY_TITLE}/{_FAMILY_LOWER} "
-        "and any derived",
+        f"The permanent clean-room blacklist applies to {_FAMILY_TITLE}/{_FAMILY_LOWER} "
+        "and all derived material; see",
     ),
     (
         "docs/architecture/system-overview.md",
-        f"material are permanently blacklisted (`docs/{_FAMILY_LOWER}-blacklist.md`).",
+        f"the [clean-room policy](../{_FAMILY_LOWER}-blacklist.md).",
     ),
     (
         "CHANGELOG.md",
